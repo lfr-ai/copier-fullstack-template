@@ -1,0 +1,15 @@
+"""Local development settings."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.config.settings.base import BaseAppSettings
+from {{ project_slug }}.core.enums.environment import Environment
+
+
+class LocalSettings(BaseAppSettings):
+    """Settings for local development environment."""
+
+    environment: Environment = Environment.LOCAL
+    debug: bool = True
+    log_level: str = "DEBUG"
+    database_echo: bool = True

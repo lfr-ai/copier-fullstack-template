@@ -1,0 +1,19 @@
+"""Test environment settings."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.config.settings.base import BaseAppSettings
+from {{ project_slug }}.core.enums.environment import Environment
+
+
+class TestSettings(BaseAppSettings):
+    """Settings for test environment.
+
+    Uses in-memory SQLite for fast test execution.
+    """
+
+    environment: Environment = Environment.TEST
+    debug: bool = True
+    log_level: str = "DEBUG"
+    database_url: str = "sqlite+aiosqlite:///:memory:"
+    database_echo: bool = False

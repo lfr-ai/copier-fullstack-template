@@ -1,0 +1,17 @@
+"""Cache test fixtures."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
+
+
+@pytest.fixture
+def cache() -> MemoryCacheAdapter:
+    """Create fresh in-memory cache for testing.
+
+    Returns:
+        Empty memory cache adapter.
+    """
+    return MemoryCacheAdapter()

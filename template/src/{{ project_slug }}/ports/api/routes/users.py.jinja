@@ -1,0 +1,46 @@
+"""User management API routes."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException
+
+from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
+
+router = APIRouter()
+HTTP_NOT_FOUND = 404
+
+
+@router.post("/users", response_model=UserDTO, status_code=201)
+async def create_user(payload: CreateUserDTO) -> UserDTO:
+    """Create new user.
+
+    Args:
+        payload: User creation data.
+
+    Returns:
+        Created user data.
+    """
+    # TODO: Inject service via Depends
+    return UserDTO(
+        id=1,
+        email=payload.email,
+        display_name=payload.display_name,
+        is_active=True,
+    )
+
+
+@router.get("/users/{user_id}", response_model=UserDTO)
+async def get_user(user_id: int) -> UserDTO:
+    """Retrieve user by ID.
+
+    Args:
+        user_id: User primary key.
+
+    Returns:
+        User data.
+
+    Raises:
+        HTTPException: If user not found.
+    """
+    # TODO: Inject service via Depends
+    raise HTTPException(status_code=HTTP_NOT_FOUND, detail=f"User {user_id} not found")

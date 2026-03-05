@@ -1,0 +1,44 @@
+"""Generate registry constants from naming_registry.json."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+
+REGISTRY_PATH = Path("data/naming_registry.json")
+OUTPUT_PY = Path("src/{{ project_slug }}/data/registry_constants.py")
+
+
+def generate() -> None:
+    """Generate Python registry constants module."""
+    with REGISTRY_PATH.open() as f:
+        registry = json.load(f)
+
+    lines = [
+        '"""Auto-generated registry constants. Do not edit manually."""',
+        "",
+        "from __future__ import annotations",
+        "",
+    ]
+
+    # Generate ORM constants
+    if "orm" in registry:
+        for model_name, fields in registry["orm"].items():
+            lines.append(f"class _ORM{model_name}:")
+            for field_name, column_name in fields.items():
+                lines.append(f'    {field_name}: str = "{column_name}"')
+            lines.append("")
+
+    lines.append("class ORM:")
+    for model_name in registry.get("orm", {}):
+        lines.append(f"    {model_name} = _ORM{model_name}()")
+    lines.append("")
+
+    OUTPUT_PY.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_PY.write_text("\n".join(lines))
+    print(f"Generated {OUTPUT_PY}")
+
+
+if __name__ == "__main__":
+    generate()

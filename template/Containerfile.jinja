@@ -1,0 +1,36 @@
+# syntax=docker/dockerfile:1
+# Stage 1: Build
+FROM python:{{ python_version }}-slim AS builder
+
+WORKDIR /app
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-editable
+
+COPY src/ src/
+
+# Stage 2: Runtime
+FROM python:{{ python_version }}-slim AS runtime
+
+WORKDIR /app
+
+RUN groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid 1000 --shell /bin/bash appuser
+
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/src /app/src
+
+ENV PATH="/app/.venv/bin:"
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+USER appuser
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"
+
+CMD ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,110 @@
+[project]
+name = "{{ project_slug }}"
+version = "0.1.0"
+description = "{{ project_description }}"
+readme = "README.md"
+license = { text = "{{ license }}" }
+requires-python = ">={{ python_version }}"
+authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
+
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "sqlalchemy[asyncio]>=2.0",
+    "alembic>=1.14",
+    "jinja2>=3.1",
+    "httpx>=0.28",
+    "tenacity>=9.0",
+    "structlog>=24.4",
+    "slowapi>=0.1",
+    "click>=8.1",
+    "rich>=13.9",
+    "tqdm>=4.67",
+    "python-multipart>=0.0.18",{% if use_celery %}
+    "celery[redis]>=5.4",{% endif %}{% if use_redis %}
+    "redis>=5.2",{% endif %}{% if database_backend == 'postgresql' %}
+    "psycopg[binary]>=3.2",
+    "asyncpg>=0.30",{% else %}
+    "aiosqlite>=0.20",{% endif %}{% if use_auth %}
+    "python-jose[cryptography]>=3.3",
+    "passlib[bcrypt]>=1.7",{% endif %}{% if secret_backend == 'azure_kv' %}
+    "azure-identity>=1.20",
+    "azure-keyvault-secrets>=4.9",{% endif %}
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "pytest-cov>=6.0",
+    "pytest-xdist>=3.5",
+    "pytest-mock>=3.14",
+    "hypothesis>=6.120",
+    "factory-boy>=3.3",
+    "freezegun>=1.4",
+    "respx>=0.22",{% if use_playwright %}
+    "playwright>=1.49",
+    "pytest-playwright>=0.6",{% endif %}{% if use_celery %}
+    "pytest-celery>=1.1",{% endif %}
+    "ruff>=0.9",
+    "pre-commit>=4.0",
+    "tox>=4.23",
+    "tox-uv>=1.16",
+]
+
+[project.scripts]
+{{ project_slug }} = "{{ project_slug }}.ports.cli.app:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/{{ project_slug }}"]
+
+[tool.uv]
+dev-dependencies = [
+    "{{ project_slug }}[dev]",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "-x",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "slow: Slow-running tests",
+    "property: Property-based tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/{{ project_slug }}"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]

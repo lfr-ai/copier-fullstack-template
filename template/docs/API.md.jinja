@@ -1,0 +1,94 @@
+# API Reference
+
+## Base URL
+
+Development: `http://localhost:8000`
+
+## Authentication
+{% if use_auth %}
+Include JWT token in Authorization header:
+
+```
+Authorization: Bearer <token>
+```
+{% endif %}
+
+## Endpoints
+
+### Health
+
+#### GET /api/v1/health
+
+Check application health status.
+
+**Response** `200 OK`:
+
+```json
+{
+  "status": "ok",
+  "environment": "local"
+}
+```
+
+#### GET /api/v1/health/ready
+
+Readiness check (includes database connectivity).
+
+**Response** `200 OK`:
+
+```json
+{
+  "status": "ok",
+  "database": "connected"
+}
+```
+
+### Users
+
+#### POST /api/v1/users
+
+Create a new user.
+
+**Request Body**:
+
+```json
+{
+  "email": "user@example.com",
+  "display_name": "Jane Doe",
+  "password": "securepassword123"
+}
+```
+
+**Response** `201 Created`:
+
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "display_name": "Jane Doe",
+  "is_active": true
+}
+```
+
+#### GET /api/v1/users/{id}
+
+Retrieve a user by ID.
+
+**Response** `200 OK`:
+
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "display_name": "Jane Doe",
+  "is_active": true
+}
+```
+
+**Response** `404 Not Found`:
+
+```json
+{
+  "detail": "User not found"
+}
+```

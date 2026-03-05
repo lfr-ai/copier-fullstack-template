@@ -1,0 +1,56 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Health check script  verify all services are running
+
+PROJECT_ROOT="${0:A:h:h}"
+BACKEND_PORT="${PORT_BACKEND:-8000}"
+FRONTEND_PORT="${PORT_FRONTEND:-3000}"
+
+MAX_RETRIES=30
+RETRY_INTERVAL=2
+
+check_endpoint() {
+    emulate -L zsh
+    local name="${1}"
+    local url="${2}"
+    local retries=0
+
+    echo "Checking ${name} at ${url}..."
+
+    while (( retries < MAX_RETRIES )); do
+        if curl -sf "${url}" > /dev/null 2>&1; then
+            echo "  OK ${name} is healthy"
+            return 0
+        fi
+        ((retries++))
+        sleep "${RETRY_INTERVAL}"
+    done
+
+    echo "  FAIL ${name} failed health check after ${MAX_RETRIES} retries"
+    return 1
+}
+
+main() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    echo "=== Health Check ==="
+    echo ""
+
+    local failures=0
+
+    check_endpoint "Backend API" "http://localhost:${BACKEND_PORT}/api/v1/health" || ((failures++))
+    check_endpoint "Frontend" "http://localhost:${FRONTEND_PORT}" || ((failures++))
+
+    echo ""
+    if (( failures > 0 )); then
+        echo "FAILED: ${failures} service(s) unhealthy"
+        return 1
+    fi
+
+    echo "All services healthy"
+}
+
+main "$@"

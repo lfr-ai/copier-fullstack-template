@@ -1,0 +1,37 @@
+"""String utility functions."""
+
+from __future__ import annotations
+
+import re
+import unicodedata
+
+
+def slugify(value: str) -> str:
+    """Convert string to URL-safe slug.
+
+    Args:
+        value: String to slugify.
+
+    Returns:
+        Lowercase hyphenated slug.
+    """
+    normalized = unicodedata.normalize("NFKD", value)
+    ascii_only = normalized.encode("ascii", "ignore").decode("ascii")
+    cleaned = re.sub(r"[^\w\s-]", "", ascii_only).strip().lower()
+    return re.sub(r"[-\s]+", "-", cleaned)
+
+
+def truncate(value: str, *, max_length: int = 100, suffix: str = "...") -> str:
+    """Truncate string to maximum length with suffix.
+
+    Args:
+        value: String to truncate.
+        max_length: Maximum allowed length.
+        suffix: Truncation indicator suffix.
+
+    Returns:
+        Truncated string.
+    """
+    if len(value) <= max_length:
+        return value
+    return value[: max_length - len(suffix)] + suffix

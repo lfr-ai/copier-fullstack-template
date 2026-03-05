@@ -1,0 +1,38 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: Dev Server",
+      "type": "shell",
+      "command": "task backend:dev",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "new" }
+    },
+    {
+      "label": "Backend: Test",
+      "type": "shell",
+      "command": "task backend:test",
+      "group": "test",
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "Backend: Lint",
+      "type": "shell",
+      "command": "task backend:lint",
+      "group": "test"
+    },
+    {
+      "label": "Frontend: Dev",
+      "type": "shell",
+      "command": "task frontend:dev",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "new" }
+    },
+    {
+      "label": "Docker: Up",
+      "type": "shell",
+      "command": "task docker:up",
+      "group": "build"
+    }
+  ]
+}

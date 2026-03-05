@@ -1,0 +1,59 @@
+# Auto-detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Python
+*.py text diff=python
+*.pyi text diff=python
+
+# Shell
+*.zsh text eol=lf
+*.azcli text eol=lf
+
+# Web
+*.ts text
+*.js text
+*.css text
+*.html text
+*.json text
+*.yaml text
+*.yml text
+*.toml text
+*.md text
+
+# Jinja templates
+*.jinja text
+*.html.j2 text
+
+# Configuration
+*.cfg text
+*.ini text
+*.env text
+.editorconfig text
+.gitattributes text
+.gitignore text
+
+# Docker
+Dockerfile text
+Caddyfile text
+compose.yaml text
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.pdf binary
+
+# Lock files — do not diff
+uv.lock binary
+pnpm-lock.yaml -diff

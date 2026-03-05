@@ -1,0 +1,106 @@
+# Configuration Reference  {{ project_name }}
+
+All configuration is loaded from environment variables with the
+`{{ project_slug | upper }}_` prefix, powered by
+[pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/).
+
+---
+
+## Environment Variable Reference
+
+### Core
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_ENVIRONMENT` | `str` | `local` | Deployment environment (`local`, `dev`, `test`, `staging`, `prod`) |
+| `{{ project_slug | upper }}_DEBUG` | `bool` | `false` | Enable debug mode |
+| `{{ project_slug | upper }}_LOG_LEVEL` | `str` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `{{ project_slug | upper }}_ALLOWED_ORIGINS` | `list[str]` | `["http://localhost:5173"]` | CORS allowed origins (JSON array) |
+| `{{ project_slug | upper }}_SECRET_KEY` | `str` | *(required)* | Application secret key |
+{% if database_backend == 'postgresql' %}
+
+### Database (PostgreSQL)
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_DATABASE_URL` | `str` | `postgresql+asyncpg://` | Full database connection URL |
+{% elif database_backend == 'sqlite' %}
+
+### Database (SQLite)
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_DATABASE_URL` | `str` | `sqlite+aiosqlite:///` | SQLite database path |
+{% endif %}
+{% if use_redis %}
+
+### Redis
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_REDIS_URL` | `str` | `redis://localhost:6379/0` | Redis connection URL |
+{% endif %}
+{% if use_auth %}
+
+### Authentication
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_JWT_SECRET` | `str` | *(required)* | JWT signing secret |
+| `{{ project_slug | upper }}_JWT_ALGORITHM` | `str` | `HS256` | JWT signing algorithm |
+| `{{ project_slug | upper }}_ACCESS_TOKEN_EXPIRE_MINUTES` | `int` | `30` | Token expiry in minutes |
+{% endif %}
+{% if use_celery %}
+
+### Celery
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_CELERY_BROKER_URL` | `str` | `redis://localhost:6379/1` | Celery broker URL |
+| `{{ project_slug | upper }}_CELERY_RESULT_BACKEND` | `str` | `redis://localhost:6379/1` | Celery result backend URL |
+{% endif %}
+{% if secret_backend == 'azure_kv' %}
+
+### Azure Key Vault
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `AZURE_KEY_VAULT_URL` | `str` | *(required)* | Key Vault URL |
+| `AZURE_TENANT_ID` | `str` | *(required)* | Entra ID tenant |
+| `AZURE_CLIENT_ID` | `str` | *(required)* | Service principal client ID |
+| `AZURE_CLIENT_SECRET` | `str` | *(required)* | Service principal secret |
+{% endif %}
+
+---
+
+## Configuration Layering
+
+Configuration is resolved in this priority order (highest wins):
+
+1. **Environment variables**  always take precedence
+2. **`.env` file**  loaded automatically in all environments
+3. **Code defaults**  hardcoded fallback values
+
+---
+
+## Secrets Management
+
+- **Local development**: Store secrets in `.env` (git-ignored)
+- **CI/CD**: Use pipeline secrets / protected variables
+{% if secret_backend == 'azure_kv' %}
+- **Production**: Use Azure Key Vault with `DefaultAzureCredential`
+{% else %}
+- **Production**: Use platform-specific secret management
+{% endif %}
+
+**Never** commit secrets to version control.
+
+---
+
+## `.env.example`
+
+Copy `.env.example` to `.env` and fill in secret values:
+
+```zsh
+cp .env.example .env
+```

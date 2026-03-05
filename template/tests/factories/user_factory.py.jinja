@@ -1,0 +1,27 @@
+"""User test data factories."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
+
+_COUNTER = 0
+
+
+def create_user_dto(
+    *,
+    email: str | None = None,
+    display_name: str = "Test User",
+) -> CreateUserDTO:
+    """Create user DTO with unique email.
+
+    Args:
+        email: Optional email override.
+        display_name: User display name.
+
+    Returns:
+        CreateUserDTO with test data.
+    """
+    global _COUNTER
+    _COUNTER += 1
+    effective_email = email or f"testuser{_COUNTER}@example.com"
+    return CreateUserDTO(email=effective_email, display_name=display_name)

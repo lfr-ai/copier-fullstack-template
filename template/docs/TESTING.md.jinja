@@ -1,0 +1,125 @@
+# Testing Guide
+
+## Overview
+
+{{ project_name }} uses a layered testing strategy aligned with the hexagonal
+architecture.
+
+## Backend Testing
+
+### Test Runner
+
+Tests run through **tox** with **pytest**:
+
+```bash
+task backend:test          # Run all tests via tox
+task backend:test:unit     # Run unit tests only
+task backend:test:coverage # Run with coverage report
+```
+
+### Test Structure
+
+```
+tests/
++-- conftest.py            # Shared fixtures
++-- factories/             # Test factories
++-- fixtures/              # Reusable fixtures
++-- unit/
+|   +-- test_entities.py
+|   +-- test_value_objects.py
+|   +-- test_services.py
+|   +-- test_validators.py
+|   +-- test_cache.py
+|   +-- test_retry_policies.py
++-- integration/
+|   +-- test_api.py
+|   +-- test_database.py
++-- property/
+|   +-- test_value_objects.py
++-- e2e/
+    +-- test_smoke.py
+```
+
+### Writing Unit Tests
+
+Test domain logic and use cases in isolation:
+
+```python
+from {{ project_slug }}.core.entities.user import User
+from {{ project_slug }}.core.value_objects.email import Email
+
+
+def test_create_user() -> None:
+    email = Email("test@example.com")
+    user = User(email=email, display_name="Test User")
+
+    assert user.email == email
+    assert user.display_name == "Test User"
+```
+
+### Writing Integration Tests
+
+Test the full HTTP request/response cycle:
+
+```python
+import pytest
+from httpx import AsyncClient
+
+
+@pytest.mark.anyio
+async def test_health_endpoint(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/health")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+```
+
+### Property-Based Tests
+
+Use Hypothesis for property-based testing:
+
+```python
+from hypothesis import given, strategies as st
+from {{ project_slug }}.core.value_objects.email import Email
+
+
+@given(st.emails())
+def test_valid_emails_accepted(email_str: str) -> None:
+    email = Email(email_str)
+    assert str(email) == email_str.lower().strip()
+```
+
+### Coverage
+
+Generate HTML coverage report:
+
+```bash
+task backend:test:coverage
+open htmlcov/index.html
+```
+
+## Frontend Testing
+
+### Unit Tests
+
+Run with vitest:
+
+```bash
+task frontend:test         # Run unit tests
+task frontend:test:coverage # With coverage
+```
+
+Tests are located in `frontend/tests/`.
+{% if use_playwright %}
+
+### End-to-End Tests
+
+Run with Playwright:
+
+```bash
+task test:e2e              # Run E2E tests headless
+task test:e2e:ui           # Run with Playwright UI
+```
+
+E2E tests are in `tests/e2e/`.
+{% endif %}

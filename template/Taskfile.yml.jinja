@@ -1,0 +1,108 @@
+version: "3"
+
+includes:
+  backend: ./tasks/backend.yml
+  frontend: ./tasks/frontend.yml
+  docker: ./tasks/docker.yml
+
+tasks:
+  default:
+    desc: "Show available tasks"
+    cmds: [task --list]
+    silent: true
+
+  setup:
+    desc: "Full project setup"
+    cmds:
+      - zsh scripts/setup.zsh
+
+  dev:
+    desc: "Start backend + frontend in development mode"
+    deps:
+      - backend:dev
+      - frontend:dev
+
+  start:
+    desc: "Start all Docker services"
+    cmds: [task: docker:up]
+
+  build:
+    desc: "Build frontend and backend for production"
+    cmds:
+      - task: frontend:build
+      - task: backend:build
+
+  test:
+    desc: "Run all tests"
+    cmds:
+      - task: backend:test
+      - task: frontend:test:unit
+
+  test:unit:
+    desc: "Run unit tests only"
+    cmds:
+      - task: backend:test:unit
+
+  test:integration:
+    desc: "Run integration tests"
+    cmds:
+      - task: backend:test:integration
+
+  test:coverage:
+    desc: "Run tests with coverage reports"
+    cmds:
+      - task: backend:test:coverage
+{% if use_playwright %}
+  test:e2e:
+    desc: "Run Playwright E2E tests"
+    cmds:
+      - task: frontend:test:e2e
+{% endif %}
+  lint:
+    desc: "Run all linters"
+    cmds:
+      - task: backend:lint
+      - task: frontend:lint
+
+  format:
+    desc: "Format all code"
+    cmds:
+      - task: backend:format
+      - task: frontend:format
+
+  typecheck:
+    desc: "Run type checkers"
+    cmds:
+      - task: backend:typecheck
+      - task: frontend:typecheck
+
+  clean:
+    desc: "Clean build artifacts and caches"
+    cmds:
+      - task: backend:clean
+      - task: frontend:clean
+
+  registry:generate:
+    desc: "Generate registry constants from naming_registry.json"
+    cmds:
+      - uv run python tools/generators/generate_registry.py
+    sources:
+      - data/naming_registry.json
+    generates:
+      - src/{{ project_slug }}/data/registry_constants.py
+      - frontend/src/js/registry_constants.js
+
+  db:migrate:
+    desc: "Run Alembic migrations"
+    cmds:
+      - uv run alembic upgrade head
+
+  db:revision:
+    desc: "Create new Alembic migration"
+    cmds:
+      - uv run alembic revision --autogenerate -m "{{.CLI_ARGS}}"
+
+  db:downgrade:
+    desc: "Rollback last migration"
+    cmds:
+      - uv run alembic downgrade -1

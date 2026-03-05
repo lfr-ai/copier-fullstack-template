@@ -1,0 +1,46 @@
+"""CLI application factory using click."""
+
+from __future__ import annotations
+
+import click
+
+
+@click.group()
+@click.version_option()
+def cli() -> None:
+    """{{ project_name }} CLI management tool."""
+
+
+@cli.command()
+def db_upgrade() -> None:
+    """Run database migrations to head."""
+    click.echo("Running database migrations...")
+    # TODO: Integrate with Alembic programmatically
+
+
+@cli.command()
+def db_seed() -> None:
+    """Seed database with initial data."""
+    click.echo("Seeding database...")
+    # TODO: Import and run seed functions
+
+
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Bind host")
+@click.option("--port", default=8000, type=int, help="Bind port")
+def serve(host: str, port: int) -> None:
+    """Start development server.
+
+    Args:
+        host: Server bind address.
+        port: Server bind port.
+    """
+    import uvicorn
+
+    uvicorn.run(
+        "{{ project_slug }}.ports.api.app:create_api_app",
+        host=host,
+        port=port,
+        factory=True,
+        reload=True,
+    )

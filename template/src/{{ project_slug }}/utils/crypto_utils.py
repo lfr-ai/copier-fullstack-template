@@ -1,0 +1,32 @@
+"""Cryptographic utility functions."""
+
+from __future__ import annotations
+
+import hashlib
+import secrets
+
+TOKEN_BYTES = 32
+
+
+def generate_token(*, nbytes: int = TOKEN_BYTES) -> str:
+    """Generate cryptographically secure random token.
+
+    Args:
+        nbytes: Number of random bytes.
+
+    Returns:
+        URL-safe base64-encoded token.
+    """
+    return secrets.token_urlsafe(nbytes)
+
+
+def hash_sha256(value: str) -> str:
+    """Compute SHA-256 hex digest of string.
+
+    Args:
+        value: String to hash.
+
+    Returns:
+        Hex-encoded SHA-256 digest.
+    """
+    return hashlib.sha256(value.encode()).hexdigest()

@@ -1,0 +1,94 @@
+version: "3"
+
+tasks:
+  dev:
+    desc: "Start FastAPI development server"
+    cmds:
+      - uv run uvicorn {{ project_slug }}.ports.api.app:create_api_app --factory --reload --port 8000
+
+  build:
+    desc: "Build Python package"
+    cmds:
+      - uv build
+
+  install:
+    desc: "Install backend dependencies"
+    cmds:
+      - uv sync --all-extras
+
+  shell:
+    desc: "Start Python REPL"
+    cmds:
+      - uv run python
+
+  #  Testing (delegated to tox) 
+
+  test:
+    desc: "Run backend tests via tox"
+    cmds:
+      - uv run tox -e py{{ python_version | replace('.', '') }} -- {{.CLI_ARGS}}
+
+  test:unit:
+    desc: "Run unit tests only"
+    cmds:
+      - uv run tox -e py{{ python_version | replace('.', '') }} -- tests/unit
+
+  test:integration:
+    desc: "Run integration tests via tox"
+    cmds:
+      - uv run tox -e integration
+
+  test:coverage:
+    desc: "Run tests with coverage"
+    cmds:
+      - uv run tox -e coverage
+
+  #  Linting, formatting & type checking 
+
+  lint:
+    desc: "Lint Python code"
+    cmds:
+      - uv run ruff check src/ tests/
+
+  lint:fix:
+    desc: "Lint and auto-fix issues"
+    cmds:
+      - uv run ruff check src/ tests/ --fix
+
+  format:
+    desc: "Format Python code"
+    cmds:
+      - uv run ruff format src/ tests/
+
+  format:check:
+    desc: "Check formatting"
+    cmds:
+      - uv run ruff format src/ tests/ --check
+
+  typecheck:
+    desc: "Type check Python code"
+    cmds:
+      - uv run pyright src/
+
+  security:
+    desc: "Security scan"
+    cmds:
+      - uv run ruff check --select S src/
+{% if use_celery %}
+  worker:
+    desc: "Start Celery worker"
+    cmds:
+      - uv run celery -A config.celery.celery_app worker --loglevel=info
+
+  beat:
+    desc: "Start Celery beat scheduler"
+    cmds:
+      - uv run celery -A config.celery.celery_app beat --loglevel=info
+{% endif %}
+  clean:
+    desc: "Clean Python build artifacts"
+    cmds:
+      - cmd: find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+      - cmd: find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+      - cmd: find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+      - cmd: rm -rf htmlcov/ .coverage coverage.xml results.xml dist/ build/

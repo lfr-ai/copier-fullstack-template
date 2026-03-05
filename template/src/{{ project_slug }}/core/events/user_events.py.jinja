@@ -1,0 +1,25 @@
+"""User-related domain events."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from {{ project_slug }}.core.entities.base import DomainEvent, _generate_id, _utcnow
+
+from datetime import datetime
+
+
+@dataclass(frozen=True, slots=True)
+class UserCreated(DomainEvent):
+    """Raised when a new user is created."""
+
+    user_id: str = ""
+    email: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class UserDeactivated(DomainEvent):
+    """Raised when a user is deactivated."""
+
+    user_id: str = ""
+    reason: str = ""

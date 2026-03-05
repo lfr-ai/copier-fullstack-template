@@ -1,0 +1,227 @@
+{
+  "files.autoSave": "onFocusChange",
+  "files.eol": "\n",
+  "editor.formatOnSave": true,
+  "editor.rulers": [88],
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.minimap.enabled": false,
+  "editor.renderWhitespace": "trailing",
+  "editor.suggestSelection": "first",
+  "editor.linkedEditing": true,
+  "editor.stickyScroll.enabled": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/dist": true,
+    "**/.vite": true,
+    "**/*.egg-info": true
+  },
+
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/.vite": true,
+    "pnpm-lock.yaml": true,
+    "uv.lock": true,
+    "**/__pycache__": true,
+    "**/.venv": true,
+    "**/htmlcov": true
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "python.analysis.typeCheckingMode": "standard",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.diagnosticMode": "workspace",
+  "python.defaultInterpreterPath": "./.venv/bin/python",
+  "python.analysis.extraPaths": ["${workspaceFolder}/src"],
+  "python.testing.cwd": "${workspaceFolder}",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests", "-q", "--tb=short"],
+
+  "ruff.lineLength": 88,
+  "ruff.lint.args": ["--config=pyproject.toml"],
+  "ruff.format.args": ["--config=pyproject.toml"],
+
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.tabSize": 2
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.ruff": "explicit",
+    "source.organizeImports.ruff": "explicit",
+    "source.organizeImports": "never"
+  },
+
+  "workbench.iconTheme": "material-icon-theme",
+  "material-icon-theme.folders.associations": {
+    "domain": "rules",
+    "application": "app",
+    "infrastructure": "server",
+    "presentation": "views",
+    "adapters": "plugin",
+    "repositories": "database",
+    "use_cases": "functions",
+    "commands": "command",
+    "queries": "search",
+    "dto": "mappings",
+    "events": "event",
+    "event_handlers": "handler",
+    "factories": "tools",
+    "policies": "guard",
+    "ports": "interface",
+    "workflows": "flow",
+    "value_objects": "class",
+    "entities": "model",
+    "services": "middleware",
+    "mcp": "connection",
+    "rag": "search",
+    "llm": "ai",
+    "ai": "robot",
+    "prompts": "messages",
+    "resources": "assets",
+    "testing": "test",
+    "utils": "utils",
+    "core": "core",
+    "db": "database",
+    "orm": "database",
+    "mappers": "mappings",
+    "uow": "context",
+    "di": "container",
+    "persistence": "database",
+    "cli": "console",
+    "api": "routes",
+    "queue": "queue",
+    "registry": "keys",
+    "fixtures": "mock",
+    "mocks": "mock",
+    "unit": "test",
+    "integration": "test",
+    "property": "test",
+    "performance": "benchmark",
+    "strategies": "config",
+    "managers": "admin",
+    "handlers": "handler",
+    "controllers": "controller",
+    "models": "class",
+    "schemas": "mappings",
+    "validators": "guard",
+    "config": "settings",
+    "common": "shared",
+    "clauses": "rules",
+    "workers": "queue",
+    "http": "connection",
+    "middleware": "middleware",
+    "middlewares": "middleware",
+    "tasks": "tasks",
+    "scripts": "scripts"
+  },
+  "material-icon-theme.files.associations": {
+    "naming_registry.json": "keys",
+    "registry_constants.py": "keys",
+    "registry_constants.ts": "keys",
+    "registry_constants.js": "keys",
+    "Taskfile.yml": "taskfile",
+    "compose.yaml": "docker",
+    "compose.dev.yaml": "docker",
+    "Caddyfile": "caddy",
+    "tox.ini": "test",
+    "conftest.py": "test",
+    "feature_flags.py": "lock",
+    "message_bus.py": "event",
+    "bootstrap.py": "rocket"
+  },
+
+  "docker.composeCommand": "{{ container_runtime }} compose",
+
+  "css.validate": true,
+  "css.lint.unknownAtRules": "ignore",
+
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  "eslint.useFlatConfig": true,
+  "eslint.validate": [
+    "javascript", "javascriptreact", "typescript", "typescriptreact"
+  ],
+
+  "vitest.vitestPackagePath": "${workspaceFolder}/frontend/node_modules/vitest/package.json",
+{% if use_playwright %}
+  "playwright.reuseBrowser": true,
+  "playwright.configs": ["frontend/playwright.config.ts"],
+{% endif %}
+
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "git.autofetch": true,
+
+  "emmet.includeLanguages": {
+    "jinja-html": "html"
+  },
+
+  "files.associations": {
+    "*.html.j2": "jinja-html",
+    "*.zsh": "shellscript",
+    "*.azcli": "shellscript",
+    "Caddyfile": "caddyfile",
+    "Taskfile.yml": "yaml",
+    ".env.*": "dotenv"
+  }
+}

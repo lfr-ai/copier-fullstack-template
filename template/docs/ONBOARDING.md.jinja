@@ -1,0 +1,140 @@
+# Onboarding Guide  {{ project_name }}
+
+Welcome to **{{ project_name }}**. Follow the steps below to set up your
+development environment from scratch.
+
+---
+
+## Prerequisites Checklist
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Git | 2.40+ | Version control |
+| zsh | 5.9+ | Default shell |
+| Python | {{ python_version }}+ | Backend runtime |
+| UV | latest | Python package manager |
+| Node.js | {{ node_version }}+ | Frontend runtime |
+| pnpm | 9+ | Node package manager |
+| {{ container_runtime | capitalize }} | latest | Container runtime |
+| Task | 3+ | Task runner |
+| VS Code | latest | Editor |
+
+---
+
+## Step 1  VS Code
+
+Download and install VS Code from <https://code.visualstudio.com/download>.
+After installation, open the project and install recommended extensions when
+prompted (or run `task setup`).
+
+---
+
+## Step 2  Git
+
+Install git following the instructions for your platform.
+
+Verify:
+
+```zsh
+git --version
+```
+
+---
+
+## Step 3  Python (via UV)
+
+Install UV and Python:
+
+```zsh
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv python install {{ python_version }}
+```
+
+Verify:
+
+```zsh
+uv python find {{ python_version }}
+```
+
+---
+
+## Step 4  Node.js + pnpm
+
+Install Node.js {{ node_version }} and pnpm:
+
+```zsh
+# Using fnm (recommended)
+curl -fsSL https://fnm.vercel.app/install | bash
+fnm install {{ node_version }}
+fnm use {{ node_version }}
+
+# Install pnpm
+corepack enable
+corepack prepare pnpm@latest --activate
+```
+
+Verify:
+
+```zsh
+node --version   # v{{ node_version }}.x
+pnpm --version   # 9.x
+```
+
+---
+
+## Step 5  Container Engine
+
+Install {{ container_runtime }}:
+
+```zsh
+# Follow official installation guide for your platform
+{{ container_runtime }} --version
+{{ container_runtime }} compose version
+```
+
+---
+
+## Step 6  Task Runner
+
+Install [Task](https://taskfile.dev):
+
+```zsh
+# macOS/Linux
+sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+```
+
+Verify:
+
+```zsh
+task --version
+```
+
+---
+
+## Step 7  Clone and Bootstrap
+
+```zsh
+git clone <REPO_URL> {{ project_slug }}
+cd {{ project_slug }}
+task setup
+```
+
+This command will:
+- Create Python virtual environment
+- Install backend dependencies
+- Install frontend dependencies
+- Copy `.env.example` to `.env`
+- Run database migrations
+
+---
+
+## Step 8  Start Development
+
+```zsh
+task dev
+```
+
+Visit:
+- Backend API: <http://localhost:8000>
+- API docs: <http://localhost:8000/docs>
+- Frontend: <http://localhost:3000>

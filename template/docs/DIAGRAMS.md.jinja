@@ -1,0 +1,175 @@
+# Architecture Diagrams
+
+## High-Level Architecture
+
+```mermaid
+graph TB
+    subgraph "Presentation Layer"
+        FE[Frontend<br/>Vite + TypeScript]
+        API[REST API<br/>FastAPI]
+        CLI_P[CLI<br/>Click]
+    end
+
+    subgraph "Application Layer"
+        CMD[Commands]
+        QRY[Queries]
+        DTO[DTOs]
+        SVC[Services]
+    end
+
+    subgraph "Domain Layer"
+        ENT[Entities]
+        VO[Value Objects]
+        EVT[Domain Events]
+    end
+
+    subgraph "Infrastructure Layer"
+{%- if database_backend == 'postgresql' %}
+        DB[(PostgreSQL)]
+{%- elif database_backend == 'sqlite' %}
+        DB[(SQLite)]
+{%- endif %}
+        ORM[ORM Models]
+        REPO[Repositories]
+{%- if use_redis %}
+        CACHE[(Redis Cache)]
+{%- endif %}
+{%- if use_celery %}
+        QUEUE[Celery Workers]
+{%- endif %}
+    end
+
+    FE --> API
+    API --> CMD
+    API --> QRY
+    CLI_P --> CMD
+    CMD --> SVC
+    QRY --> DTO
+    SVC --> ENT
+    ENT --> VO
+    ENT --> EVT
+    REPO --> ORM
+    ORM --> DB
+    SVC -.->|Port| REPO
+{%- if use_redis %}
+    SVC -.->|Port| CACHE
+{%- endif %}
+{%- if use_celery %}
+    SVC -.->|Port| QUEUE
+{%- endif %}
+```
+
+## Hexagonal Architecture (Ports & Adapters)
+
+```mermaid
+graph LR
+    subgraph "Driving Adapters (Left)"
+        HTTP[HTTP API]
+        CLI_A[CLI]
+        EVENTS_IN[Event Handlers]
+    end
+
+    subgraph "Application Core"
+        subgraph "Ports In"
+            PI1[Repository Port]
+            PI2[Cache Port]
+            PI3[EventBus Port]
+            PI4[UoW Port]
+        end
+
+        subgraph "Domain"
+            D1[Entities]
+            D2[Value Objects]
+            D3[Domain Events]
+        end
+
+        subgraph "Use Cases"
+            U1[Commands]
+            U2[Queries]
+        end
+    end
+
+    subgraph "Driven Adapters (Right)"
+        DB_A[(Database)]
+{%- if use_redis %}
+        REDIS_A[(Redis)]
+{%- endif %}
+        MEM_A[In-Memory]
+        HTTP_OUT[HTTP Client]
+{%- if use_celery %}
+        CELERY_A[Celery]
+{%- endif %}
+    end
+
+    HTTP --> U1
+    HTTP --> U2
+    CLI_A --> U1
+    EVENTS_IN --> U1
+    U1 --> D1
+    U2 --> D1
+    D1 --> D2
+    D1 --> D3
+    PI1 -.-> DB_A
+{%- if use_redis %}
+    PI2 -.-> REDIS_A
+{%- endif %}
+    PI2 -.-> MEM_A
+    PI3 -.-> MEM_A
+{%- if use_celery %}
+    PI3 -.-> CELERY_A
+{%- endif %}
+```
+
+## Container Architecture
+
+```mermaid
+graph TB
+    subgraph "{{ project_name }} Stack"
+        APP[App Service<br/>:8000]
+        FRONTEND[Frontend Dev Server<br/>:3000]
+{%- if database_backend == 'postgresql' %}
+        PG[(PostgreSQL<br/>:5432)]
+{%- endif %}
+{%- if use_redis %}
+        REDIS[(Redis<br/>:6379)]
+{%- endif %}
+{%- if use_celery %}
+        WORKER[Celery Worker]
+        BEAT[Celery Beat]
+{%- endif %}
+    end
+
+{%- if database_backend == 'postgresql' %}
+    APP --> PG
+{%- endif %}
+{%- if use_redis %}
+    APP --> REDIS
+{%- if use_celery %}
+    WORKER --> REDIS
+    BEAT --> REDIS
+{%- if database_backend == 'postgresql' %}
+    WORKER --> PG
+{%- endif %}
+{%- endif %}
+{%- endif %}
+```
+
+## Data Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API Router
+    participant U as Use Case
+    participant R as Repository
+    participant D as Database
+
+    C->>A: HTTP Request
+    A->>U: Execute command/query
+    U->>R: Access data (via port)
+    R->>D: SQL query
+    D-->>R: Result set
+    R-->>U: Domain entity
+    U-->>A: DTO response
+    A-->>C: HTTP Response
+```
