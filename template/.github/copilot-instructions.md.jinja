@@ -1,0 +1,27 @@
+# Coding Conventions for {{ project_name }}
+
+## Architecture
+
+This project follows hexagonal architecture (ports & adapters).
+
+- **core/**: Domain entities, value objects, interfaces, events (no external deps)
+- **application/**: Use cases, services, DTOs, commands, queries
+- **adapters/**: Infrastructure implementations (DB, cache, messaging)
+- **ports/**: Entry points (API, web, CLI)
+- **config/**: Settings, DI container
+- **utils/**: Shared utilities
+
+## Conventions
+
+- Python {{ python_version }}+, type hints everywhere
+- UV for dependency management
+- Ruff for linting and formatting
+- Taskfile for task running
+- Pydantic v2 for validation
+- SQLAlchemy 2.0+ async with Mapped/mapped_column
+- structlog for logging
+- tenacity for retries
+- Never use magic numbers; define as constants
+- Never use raw SQL; use ORM
+- Always use %s formatting for log messages
+- Docstrings follow Google conventions

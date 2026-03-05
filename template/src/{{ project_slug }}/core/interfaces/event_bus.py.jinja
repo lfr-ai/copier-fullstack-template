@@ -1,0 +1,37 @@
+"""Event bus protocol for domain event dispatch."""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Coroutine
+from typing import Protocol, runtime_checkable
+
+from {{ project_slug }}.core.entities.base import DomainEvent
+
+
+EventHandler = Callable[[DomainEvent], Coroutine[object, object, None]]
+
+
+@runtime_checkable
+class EventBus(Protocol):
+    """Protocol for publishing and subscribing to domain events."""
+
+    async def publish(self, event: DomainEvent) -> None:
+        """Publish domain event to all subscribers.
+
+        Args:
+            event: Domain event to publish.
+        """
+        ...
+
+    def subscribe(
+        self,
+        event_type: type[DomainEvent],
+        handler: EventHandler,
+    ) -> None:
+        """Subscribe handler to domain event type.
+
+        Args:
+            event_type: Type of event to subscribe to.
+            handler: Async callable to invoke on event.
+        """
+        ...

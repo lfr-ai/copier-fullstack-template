@@ -1,0 +1,67 @@
+# Architecture Overview
+
+## {{ project_name }}
+
+### Hexagonal Architecture (Ports & Adapters)
+
+`
+
+                  Ports (Driving)                      
+                 
+   API/REST     Web          CLI               
+                 
+                                                    
+              
+            Application Layer                        
+    Services  Commands  Queries  DTOs             
+              
+                                                      
+              
+              Core Domain                            
+    Entities  Value Objects  Events                
+    Interfaces  Enums  Exceptions                  
+              
+                                                      
+              
+            Adapters (Driven)                        
+    Persistence  Cache  Messaging                  
+    Auth  External Services                         
+              
+
+`
+
+### Key Principles
+
+- **Dependency Inversion**: Core domain has no external dependencies
+- **Port Interfaces**: Defined in core, implemented in adapters
+- **Factory Pattern**: Application and API created via factory functions
+- **CQRS-Lite**: Separate command and query handlers
+- **Repository Pattern**: Data access abstracted behind interfaces
+- **Unit of Work**: Transaction management via context managers
+
+### Directory Structure
+
+`
+src/{{ project_slug }}/
+ core/           # Domain logic, entities, interfaces
+ application/    # Use cases, services, DTOs, commands
+ adapters/       # Infrastructure implementations
+ ports/          # API, Web, CLI entry points
+ config/         # Settings, DI container
+ utils/          # Shared utilities
+`
+
+### Data Flow
+
+1. Request enters via **Port** (API route, CLI command, web controller)
+2. Port delegates to **Application Service**
+3. Service uses **Core Domain** entities and interfaces
+4. **Adapters** implement interfaces for persistence, cache, events
+5. Response flows back through the same path
+
+### Configuration
+
+Settings are loaded from environment variables with pydantic-settings.
+Environment-specific settings classes override base defaults.
+
+See config/settings/ for details.

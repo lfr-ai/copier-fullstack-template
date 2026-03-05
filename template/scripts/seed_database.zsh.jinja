@@ -1,0 +1,14 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Seed database with initial data
+echo "Seeding database..."
+
+uv run python -c "
+from {{ project_slug }}.utils.async_utils import run_sync
+# TODO: Import and call seed functions
+print('Seeding complete')
+"
+
+echo "Database seeded"

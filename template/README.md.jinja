@@ -1,0 +1,57 @@
+# {{ project_name }}
+
+{{ project_description }}
+
+## Quick Start
+
+### Prerequisites
+
+- Python {{ python_version }}+
+- [UV](https://docs.astral.sh/uv/) package manager
+- [go-task](https://taskfile.dev/) task runner
+- [pnpm](https://pnpm.io/) for frontend
+- {{ container_runtime }} for containers
+
+### Setup
+
+`ash
+# Install dependencies
+task backend:dev
+
+# Start development server
+uv run uvicorn {{ project_slug }}.main:app --reload
+
+# Or use containers
+task docker:up
+`
+
+### Development Commands
+
+| Command | Description |
+|---------|-------------|
+| 	ask backend:dev | Install Python dependencies |
+| 	ask backend:test | Run test suite via tox |
+| 	ask backend:lint | Run linters (Ruff) |
+| 	ask backend:format | Auto-format code |
+| 	ask backend:typecheck | Run mypy type checker |
+| 	ask frontend:dev | Start frontend dev server |
+| 	ask frontend:test | Run frontend tests |
+| 	ask docker:up | Start all containers |
+| 	ask docker:down | Stop all containers |
+
+### API Documentation
+
+- Swagger UI: http://localhost:8000/api/docs
+- ReDoc: http://localhost:8000/api/redoc
+
+## Architecture
+
+See [docs/architecture.md](docs/architecture.md) for detailed overview.
+
+## Contributing
+
+See [docs/contributing.md](docs/contributing.md) for guidelines.
+
+## License
+
+{{ license }}

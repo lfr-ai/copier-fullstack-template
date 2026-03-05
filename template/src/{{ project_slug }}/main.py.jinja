@@ -1,0 +1,10 @@
+"""Application entrypoint module."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.config.logging import setup_logging
+from {{ project_slug }}.ports.api.app import create_api_app
+
+setup_logging()
+
+app = create_api_app()

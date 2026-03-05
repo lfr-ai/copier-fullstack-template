@@ -1,0 +1,107 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Full project bootstrap: install all dependencies and verify environment
+
+SCRIPT_DIR="${0:A:h}"
+PROJECT_ROOT="${SCRIPT_DIR:h}"
+
+check_command() {
+    emulate -L zsh
+    local cmd="${1}"
+    local install_hint="${2}"
+
+    if ! command -v "${cmd}" &>/dev/null; then
+        echo "ERROR: ${cmd} not found"
+        echo "  Install with: ${install_hint}"
+        return 1
+    fi
+}
+
+verify_prerequisites() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    local missing_count=0
+
+    echo "=== Checking prerequisites ==="
+
+    check_command "git" "https://git-scm.com/downloads" || ((missing_count++))
+    check_command "task" "https://taskfile.dev/installation" || ((missing_count++))
+    check_command "uv" "curl -LsSf https://astral.sh/uv/install.sh | sh" || ((missing_count++))
+    check_command "node" "https://nodejs.org/" || ((missing_count++))
+    check_command "pnpm" "corepack enable && corepack prepare pnpm@latest --activate" || ((missing_count++))
+
+    if (( missing_count > 0 )); then
+        echo ""
+        echo "ERROR: ${missing_count} prerequisite(s) missing"
+        return 1
+    fi
+
+    echo "All prerequisites satisfied"
+    echo ""
+}
+
+install_dependencies() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    echo "=== Installing backend dependencies ==="
+    cd "${PROJECT_ROOT}"
+    uv sync --all-groups
+    echo "Backend dependencies installed"
+    echo ""
+
+    echo "=== Installing frontend dependencies ==="
+    cd "${PROJECT_ROOT}/frontend"
+    pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+    echo "Frontend dependencies installed"
+    echo ""
+}
+
+setup_environment() {
+    emulate -L zsh
+
+    cd "${PROJECT_ROOT}"
+
+    if [[ ! -f .env ]]; then
+        echo "=== Creating .env from .env.example ==="
+        cp .env.example .env
+        echo ".env created  review and update values"
+        echo ""
+    fi
+}
+
+verify_setup() {
+    emulate -L zsh
+
+    echo "=== Environment Summary ==="
+    echo "Git:    $(git --version 2>/dev/null || echo 'NOT FOUND')"
+    echo "Task:   $(task --version 2>/dev/null || echo 'NOT FOUND')"
+    echo "UV:     $(uv --version 2>/dev/null || echo 'NOT FOUND')"
+    echo "Python: $(python3 --version 2>/dev/null || echo 'NOT FOUND')"
+    echo "Node:   $(node --version 2>/dev/null || echo 'NOT FOUND')"
+    echo "pnpm:   $(pnpm --version 2>/dev/null || echo 'NOT FOUND')"
+    echo ""
+    echo "Bootstrap complete. Run 'task dev' to start developing."
+}
+
+main() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    cd "${PROJECT_ROOT}"
+
+    echo "========================================="
+    echo "  {{ project_name }}  Bootstrap"
+    echo "========================================="
+    echo ""
+
+    verify_prerequisites
+    setup_environment
+    install_dependencies
+    verify_setup
+}
+
+main "$@"

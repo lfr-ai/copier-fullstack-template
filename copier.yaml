@@ -1,0 +1,285 @@
+---
+# ┌──────────────────────────────────────────────────────────────────┐
+# │  Copier Fullstack Template                                       │
+# │  Production-ready scaffolding for any project type and stack     │
+# └──────────────────────────────────────────────────────────────────┘
+_min_copier_version: "9.0.0"
+
+_subdirectory: template
+
+_templates_suffix: .jinja
+
+_jinja_extensions:
+  - copier_templates_extensions.TemplateExtensionLoader
+
+_envops:
+  trim_blocks: true
+  lstrip_blocks: true
+
+# ── Project metadata ──────────────────────────────────────────────
+project_name:
+  type: str
+  help: "Human-readable project name (e.g. Claim Handler)"
+  validator: "{% if not project_name %}Project name is required{% endif %}"
+
+project_slug:
+  type: str
+  default: "{{ project_name | lower | replace(' ', '_') | replace('-', '_') }}"
+  help: "Python-safe project slug (snake_case)"
+  validator: "{% if not project_slug | regex_search('^[a-z][a-z0-9_]*$') %}Must be snake_case starting with a letter{% endif %}"
+
+description:
+  type: str
+  default: "A production-ready application"
+  help: "Short project description"
+
+author_name:
+  type: str
+  help: "Author full name"
+
+author_email:
+  type: str
+  help: "Author email"
+  validator: "{% if '@' not in author_email %}Must be a valid email{% endif %}"
+
+year:
+  type: int
+  default: 2026
+
+license:
+  type: str
+  choices:
+    - MIT
+    - "Apache-2.0"
+    - Proprietary
+  default: MIT
+
+# ── Project style ─────────────────────────────────────────────────
+project_style:
+  type: str
+  choices:
+    - backend
+    - frontend
+    - hybrid
+    - library
+  default: hybrid
+  help: "Project type determines folder layout and tooling"
+
+# ── Language versions ─────────────────────────────────────────────
+python_version:
+  type: str
+  default: "3.13"
+  choices: ["3.11", "3.12", "3.13"]
+
+node_version:
+  type: str
+  default: "22"
+  choices: ["20", "22"]
+  when: "{{ project_style in ['frontend', 'hybrid'] }}"
+
+# ── Frameworks ────────────────────────────────────────────────────
+backend_framework:
+  type: str
+  choices:
+    - fastapi
+    - flask
+  default: fastapi
+  when: "{{ project_style in ['backend', 'hybrid', 'library'] }}"
+
+frontend_framework:
+  type: str
+  choices:
+    - lit
+    - react
+    - svelte
+    - vanilla
+  default: lit
+  when: "{{ project_style in ['frontend', 'hybrid'] }}"
+
+# ── Database ──────────────────────────────────────────────────────
+db_choice:
+  type: str
+  choices:
+    - postgresql
+    - sqlite
+    - mysql
+    - none
+  default: postgresql
+  when: "{{ project_style in ['backend', 'hybrid'] }}"
+
+use_sqlalchemy:
+  type: bool
+  default: true
+  when: "{{ db_choice | default('none') != 'none' }}"
+
+# ── Services ──────────────────────────────────────────────────────
+use_redis:
+  type: bool
+  default: true
+  when: "{{ project_style in ['backend', 'hybrid'] }}"
+  help: "Include Redis for caching and Celery broker"
+
+use_celery:
+  type: bool
+  default: true
+  when: "{{ use_redis | default(false) }}"
+  help: "Include Celery worker and beat for async task processing"
+
+# ── AI / LLM ─────────────────────────────────────────────────────
+use_ai:
+  type: bool
+  default: false
+  help: "Include AI/LLM provider abstraction layer"
+
+ai_provider:
+  type: str
+  choices:
+    - openai
+    - anthropic
+    - azure_openai
+    - ollama
+    - none
+  default: none
+  when: "{{ use_ai }}"
+
+use_rag:
+  type: bool
+  default: false
+  when: "{{ use_ai }}"
+  help: "Include RAG pipeline with vector store integration"
+
+# ── Cloud ─────────────────────────────────────────────────────────
+cloud_provider:
+  type: str
+  choices:
+    - azure
+    - aws
+    - gcp
+    - none
+  default: none
+  help: "Cloud provider for infrastructure placeholders"
+
+# ── Git / CI ──────────────────────────────────────────────────────
+git_provider:
+  type: str
+  choices:
+    - github
+    - gitlab
+    - azure_devops
+  default: github
+  help: "Git hosting provider for CI/CD templates"
+
+# ── Container ─────────────────────────────────────────────────────
+container_engine:
+  type: str
+  choices:
+    - docker
+    - podman
+  default: docker
+
+# ── Optional features ─────────────────────────────────────────────
+include_devcontainer:
+  type: bool
+  default: true
+
+include_tests:
+  type: bool
+  default: true
+
+include_e2e:
+  type: bool
+  default: false
+  when: "{{ project_style in ['frontend', 'hybrid'] and include_tests }}"
+
+include_property_tests:
+  type: bool
+  default: true
+  when: "{{ include_tests }}"
+
+include_performance_tests:
+  type: bool
+  default: false
+  when: "{{ include_tests }}"
+
+use_mcp:
+  type: bool
+  default: false
+  help: "Include Model Context Protocol server"
+
+use_cli:
+  type: bool
+  default: true
+  when: "{{ project_style in ['backend', 'hybrid', 'library'] }}"
+  help: "Include CLI entrypoint via Click"
+
+use_email_service:
+  type: bool
+  default: false
+  when: "{{ project_style in ['backend', 'hybrid'] }}"
+  help: "Include email sending service abstraction"
+
+use_naming_registry:
+  type: bool
+  default: true
+  help: "Include centralized naming registry with code generation"
+
+strict_types:
+  type: bool
+  default: true
+  help: "Enable strict type checking (mypy strict / ty / pyright)"
+
+# ── Computed (hidden from user) ───────────────────────────────────
+has_backend:
+  type: bool
+  default: "{{ project_style in ['backend', 'hybrid', 'library'] }}"
+  when: false
+
+has_frontend:
+  type: bool
+  default: "{{ project_style in ['frontend', 'hybrid'] }}"
+  when: false
+
+has_db:
+  type: bool
+  default: "{{ db_choice | default('none') != 'none' }}"
+  when: false
+
+use_sqlalchemy_computed:
+  type: bool
+  default: "{{ has_db and use_sqlalchemy | default(false) }}"
+  when: false
+
+use_celery_computed:
+  type: bool
+  default: "{{ use_redis | default(false) and use_celery | default(false) }}"
+  when: false
+
+use_cli_computed:
+  type: bool
+  default: "{{ has_backend and use_cli | default(false) }}"
+  when: false
+
+use_rag_computed:
+  type: bool
+  default: "{{ use_ai and use_rag | default(false) }}"
+  when: false
+
+include_property_computed:
+  type: bool
+  default: "{{ include_tests and include_property_tests | default(false) }}"
+  when: false
+
+include_performance_computed:
+  type: bool
+  default: "{{ include_tests and include_performance_tests | default(false) }}"
+  when: false
+
+env_prefix:
+  type: str
+  default: "{{ project_slug | upper }}"
+  when: false
+
+project_slug_kebab:
+  type: str
+  default: "{{ project_slug | replace('_', '-') }}"
+  when: false

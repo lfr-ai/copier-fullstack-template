@@ -1,0 +1,154 @@
+_min_copier_version: "9.0.0"
+_subdirectory: "template"
+_templates_suffix: ".jinja"
+
+_exclude:
+  - "copier.yml"
+  - "copier.yaml"
+  - "~*"
+  - "*.py[co]"
+  - "__pycache__"
+  - ".git"
+  - ".DS_Store"
+  - ".svn"
+
+_skip_if_exists:
+  - ".env"
+
+#  Project metadata 
+
+project_name:
+  type: str
+  help: "Project display name (e.g., 'My Awesome App')"
+  validator: "{% if not project_name %}Project name is required{% endif %}"
+
+project_slug:
+  type: str
+  help: "Python package name (snake_case)"
+  default: "{{ project_name | lower | replace(' ', '_') | replace('-', '_') }}"
+  validator: "{% if not project_slug | regex_search('^[a-z][a-z0-9_]*$') %}Must be valid Python identifier (lowercase, underscores){% endif %}"
+
+project_description:
+  type: str
+  help: "Short project description"
+  default: "A fullstack Python application"
+
+author_name:
+  type: str
+  help: "Author full name"
+  validator: "{% if not author_name %}Author name is required{% endif %}"
+
+author_email:
+  type: str
+  help: "Author email address"
+  validator: "{% if not author_email | regex_search('.+@.+\\..+') %}Must be a valid email{% endif %}"
+
+github_username:
+  type: str
+  help: "GitHub username or organization"
+  default: "{{ author_name | lower | replace(' ', '-') }}"
+
+copyright_year:
+  type: str
+  help: "Copyright year"
+  default: "2025"
+
+#  Technical choices 
+
+python_version:
+  type: str
+  help: "Minimum Python version"
+  default: "3.12"
+  choices:
+    - "3.12"
+    - "3.13"
+
+node_version:
+  type: str
+  help: "Node.js major version (for frontend tooling)"
+  default: "22"
+  choices:
+    - "20"
+    - "22"
+
+database_backend:
+  type: str
+  help: "Database backend"
+  default: "postgresql"
+  choices:
+    - "postgresql"
+    - "sqlite"
+
+use_celery:
+  type: bool
+  help: "Include Celery async task processing"
+  default: true
+
+use_redis:
+  type: bool
+  help: "Include Redis caching layer"
+  default: true
+
+use_auth:
+  type: bool
+  help: "Include authentication (JWT + session)"
+  default: true
+
+use_playwright:
+  type: bool
+  help: "Include Playwright E2E tests"
+  default: true
+
+use_devcontainer:
+  type: bool
+  help: "Include devcontainer configuration"
+  default: true
+
+container_runtime:
+  type: str
+  help: "Container runtime"
+  default: "podman"
+  choices:
+    - "podman"
+    - "docker"
+
+secret_backend:
+  type: str
+  help: "Secret management backend"
+  default: "env"
+  choices:
+    Env files only: "env"
+    Azure Key Vault: "azure_kv"
+
+license:
+  type: str
+  help: "License type"
+  default: "MIT"
+  choices:
+    - "MIT"
+    - "Apache-2.0"
+    - "GPL-3.0"
+    - "Proprietary"
+
+#  Post-generation tasks 
+
+_tasks:
+  - command: "git init"
+    when: "{{ _copier_operation == 'copy' }}"
+  - command: "git add ."
+    when: "{{ _copier_operation == 'copy' }}"
+
+_message_after_copy: |
+  Your project "{{ project_name }}" has been created successfully!
+
+  Next steps:
+
+    1. cd {{ _copier_conf.dst_path }}
+    2. zsh scripts/setup.zsh   # Full project setup
+    3. task dev                 # Start development server
+
+  See README.md for full documentation.
+
+_message_after_update: |
+  Your project "{{ project_name }}" has been updated successfully!
+  Please review any conflicts and resolve them.

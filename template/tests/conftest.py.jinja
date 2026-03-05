@@ -1,0 +1,73 @@
+"""Root test configuration and shared fixtures."""
+
+from __future__ import annotations
+
+import asyncio
+from collections.abc import AsyncGenerator, Generator
+
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+
+from {{ project_slug }}.adapters.persistence.orm.base import ORMBase
+from {{ project_slug }}.ports.api.app import create_api_app
+
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+@pytest.fixture(scope="session")
+def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+    """Create event loop for entire test session.
+
+    Yields:
+        Event loop instance.
+    """
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def engine() -> AsyncGenerator[AsyncEngine, None]:
+    """Create async test database engine.
+
+    Yields:
+        Configured async engine with tables created.
+    """
+    eng = create_async_engine(TEST_DATABASE_URL, echo=False)
+    async with eng.begin() as conn:
+        await conn.run_sync(ORMBase.metadata.create_all)
+    yield eng
+    async with eng.begin() as conn:
+        await conn.run_sync(ORMBase.metadata.drop_all)
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture
+async def session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    """Create async test database session with rollback.
+
+    Args:
+        engine: Test database engine.
+
+    Yields:
+        Async session rolled back after each test.
+    """
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with factory() as sess:
+        yield sess
+        await sess.rollback()
+
+
+@pytest_asyncio.fixture
+async def client() -> AsyncGenerator[AsyncClient, None]:
+    """Create async HTTP test client.
+
+    Yields:
+        Configured async HTTP client for API testing.
+    """
+    app = create_api_app(debug=True)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac

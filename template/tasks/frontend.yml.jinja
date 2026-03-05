@@ -1,0 +1,62 @@
+version: "3"
+
+tasks:
+  dev:
+    desc: "Start Vite dev server"
+    dir: frontend
+    cmds:
+      - pnpm dev
+
+  build:
+    desc: "Build for production"
+    dir: frontend
+    cmds:
+      - pnpm build
+
+  install:
+    desc: "Install frontend dependencies"
+    dir: frontend
+    cmds:
+      - pnpm install --frozen-lockfile
+
+  test:unit:
+    desc: "Run unit tests"
+    dir: frontend
+    cmds:
+      - pnpm test:unit
+
+  test:coverage:
+    desc: "Run tests with coverage"
+    dir: frontend
+    cmds:
+      - pnpm test:coverage
+{% if use_playwright %}
+  test:e2e:
+    desc: "Run E2E tests"
+    dir: frontend
+    cmds:
+      - pnpm test:e2e
+{% endif %}
+  lint:
+    desc: "Lint frontend code"
+    dir: frontend
+    cmds:
+      - pnpm lint
+
+  format:
+    desc: "Format frontend code"
+    dir: frontend
+    cmds:
+      - pnpm format
+
+  typecheck:
+    desc: "Type check TypeScript"
+    dir: frontend
+    cmds:
+      - pnpm typecheck
+
+  clean:
+    desc: "Remove build artifacts"
+    dir: frontend
+    cmds:
+      - pnpm exec rimraf dist node_modules/.vite coverage playwright-report test-results

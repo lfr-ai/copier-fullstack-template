@@ -1,0 +1,24 @@
+{%- if use_playwright %}
+"""End-to-end smoke tests using Playwright."""
+
+from __future__ import annotations
+
+import pytest
+from playwright.async_api import Page
+
+
+@pytest.mark.asyncio
+class TestSmoke:
+    """Smoke tests verifying basic application flow."""
+
+    async def test_home_page_loads(self, page: Page) -> None:
+        """Verify home page renders successfully."""
+        await page.goto("/")
+        assert await page.title() != ""
+
+    async def test_api_docs_accessible(self, page: Page) -> None:
+        """Verify API documentation page loads."""
+        response = await page.goto("/api/docs")
+        assert response is not None
+        assert response.status == 200
+{%- endif %}

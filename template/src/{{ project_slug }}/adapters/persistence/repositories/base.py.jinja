@@ -1,0 +1,121 @@
+"""Generic SQLAlchemy repository implementation."""
+
+from __future__ import annotations
+
+import logging
+from typing import Generic, TypeVar
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from {{ project_slug }}.adapters.persistence.orm.base import ORMBase
+
+
+logger = logging.getLogger(__name__)
+ModelT = TypeVar("ModelT", bound=ORMBase)
+
+
+class SQLAlchemyRepository(Generic[ModelT]):
+    """Generic repository for SQLAlchemy ORM models.
+
+    Provides standard CRUD operations with async support
+    and pagination.
+    """
+
+    def __init__(self, session: AsyncSession, model_class: type[ModelT]) -> None:
+        """Initialize repository with session and model.
+
+        Args:
+            session: Async SQLAlchemy session.
+            model_class: ORM model class for this repository.
+        """
+        self._session = session
+        self._model_class = model_class
+
+    async def get_by_id(self, entity_id: int) -> ModelT | None:
+        """Retrieve model by primary key.
+
+        Args:
+            entity_id: Primary key value.
+
+        Returns:
+            Model instance or None if not found.
+        """
+        return await self._session.get(self._model_class, entity_id)
+
+    async def add(self, instance: ModelT) -> ModelT:
+        """Add model instance to session.
+
+        Args:
+            instance: Model instance to persist.
+
+        Returns:
+            Persisted model instance.
+        """
+        self._session.add(instance)
+        await self._session.flush()
+        await self._session.refresh(instance)
+        logger.debug(
+            "Added %s with id %s",
+            self._model_class.__name__,
+            getattr(instance, "id", "unknown"),
+        )
+        return instance
+
+    async def update(self, instance: ModelT) -> ModelT:
+        """Merge updated model instance.
+
+        Args:
+            instance: Model instance with updated fields.
+
+        Returns:
+            Merged model instance.
+        """
+        merged = await self._session.merge(instance)
+        await self._session.flush()
+        return merged
+
+    async def delete(self, entity_id: int) -> bool:
+        """Delete model by primary key.
+
+        Args:
+            entity_id: Primary key value.
+
+        Returns:
+            True if instance was deleted.
+        """
+        instance = await self.get_by_id(entity_id)
+        if instance is None:
+            return False
+        await self._session.delete(instance)
+        await self._session.flush()
+        return True
+
+    async def list_all(
+        self,
+        *,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> list[ModelT]:
+        """Retrieve paginated list of model instances.
+
+        Args:
+            offset: Number of records to skip.
+            limit: Maximum records to return.
+
+        Returns:
+            List of model instances.
+        """
+        stmt = select(self._model_class).offset(offset).limit(limit)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count(self) -> int:
+        """Count total records.
+
+        Returns:
+            Total number of records.
+        """
+        stmt = select(func.count()).select_from(self._model_class)
+        result = await self._session.execute(stmt)
+        return result.scalar_one()

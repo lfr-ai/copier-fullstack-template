@@ -1,0 +1,32 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Setup development environment
+echo "Setting up {{ project_name }} development environment..."
+
+# Install Python dependencies
+if command -v uv &> /dev/null; then
+    uv sync
+else
+    echo "ERROR: UV not found. Install from https://docs.astral.sh/uv/"
+    exit 1
+fi
+
+# Install frontend dependencies
+if [ -d "frontend" ]; then
+    cd frontend
+    if command -v pnpm &> /dev/null; then
+        pnpm install
+    else
+        echo "WARNING: pnpm not found, skipping frontend setup"
+    fi
+    cd ..
+fi
+
+# Install pre-commit hooks
+if command -v pre-commit &> /dev/null; then
+    pre-commit install
+fi
+
+echo "Setup complete"

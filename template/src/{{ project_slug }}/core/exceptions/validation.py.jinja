@@ -1,0 +1,19 @@
+"""Validation exception for domain rule violations."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.core.exceptions.base import DomainError
+
+
+class ValidationError(DomainError):
+    """Raised when domain validation fails."""
+
+    def __init__(self, message: str, *, field: str | None = None) -> None:
+        """Initialize validation error.
+
+        Args:
+            message: Validation failure description.
+            field: Field that failed validation.
+        """
+        super().__init__(message=message, code="VALIDATION_ERROR")
+        self.field = field

@@ -1,0 +1,71 @@
+# Deployment Guide
+
+## Environments
+
+| Environment | Purpose | Branch |
+|------------|---------|--------|
+| `dev` | Development testing | `develop` |
+| `test` | QA validation | `release/*` |
+| `staging` | Pre-production | `main` (manual) |
+| `prod` | Production | `main` (approved) |
+
+## Container Deployment
+
+### Build and Run
+
+```bash
+task docker:build          # Build container images
+task docker:up             # Start services
+task docker:down           # Stop services
+```
+
+### Production Compose
+
+```bash
+{{ container_runtime }} compose -f compose.yml up -d
+```
+{% if secret_backend == 'azure_kv' %}
+
+## Azure Key Vault Integration
+
+Production deployments use Azure Key Vault for secret management:
+
+1. Configure `AZURE_KEY_VAULT_URL` environment variable
+2. Ensure the application identity has `Key Vault Secrets User` role
+3. Secrets are loaded automatically via `DefaultAzureCredential`
+{% endif %}
+
+## Environment Variables
+
+Production environments should configure all variables from `.env.example`
+through the deployment platform's secret management system.
+
+**Never** commit secrets to version control.
+
+See `docs/CONFIG.md` for the full variable reference.
+
+## Health Checks
+
+The application exposes health endpoints:
+
+- `/api/v1/health`  basic liveness check
+- `/api/v1/health/ready`  readiness check (includes database)
+
+## Database Migrations
+
+Before deploying a new version with schema changes:
+
+```bash
+task backend:db:upgrade    # Apply pending migrations
+```
+
+## Rollback
+
+To rollback a deployment:
+
+1. Identify the last known good version from CHANGELOG.md
+2. Deploy the specific version tag
+3. If database migration was applied:
+   ```bash
+   task backend:db:downgrade
+   ```
