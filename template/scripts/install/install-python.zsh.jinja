@@ -1,0 +1,84 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Install Python via UV (recommended) or system package manager
+
+PYTHON_TARGET_VERSION="${1:-{{ python_version }}}"
+UV_MIN_VERSION="0.5.0"
+
+install_uv() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    if command -v uv &>/dev/null; then
+        echo "UV already installed: $(uv --version)"
+        return 0
+    fi
+
+    echo "Installing UV package manager..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
+
+    if ! command -v uv &>/dev/null; then
+        echo "ERROR: UV installation failed"
+        return 1
+    fi
+
+    echo "UV installed: $(uv --version)"
+}
+
+install_python_via_uv() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    local target_version="${1}"
+
+    echo "Installing Python ${target_version} via UV..."
+    uv python install "${target_version}"
+
+    local installed_path
+    installed_path="$(uv python find "${target_version}" 2>/dev/null || echo '')"
+
+    if [[ -z "${installed_path}" ]]; then
+        echo "ERROR: Python ${target_version} installation failed"
+        return 1
+    fi
+
+    echo "Python ${target_version} installed at: ${installed_path}"
+    "${installed_path}" --version
+}
+
+verify_installation() {
+    emulate -L zsh
+
+    local target_version="${1}"
+
+    echo ""
+    echo "=== Installation Verification ==="
+    echo "UV:     $(uv --version 2>/dev/null || echo 'NOT FOUND')"
+    echo "Python: $(uv python find "${target_version}" 2>/dev/null || echo 'NOT FOUND')"
+    echo ""
+}
+
+main() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    echo "Target Python version: ${PYTHON_TARGET_VERSION}"
+    echo ""
+
+    install_uv
+    install_python_via_uv "${PYTHON_TARGET_VERSION}"
+    verify_installation "${PYTHON_TARGET_VERSION}"
+
+    echo "Python installation complete"
+    echo ""
+    echo "Quick start:"
+    echo "  uv venv                    # Create virtual environment"
+    echo "  uv sync                    # Install dependencies from pyproject.toml"
+    echo "  uv run python -m pytest    # Run tests"
+}
+
+main "$@"

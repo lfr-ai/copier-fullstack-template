@@ -1,0 +1,47 @@
+[tox]
+envlist = py{{ python_version | replace('.', '') }},lint,typecheck,security
+requires = tox-uv>=1.16
+
+[testenv]
+runner = uv-venv-lock-runner
+extras = dev
+commands =
+    pytest tests/unit tests/property -v --tb=short -q {posargs}
+
+[testenv:integration]
+runner = uv-venv-lock-runner
+extras = dev
+commands =
+    pytest tests/integration -v --tb=short {posargs}
+{% if use_playwright %}
+[testenv:e2e]
+runner = uv-venv-lock-runner
+extras = dev
+commands =
+    playwright install --with-deps chromium
+    pytest tests/e2e -v --tb=short {posargs}
+{% endif %}
+[testenv:lint]
+runner = uv-venv-lock-runner
+extras = dev
+commands =
+    ruff check src/ tests/
+    ruff format --check src/ tests/
+
+[testenv:typecheck]
+runner = uv-venv-lock-runner
+extras = dev
+commands =
+    python -m pyright src/
+
+[testenv:security]
+runner = uv-venv-lock-runner
+extras = dev
+commands =
+    ruff check --select S src/
+
+[testenv:coverage]
+runner = uv-venv-lock-runner
+extras = dev
+commands =
+    pytest tests/unit tests/property --cov --cov-report=html --cov-report=term-missing {posargs}

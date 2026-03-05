@@ -1,0 +1,81 @@
+# Contributing to {{ project_name }}
+
+## Getting Started
+
+1. Clone the repository
+2. Run `task setup` to install all dependencies
+3. Run `task dev` to start the development servers
+
+## Development Workflow
+
+### Branch Naming
+
+- `feature/<description>` for new features
+- `fix/<description>` for bug fixes
+- `refactor/<description>` for code improvements
+- `docs/<description>` for documentation changes
+
+### Commit Messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+```
+
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
+
+### Pre-commit Hooks
+
+Pre-commit hooks run automatically on `git commit`. Install with:
+
+```bash
+pre-commit install
+pre-commit install --hook-type commit-msg
+```
+
+## Code Quality
+
+### Backend
+
+```bash
+task backend:lint       # Run ruff linter
+task backend:format     # Auto-format with ruff
+task backend:test       # Run test suite via tox
+```
+
+### Frontend
+
+```bash
+task frontend:lint      # Run eslint
+task frontend:format    # Auto-format with prettier
+task frontend:test      # Run vitest unit tests
+```
+
+## Testing
+
+### Backend Tests
+
+- Unit tests go in `tests/unit/`
+- Integration tests go in `tests/integration/`
+- Property-based tests go in `tests/property/`
+- Run with: `task backend:test`
+
+### Frontend Tests
+
+- Unit tests go in `frontend/tests/`
+- Run with: `task frontend:test`
+{% if use_playwright %}
+- E2E tests go in `tests/e2e/`
+- Run with: `task test:e2e`
+{% endif %}
+
+## Pull Request Checklist
+
+- [ ] Tests pass locally
+- [ ] Linters pass with no warnings
+- [ ] Type checks pass
+- [ ] Documentation updated if needed
+- [ ] CHANGELOG.md updated

@@ -1,0 +1,47 @@
+version: "3"
+
+tasks:
+  up:
+    desc: "Start all services"
+    cmds:
+      - {{ container_runtime }} compose up -d
+
+  down:
+    desc: "Stop all services"
+    cmds:
+      - {{ container_runtime }} compose down
+
+  restart:
+    desc: "Restart all services"
+    cmds:
+      - {{ container_runtime }} compose restart
+
+  logs:
+    desc: "Follow logs"
+    cmds:
+      - {{ container_runtime }} compose logs -f {{.CLI_ARGS}}
+
+  ps:
+    desc: "List running services"
+    cmds:
+      - {{ container_runtime }} compose ps
+
+  build:
+    desc: "Build all container images"
+    cmds:
+      - {{ container_runtime }} compose build
+
+  build:clean:
+    desc: "Build without cache"
+    cmds:
+      - {{ container_runtime }} compose build --no-cache
+
+  clean:
+    desc: "Stop and remove containers"
+    cmds:
+      - {{ container_runtime }} compose down --remove-orphans
+
+  clean:volumes:
+    desc: "Stop and remove containers + volumes"
+    cmds:
+      - {{ container_runtime }} compose down --volumes --remove-orphans

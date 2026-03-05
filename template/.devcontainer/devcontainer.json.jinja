@@ -1,0 +1,31 @@
+{
+  "name": "{{ project_name }} Dev Container",
+  "dockerComposeFile": "compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [8000, 3000{% if use_redis %}, 6379{% endif %}],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "esbenp.prettier-vscode",
+        "task.vscode-task",
+        "GitHub.copilot"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true
+        }
+      }
+    }
+  },
+  "postCreateCommand": "zsh scripts/setup.zsh",
+  "remoteUser": "vscode"
+}

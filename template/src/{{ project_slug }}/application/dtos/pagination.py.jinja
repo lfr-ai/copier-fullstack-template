@@ -1,0 +1,32 @@
+"""Pagination parameters DTO."""
+
+from __future__ import annotations
+
+from typing import Annotated
+
+from pydantic import Field
+
+from {{ project_slug }}.application.dtos.base import BaseDTO
+
+
+DEFAULT_PAGE_SIZE: int = 20
+MAX_PAGE_SIZE: int = 100
+
+
+class PaginationParams(BaseDTO):
+    """Query parameters for paginated endpoints."""
+
+    offset: Annotated[
+        int,
+        Field(default=0, ge=0, description="Number of records to skip", examples=[0, 20]),
+    ]
+    limit: Annotated[
+        int,
+        Field(
+            default=DEFAULT_PAGE_SIZE,
+            gt=0,
+            le=MAX_PAGE_SIZE,
+            description="Maximum records per page",
+            examples=[20, 50],
+        ),
+    ]

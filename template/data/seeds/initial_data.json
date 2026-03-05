@@ -1,0 +1,9 @@
+{
+  "users": [
+    {
+      "email": "admin@example.com",
+      "display_name": "Admin User",
+      "is_active": true
+    }
+  ]
+}

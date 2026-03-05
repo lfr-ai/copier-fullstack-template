@@ -1,0 +1,56 @@
+# Release Process  {{ project_name }}
+
+This project follows [Semantic Versioning 2.0.0](https://semver.org/).
+
+---
+
+## Version Format
+
+```
+MAJOR.MINOR.PATCH
+```
+
+- **MAJOR**: Incompatible API changes
+- **MINOR**: Backwards-compatible new features
+- **PATCH**: Backwards-compatible bug fixes
+
+---
+
+## Release Checklist
+
+1. Ensure all tests pass: `task test`
+2. Update `CHANGELOG.md`  move items from `[Unreleased]` to `[X.Y.Z]`
+3. Bump version:
+   ```zsh
+   uv run cz bump
+   ```
+4. Push the tag:
+   ```zsh
+   git push origin main --tags
+   ```
+5. CI automatically creates a GitHub Release from the tag.
+
+---
+
+## Changelog Maintenance
+
+Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+
+### Categories
+
+- **Added**  new features
+- **Changed**  changes in existing functionality
+- **Deprecated**  soon-to-be removed features
+- **Removed**  removed features
+- **Fixed**  bug fixes
+- **Security**  vulnerability fixes
+
+---
+
+## Hotfix Process
+
+1. Branch from the release tag: `git checkout -b hotfix/X.Y.Z+1 vX.Y.Z`
+2. Apply fix and add tests
+3. Bump patch version
+4. Merge back to `main`
+5. Tag and release

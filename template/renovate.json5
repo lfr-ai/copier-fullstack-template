@@ -1,0 +1,31 @@
+{
+  "": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":automergeMinor",
+    "schedule:weekends"
+  ],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "matchManagers": ["pip_requirements", "pep621"],
+      "groupName": "python dependencies",
+      "automerge": true
+    },
+    {
+      "matchManagers": ["npm"],
+      "groupName": "frontend dependencies",
+      "automerge": true
+    },
+    {
+      "matchManagers": ["docker-compose", "dockerfile"],
+      "groupName": "container images",
+      "automerge": false
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ]
+}

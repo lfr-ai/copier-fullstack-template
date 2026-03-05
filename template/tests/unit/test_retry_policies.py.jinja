@@ -1,0 +1,20 @@
+"""Unit tests for retry policy configuration."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.utils.retry_policies import (
+    API_RETRY_ATTEMPTS,
+    HTTP_RETRY_ATTEMPTS,
+)
+
+
+class TestRetryPolicies:
+    """Test suite for retry policy constants."""
+
+    def test_http_retry_attempts_positive(self) -> None:
+        """Verify HTTP retry attempts is positive."""
+        assert HTTP_RETRY_ATTEMPTS > 0
+
+    def test_api_retry_attempts_exceeds_http(self) -> None:
+        """Verify API retry has more attempts than HTTP."""
+        assert API_RETRY_ATTEMPTS >= HTTP_RETRY_ATTEMPTS

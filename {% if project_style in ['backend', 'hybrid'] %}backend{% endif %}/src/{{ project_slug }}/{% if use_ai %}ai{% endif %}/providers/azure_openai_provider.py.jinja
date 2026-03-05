@@ -1,0 +1,117 @@
+"""Azure OpenAI provider implementation for the completion service."""
+
+from __future__ import annotations
+
+import logging
+from typing import Final
+
+from {{ project_slug }}.ai.models import CompletionRequest, CompletionResponse
+from {{ project_slug }}.ai.providers.base import BaseProvider
+from {{ project_slug }}.core.exceptions import ExternalServiceError
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
+
+_DEFAULT_API_VERSION: Final[str] = "2025-01-01-preview"
+_DEFAULT_TIMEOUT: Final[float] = 60.0
+
+
+class AzureOpenAIProvider(BaseProvider):
+    """Provider backed by Azure OpenAI Service.
+
+    Attributes:
+        _endpoint: Azure OpenAI endpoint URL.
+        _api_key: Azure OpenAI API key.
+        _api_version: Azure OpenAI API version.
+        _deployment: Deployment name for the model.
+        _timeout: Request timeout in seconds.
+    """
+
+    __slots__ = ("_api_key", "_api_version", "_deployment", "_endpoint", "_timeout")
+
+    def __init__(
+        self,
+        *,
+        endpoint: str,
+        api_key: str,
+        deployment: str,
+        api_version: str = _DEFAULT_API_VERSION,
+        timeout: float = _DEFAULT_TIMEOUT,
+    ) -> None:
+        self._endpoint = endpoint
+        self._api_key = api_key
+        self._deployment = deployment
+        self._api_version = api_version
+        self._timeout = timeout
+
+    async def complete(self, request: CompletionRequest) -> CompletionResponse:
+        """Send completion request to Azure OpenAI.
+
+        Args:
+            request: Structured completion request.
+
+        Returns:
+            CompletionResponse: Completion with usage statistics.
+
+        Raises:
+            ExternalServiceError: When Azure OpenAI call fails.
+        """
+        try:
+            from openai import AsyncAzureOpenAI
+
+            client = AsyncAzureOpenAI(
+                azure_endpoint=self._endpoint,
+                api_key=self._api_key,
+                api_version=self._api_version,
+                timeout=self._timeout,
+            )
+            response = await client.chat.completions.create(
+                model=self._deployment,
+                messages=[{"role": m.role, "content": m.content} for m in request.messages],
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                stop=request.stop_sequences or None,
+            )
+            choice = response.choices[0]
+            usage = response.usage
+
+            logger.info(
+                "Azure OpenAI completion: deployment=%s, tokens=%d",
+                self._deployment,
+                usage.total_tokens if usage else 0,
+            )
+
+            return CompletionResponse(
+                content=choice.message.content or "",
+                model=self._deployment,
+                prompt_tokens=usage.prompt_tokens if usage else 0,
+                completion_tokens=usage.completion_tokens if usage else 0,
+                total_tokens=usage.total_tokens if usage else 0,
+                finish_reason=choice.finish_reason or "stop",
+            )
+        except Exception as exc:
+            logger.error("Azure OpenAI completion failed: %s", exc, exc_info=True)
+            raise ExternalServiceError(f"Azure OpenAI error: {exc}") from exc
+
+    async def health_check(self) -> bool:
+        """Verify connectivity to Azure OpenAI Service.
+
+        Returns:
+            bool: True if Azure OpenAI is reachable.
+        """
+        try:
+            from openai import AsyncAzureOpenAI
+
+            client = AsyncAzureOpenAI(
+                azure_endpoint=self._endpoint,
+                api_key=self._api_key,
+                api_version=self._api_version,
+                timeout=self._timeout,
+            )
+            await client.models.list()
+            return True
+        except Exception:
+            logger.warning("Azure OpenAI health check failed", exc_info=True)
+            return False
+
+
+__all__ = ["AzureOpenAIProvider"]

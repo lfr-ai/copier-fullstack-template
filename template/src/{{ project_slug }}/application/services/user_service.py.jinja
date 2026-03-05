@@ -1,0 +1,69 @@
+"""User application service for orchestrating user operations."""
+
+from __future__ import annotations
+
+import logging
+
+from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
+from {{ project_slug }}.core.entities.user import User
+from {{ project_slug }}.core.events.user_events import UserCreated
+from {{ project_slug }}.core.interfaces.repository import Repository
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+
+logger = logging.getLogger(__name__)
+
+
+class UserService:
+    """Application service for user management.
+
+    Orchestrates user creation, retrieval, and lifecycle
+    operations through repository and unit of work patterns.
+    """
+
+    def __init__(
+        self,
+        user_repository: Repository[User],
+        uow: UnitOfWork,
+    ) -> None:
+        """Initialize user service.
+
+        Args:
+            user_repository: Repository for user persistence.
+            uow: Unit of work for transactional boundaries.
+        """
+        self._repo = user_repository
+        self._uow = uow
+
+    async def create_user(self, dto: CreateUserDTO) -> UserDTO:
+        """Create new user from DTO.
+
+        Args:
+            dto: User creation data transfer object.
+
+        Returns:
+            Created user as DTO.
+        """
+        user = User(email=dto.email, display_name=dto.display_name)
+        user.register_event(UserCreated(user_id=user.id, email=user.email))
+
+        async with self._uow:
+            created = await self._repo.add(user)
+            await self._uow.commit()
+
+        logger.info("Created user %s with email %s", created.id, created.email)
+        return UserDTO.model_validate(created, from_attributes=True)
+
+    async def get_user(self, user_id: str) -> UserDTO | None:
+        """Retrieve user by identifier.
+
+        Args:
+            user_id: Unique user identifier.
+
+        Returns:
+            User DTO or None if not found.
+        """
+        user = await self._repo.get_by_id(user_id)
+        if user is None:
+            return None
+        return UserDTO.model_validate(user, from_attributes=True)

@@ -1,0 +1,31 @@
+"""Base application service with common patterns."""
+
+from __future__ import annotations
+
+import logging
+from typing import Generic, TypeVar
+
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+
+logger = logging.getLogger(__name__)
+ResultT = TypeVar("ResultT")
+
+
+class BaseService(Generic[ResultT]):
+    """Base service providing unit of work and logging.
+
+    All application services should inherit from this
+    to get consistent transactional behavior.
+    """
+
+    def __init__(self, uow: UnitOfWork) -> None:
+        """Initialize service with unit of work.
+
+        Args:
+            uow: Unit of work for transactional boundaries.
+        """
+        self._uow = uow
+        self._logger = logging.getLogger(
+            f"{__name__}.{self.__class__.__name__}"
+        )

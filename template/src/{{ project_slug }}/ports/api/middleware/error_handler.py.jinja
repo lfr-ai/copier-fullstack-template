@@ -1,0 +1,66 @@
+"""Global error handler middleware for FastAPI."""
+
+from __future__ import annotations
+
+import logging
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from {{ project_slug }}.core.exceptions.base import (
+    AuthorizationError,
+    ConflictError,
+    DomainError,
+    NotFoundError,
+)
+
+logger = logging.getLogger(__name__)
+HTTP_NOT_FOUND = 404
+HTTP_CONFLICT = 409
+HTTP_FORBIDDEN = 403
+HTTP_UNPROCESSABLE = 422
+HTTP_INTERNAL_ERROR = 500
+
+
+def register_error_handlers(app: FastAPI) -> None:
+    """Register global exception handlers on FastAPI app.
+
+    Args:
+        app: FastAPI application instance.
+    """
+
+    @app.exception_handler(NotFoundError)
+    async def _not_found_handler(request: Request, exc: NotFoundError) -> JSONResponse:
+        return JSONResponse(
+            status_code=HTTP_NOT_FOUND,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(ConflictError)
+    async def _conflict_handler(request: Request, exc: ConflictError) -> JSONResponse:
+        return JSONResponse(
+            status_code=HTTP_CONFLICT,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(AuthorizationError)
+    async def _auth_handler(request: Request, exc: AuthorizationError) -> JSONResponse:
+        return JSONResponse(
+            status_code=HTTP_FORBIDDEN,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(DomainError)
+    async def _domain_handler(request: Request, exc: DomainError) -> JSONResponse:
+        return JSONResponse(
+            status_code=HTTP_UNPROCESSABLE,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(Exception)
+    async def _generic_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled exception on %s %s", request.method, request.url)
+        return JSONResponse(
+            status_code=HTTP_INTERNAL_ERROR,
+            content={"detail": "Internal server error"},
+        )

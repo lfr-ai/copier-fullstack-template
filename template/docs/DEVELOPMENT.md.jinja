@@ -1,0 +1,106 @@
+# Development Guide
+
+## Prerequisites
+
+- Python >= {{ python_version }} (managed via UV)
+- Node.js >= {{ node_version }} with pnpm
+- [Task](https://taskfile.dev/) (task runner)
+- {{ container_runtime | title }} and {{ container_runtime | title }} Compose
+
+## Quick Start
+
+```bash
+# Install all dependencies
+task install
+
+# Start development servers
+task dev
+```
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+Key variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `{{ project_slug | upper }}_ENVIRONMENT` | Environment name | `local` |
+| `{{ project_slug | upper }}_DEBUG` | Enable debug mode | `false` |
+| `{{ project_slug | upper }}_DATABASE_URL` | Database connection URL | *(see .env.example)* |
+{% if use_redis %}
+| `{{ project_slug | upper }}_REDIS_URL` | Redis connection URL | `redis://localhost:6379/0` |
+{% endif %}
+
+## Backend Development
+
+```bash
+task backend:install    # Install Python dependencies
+task backend:dev        # Start backend server
+task backend:lint       # Lint with ruff
+task backend:format     # Format with ruff
+task backend:test       # Run tests via tox
+```
+
+## Frontend Development
+
+```bash
+task frontend:install   # Install npm dependencies
+task frontend:dev       # Start dev server with HMR
+task frontend:build     # Production build
+task frontend:test      # Run unit tests
+task frontend:lint      # Lint with eslint
+task frontend:format    # Format with prettier
+```
+
+## Docker / Containers
+
+```bash
+task docker:up          # Start all services
+task docker:down        # Stop all services
+task docker:build       # Build images
+task docker:logs        # View service logs
+```
+
+## Database
+
+```bash
+task backend:db:upgrade     # Run migrations
+task backend:db:migrate     # Create new migration
+task backend:db:seed        # Seed initial data
+```
+
+## Testing
+
+```bash
+task test               # Run all tests
+task backend:test       # Backend tests only
+task frontend:test      # Frontend tests only
+```
+
+## Code Quality
+
+```bash
+task lint               # Lint all code
+task format             # Format all code
+task typecheck          # Run type checking
+```
+
+## pre-commit Hooks
+
+Install hooks:
+
+```bash
+pre-commit install
+pre-commit install --hook-type commit-msg
+```
+
+Run all hooks manually:
+
+```bash
+pre-commit run --all-files
+```

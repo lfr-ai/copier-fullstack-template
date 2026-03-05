@@ -1,0 +1,72 @@
+x-common-env: &common-env
+  APP_ENVIRONMENT: local
+  {{ project_slug | upper }}_DATABASE_URL: {{ '' }}
+  {{ project_slug | upper }}_SECRET_KEY: {{ '' }}
+{%- if use_redis %}
+  {{ project_slug | upper }}_REDIS_URL: {{ '' }}
+{%- endif %}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+    volumes:
+      - ./src:/app/src:ro
+{%- if use_redis %}
+    depends_on:
+      redis:
+        condition: service_healthy
+{%- endif %}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: ../Containerfile
+      target: builder
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/frontend/src:ro
+    command: ["pnpm", "dev", "--host"]
+{%- if use_redis %}
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+{%- endif %}
+{%- if use_celery %}
+
+  worker:
+    build:
+      context: .
+      dockerfile: Containerfile
+    environment:
+      <<: *common-env
+    command: ["celery", "-A", "{{ project_slug }}.config.celery:celery_app", "worker", "--loglevel=info"]
+    depends_on:
+      - redis
+{%- endif %}
+{%- if use_redis %}
+
+volumes:
+  redis-data:
+{%- endif %}
