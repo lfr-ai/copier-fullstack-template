@@ -19,7 +19,7 @@ tasks:
   logs:
     desc: "Follow logs"
     cmds:
-      - {{ container_runtime }} compose logs -f {{.CLI_ARGS}}
+      - {{ container_runtime }} compose logs -f {% raw %}{{.CLI_ARGS}}{% endraw %}
 
   ps:
     desc: "List running services"

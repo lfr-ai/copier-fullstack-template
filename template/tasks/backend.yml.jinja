@@ -26,7 +26,7 @@ tasks:
   test:
     desc: "Run backend tests via tox"
     cmds:
-      - uv run tox -e py{{ python_version | replace('.', '') }} -- {{.CLI_ARGS}}
+      - uv run tox -e py{{ python_version | replace('.', '') }} -- {% raw %}{{.CLI_ARGS}}{% endraw %}
 
   test:unit:
     desc: "Run unit tests only"
