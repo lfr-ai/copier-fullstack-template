@@ -100,7 +100,7 @@ tasks:
   db:revision:
     desc: "Create new Alembic migration"
     cmds:
-      - uv run alembic revision --autogenerate -m "{{.CLI_ARGS}}"
+      - uv run alembic revision --autogenerate -m "{% raw %}{{.CLI_ARGS}}{% endraw %}"
 
   db:downgrade:
     desc: "Rollback last migration"
