@@ -2,17 +2,28 @@
 
 from __future__ import annotations
 
-from tenacity import retry, stop_after_attempt, wait_exponential
+import logging
+from typing import Final
 
-HTTP_RETRY_ATTEMPTS = 3
-HTTP_BACKOFF_MULTIPLIER = 1.5
-HTTP_BACKOFF_MIN = 2
-HTTP_BACKOFF_MAX = 15
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
-API_RETRY_ATTEMPTS = 5
-API_BACKOFF_MULTIPLIER = 2.0
-API_BACKOFF_MIN = 3
-API_BACKOFF_MAX = 30
+logger = logging.getLogger(__name__)
+
+HTTP_RETRY_ATTEMPTS: Final[int] = 3
+HTTP_BACKOFF_MULTIPLIER: Final[float] = 1.5
+HTTP_BACKOFF_MIN: Final[float] = 2.0
+HTTP_BACKOFF_MAX: Final[float] = 15.0
+
+API_RETRY_ATTEMPTS: Final[int] = 5
+API_BACKOFF_MULTIPLIER: Final[float] = 2.0
+API_BACKOFF_MIN: Final[float] = 3.0
+API_BACKOFF_MAX: Final[float] = 30.0
 
 http_retry = retry(
     stop=stop_after_attempt(HTTP_RETRY_ATTEMPTS),
@@ -22,8 +33,10 @@ http_retry = retry(
         max=HTTP_BACKOFF_MAX,
     ),
     reraise=True,
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    retry=retry_if_exception_type((ConnectionError, TimeoutError)),
 )
-"""Retry decorator for general HTTP operations."""
+"""Retry decorator for general HTTP operations with transient error filtering."""
 
 api_retry = retry(
     stop=stop_after_attempt(API_RETRY_ATTEMPTS),
@@ -33,5 +46,7 @@ api_retry = retry(
         max=API_BACKOFF_MAX,
     ),
     reraise=True,
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
 )
-"""Retry decorator for API calls with longer timeouts."""
+"""Retry decorator for API calls with longer timeouts and broader error matching."""

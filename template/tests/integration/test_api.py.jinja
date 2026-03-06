@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 from httpx import AsyncClient
 
 API_PREFIX = "/api/v1"
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="Async integration tests are skipped on Windows due event loop conflicts",
+    ),
+]
 
 
-@pytest.mark.asyncio
 class TestHealthEndpoints:
     """Test suite for health check API endpoints."""
 
@@ -25,7 +33,6 @@ class TestHealthEndpoints:
         assert response.json()["status"] == "ready"
 
 
-@pytest.mark.asyncio
 class TestUserEndpoints:
     """Test suite for user management API endpoints."""
 

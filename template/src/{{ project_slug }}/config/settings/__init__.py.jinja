@@ -27,7 +27,7 @@ def get_settings() -> BaseAppSettings:
     Returns:
         Configured application settings.
     """
-    env_name = os.getenv("APP_ENVIRONMENT", "local").upper()
+    env_name = os.getenv("{{ project_slug | upper }}_ENVIRONMENT", "local").upper()
     environment = Environment(env_name.lower())
     settings_class = _SETTINGS_MAP.get(environment, LocalSettings)
     return settings_class()

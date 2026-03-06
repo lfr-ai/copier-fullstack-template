@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING, Final
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import Response
 
-HEADER_REQUEST_ID = "X-Request-ID"
+if TYPE_CHECKING:
+    from starlette.requests import Request
+    from starlette.responses import Response
+
+HEADER_REQUEST_ID: Final[str] = "X-Request-ID"
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):

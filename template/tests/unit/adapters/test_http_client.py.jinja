@@ -1,0 +1,61 @@
+"""Unit tests for HTTP client adapter."""
+
+from __future__ import annotations
+
+import pytest
+import httpx
+import respx
+
+from {{ project_slug }}.adapters.external.http_client import HTTPClientAdapter
+
+
+@pytest.mark.asyncio
+class TestHTTPClientAdapter:
+    """Test suite for async HTTP client adapter."""
+
+    @respx.mock
+    async def test_get_successful(self) -> None:
+        """Verify GET request returns response on success."""
+        respx.get("https://api.example.com/data").mock(
+            return_value=httpx.Response(200, json={"status": "ok"}),
+        )
+        adapter = HTTPClientAdapter(base_url="https://api.example.com")
+        response = await adapter.get("/data")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+        await adapter.close()
+
+    @respx.mock
+    async def test_post_successful(self) -> None:
+        """Verify POST request returns response on success."""
+        respx.post("https://api.example.com/items").mock(
+            return_value=httpx.Response(201, json={"id": 1}),
+        )
+        adapter = HTTPClientAdapter(base_url="https://api.example.com")
+        response = await adapter.post("/items", json={"name": "test"})
+        assert response.status_code == 201
+        await adapter.close()
+
+    @respx.mock
+    async def test_get_raises_on_error(self) -> None:
+        """Verify GET raises HTTPStatusError on server error."""
+        respx.get("https://api.example.com/fail").mock(
+            return_value=httpx.Response(500),
+        )
+        adapter = HTTPClientAdapter(base_url="https://api.example.com")
+        with pytest.raises(httpx.HTTPStatusError):
+            await adapter.get("/fail")
+        await adapter.close()
+
+    async def test_custom_headers_accepted(self) -> None:
+        """Verify adapter construction with custom headers does not raise."""
+        adapter = HTTPClientAdapter(
+            base_url="https://api.example.com",
+            headers={"Authorization": "Bearer test"},
+        )
+        await adapter.close()
+
+    async def test_custom_timeout_accepted(self) -> None:
+        """Verify adapter construction with custom timeout does not raise."""
+        adapter = HTTPClientAdapter(base_url="", timeout=10.0)
+        await adapter.close()

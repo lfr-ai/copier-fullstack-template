@@ -1,5 +1,7 @@
 """Status enumerations for domain entities."""
 
+from __future__ import annotations
+
 from enum import StrEnum, auto, unique
 
 

@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
+from typing import Final
+
 from fastapi import APIRouter, HTTPException
 
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
 
 router = APIRouter()
-HTTP_NOT_FOUND = 404
+HTTP_NOT_FOUND: Final[int] = 404
+_FIRST_USER_ID: int = 1
+_USERS: dict[int, UserDTO] = {}
+
+
+def _next_user_id() -> int:
+    """Return next in-memory user identifier."""
+    if not _USERS:
+        return _FIRST_USER_ID
+    return max(_USERS) + 1
 
 
 @router.post("/users", response_model=UserDTO, status_code=201)
@@ -20,13 +31,15 @@ async def create_user(payload: CreateUserDTO) -> UserDTO:
     Returns:
         Created user data.
     """
-    # TODO: Inject service via Depends
-    return UserDTO(
-        id=1,
+    user_id = _next_user_id()
+    user = UserDTO(
+        id=str(user_id),
         email=payload.email,
         display_name=payload.display_name,
         is_active=True,
     )
+    _USERS[user_id] = user
+    return user
 
 
 @router.get("/users/{user_id}", response_model=UserDTO)
@@ -42,5 +55,10 @@ async def get_user(user_id: int) -> UserDTO:
     Raises:
         HTTPException: If user not found.
     """
-    # TODO: Inject service via Depends
-    raise HTTPException(status_code=HTTP_NOT_FOUND, detail=f"User {user_id} not found")
+    user = _USERS.get(user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=HTTP_NOT_FOUND,
+            detail="User not found",
+        )
+    return user

@@ -4,21 +4,26 @@
 from __future__ import annotations
 
 import pytest
-from playwright.async_api import Page
+from playwright.sync_api import Page
+
+pytestmark = pytest.mark.e2e
 
 
-@pytest.mark.asyncio
 class TestSmoke:
     """Smoke tests verifying basic application flow."""
 
-    async def test_home_page_loads(self, page: Page) -> None:
+    def test_home_page_loads(self, page: Page, base_url: str | None) -> None:
         """Verify home page renders successfully."""
-        await page.goto("/")
-        assert await page.title() != ""
+        if not base_url:
+            pytest.skip("base_url is not configured")
+        page.goto(f"{base_url}/")
+        assert page.title() != ""
 
-    async def test_api_docs_accessible(self, page: Page) -> None:
+    def test_api_docs_accessible(self, page: Page, base_url: str | None) -> None:
         """Verify API documentation page loads."""
-        response = await page.goto("/api/docs")
+        if not base_url:
+            pytest.skip("base_url is not configured")
+        response = page.goto(f"{base_url}/api/docs")
         assert response is not None
         assert response.status == 200
 {%- endif %}

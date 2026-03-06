@@ -68,7 +68,7 @@ tasks:
   typecheck:
     desc: "Type check Python code"
     cmds:
-      - uv run pyright src/
+      - uv run ty check src/
 
   security:
     desc: "Security scan"
@@ -78,12 +78,12 @@ tasks:
   worker:
     desc: "Start Celery worker"
     cmds:
-      - uv run celery -A config.celery.celery_app worker --loglevel=info
+      - uv run celery -A {{ project_slug }}.config.celery:celery_app worker --loglevel=info
 
   beat:
     desc: "Start Celery beat scheduler"
     cmds:
-      - uv run celery -A config.celery.celery_app beat --loglevel=info
+      - uv run celery -A {{ project_slug }}.config.celery:celery_app beat --loglevel=info
 {% endif %}
   clean:
     desc: "Clean Python build artifacts"

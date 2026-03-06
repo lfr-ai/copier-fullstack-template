@@ -39,19 +39,26 @@ select = [
     "RUF",    # ruff-specific
 ]
 ignore = [
+    "I001",     # Import sorting noise handled separately when desired
     "E501",     # Line too long (handled by formatter)
     "TRY003",   # Long exception messages
     "ISC001",   # Conflicts with formatter
+    "TC001",    # Type-checking import placement (application imports)
+    "TC002",    # Type-checking import placement (third-party imports)
+    "TC003",    # Type-checking import placement (stdlib imports)
+    "UP046",    # PEP 695 generic type parameter syntax migration (classes)
+    "UP047",    # PEP 695 generic type parameter syntax migration (functions)
 ]
 
 [lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "ARG", "PLR2004"]
 "scripts/**/*.py" = ["T20"]
+"**/__init__.py" = ["I001"]
 
 [lint.isort]
 known-first-party = ["{{ project_slug }}"]
 force-single-line = false
-lines-after-imports = 2
+lines-after-imports = 1
 
 [lint.pylint]
 max-args = 8

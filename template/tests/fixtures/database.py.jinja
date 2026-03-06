@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator
 
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from {{ project_slug }}.adapters.persistence.repositories.user_repository import UserRepository
 
 
 @pytest_asyncio.fixture
-async def user_repository(session: AsyncSession) -> AsyncGenerator[UserRepository, None]:
+async def user_repository(session: AsyncSession) -> AsyncIterator[UserRepository]:
     """Create user repository with test session.
 
     Args:

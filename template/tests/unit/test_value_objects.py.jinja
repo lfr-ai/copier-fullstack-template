@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from {{ project_slug }}.core.exceptions.validation import ValidationError
 from {{ project_slug }}.core.value_objects.email import Email
 
 
@@ -16,8 +17,8 @@ class TestEmailValueObject:
         assert email.value == "user@example.com"
 
     def test_invalid_email_raises(self) -> None:
-        """Verify invalid email raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid email"):
+        """Verify invalid email raises ValidationError."""
+        with pytest.raises(ValidationError, match="Invalid email"):
             Email(value="not-an-email")
 
     def test_email_immutability(self) -> None:
