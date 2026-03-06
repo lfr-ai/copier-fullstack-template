@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncGenerator, Generator
+import sys
+from collections.abc import AsyncIterator
 
 import pytest
 import pytest_asyncio
@@ -17,19 +18,19 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
 @pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """Create event loop for entire test session.
+def event_loop_policy() -> asyncio.AbstractEventLoopPolicy:
+    """Provide event loop policy for test session.
 
-    Yields:
-        Event loop instance.
+    Returns:
+        Event loop policy for current platform.
     """
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+    if sys.platform == "win32":
+        return asyncio.WindowsSelectorEventLoopPolicy()
+    return asyncio.get_event_loop_policy()
 
 
 @pytest_asyncio.fixture(scope="session")
-async def engine() -> AsyncGenerator[AsyncEngine, None]:
+async def engine() -> AsyncIterator[AsyncEngine]:
     """Create async test database engine.
 
     Yields:
@@ -45,7 +46,7 @@ async def engine() -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest_asyncio.fixture
-async def session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
     """Create async test database session with rollback.
 
     Args:
@@ -61,7 +62,7 @@ async def session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest_asyncio.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
+async def client() -> AsyncIterator[AsyncClient]:
     """Create async HTTP test client.
 
     Yields:

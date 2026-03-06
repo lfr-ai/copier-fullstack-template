@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from {{ project_slug }}.core.entities.base import DomainEvent, _generate_id, _utcnow
-
-from datetime import datetime
+from {{ project_slug }}.core.entities.base import DomainEvent
 
 
 @dataclass(frozen=True, slots=True)

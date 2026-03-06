@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from itertools import count
+
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
 
-_COUNTER = 0
+_COUNTER = count(start=1)
 
 
 def create_user_dto(
@@ -21,7 +23,6 @@ def create_user_dto(
     Returns:
         CreateUserDTO with test data.
     """
-    global _COUNTER
-    _COUNTER += 1
-    effective_email = email or f"testuser{_COUNTER}@example.com"
+    counter_value = next(_COUNTER)
+    effective_email = email or f"testuser{counter_value}@example.com"
     return CreateUserDTO(email=effective_email, display_name=display_name)

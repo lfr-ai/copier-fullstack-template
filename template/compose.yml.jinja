@@ -1,6 +1,10 @@
 x-common-env: &common-env
   APP_ENVIRONMENT: local
-  {{ project_slug | upper }}_DATABASE_URL: {{ '' }}
+{%- if database_backend == "postgresql" %}
+  {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/{{ project_slug }}
+{%- else %}
+  {{ project_slug | upper }}_DATABASE_URL: sqlite+aiosqlite:///./data/app.db
+{%- endif %}
   {{ project_slug | upper }}_SECRET_KEY: {{ '' }}
 {%- if use_redis %}
   {{ project_slug | upper }}_REDIS_URL: {{ '' }}
@@ -17,9 +21,15 @@ services:
       <<: *common-env
     volumes:
       - ./src:/app/src:ro
-{%- if use_redis %}
+{%- if use_redis or database_backend == "postgresql" %}
     depends_on:
+{%- endif %}
+{%- if use_redis %}
       redis:
+        condition: service_healthy
+{%- endif %}
+{%- if database_backend == "postgresql" %}
+      db:
         condition: service_healthy
 {%- endif %}
     healthcheck:
@@ -32,8 +42,6 @@ services:
   frontend:
     build:
       context: frontend
-      dockerfile: ../Containerfile
-      target: builder
     ports:
       - "3000:3000"
     volumes:
@@ -53,6 +61,24 @@ services:
       timeout: 3s
       retries: 5
 {%- endif %}
+{%- if database_backend == "postgresql" %}
+
+  db:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: {{ project_slug }}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d {{ project_slug }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+{%- endif %}
 {%- if use_celery %}
 
   worker:
@@ -62,11 +88,18 @@ services:
     environment:
       <<: *common-env
     command: ["celery", "-A", "{{ project_slug }}.config.celery:celery_app", "worker", "--loglevel=info"]
+{%- if use_redis %}
     depends_on:
       - redis
 {%- endif %}
-{%- if use_redis %}
+{%- endif %}
+{%- if use_redis or database_backend == "postgresql" %}
 
 volumes:
+{%- endif %}
+{%- if use_redis %}
   redis-data:
+{%- endif %}
+{%- if database_backend == "postgresql" %}
+  postgres-data:
 {%- endif %}

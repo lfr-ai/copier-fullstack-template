@@ -1,0 +1,47 @@
+"""Unit tests for structured logging factory."""
+
+from __future__ import annotations
+
+import logging
+
+from {{ project_slug }}.utils.logger_factory import configure_logging
+
+
+class TestLoggerFactory:
+    """Test suite for logging configuration."""
+
+    def test_configure_default_level(self) -> None:
+        """Verify default INFO log level is applied."""
+        configure_logging()
+        root = logging.getLogger()
+        assert root.level == logging.INFO
+
+    def test_configure_debug_level(self) -> None:
+        """Verify DEBUG log level is applied when specified."""
+        configure_logging(log_level="DEBUG")
+        root = logging.getLogger()
+        assert root.level == logging.DEBUG
+
+    def test_configure_warning_level(self) -> None:
+        """Verify WARNING log level is applied."""
+        configure_logging(log_level="WARNING")
+        root = logging.getLogger()
+        assert root.level == logging.WARNING
+
+    def test_handler_attached(self) -> None:
+        """Verify at least one handler is attached to root logger."""
+        configure_logging()
+        root = logging.getLogger()
+        assert len(root.handlers) >= 1
+
+    def test_json_output_mode(self) -> None:
+        """Verify JSON output mode does not raise."""
+        configure_logging(json_output=True)
+        root = logging.getLogger()
+        assert root.level == logging.INFO
+
+    def test_console_output_mode(self) -> None:
+        """Verify console output mode does not raise."""
+        configure_logging(json_output=False)
+        root = logging.getLogger()
+        assert len(root.handlers) >= 1

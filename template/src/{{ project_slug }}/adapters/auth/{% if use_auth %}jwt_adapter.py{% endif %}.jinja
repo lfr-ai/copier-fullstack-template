@@ -1,18 +1,18 @@
-{%- if use_auth %}
 """JWT authentication adapter."""
 
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Final
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 
 logger = logging.getLogger(__name__)
-ALGORITHM = "HS256"
+ALGORITHM: Final[str] = "HS256"
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,4 +100,3 @@ class JWTAdapter:
         except JWTError:
             logger.warning("Failed to decode JWT token")
             return None
-{%- endif %}
