@@ -1,0 +1,104 @@
+"""Unit tests for domain exception hierarchy."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.core.exceptions.base import (
+    AuthorizationError,
+    ConflictError,
+    DomainError,
+    NotFoundError,
+)
+
+
+class TestDomainError:
+    """Test suite for DomainError base exception."""
+
+    def test_domain_error_message(self) -> None:
+        """Verify error stores message."""
+        error = DomainError("something went wrong")
+        assert error.message == "something went wrong"
+        assert str(error) == "something went wrong"
+
+    def test_domain_error_default_code(self) -> None:
+        """Verify default error code."""
+        error = DomainError("test")
+        assert error.code == "DOMAIN_ERROR"
+
+    def test_domain_error_custom_code(self) -> None:
+        """Verify custom error code."""
+        error = DomainError("test", code="CUSTOM")
+        assert error.code == "CUSTOM"
+
+    def test_domain_error_is_exception(self) -> None:
+        """Verify DomainError is catchable as Exception."""
+        with pytest.raises(DomainError, match="test"):
+            raise DomainError("test")
+
+
+class TestNotFoundError:
+    """Test suite for NotFoundError."""
+
+    def test_not_found_error_message(self) -> None:
+        """Verify formatted error message."""
+        error = NotFoundError("User", "abc-123")
+        assert "User" in str(error)
+        assert "abc-123" in str(error)
+
+    def test_not_found_error_code(self) -> None:
+        """Verify error code is NOT_FOUND."""
+        error = NotFoundError("User", "abc-123")
+        assert error.code == "NOT_FOUND"
+
+    def test_not_found_stores_entity_info(self) -> None:
+        """Verify entity type and id are accessible."""
+        error = NotFoundError("Order", "order-1")
+        assert error.entity_type == "Order"
+        assert error.entity_id == "order-1"
+
+    def test_not_found_is_domain_error(self) -> None:
+        """Verify NotFoundError inherits DomainError."""
+        error = NotFoundError("User", "1")
+        assert isinstance(error, DomainError)
+
+
+class TestConflictError:
+    """Test suite for ConflictError."""
+
+    def test_conflict_error_message(self) -> None:
+        """Verify conflict error stores message."""
+        error = ConflictError("duplicate entry")
+        assert error.message == "duplicate entry"
+
+    def test_conflict_error_code(self) -> None:
+        """Verify error code is CONFLICT."""
+        error = ConflictError("test")
+        assert error.code == "CONFLICT"
+
+    def test_conflict_is_domain_error(self) -> None:
+        """Verify ConflictError inherits DomainError."""
+        assert issubclass(ConflictError, DomainError)
+
+
+class TestAuthorizationError:
+    """Test suite for AuthorizationError."""
+
+    def test_default_message(self) -> None:
+        """Verify default authorization error message."""
+        error = AuthorizationError()
+        assert error.message == "Insufficient permissions"
+
+    def test_custom_message(self) -> None:
+        """Verify custom authorization error message."""
+        error = AuthorizationError("Admin access required")
+        assert error.message == "Admin access required"
+
+    def test_authorization_error_code(self) -> None:
+        """Verify error code is FORBIDDEN."""
+        error = AuthorizationError()
+        assert error.code == "FORBIDDEN"
+
+    def test_authorization_is_domain_error(self) -> None:
+        """Verify AuthorizationError inherits DomainError."""
+        assert issubclass(AuthorizationError, DomainError)

@@ -1,5 +1,7 @@
 """Not found exception re-export."""
 
+from __future__ import annotations
+
 from {{ project_slug }}.core.exceptions.base import NotFoundError
 
-__all__ = ["NotFoundError"]
+__all__: list[str] = ["NotFoundError"]

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from typing import TYPE_CHECKING, Final
+
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-DEFAULT_RATE_LIMIT = "60/minute"
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
+DEFAULT_RATE_LIMIT: Final[str] = "60/minute"
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[DEFAULT_RATE_LIMIT])
 

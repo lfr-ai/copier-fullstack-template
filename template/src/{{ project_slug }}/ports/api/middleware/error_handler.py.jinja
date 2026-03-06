@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from {{ project_slug }}.core.exceptions.base import (
@@ -13,6 +13,9 @@ from {{ project_slug }}.core.exceptions.base import (
     DomainError,
     NotFoundError,
 )
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI, Request
 
 logger = logging.getLogger(__name__)
 HTTP_NOT_FOUND = 404
@@ -30,35 +33,38 @@ def register_error_handlers(app: FastAPI) -> None:
     """
 
     @app.exception_handler(NotFoundError)
-    async def _not_found_handler(request: Request, exc: NotFoundError) -> JSONResponse:
+    async def _not_found_handler(_request: Request, exc: NotFoundError) -> JSONResponse:
         return JSONResponse(
             status_code=HTTP_NOT_FOUND,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(ConflictError)
-    async def _conflict_handler(request: Request, exc: ConflictError) -> JSONResponse:
+    async def _conflict_handler(_request: Request, exc: ConflictError) -> JSONResponse:
         return JSONResponse(
             status_code=HTTP_CONFLICT,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(AuthorizationError)
-    async def _auth_handler(request: Request, exc: AuthorizationError) -> JSONResponse:
+    async def _auth_handler(
+        _request: Request,
+        exc: AuthorizationError,
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=HTTP_FORBIDDEN,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(DomainError)
-    async def _domain_handler(request: Request, exc: DomainError) -> JSONResponse:
+    async def _domain_handler(_request: Request, exc: DomainError) -> JSONResponse:
         return JSONResponse(
             status_code=HTTP_UNPROCESSABLE,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(Exception)
-    async def _generic_handler(request: Request, exc: Exception) -> JSONResponse:
+    async def _generic_handler(request: Request, _exc: Exception) -> JSONResponse:
         logger.exception("Unhandled exception on %s %s", request.method, request.url)
         return JSONResponse(
             status_code=HTTP_INTERNAL_ERROR,

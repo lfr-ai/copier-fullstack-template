@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from {{ project_slug }}.utils.retry_policies import (
+    API_BACKOFF_MAX,
+    API_BACKOFF_MIN,
     API_RETRY_ATTEMPTS,
+    HTTP_BACKOFF_MAX,
+    HTTP_BACKOFF_MIN,
+    HTTP_BACKOFF_MULTIPLIER,
     HTTP_RETRY_ATTEMPTS,
 )
 
@@ -18,3 +23,23 @@ class TestRetryPolicies:
     def test_api_retry_attempts_exceeds_http(self) -> None:
         """Verify API retry has more attempts than HTTP."""
         assert API_RETRY_ATTEMPTS >= HTTP_RETRY_ATTEMPTS
+
+    def test_backoff_multiplier_positive(self) -> None:
+        """Verify exponential backoff multiplier is positive."""
+        assert HTTP_BACKOFF_MULTIPLIER > 0
+
+    def test_http_backoff_min_less_than_max(self) -> None:
+        """Verify HTTP minimum wait is less than maximum wait."""
+        assert HTTP_BACKOFF_MIN < HTTP_BACKOFF_MAX
+
+    def test_api_backoff_min_less_than_max(self) -> None:
+        """Verify API minimum wait is less than maximum wait."""
+        assert API_BACKOFF_MIN < API_BACKOFF_MAX
+
+    def test_http_backoff_min_positive(self) -> None:
+        """Verify HTTP minimum backoff wait is positive."""
+        assert HTTP_BACKOFF_MIN > 0
+
+    def test_api_backoff_max_reasonable(self) -> None:
+        """Verify API maximum backoff wait is reasonable (under 60s)."""
+        assert API_BACKOFF_MAX <= 60

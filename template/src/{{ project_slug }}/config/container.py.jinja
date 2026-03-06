@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
 from {{ project_slug }}.adapters.messaging.memory_event_bus import MemoryEventBus
 from {{ project_slug }}.adapters.persistence.session import create_engine, create_session_factory
@@ -50,16 +52,11 @@ class Container:
         return MemoryEventBus()
 
 
-_container: Container | None = None
-
-
+@lru_cache(maxsize=1)
 def get_container() -> Container:
-    """Get or create singleton container.
+    """Get singleton container instance.
 
     Returns:
         Application dependency container.
     """
-    global _container
-    if _container is None:
-        _container = Container()
-    return _container
+    return Container()

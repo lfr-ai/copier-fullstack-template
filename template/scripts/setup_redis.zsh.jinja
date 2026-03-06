@@ -4,20 +4,21 @@ emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT
 
 # Start Redis for local development
-local CONTAINER_RUNTIME="{{ container_runtime }}"
-local REDIS_PORT=6379
-local CONTAINER_NAME="{{ project_slug }}-redis"
+
+CONTAINER_RUNTIME="{{ container_runtime }}"
+REDIS_PORT=6379
+CONTAINER_NAME="{{ project_slug }}-redis"
 
 echo "Starting Redis container..."
 
-if $CONTAINER_RUNTIME ps -a --format '{{ '{{.Names}}' }}' | grep -q "^${CONTAINER_NAME}$"; then
-    $CONTAINER_RUNTIME start $CONTAINER_NAME
+if "${CONTAINER_RUNTIME}" ps -a --format '{{ '{{.Names}}' }}' | grep -q "^${CONTAINER_NAME}$"; then
+    "${CONTAINER_RUNTIME}" start "${CONTAINER_NAME}"
 else
-    $CONTAINER_RUNTIME run -d \
-        --name $CONTAINER_NAME \
-        -p ${REDIS_PORT}:6379 \
+    "${CONTAINER_RUNTIME}" run -d \
+        --name "${CONTAINER_NAME}" \
+        -p "${REDIS_PORT}:6379" \
         redis:7-alpine
 fi
 
-echo "Redis running on port $REDIS_PORT"
+echo "Redis running on port ${REDIS_PORT}"
 {%- endif %}

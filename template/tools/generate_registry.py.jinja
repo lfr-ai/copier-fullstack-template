@@ -3,17 +3,92 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+from typing import Final
 
 
-REGISTRY_PATH = Path("data/naming_registry.json")
-OUTPUT_PY = Path("src/{{ project_slug }}/data/registry_constants.py")
+REGISTRY_PATH: Final[Path] = Path("data/naming_registry.json")
+OUTPUT_PY: Final[Path] = Path("src/{{ project_slug }}/data/registry_constants.py")
+
+logger = logging.getLogger(__name__)
+
+
+def _extract_orm_section(registry: dict[str, object]) -> dict[str, object]:
+    """Extract ORM section from registry data.
+
+    Args:
+        registry: Parsed naming registry.
+
+    Returns:
+        ORM section mapping.
+    """
+    orm_section = registry.get("orm")
+    if not isinstance(orm_section, dict):
+        return {}
+    return orm_section
+
+
+def _build_model_lines(model_name: str, fields: object) -> list[str]:
+    """Build constants lines for single ORM model.
+
+    Args:
+        model_name: ORM model name.
+        fields: Field mapping object.
+
+    Returns:
+        Generated model class lines.
+    """
+    if not isinstance(fields, dict):
+        return []
+
+    lines = [f"class _ORM{model_name}:"]
+    for field_name, column_name in fields.items():
+        if not isinstance(field_name, str):
+            continue
+        if not isinstance(column_name, str):
+            continue
+        lines.append(f'    {field_name}: str = "{column_name}"')
+    lines.append("")
+    return lines
+
+
+def _build_orm_lines(registry: dict[str, object]) -> list[str]:
+    """Build ORM constants lines from registry data.
+
+    Args:
+        registry: Parsed naming registry.
+
+    Returns:
+        Generated source lines.
+    """
+    lines: list[str] = []
+    orm_section = _extract_orm_section(registry)
+
+    for model_name, fields in orm_section.items():
+        if not isinstance(model_name, str):
+            continue
+        lines.extend(_build_model_lines(model_name, fields))
+
+    lines.append("class ORM:")
+    lines.extend(
+        f"    {model_name} = _ORM{model_name}()"
+        for model_name in orm_section
+        if isinstance(model_name, str)
+    )
+    lines.append("")
+    return lines
 
 
 def generate() -> None:
     """Generate Python registry constants module."""
-    with REGISTRY_PATH.open() as f:
-        registry = json.load(f)
+    with REGISTRY_PATH.open(encoding="utf-8") as file_handle:
+        loaded_registry = json.load(file_handle)
+
+    if not isinstance(loaded_registry, dict):
+        raise TypeError("Registry data must be object")
+
+    registry = loaded_registry
 
     lines = [
         '"""Auto-generated registry constants. Do not edit manually."""',
@@ -21,24 +96,13 @@ def generate() -> None:
         "from __future__ import annotations",
         "",
     ]
-
-    # Generate ORM constants
-    if "orm" in registry:
-        for model_name, fields in registry["orm"].items():
-            lines.append(f"class _ORM{model_name}:")
-            for field_name, column_name in fields.items():
-                lines.append(f'    {field_name}: str = "{column_name}"')
-            lines.append("")
-
-    lines.append("class ORM:")
-    for model_name in registry.get("orm", {}):
-        lines.append(f"    {model_name} = _ORM{model_name}()")
-    lines.append("")
+    lines.extend(_build_orm_lines(registry))
 
     OUTPUT_PY.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PY.write_text("\n".join(lines))
-    print(f"Generated {OUTPUT_PY}")
+    OUTPUT_PY.write_text("\n".join(lines), encoding="utf-8")
+    logger.info("Generated %s", OUTPUT_PY)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     generate()

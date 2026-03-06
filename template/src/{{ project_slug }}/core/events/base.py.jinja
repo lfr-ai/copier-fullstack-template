@@ -1,5 +1,7 @@
 """Domain event base definitions."""
 
+from __future__ import annotations
+
 from {{ project_slug }}.core.entities.base import DomainEvent
 
-__all__ = ["DomainEvent"]
+__all__: list[str] = ["DomainEvent"]

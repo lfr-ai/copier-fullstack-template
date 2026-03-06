@@ -14,7 +14,7 @@
 
 ### Setup
 
-`ash
+```bash
 # Install dependencies
 task backend:dev
 
@@ -23,21 +23,21 @@ uv run uvicorn {{ project_slug }}.main:app --reload
 
 # Or use containers
 task docker:up
-`
+```
 
 ### Development Commands
 
 | Command | Description |
 |---------|-------------|
-| 	ask backend:dev | Install Python dependencies |
-| 	ask backend:test | Run test suite via tox |
-| 	ask backend:lint | Run linters (Ruff) |
-| 	ask backend:format | Auto-format code |
-| 	ask backend:typecheck | Run mypy type checker |
-| 	ask frontend:dev | Start frontend dev server |
-| 	ask frontend:test | Run frontend tests |
-| 	ask docker:up | Start all containers |
-| 	ask docker:down | Stop all containers |
+| `task backend:dev` | Install Python dependencies |
+| `task backend:test` | Run test suite via tox |
+| `task backend:lint` | Run linters (Ruff) |
+| `task backend:format` | Auto-format code |
+| `task backend:typecheck` | Run type checker |
+| `task frontend:dev` | Start frontend dev server |
+| `task frontend:test` | Run frontend tests |
+| `task docker:up` | Start all containers |
+| `task docker:down` | Stop all containers |
 
 ### API Documentation
 
@@ -46,11 +46,11 @@ task docker:up
 
 ## Architecture
 
-See [docs/architecture.md](docs/architecture.md) for detailed overview.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed overview.
 
 ## Contributing
 
-See [docs/contributing.md](docs/contributing.md) for guidelines.
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ## License
 

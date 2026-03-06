@@ -4,31 +4,21 @@
 
 ### Hexagonal Architecture (Ports & Adapters)
 
-`
+```
+                  Ports (Driving)
+   API/REST     Web          CLI
 
-                  Ports (Driving)                      
-                 
-   API/REST     Web          CLI               
-                 
-                                                    
-              
-            Application Layer                        
-    Services  Commands  Queries  DTOs             
-              
-                                                      
-              
-              Core Domain                            
-    Entities  Value Objects  Events                
-    Interfaces  Enums  Exceptions                  
-              
-                                                      
-              
-            Adapters (Driven)                        
-    Persistence  Cache  Messaging                  
-    Auth  External Services                         
-              
+            Application Layer
+    Services  Commands  Queries  DTOs
 
-`
+              Core Domain
+    Entities  Value Objects  Events
+    Interfaces  Enums  Exceptions
+
+            Adapters (Driven)
+    Persistence  Cache  Messaging
+    Auth  External Services
+```
 
 ### Key Principles
 
@@ -41,15 +31,15 @@
 
 ### Directory Structure
 
-`
+```
 src/{{ project_slug }}/
- core/           # Domain logic, entities, interfaces
- application/    # Use cases, services, DTOs, commands
- adapters/       # Infrastructure implementations
- ports/          # API, Web, CLI entry points
- config/         # Settings, DI container
- utils/          # Shared utilities
-`
+  core/           # Domain logic, entities, interfaces
+  application/    # Use cases, services, DTOs, commands
+  adapters/       # Infrastructure implementations
+  ports/          # API, Web, CLI entry points
+  config/         # Settings, DI container
+  utils/          # Shared utilities
+```
 
 ### Data Flow
 
@@ -64,4 +54,4 @@ src/{{ project_slug }}/
 Settings are loaded from environment variables with pydantic-settings.
 Environment-specific settings classes override base defaults.
 
-See config/settings/ for details.
+See `config/settings/` for details.

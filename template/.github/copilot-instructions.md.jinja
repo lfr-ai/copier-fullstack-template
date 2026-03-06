@@ -1,4 +1,36 @@
+---
+description: Coding conventions and guidelines
+applyTo: "**/*.py, **/*.html.j2, **/*.js, **/*.ts, **/*.css, **/*.zsh, **/*.azcli"
+---
+
 # Coding Conventions for {{ project_name }}
+
+## Status
+
+This document defines coding standards, conventions, and best practices for this codebase
+
+Apply principles from PEP 20 (The Zen of Python) throughout:
+
+- Beautiful is better than ugly
+- Explicit is better than implicit
+- Simple is better than complex
+- Complex is better than complicated
+- Flat is better than nested
+- Sparse is better than dense
+- Readability counts
+- Special cases aren't special enough to break the rules
+- Although practicality beats purity
+- Errors should never pass silently
+- Unless explicitly silenced
+- In the face of ambiguity, refuse the temptation to guess
+- There should be one-- and preferably only one --obvious way to do it
+- Now is better than never
+- Although never is often better than _right_ now
+- If the implementation is hard to explain, it's a bad idea
+- If the implementation is easy to explain, it may be a good idea
+- Namespaces are one honking great idea -- let's do more of those
+
+---
 
 ## Architecture
 
@@ -11,17 +43,429 @@ This project follows hexagonal architecture (ports & adapters).
 - **config/**: Settings, DI container
 - **utils/**: Shared utilities
 
-## Conventions
+---
+
+## File Naming and Extensions
+
+### Python Files
+
+- Python modules should use snake_case: `my_module.py`
+- Test files should be prefixed with `test_`: `test_my_module.py`
+
+### Shell Scripts
+
+- Shell scripts MUST use `.zsh` extension: `setup_redis.zsh`
+- Azure CLI scripts MUST use `.azcli` extension: `deploy.azcli`
+- Never use `.sh` extension in this repository
+
+### Template Files
+
+- Jinja2 templates MUST use `.html.j2` extension: `index.html.j2`
+- Never use `.html.jinja2`, `.jinja`, or `.jinja2` extensions
+
+### Frontend Files
+
+- TypeScript files use `.ts` extension: `app.ts`
+- JavaScript files use `.js` extension: `registry_constants.js`
+- CSS files use `.css` extension: `styles.css`
+
+---
+
+## General Guidelines
+
+### Readability and Clarity
+
+- Always prioritize readability and clarity
+- Write concise, efficient, and idiomatic code that is also easily understandable
+- Enforce use of variables with meaningful names rather than use of comments
+- Comments should be short, concise, and to the point
+- Avoid long explanations or reasoning in comments
+
+### Code Structure and Organization
+
+- Follow a logical structure in code organization
+- Make modular code that promotes reusability, separation of concerns, and single responsibility
+- Break down complex functions into smaller, more manageable helper functions
+- Ensure functions have descriptive names and include type hints
+- Provide docstrings following Google conventions
+- Ensure that sentences in docstrings are complete and clear and NEVER start with articles such as "a", "an", or "the"
+
+### Defensive and Robust Programming
+
+- Account for common edge cases like empty inputs, invalid data types, and large datasets
+- Handle edge cases and write clear exception handling
+- Enforce and ensure that all new code or changes to existing code, under no circumstances introduce regression of existing functionality
+- Never use magic numbers under any circumstance; define them as constants with meaningful names
+
+### Design and Principles
+
+- Always prefer modular and object-oriented design where applicable
+- Adhere to OOP principles where applicable
+- Write code with good maintainability practices, including comments on why certain design decisions were made
+
+---
+
+## Naming Conventions
+
+### File and Variable Naming
+
+- Files should always use snake_case
+- Classes should always use PascalCase
+- Functions and variables should always use snake_case
+- Use consistent naming conventions and follow language-specific best practices
+
+### Constants and Magic Numbers
+
+- Never use magic numbers under any circumstance; define them as constants with meaningful names or make use of enumerations and helper functions where applicable
+
+---
+
+## Privacy and Underscore Prefixing
+
+### When to use a leading underscore `_`
+
+- Use `_` to indicate non-public API in modules, classes, and functions
+- Module-level (global) names: prefix with `_` if intended for internal use only and not part of the public interface exported by the package
+- Class instance variables: prefix with `_` for internal attributes not meant for external access
+- Class methods: prefix with `_` for helper or internal methods not intended for external callers
+- Functions in modules: prefix with `_` when they are internal helpers and not part of the module's public API
+- Class variables: prefix with `_` for internal configuration/state not intended for external access
+
+### Do not use double underscore `__` for name mangling
+
+- Avoid `__name` unless you explicitly need Python's name mangling within inheritance; prefer single underscore `_name` for non-public
+
+### Constants and underscore
+
+- Prefer public, UPPER_SNAKE_CASE for constants that are part of the public API
+- Use `_UPPER_SNAKE_CASE` for constants that are internal-only to a module or class
+- Do NOT annotate internal (`_`-prefixed) constants with `Final`; reserve `Final` for public API constants only
+
+### Public API clarity
+
+- Clearly separate public vs. internal by imports in `__init__.py`; avoid `from module import *` and explicitly export public names via `__all__` when useful
+- Keep docstrings and documentation aligned: do not document underscored members as public features
+
+---
+
+## Python-Specific Guidelines
+
+### Best Practices
 
 - Python {{ python_version }}+, type hints everywhere
-- UV for dependency management
+- Always use UV for dependency management and project setup
+- Enforce pythonic idioms and best practices
+- Follow the **PEP 8** style guide
+- Never use raw SQL queries; always use ORM
 - Ruff for linting and formatting
 - Taskfile for task running
-- Pydantic v2 for validation
-- SQLAlchemy 2.0+ async with Mapped/mapped_column
-- structlog for logging
-- tenacity for retries
-- Never use magic numbers; define as constants
-- Never use raw SQL; use ORM
-- Always use %s formatting for log messages
-- Docstrings follow Google conventions
+
+### Type Annotations
+
+- Prefer modern builtins (`list[int]`, `dict[str, object]`) over `typing` aliases
+- Do NOT import or use the `typing` module for basic built-in primitives or generic types unless you need advanced typing features not available as builtins (e.g., `TypedDict`, `Protocol`, `TypeVar`)
+- Never use `Any` as a type hint; use `object` as the fallback
+- Ensure functions have descriptive names and include precise type hints
+- When types become complex, prefer small type aliases, dataclasses, or pydantic models to keep signatures readable
+
+### Advanced Type Annotations
+
+#### Use Annotated for enhanced type information
+
+- Use `Annotated` from `typing` to add metadata to type hints
+- Particularly useful with Pydantic `Field` for validation constraints
+
+#### Use TypeAlias for complex type signatures
+
+- Define type aliases using `TypeAlias` from `typing` for complex, reusable types
+- Always annotate the alias variable with `TypeAlias` for clarity
+
+#### Use Literal for fixed value sets
+
+- Use `Literal` from `typing` for parameters that accept only specific values
+
+#### Use Final for constants and immutable attributes
+
+- Use `Final` from `typing` to mark **public** constants and immutable class/module variables
+- Do NOT use `Final` for internal (`_`-prefixed) constants -- the underscore prefix already signals non-public status
+- Signals intent that a value should never be reassigned
+
+#### Use @final decorator for classes and methods
+
+- Use `@final` from `typing` to prevent inheritance or method overriding
+- Apply to classes that should not be subclassed
+- Apply to methods that should not be overridden in subclasses
+
+#### Use NoReturn for functions that never return
+
+- Use `NoReturn` from `typing` for functions that always raise exceptions or exit
+
+### API Routes and Rate Limiting
+
+- Always implement sensible rate limiting for API routes
+- Prefer slowapi and configure sensible limits
+
+### Performance and Data Structures
+
+- Favor efficient choices by default: pick the data structure that matches the access pattern:
+  - `list`: ordered, indexable, mutable -- for indexing and appends
+  - `tuple`: immutable, lower overhead -- for fixed-size collections
+  - `set` / `frozenset`: fast membership and deduplication
+  - `dict`: optimized mapping for key-value lookups
+  - `collections.deque`: pops/pushes at both ends
+
+### Dataclasses
+
+- Use `@dataclass` from `dataclasses` module for simple data structures
+- Always use `frozen=True` for immutable data classes to ensure thread safety and hashability
+- Always use `slots=True` to reduce memory overhead and improve attribute access speed
+- Prefer dataclasses over plain classes for data containers without complex behavior
+
+### Caching and Memoization
+
+- Prefer `functools.lru_cache(maxsize=...)` for pure, deterministic functions called frequently with the same inputs
+- Do not cache functions that accept mutable arguments or depend on external mutable state
+- Always specify `maxsize` explicitly (never rely on defaults)
+
+### Cached Properties
+
+- Use `@cached_property` from `functools` for expensive computations that should be calculated once per instance
+- Cached properties are evaluated once on first access and then stored on the instance
+- Use for idempotent operations that may be expensive or involve I/O
+
+### Concurrency and Parallelism
+
+- I/O-bound tasks: prefer threading or async I/O (`threading`, `asyncio`)
+- CPU-bound tasks: prefer multiprocessing or process pools
+- Minimize shared mutable state between threads/processes
+- Prefer vectorized operations before introducing parallelism
+
+### Logging
+
+- Always prefer structured logging over print statements
+- Use structured logging with structlog
+- Use `%s` string formatting for log messages, never f-strings or `.format()`
+- Use `exc_info=True` parameter when logging exceptions to include stack traces
+- For exception handlers, prefer `logger.exception()` which automatically includes `exc_info=True`
+- Never log sensitive data (passwords, tokens, PII)
+
+### Retry Policies and Resilience
+
+- Use `@tenacity.retry()` decorator for operations that may fail transiently
+- Define retry policies in a centralized location (e.g., `utils/retry_policies.py`)
+- Use exponential backoff with jitter for retry delays
+- Always set a maximum number of attempts to prevent infinite loops
+- Set `reraise=True` to propagate exceptions after exhausting retries
+- Only retry on transient errors (network issues, timeouts, rate limits)
+- Never retry on permanent errors (validation errors, authentication failures)
+
+---
+
+## SQLAlchemy ORM Guidelines
+
+### Database Models
+
+- Never use raw SQL queries; always use ORM
+- Use SQLAlchemy 2.0+ syntax with `Mapped` and `mapped_column`
+
+### Database Indices
+
+- Always add indices to columns used in:
+  - Foreign keys
+  - WHERE clauses in queries
+  - JOIN conditions
+  - ORDER BY clauses
+  - Frequently filtered fields (status, timestamps, user IDs)
+- Use `index=True` parameter in `mapped_column()` for single-column indices
+- For composite indices, use the `__table_args__` class attribute
+- Avoid over-indexing; each index adds overhead to write operations
+{% if database_backend == "postgresql" %}
+
+### Enum Handling in SQLAlchemy
+
+- Use PostgreSQL native enums with `sqlalchemy.dialects.postgresql.ENUM`
+{% endif %}
+
+### Timestamps and Audit Fields
+
+- Use `server_default=func.now()` for creation timestamps
+- Use `onupdate=func.now()` for modification timestamps
+- Always index timestamp fields used for querying
+
+---
+
+## Pydantic Models Guidelines
+
+### Model Configuration
+
+- Always use `ConfigDict` to configure Pydantic models
+- Enable `str_strip_whitespace=True` to automatically strip whitespace
+- Enable `validate_assignment=True` to validate on attribute assignment
+
+### Field Definitions
+
+- Always use `Annotated` with `Field` for field metadata
+- Every field MUST have a `description` parameter
+- Every field MUST have `examples` parameter demonstrating valid values
+- Use `validation_alias` for accepting multiple input field names
+- Use `serialization_alias` for consistent output field names
+
+### Validation Constraints
+
+- Use appropriate validators in `Field`:
+  - `gt`, `ge`, `lt`, `le` for numeric bounds
+  - `min_length`, `max_length` for string/collection length
+  - `pattern` for regex validation
+
+---
+
+## Enum Guidelines
+
+### Enum Definition
+
+- Use `@unique` decorator from `enum` module to prevent duplicate values
+- Use `StrEnum` for string-valued enums
+- Use `IntEnum` for integer-valued enums
+- Use `auto()` for automatic value assignment when exact values don't matter
+
+### Enum Usage in Code
+
+- Always use enum members, not raw values: `Environment.PROD` not `"prod"`
+- Access enum name with `.name` property and value with `.value` property
+
+---
+
+## Error Handling and Exception Chaining
+
+### Exception Chaining
+
+- Always use `raise ... from e` to preserve exception context
+- Never use bare `raise` without proper exception chaining
+- Use `raise ... from None` only when you explicitly want to suppress the original exception
+
+### Exception Handling Patterns
+
+- Catch specific exceptions, not bare `except:`
+- Log exceptions before re-raising or wrapping
+- Include relevant context in error messages using `%s` formatting
+
+---
+
+## Function Signature Guidelines
+
+### Keyword-Only Arguments
+
+- Use `*` in function signatures to enforce keyword-only arguments
+- Improves readability and prevents positional argument mistakes
+- Use for functions with multiple optional parameters or boolean flags
+
+### Function Argument Ordering
+
+- Positional arguments first (required parameters)
+- Then `*` to separate keyword-only arguments
+- Then keyword-only arguments (optional parameters)
+- Follow conventional ordering: required, optional, flags, config
+
+---
+
+## Punctuation and Formatting Guidelines
+
+- Do NOT use punctuation (periods, commas, semicolons) in:
+  - Short comments
+  - Log messages (unless part of structured data)
+  - Error messages (unless multiline)
+- DO use proper punctuation in:
+  - Docstrings (complete sentences with periods)
+  - Multi-line descriptions in Pydantic `Field(description=...)`
+  - Documentation files (markdown, README)
+  - User-facing messages
+
+---
+{% if use_redis %}
+
+## Redis Integration
+
+- Use the `redis` library for Redis operations
+- Create connection pools for efficient connection management
+- Always set appropriate timeouts
+- Set appropriate TTL (time-to-live) for all cached data
+- Use structured keys with prefixes: `app:resource:id`
+
+---
+{% endif %}
+
+## Testing Guidelines
+
+### Test Frameworks and Tools
+
+- Use `pytest` for unit and integration tests
+- Use `hypothesis` for property-based testing
+- Use `tox` for testing across multiple Python versions
+- Store tests in `tests/` directory with structure mirroring `src/`
+
+### Test Coverage and Edge Cases
+
+- Always include test cases for critical paths of the application
+- Include comments for edge cases and the expected behavior in those cases
+- Account for common edge cases like empty inputs, invalid data types, and large datasets
+
+---
+
+## Frontend Development
+
+### JavaScript/TypeScript
+
+- Use TypeScript for type safety when possible
+- Use Vite for build tooling and hot module replacement
+
+### Package Management
+
+- Use `pnpm` for package management (faster and more efficient than npm)
+- Install packages with: `pnpm install`
+- Add dependencies with: `pnpm add <package>`
+
+---
+
+## Centralized Naming Registry
+
+- Maintain all naming constants in `data/naming_registry.json`
+- Generate Python constants with `tools/generate_registry.py`
+- Never hardcode field/column names; always use registry constants
+- Update `naming_registry.json` for any new fields
+- Run generator script after registry changes
+
+---
+
+## Code Style and Formatting
+
+### Formatting and Indentation
+
+- Ensure lines do not exceed 88 characters
+- Maintain proper indentation (use 4 spaces for each level of indentation)
+- Use blank lines to separate functions, classes, and code blocks where appropriate
+
+### Documentation and Comments
+
+- Place function and class docstrings immediately after the relevant keyword
+- Comments should be short, concise, and to the point
+- Avoid long explanations or reasoning in comments
+- Do NOT use multi-line comments
+- Provide docstrings following Google conventions
+- Ensure that sentences in docstrings are complete and clear and NEVER start with articles such as "a", "an", or "the"
+
+---
+
+## Shell / zsh
+
+- All shell scripts in this repository MUST be written for zsh and follow idiomatic zsh practices
+- Use the shebang: `#!/usr/bin/env zsh`
+- Reset to a known zsh state at the top of scripts: `emulate -L zsh`
+- Always set `setopt PIPE_FAIL` and `setopt ERR_EXIT` for safer scripting
+- Write functions that do not depend on the caller's environment using `emulate -L zsh`
+- All variables declared inside a function should use `local`
+- Use `zparseopts` for option parsing
+
+### Azure CLI scripts (.azcli)
+
+- Azure CLI scripts that are primarily collections of `az` commands should use the `.azcli` extension
+- `.azcli` files should also be valid zsh scripts (use the same zsh header and idioms)

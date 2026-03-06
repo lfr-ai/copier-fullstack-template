@@ -5,12 +5,14 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
+_DEFAULT_TTL_SECONDS: int = 3600
+
 
 @dataclass(frozen=True, slots=True)
 class _CacheEntry:
     """Internal cache entry with value and expiration."""
 
-    value: object
+    value: str
     expires_at: float
 
 
@@ -25,14 +27,14 @@ class MemoryCacheAdapter:
         """Initialize empty in-memory cache."""
         self._store: dict[str, _CacheEntry] = {}
 
-    async def get(self, key: str) -> object | None:
+    async def get(self, key: str) -> str | None:
         """Retrieve value from memory cache.
 
         Args:
             key: Cache key.
 
         Returns:
-            Cached value or None if not found or expired.
+            Cached string value or None if not found or expired.
         """
         entry = self._store.get(key)
         if entry is None:
@@ -45,18 +47,19 @@ class MemoryCacheAdapter:
     async def set(
         self,
         key: str,
-        value: object,
+        value: str,
         *,
-        ttl: int = 3600,
+        ttl_seconds: int | None = None,
     ) -> None:
         """Store value in memory cache with TTL.
 
         Args:
             key: Cache key.
-            value: Value to store.
-            ttl: Time-to-live in seconds.
+            value: String value to store.
+            ttl_seconds: Time-to-live in seconds; uses default if None.
         """
-        expires_at = time.monotonic() + ttl
+        effective_ttl = ttl_seconds if ttl_seconds is not None else _DEFAULT_TTL_SECONDS
+        expires_at = time.monotonic() + effective_ttl
         self._store[key] = _CacheEntry(value=value, expires_at=expires_at)
 
     async def delete(self, key: str) -> bool:

@@ -8,6 +8,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from {{ project_slug }}.core.enums.environment import Environment
 
 
+_DEFAULT_HOST = "127.0.0.1"
+
+
 class BaseAppSettings(BaseSettings):
     """Base settings with environment variable loading.
 
@@ -51,7 +54,7 @@ class BaseAppSettings(BaseSettings):
     )
 
     # Server
-    host: str = Field(default="0.0.0.0", description="Server bind host")
+    host: str = Field(default=_DEFAULT_HOST, description="Server bind host")
     port: int = Field(default=8000, gt=0, le=65535, description="Server bind port")
 {%- if use_redis %}
 

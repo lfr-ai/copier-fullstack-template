@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
 from {{ project_slug }}.adapters.persistence.repositories.user_repository import UserRepository
 
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="Async integration tests are skipped on Windows due event loop conflicts",
+    ),
+]
 
-@pytest.mark.asyncio
+
 class TestUserRepository:
     """Test suite for user repository database operations."""
 
