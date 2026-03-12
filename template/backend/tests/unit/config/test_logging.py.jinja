@@ -1,0 +1,72 @@
+"""Unit tests for logging configuration."""
+
+from __future__ import annotations
+
+from unittest.mock import patch, MagicMock
+
+import pytest
+
+from {{ project_slug }}.core.enums.environment import Environment
+
+class TestSetupLogging:
+    """Test suite for setup_logging function."""
+
+    @patch("{{ project_slug }}.config.logging.configure_logging")
+    @patch("{{ project_slug }}.config.logging.get_settings")
+    def test_local_environment_uses_console_output(
+        self,
+        mock_settings: MagicMock,
+        mock_configure: MagicMock,
+    ) -> None:
+        """Verify local env uses non-JSON (console) output."""
+        from {{ project_slug }}.config.logging import setup_logging
+
+        mock_settings.return_value.environment = Environment.LOCAL
+        mock_settings.return_value.log_level = "DEBUG"
+        setup_logging()
+        mock_configure.assert_called_once_with(log_level="DEBUG", json_output=False)
+
+    @patch("{{ project_slug }}.config.logging.configure_logging")
+    @patch("{{ project_slug }}.config.logging.get_settings")
+    def test_production_environment_uses_json_output(
+        self,
+        mock_settings: MagicMock,
+        mock_configure: MagicMock,
+    ) -> None:
+        """Verify production env uses JSON output."""
+        from {{ project_slug }}.config.logging import setup_logging
+
+        mock_settings.return_value.environment = Environment.PRODUCTION
+        mock_settings.return_value.log_level = "WARNING"
+        setup_logging()
+        mock_configure.assert_called_once_with(log_level="WARNING", json_output=True)
+
+    @patch("{{ project_slug }}.config.logging.configure_logging")
+    @patch("{{ project_slug }}.config.logging.get_settings")
+    def test_staging_environment_uses_json_output(
+        self,
+        mock_settings: MagicMock,
+        mock_configure: MagicMock,
+    ) -> None:
+        """Verify staging env uses JSON output."""
+        from {{ project_slug }}.config.logging import setup_logging
+
+        mock_settings.return_value.environment = Environment.STAGING
+        mock_settings.return_value.log_level = "INFO"
+        setup_logging()
+        mock_configure.assert_called_once_with(log_level="INFO", json_output=True)
+
+    @patch("{{ project_slug }}.config.logging.configure_logging")
+    @patch("{{ project_slug }}.config.logging.get_settings")
+    def test_test_environment_uses_console_output(
+        self,
+        mock_settings: MagicMock,
+        mock_configure: MagicMock,
+    ) -> None:
+        """Verify test env uses console (non-JSON) output."""
+        from {{ project_slug }}.config.logging import setup_logging
+
+        mock_settings.return_value.environment = Environment.TEST
+        mock_settings.return_value.log_level = "DEBUG"
+        setup_logging()
+        mock_configure.assert_called_once_with(log_level="DEBUG", json_output=False)

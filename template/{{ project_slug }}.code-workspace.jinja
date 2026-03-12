@@ -6,43 +6,305 @@
     },
     {
       "name": "Backend (src)",
-      "path": "src/{{ project_slug }}"
+      "path": "backend/src/{{ project_slug }}"
+    },
+    {
+      "name": "Backend (tests)",
+      "path": "backend/tests"
     },
     {
       "name": "Frontend",
       "path": "frontend"
-    },
-    {
-      "name": "Tests",
-      "path": "tests"
     }
   ],
   "settings": {
+    // ── File management ──────────────────────────────────────────────
     "files.exclude": {
       "**/__pycache__": true,
       "**/.pytest_cache": true,
       "**/.ruff_cache": true,
+      "**/.mypy_cache": true,
+      "**/.ty": true,
+      "**/.tox": true,
       "**/node_modules": true,
-      "**/.venv": true
+      "**/.venv": true,
+      "**/.vite": true,
+      "**/htmlcov": true,
+      "**/.coverage": true
     },
-    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-    "python.testing.pytestEnabled": true,
+    "files.associations": {
+      "*.css": "tailwindcss",
+      "**/ci/*.yml": "azure-pipelines",
+      "*.jinja": "jinja-html",
+      "*.html.jinja": "jinja-html",
+      "*.yml.jinja": "jinja-yaml",
+      "*.toml.jinja": "jinja-toml",
+      "*.json.jinja": "jinja-json",
+      "Containerfile": "dockerfile",
+      "Containerfile.*": "dockerfile"
+    },
+    "files.autoSave": "afterDelay",
+    "files.trimTrailingWhitespace": true,
+
+    // ── Editor ───────────────────────────────────────────────────────
     "editor.formatOnSave": true,
+    "editor.folding": false,
+    "editor.rulers": [99],
+    "editor.tabCompletion": "on",
+    "editor.trimAutoWhitespace": true,
+    "editor.autoIndentOnPaste": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.shellcheck": "explicit"
+    },
+    "diffEditor.ignoreTrimWhitespace": true,
+
+    // ── Python ───────────────────────────────────────────────────────
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+    "python.terminal.activateEnvironment": false,
+    "python.testing.pytestEnabled": true,
     "[python]": {
-      "editor.defaultFormatter": "charliermarsh.ruff"
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.organizeImports": "explicit"
+      }
+    },
+
+    // ── JavaScript / TypeScript ──────────────────────────────────────
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "[typescript]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
-    }
+    },
+    "javascript.referencesCodeLens.enabled": true,
+    "javascript.referencesCodeLens.showOnAllFunctions": true,
+    "javascript.suggest.completeFunctionCalls": true,
+    "javascript.inlayHints.functionLikeReturnTypes.enabled": true,
+    "javascript.inlayHints.parameterNames.enabled": "all",
+    "javascript.inlayHints.parameterTypes.enabled": true,
+    "javascript.inlayHints.propertyDeclarationTypes.enabled": true,
+    "javascript.inlayHints.variableTypes.enabled": true,
+    "typescript.suggest.completeFunctionCalls": true,
+    "typescript.inlayHints.enumMemberValues.enabled": true,
+    "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+    "typescript.inlayHints.parameterNames.enabled": "all",
+    "typescript.inlayHints.parameterTypes.enabled": true,
+    "typescript.inlayHints.propertyDeclarationTypes.enabled": true,
+    "typescript.inlayHints.variableTypes.enabled": true,
+
+    // ── HTML / CSS / Markup ──────────────────────────────────────────
+    "[html]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[css]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[less]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "html.format.indentInnerHtml": true,
+
+    // ── JSON / YAML / TOML / Markdown ────────────────────────────────
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[jsonc]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[yaml]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[azure-pipelines]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "evenBetterToml.formatter.arrayAutoCollapse": true,
+    "evenBetterToml.formatter.arrayAutoExpand": true,
+
+    // ── Spell checker ────────────────────────────────────────────────
+    "cSpell.language": "en",
+
+    // ── Workbench ────────────────────────────────────────────────────
+    "workbench.iconTheme": "vscode-icons",
+    "workbench.panel.defaultLocation": "right",
+    "workbench.colorCustomizations": {
+      "editorRuler.foreground": "#FF69B4"
+    },
+    "workbench.editor.closeOnFileDelete": true,
+    "vsicons.associations.folders": [
+      {
+        "icon": "test",
+        "extensions": ["tests"],
+        "format": "svg",
+        "overrides": "test"
+      }
+    ],
+
+    // ── Extensions behaviour ─────────────────────────────────────────
+    "extensions.ignoreRecommendations": false,
+
+    // ── Copilot / Chat ───────────────────────────────────────────────
+    "chat.instructionsFilesLocations": {
+      ".github/instructions": true,
+      ".claude/rules": true
+    },
+    "chat.agent.maxRequests": 250,
+    "chat.detectParticipant.enabled": false,
+    "chat.useAgentSkills": true,
+    "github.copilot.chat.codesearch.enabled": true,
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "github.copilot.nextEditSuggestions.allowWhitespaceOnlyChanges": false
   },
   "extensions": {
     "recommendations": [
-      "charliermarsh.ruff",
+      // ── Python ──
       "ms-python.python",
-      "esbenp.prettier-vscode",
+      "ms-python.debugpy",
+      "charliermarsh.ruff",
+      "astral-sh.ty",
+
+      // ── JavaScript / TypeScript ──
       "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "vitest.explorer",
+
+      // ── Frontend / CSS ──
+      "bradlc.vscode-tailwindcss",
+      "naumovs.color-highlight",
+
+      // ── Data formats ──
       "tamasfe.even-better-toml",
-      "redhat.vscode-yaml"
+      "redhat.vscode-yaml",
+      "samuelcolvin.jinjahtml",
+      "editorconfig.editorconfig",
+
+      // ── Markdown & docs ──
+      "davidanson.vscode-markdownlint",
+      "shd101wyy.markdown-preview-enhanced",
+
+      // ── Containers & shell ──
+      "ms-azuretools.vscode-containers",
+      "exiasr.hadolint",
+      "timonwong.shellcheck",
+
+      // ── Git ──
+      "waderyan.gitblame",
+      "codezombiech.gitignore",
+
+      // ── AI ──
+      "github.copilot-chat",
+
+      // ── Spell checking ──
+      "streetsidesoftware.code-spell-checker",
+
+      // ── Quality of life ──
+      "vscode-icons-team.vscode-icons",
+      "wayou.vscode-todo-highlight",
+      "dvirtz.parquet-viewer",
+      "tomoki1207.pdf",
+
+      // ── API testing ──
+      "postman.postman-for-vscode",
+
+      // ── MCP ──
+      "upstash.context7-mcp"{% if use_playwright %},
+
+      // ── E2E testing ──
+      "ms-playwright.playwright"{% endif %}{% if use_devcontainer %},
+
+      // ── Dev containers ──
+      "ms-vscode-remote.remote-containers"{% endif %}{% if database_backend == "postgresql" %},
+
+      // ── Database (PostgreSQL) ──
+      "mtxr.sqltools",
+      "mtxr.sqltools-driver-pg"{% endif %}{% if cloud_provider == "azure" %},
+
+      // ── Azure ──
+      "ms-azuretools.vscode-azure-github-copilot",
+      "ms-azuretools.vscode-azure-mcp-server",
+      "ms-azuretools.vscode-azureresourcegroups",
+      "ms-azuretools.vscode-bicep",
+      "ms-vscode.azure-repos",
+      "ms-vscode.azurecli",
+      "ms-azure-devops.azure-pipelines"{% endif %}
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Backend: FastAPI",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": [
+          "{{ project_slug }}.ports.api.app:create_api_app",
+          "--factory",
+          "--reload",
+          "--port",
+          "8000"
+        ],
+        "jinja": true,
+        "justMyCode": true,
+        "env": {
+          "{{ project_slug | upper }}_ENVIRONMENT": "local"
+        }
+      },
+      {
+        "name": "Backend: pytest (current file)",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "pytest",
+        "args": ["${file}", "-x", "--tb=short"],
+        "justMyCode": true
+      },
+      {
+        "name": "Backend: CLI",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "{{ project_slug }}.ports.cli.app",
+        "args": [],
+        "justMyCode": true
+      }
+    ],
+    "compounds": []
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "dev",
+        "type": "shell",
+        "command": "task dev",
+        "group": "build",
+        "isBackground": true,
+        "problemMatcher": []
+      },
+      {
+        "label": "test",
+        "type": "shell",
+        "command": "task test",
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "lint",
+        "type": "shell",
+        "command": "task lint",
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "typecheck",
+        "type": "shell",
+        "command": "task typecheck",
+        "group": "test",
+        "problemMatcher": []
+      }
     ]
   }
 }

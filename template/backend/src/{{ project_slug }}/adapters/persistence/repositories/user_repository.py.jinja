@@ -1,0 +1,61 @@
+"""User repository SQLAlchemy implementation."""
+
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
+from {{ project_slug }}.adapters.persistence.repositories.base import SQLAlchemyRepository
+from {{ project_slug }}.core.constants import DEFAULT_LIST_LIMIT
+
+__all__ = ["UserRepository"]
+
+
+class UserRepository(SQLAlchemyRepository[UserModel]):
+    """Repository for user persistence operations."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize user repository.
+
+        Args:
+            session (AsyncSession): Async SQLAlchemy session.
+        """
+        super().__init__(session=session, model_class=UserModel)
+
+    async def get_by_email(self, email: str) -> UserModel | None:
+        """Retrieve user by email address.
+
+        Args:
+            email (str): User email address.
+
+        Returns:
+            UserModel | None: UserModel instance or None if not found.
+        """
+        stmt = select(UserModel).where(UserModel.email == email)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_active_users(
+        self,
+        *,
+        offset: int = 0,
+        limit: int = DEFAULT_LIST_LIMIT,
+    ) -> list[UserModel]:
+        """Retrieve active users with pagination.
+
+        Args:
+            offset (int): Number of records to skip.
+            limit (int): Maximum records to return.
+
+        Returns:
+            list[UserModel]: List of active user models.
+        """
+        stmt = (
+            select(UserModel)
+            .where(UserModel.is_active.is_(True))
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())

@@ -1,0 +1,68 @@
+"""Unit tests for UserMapper."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.application.dtos.user_dto import UserDTO
+from {{ project_slug }}.application.mappers.user_mapper import UserMapper
+from {{ project_slug }}.core.entities.user import User
+
+class TestUserMapper:
+    """Test suite for User entity-to-DTO mapper."""
+
+    def test_to_dto_maps_all_fields(self) -> None:
+        """Verify all entity fields are mapped to DTO."""
+        entity = User(
+            id="abc-123",
+            email="test@example.com",
+            display_name="Test User",
+            is_active=True,
+        )
+        dto = UserMapper.to_dto(entity)
+
+        assert isinstance(dto, UserDTO)
+        assert dto.id == "abc-123"
+        assert dto.email == "test@example.com"
+        assert dto.display_name == "Test User"
+        assert dto.is_active is True
+
+    def test_to_dto_inactive_user(self) -> None:
+        """Verify inactive status is preserved."""
+        entity = User(
+            id="xyz-789",
+            email="inactive@example.com",
+            display_name="Inactive",
+            is_active=False,
+        )
+        dto = UserMapper.to_dto(entity)
+
+        assert dto.is_active is False
+
+    def test_to_dto_list_empty(self) -> None:
+        """Verify empty list returns empty list."""
+        result = UserMapper.to_dto_list([])
+        assert result == []
+
+    def test_to_dto_list_multiple(self) -> None:
+        """Verify multiple entities are mapped correctly."""
+        entities = [
+            User(id="1", email="a@example.com", display_name="A"),
+            User(id="2", email="b@example.com", display_name="B"),
+        ]
+        dtos = UserMapper.to_dto_list(entities)
+
+        assert len(dtos) == 2
+        assert dtos[0].email == "a@example.com"
+        assert dtos[1].email == "b@example.com"
+
+    def test_to_dto_list_preserves_order(self) -> None:
+        """Verify list order is preserved after mapping."""
+        entities = [
+            User(id=str(i), email=f"user{i}@example.com", display_name=f"User {i}")
+            for i in range(5)
+        ]
+        dtos = UserMapper.to_dto_list(entities)
+
+        for i, dto in enumerate(dtos):
+            assert dto.id == str(i)

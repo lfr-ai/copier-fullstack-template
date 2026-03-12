@@ -1,0 +1,267 @@
+
+# Infrastructure
+
+This directory contains Azure infrastructure definitions for **{{ project_name }}**
+using [Bicep](https://learn.microsoft.com/azure/azure-resource-manager/bicep/).
+
+## Directory structure
+
+```text
+infra/
+├── deploy.bicep                  # Subscription-scoped entry point (creates RG)
+├── main.bicep                    # Resource-group-scoped orchestrator
+├── modules/
+│   ├── appInsights.bicep         # Application Insights
+│   ├── keyVault.bicep            # Key Vault with RBAC
+│   ├── logAnalytics.bicep        # Log Analytics workspace
+{%- if use_redis %}
+│   ├── redis.bicep               # Azure Cache for Redis (TLS, Entra auth, diagnostics, patching, firewall, persistence)
+{%- endif %}
+{%- if use_azure_openai %}
+│   ├── openai.bicep              # Azure OpenAI Service (GPT + embeddings)
+{%- endif %}
+{%- if use_ai_search %}
+│   ├── aiSearch.bicep            # Azure AI Search (vector/hybrid/semantic)
+{%- endif %}
+{%- if use_document_intelligence %}
+│   ├── documentIntelligence.bicep # Azure Document Intelligence
+{%- endif %}
+{%- if database_backend == "azure_postgresql" %}
+│   └── postgresFlexible.bicep    # Azure Database for PostgreSQL Flexible Server
+{%- endif %}
+├── parameters/
+│   ├── dev/deploy.dev.bicepparam
+│   ├── test/deploy.test.bicepparam
+│   ├── staging/deploy.staging.bicepparam
+│   └── prod/deploy.prod.bicepparam
+└── scripts/
+    ├── deploy.azcli              # Full subscription-scoped deployment
+    ├── main.azcli                # Resource-group-scoped deployment
+{%- if database_backend in ("postgresql", "azure_postgresql") %}
+    ├── backup-db.zsh             # PostgreSQL backup utility
+{%- endif %}
+{%- if secret_backend == "azure_kv" %}
+    ├── add-kv-secret.azcli       # Add secret to Key Vault
+    └── add-kv-user.azcli         # Grant Key Vault RBAC access
+{%- endif %}
+```
+
+## Prerequisites
+
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) >= 2.64
+- An Azure subscription with **Contributor** + **User Access Administrator** roles
+- Bicep CLI (bundled with Azure CLI 2.20+)
+
+## Quick start
+
+```bash
+az login
+
+# Validate templates first
+task infra:validate
+
+# Preview changes (what-if)
+task infra:what-if:dev
+
+# Deploy a single environment
+task infra:deploy:dev
+
+# Deploy using the helper script directly
+zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e dev
+
+# Or via az deployment sub create
+az deployment sub create \
+  --location {{ azure_location }} \
+  --template-file infra/deploy.bicep \
+  --parameters infra/parameters/dev/deploy.dev.bicepparam \
+  --parameters projectName="{{ project_slug }}" env="dev"
+```
+
+## Environments
+
+| Environment | Parameter file                                  | Purpose              | Safety prompt |
+| ----------- | ----------------------------------------------- | -------------------- | ------------- |
+| dev         | `parameters/dev/deploy.dev.bicepparam`          | Development          | No            |
+| test        | `parameters/test/deploy.test.bicepparam`        | Automated testing    | No            |
+| staging     | `parameters/staging/deploy.staging.bicepparam`  | Pre-production       | Yes           |
+| prod        | `parameters/prod/deploy.prod.bicepparam`        | Production           | Yes           |
+
+## Task commands
+
+All infrastructure tasks are namespaced under `infra:` in go-task:
+
+### Validation
+
+```bash
+task infra:validate          # Validate all Bicep templates
+task infra:validate:deploy   # Validate deploy.bicep only
+task infra:validate:main     # Validate main.bicep only
+```
+
+### What-if (preview changes)
+
+```bash
+task infra:what-if:dev
+task infra:what-if:test
+task infra:what-if:staging
+task infra:what-if:prod
+```
+
+### Deploy (subscription-scoped)
+
+```bash
+task infra:deploy:dev        # No confirmation
+task infra:deploy:test       # No confirmation
+task infra:deploy:staging    # Prompts for confirmation
+task infra:deploy:prod       # Prompts for confirmation
+```
+
+### Deploy (resource-group-scoped only)
+
+```bash
+task infra:deploy:rg:dev
+task infra:deploy:rg:test
+task infra:deploy:rg:staging
+task infra:deploy:rg:prod
+```
+
+### Resource inspection
+
+```bash
+task infra:resources:list    # List resources across all environments
+task infra:resources:groups  # List all resource groups
+```
+{% if secret_backend == "azure_kv" %}
+
+### Key Vault operations
+
+```bash
+task infra:kv:add-secret VAULT=my-vault NAME=my-secret VALUE=my-value
+task infra:kv:add-user VAULT=my-vault UPN=user@example.com
+task infra:kv:list VAULT=my-vault
+```
+{% endif %}
+
+### Cleanup
+
+```bash
+task infra:clean             # Delete ALL resource groups (prompts for confirmation)
+```
+
+## Deploy script
+
+The `scripts/deploy.azcli` script supports three modes:
+
+```bash
+# Single environment
+zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e dev
+
+# Default: dev + prod
+zsh infra/scripts/deploy.azcli -p "{{ project_slug }}"
+
+# All four environments
+zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" --all
+```
+{%- if database_backend in ("postgresql", "azure_postgresql") %}
+
+## Database backup
+
+The `scripts/backup-db.zsh` script creates a compressed `pg_dump` backup:
+
+```bash
+zsh infra/scripts/backup-db.zsh                  # backs up to ./backups/
+zsh infra/scripts/backup-db.zsh /path/to/dir     # custom backup directory
+```
+
+Set connection details via environment variables (`POSTGRES_HOST`, `POSTGRES_PORT`,
+`POSTGRES_DB`, `POSTGRES_USER`) or source them from the project `.env` file.
+{%- endif %}
+
+## Module conventions
+
+Each module follows the **claim_handler** convention:
+
+| Convention          | Description                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| `namePrefix`        | Project-level naming prefix (e.g., `myapp-dev`)                 |
+| `enabled`           | Boolean flag to conditionally skip resource creation             |
+| Parameterised objects | All tuneable settings passed as typed object parameters         |
+| `commonTags`        | Standard tags (`project`, `environment`) applied to all resources |
+| Optional name       | Each module accepts an optional explicit name override           |
+{%- if use_redis %}
+
+## Azure Cache for Redis
+
+The `modules/redis.bicep` module deploys Azure Cache for Redis with production-grade
+security, monitoring, and availability features using the `2024-11-01` API.
+
+### SKU tiers
+
+| Tier     | Family | Capacity | SLA   | Features                                          |
+| -------- | ------ | -------- | ----- | ------------------------------------------------- |
+| Basic    | C      | 0–6      | None  | Single node, no replication, dev/test only        |
+| Standard | C      | 0–6      | 99.9% | Primary + replica, auto-failover, patching        |
+| Premium  | P      | 1–5      | 99.9% | Clustering, zones, persistence, VNet, Entra auth  |
+
+### Security features
+
+- **TLS 1.2 enforced** — non-SSL port disabled by default
+- **Microsoft Entra (AAD) authentication** — `enableEntraAuth: true` + `enableManagedIdentity: true`
+- **Access key disable** — `disableAccessKeyAuthentication: true` for zero-trust (requires Entra auth)
+- **System-assigned managed identity** — for Key Vault, diagnostic sinks, Entra tokens
+- **Public network toggle** — set `publicNetworkAccess: 'Disabled'` when using Private Endpoints
+- **Firewall rules** — array of `{ name, startIP, endIP }` for IP-based access control
+
+### Monitoring & diagnostics
+
+Enable `enableDiagnostics: true` to stream:
+- **AllMetrics** — cache hits/misses, connected clients, memory, CPU, latency
+- **allLogs** — connection audit logs
+
+Data flows to the Log Analytics workspace deployed by the `logAnalytics` module.
+
+### Patch schedule
+
+Standard and Premium tiers support a configurable maintenance window:
+
+```bicep
+patchScheduleDayOfWeek: 'Sunday'
+patchScheduleStartHourUtc: 2
+patchScheduleMaintenanceWindow: 'PT5H'
+```
+
+### Premium-only features
+
+| Feature             | Parameter                       | Notes                                        |
+| ------------------- | ------------------------------- | -------------------------------------------- |
+| Availability zones  | `zones: ['1', '2', '3']`       | Zone-redundant deployment                    |
+| Clustering          | `shardCount: 1–10`             | Horizontal partitioning                      |
+| Read replicas       | `replicasPerPrimary: 0–3`      | Read-scale-out                               |
+| RDB persistence     | `enableRdbPersistence: true`    | Point-in-time snapshots (15m / 1h / 24h)     |
+| AOF persistence     | `enableAofPersistence: true`    | Append-only file for near-zero data loss     |
+
+### Outputs
+
+| Output                      | Description                                              |
+| --------------------------- | -------------------------------------------------------- |
+| `redisCacheName`            | Name of the deployed cache                               |
+| `redisCacheHostName`        | Hostname for SSL connections                             |
+| `redisCachePort`            | SSL port (6380)                                          |
+| `redisCacheResourceId`      | Full ARM resource ID                                     |
+| `redisPrimaryConnectionString` | StackExchange-compatible connection string (empty if keys disabled) |
+| `redisManagedIdentityPrincipalId` | System identity principal ID                       |
+
+### Environment defaults
+
+| Setting                     | dev     | test    | staging   | prod        |
+| --------------------------- | ------- | ------- | --------- | ----------- |
+| SKU                         | Basic C0| Basic C0| Standard C1| Standard C1|
+| Public access               | Enabled | Enabled | Enabled   | **Disabled**|
+| Entra auth                  | Off     | Off     | **On**    | **On**      |
+| Access keys disabled        | No      | No      | No        | **Yes**     |
+| Managed identity            | Off     | Off     | **On**    | **On**      |
+| Diagnostics                 | Off     | Off     | **On**    | **On**      |
+| Patch schedule              | —       | —       | Saturday 02:00 | Sunday 02:00 |
+| Memory reservation          | —       | —       | 50 MB     | 50 MB       |
+{%- endif %}
+

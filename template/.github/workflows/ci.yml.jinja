@@ -18,9 +18,12 @@ jobs:
     name: Lint & Format
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
           enable-cache: true
@@ -34,9 +37,12 @@ jobs:
     name: Type Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
           enable-cache: true
@@ -48,9 +54,12 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
           enable-cache: true
@@ -62,13 +71,16 @@ jobs:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
     strategy:
       fail-fast: false
       matrix:
         python-version: ["{% endraw %}{{ python_version }}{% raw %}"{% endraw %}{% if python_version == "3.12" %}{% raw %}, "3.13"{% endraw %}{% endif %}{% raw %}]
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
@@ -90,6 +102,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [lint, typecheck]
+    defaults:
+      run:
+        working-directory: backend
     services:
 {% endraw %}
 {%- if database_backend == "postgresql" %}
@@ -124,6 +139,7 @@ jobs:
 {%- endif %}
 {% raw %}
     env:
+      {% endraw %}{{ project_slug | upper }}{% raw %}_ENVIRONMENT: test
 {% endraw %}
 {%- if database_backend == "postgresql" %}
 {% raw %}
@@ -137,8 +153,8 @@ jobs:
 {%- endif %}
 {% raw %}
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
           enable-cache: true
@@ -156,10 +172,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: "{% endraw %}{{ node_version }}{% raw %}"
@@ -167,15 +183,26 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
+      - run: pnpm run typecheck
       - run: pnpm run test
 
   container:
-    name: Container Lint
+    name: Container Build & Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3
+        with:
+          dockerfile: Containerfile
+      - name: Build container (smoke test)
+        run: docker build --target prod -t {% endraw %}{{ project_slug }}{% raw %}:ci -f Containerfile .
+
+  spellcheck:
+    name: Spell Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v6
-      - uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: Containerfile
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@v1
 {% endraw %}

@@ -1,0 +1,15 @@
+"""Logging configuration module."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.config.settings import get_settings
+from {{ project_slug }}.utils.logger_factory import configure_logging
+
+__all__ = ["setup_logging"]
+
+
+def setup_logging() -> None:
+    """Initialize logging based on application settings."""
+    settings = get_settings()
+    json_output = settings.environment.value in ("staging", "production")
+    configure_logging(log_level=settings.log_level, json_output=json_output)

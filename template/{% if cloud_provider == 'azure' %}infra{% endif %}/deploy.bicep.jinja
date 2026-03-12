@@ -1,0 +1,105 @@
+// ── Subscription-scoped deployment entry point ───────────────────
+// Creates the resource group, then delegates to main.bicep.
+//
+// Usage:
+// az deployment sub create \
+// --location {{ azure_location }} \
+// --template-file infra/deploy.bicep \
+// --parameters infra/parameters/dev/deploy.dev.bicepparam
+
+targetScope = 'subscription'
+
+// ── Parameters ───────────────────────────────────────────────────
+
+@description('Project name')
+param projectName string
+
+@description('Environment for deployment')
+@allowed(['dev', 'test', 'staging', 'prod'])
+param env string
+
+@description('Azure region for resources. Default: {{ azure_location }}.')
+param location string = '{{ azure_location }}'
+
+@description('Optional resource group name to create/use')
+param resourceGroupName string = ''
+
+@description('Key Vault configuration to forward to main.bicep')
+param keyVault object = {}
+
+@description('Application Insights configuration to forward to main.bicep')
+param appInsights object = {}
+
+@description('Log Analytics configuration to forward to main.bicep')
+param logAnalytics object = {}
+{%- if use_redis %}
+
+@description('Azure Cache for Redis configuration to forward to main.bicep')
+param redis object = {}
+{%- endif %}
+{%- if database_backend == 'azure_postgresql' %}
+
+@description('Azure Database for PostgreSQL Flexible Server configuration')
+param postgres object = {}
+{%- endif %}
+{%- if use_azure_openai %}
+
+@description('Azure OpenAI Service configuration')
+param openai object = {}
+{%- endif %}
+{%- if use_ai_search %}
+
+@description('Azure AI Search configuration')
+param aiSearch object = {}
+{%- endif %}
+{%- if use_document_intelligence %}
+
+@description('Azure Document Intelligence configuration')
+param documentIntelligence object = {}
+{%- endif %}
+
+// ── Derived values ───────────────────────────────────────────────
+
+var sanitizedProject = toLower(replace(projectName, '_', '-'))
+
+// ── Resource Group ───────────────────────────────────────────────
+
+resource rgs 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+name: empty(resourceGroupName) ? '${sanitizedProject}-${env}-rg' : resourceGroupName
+location: location
+}
+
+// ── Module deployment ────────────────────────────────────────────
+
+module mainDeploys 'main.bicep' = {
+name: 'deployMainToRg-${env}'
+scope: resourceGroup(rgs.name)
+params: {
+projectName: projectName
+env: env
+location: location
+keyVault: keyVault
+appInsights: appInsights
+logAnalytics: logAnalytics
+{%- if use_redis %}
+redis: redis
+{%- endif %}
+{%- if database_backend == 'azure_postgresql' %}
+postgres: postgres
+{%- endif %}
+{%- if use_azure_openai %}
+openai: openai
+{%- endif %}
+{%- if use_ai_search %}
+aiSearch: aiSearch
+{%- endif %}
+{%- if use_document_intelligence %}
+documentIntelligence: documentIntelligence
+{%- endif %}
+}
+}
+
+// ── Outputs ──────────────────────────────────────────────────────
+
+output resourceGroupName string = rgs.name
+output resourceGroupId string = rgs.id

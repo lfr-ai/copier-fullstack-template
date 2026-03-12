@@ -1,13 +1,9 @@
-# Testing Guide
 
-## Overview
 
 {{ project_name }} uses a layered testing strategy aligned with the hexagonal
 architecture.
 
-## Backend Testing
 
-### Test Runner
 
 Tests run through **tox** with **pytest**:
 
@@ -17,30 +13,42 @@ task backend:test:unit     # Run unit tests only
 task backend:test:coverage # Run with coverage report
 ```
 
-### Test Structure
 
 ```
-tests/
+backend/tests/
 +-- conftest.py            # Shared fixtures
-+-- factories/             # Test factories
-+-- fixtures/              # Reusable fixtures
++-- factories/             # Test data factories (factory_boy)
++-- fixtures/              # Reusable fixture data files
++-- mocks/                 # Reusable mock objects
++-- utils/                 # Assertion helpers, fixture factories, mock builders
 +-- unit/
-|   +-- test_entities.py
-|   +-- test_value_objects.py
-|   +-- test_services.py
-|   +-- test_validators.py
-|   +-- test_cache.py
-|   +-- test_retry_policies.py
+|   +-- core/              # Domain entity and value object tests
+|   +-- application/       # Service and use case tests
+|   +-- adapters/          # Adapter tests (mocked I/O)
+|   +-- ports/             # API route and CLI tests
+|   +-- config/            # Config and settings tests
+|   +-- infrastructure/    # Infrastructure tests
+|   +-- utils/             # Utility function tests
 +-- integration/
 |   +-- test_api.py
 |   +-- test_database.py
 +-- property/
 |   +-- test_value_objects.py
-+-- e2e/
-    +-- test_smoke.py
+|   +-- test_generate_registry.py
++-- performance/
+    +-- (benchmarks)
 ```
 
-### Writing Unit Tests
+
+```bash
+task backend:test              # Run all backend tests via tox
+task backend:test:unit         # Unit tests only
+task backend:test:integration  # Integration tests
+task backend:test:property     # Property-based tests (Hypothesis)
+task backend:test:performance  # Performance / benchmark tests
+task backend:test:coverage     # Tests with coverage report
+```
+
 
 Test domain logic and use cases in isolation:
 
@@ -57,7 +65,6 @@ def test_create_user() -> None:
     assert user.display_name == "Test User"
 ```
 
-### Writing Integration Tests
 
 Test the full HTTP request/response cycle:
 
@@ -71,10 +78,9 @@ async def test_health_endpoint(client: AsyncClient) -> None:
     response = await client.get("/api/v1/health")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert response.json()["status"] == "healthy"
 ```
 
-### Property-Based Tests
 
 Use Hypothesis for property-based testing:
 
@@ -89,7 +95,6 @@ def test_valid_emails_accepted(email_str: str) -> None:
     assert str(email) == email_str.lower().strip()
 ```
 
-### Coverage
 
 Generate HTML coverage report:
 
@@ -98,9 +103,7 @@ task backend:test:coverage
 open htmlcov/index.html
 ```
 
-## Frontend Testing
 
-### Unit Tests
 
 Run with vitest:
 
@@ -112,7 +115,6 @@ task frontend:test:coverage # With coverage
 Tests are located in `frontend/tests/`.
 {% if use_playwright %}
 
-### End-to-End Tests
 
 Run with Playwright:
 
@@ -121,5 +123,48 @@ task test:e2e              # Run E2E tests headless
 task test:e2e:ui           # Run with Playwright UI
 ```
 
-E2E tests are in `tests/e2e/`.
+E2E tests are in `frontend/tests/e2e/` and run via Playwright.
 {% endif %}
+
+
+The registry code generator has its own co-located test suite in `registry/tests/`:
+
+```
+registry/tests/
++-- conftest.py                         # Registry-specific fixtures
++-- test_generate_registry.py           # Unit tests for generator functions
++-- test_generate_registry_property.py  # Hypothesis property-based tests
+```
+
+
+```bash
+task registry:test      # Unit + property tests for the generator
+task registry:check     # CI gate — verify generated files are up-to-date
+task registry:validate  # Validate naming_registry.json structure only
+```
+
+Registry tests verify:
+
+- String helpers (`_to_pascal_case`, `_to_camel_case`) produce correct output
+- Validation catches missing/invalid schema fields
+- Python/TypeScript/env generation produces expected content
+- Property-based invariants hold across random inputs (Hypothesis)
+
+
+Performance tests live in `backend/tests/performance/` and use the `@pytest.mark.performance` marker:
+
+```bash
+task backend:test:performance   # Run performance tests
+task test:performance           # Alias from root
+```
+
+
+| Level       | Speed   | Scope              | Where                      |
+| ----------- | ------- | ------------------ | -------------------------- |
+| Unit        | Fast    | Single function    | `backend/tests/unit/`      |
+| Property    | Medium  | Invariant proofs   | `backend/tests/property/`  |
+| Integration | Slow    | DB + HTTP paths    | `backend/tests/integration/`|
+| Performance | Slow    | Benchmarks         | `backend/tests/performance/`|
+| Registry    | Fast    | Generator logic    | `registry/tests/`          |
+| Frontend    | Fast    | Components + utils | `frontend/tests/unit/`     |{% if use_playwright %}
+| E2E         | Slowest | Full browser flow  | `frontend/tests/e2e/`      |{% endif %}

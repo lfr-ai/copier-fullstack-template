@@ -1,0 +1,50 @@
+"""Tests for pagination_utils module."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.utils.pagination_utils import paginate_list, total_pages
+
+
+class TestPaginateList:
+    """Test suite for paginate_list function."""
+
+    def test_first_page(self) -> None:
+        """Verify first page returns correct slice."""
+        items = list(range(50))
+        assert paginate_list(items, page=1, page_size=10) == list(range(10))
+
+    def test_second_page(self) -> None:
+        """Verify second page returns correct offset slice."""
+        items = list(range(50))
+        assert paginate_list(items, page=2, page_size=10) == list(range(10, 20))
+
+    def test_last_partial_page(self) -> None:
+        """Verify last partial page returns remaining items."""
+        items = list(range(25))
+        result = paginate_list(items, page=3, page_size=10)
+        assert result == [20, 21, 22, 23, 24]
+
+    def test_beyond_last_page_returns_empty(self) -> None:
+        """Verify page beyond last returns empty list."""
+        items = list(range(5))
+        assert paginate_list(items, page=2, page_size=10) == []
+
+
+class TestTotalPages:
+    """Test suite for total_pages function."""
+
+    def test_exact_division(self) -> None:
+        """Verify exact division returns correct page count."""
+        assert total_pages(total_items=100, page_size=10) == 10
+
+    def test_remainder(self) -> None:
+        """Verify remainder rounds up to extra page."""
+        assert total_pages(total_items=101, page_size=10) == 11
+
+    def test_zero_items(self) -> None:
+        """Verify zero items yields zero pages."""
+        assert total_pages(total_items=0, page_size=10) == 0
+
+    def test_zero_page_size(self) -> None:
+        """Verify zero page_size yields zero pages."""
+        assert total_pages(total_items=10, page_size=0) == 0

@@ -1,0 +1,12 @@
+"""Shared configuration for all unit tests.
+
+Automatically applies ``pytest.mark.unit`` to every test collected
+under ``tests/unit/``, so individual modules no longer need to
+declare ``pytestmark = pytest.mark.unit``.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+pytestmark = pytest.mark.unit

@@ -1,0 +1,27 @@
+
+
+Accepted
+
+
+{{ '%Y-%m-%d' | strftime }}
+
+
+We need a reverse proxy for production deployments that handles TLS termination, compression,
+security headers, and routing between backend API and frontend static assets.
+
+
+Use [Caddy](https://caddyserver.com/) as the reverse proxy with:
+
+- Automatic HTTPS via ACME (Let's Encrypt)
+- Built-in compression (gzip, zstd)
+- Security headers (HSTS, CSP, X-Frame-Options)
+- Simple configuration via Caddyfile
+
+Caddy is an optional component, enabled via `use_caddy` copier variable.
+
+
+- **Positive**: Zero-config HTTPS in production
+- **Positive**: Much simpler configuration than Nginx
+- **Positive**: Built-in HTTP/3 support
+- **Negative**: Less community documentation than Nginx
+- **Negative**: Slightly higher memory usage than Nginx

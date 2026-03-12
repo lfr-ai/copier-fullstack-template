@@ -1,0 +1,46 @@
+"""Unit tests for the development task scheduler."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.infrastructure.scheduling.scheduler import Scheduler
+
+
+class TestSchedulerRegister:
+    """Test suite for task registration."""
+
+    def test_register_adds_task(self) -> None:
+        """Verify register stores a task by name."""
+        scheduler = Scheduler()
+        scheduler.register("cleanup", lambda: None, interval_seconds=60)
+        assert "cleanup" in scheduler.list_tasks()
+
+    def test_register_multiple_tasks(self) -> None:
+        """Verify multiple tasks can be registered."""
+        scheduler = Scheduler()
+        scheduler.register("task_a", lambda: None, interval_seconds=10)
+        scheduler.register("task_b", lambda: None, interval_seconds=20)
+        assert scheduler.list_tasks() == ["task_a", "task_b"]
+
+    def test_register_overwrites_existing_task(self) -> None:
+        """Verify re-registering a task name overwrites the previous entry."""
+        scheduler = Scheduler()
+        scheduler.register("job", lambda: "v1", interval_seconds=5)
+        scheduler.register("job", lambda: "v2", interval_seconds=10)
+        assert scheduler.list_tasks().count("job") == 1
+
+
+class TestSchedulerListTasks:
+    """Test suite for list_tasks operation."""
+
+    def test_list_tasks_empty(self) -> None:
+        """Verify list_tasks returns empty list when nothing registered."""
+        scheduler = Scheduler()
+        assert scheduler.list_tasks() == []
+
+    def test_list_tasks_preserves_order(self) -> None:
+        """Verify list_tasks returns tasks in registration order."""
+        scheduler = Scheduler()
+        scheduler.register("first", lambda: None, interval_seconds=1)
+        scheduler.register("second", lambda: None, interval_seconds=2)
+        scheduler.register("third", lambda: None, interval_seconds=3)
+        assert scheduler.list_tasks() == ["first", "second", "third"]

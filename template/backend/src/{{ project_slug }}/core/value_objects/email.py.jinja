@@ -1,0 +1,44 @@
+"""Email value object with validation."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from {{ project_slug }}.core.entities.base import ValueObject
+from {{ project_slug }}.core.exceptions.validation import ValidationError
+from {{ project_slug }}.core.validators import EMAIL_PATTERN
+
+__all__ = ["Email"]
+
+
+@dataclass(frozen=True, slots=True)
+class Email(ValueObject):
+    """Immutable email value object with format validation.
+
+    Ensures email addresses are always valid and normalized
+    to lowercase on creation.
+    """
+
+    value: str
+
+    def __post_init__(self) -> None:
+        """Validate and normalize email on creation."""
+        normalized = self.value.strip().lower()
+        object.__setattr__(self, "value", normalized)
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate email format invariant.
+
+        Raises:
+            ValidationError: When email format is invalid.
+        """
+        if not EMAIL_PATTERN.match(self.value):
+            raise ValidationError(
+                "Invalid email format: '%s'" % self.value,
+                field="email",
+            )
+
+    def __str__(self) -> str:
+        """Return the normalized email address."""
+        return self.value

@@ -1,8 +1,5 @@
-# Architecture Overview
 
-## {{ project_name }}
 
-### Hexagonal Architecture (Ports & Adapters)
 
 ```
                   Ports (Driving)
@@ -20,7 +17,6 @@
     Auth  External Services
 ```
 
-### Key Principles
 
 - **Dependency Inversion**: Core domain has no external dependencies
 - **Port Interfaces**: Defined in core, implemented in adapters
@@ -28,20 +24,23 @@
 - **CQRS-Lite**: Separate command and query handlers
 - **Repository Pattern**: Data access abstracted behind interfaces
 - **Unit of Work**: Transaction management via context managers
+- **Keyword-Only Arguments**: All constructors use `*` for keyword enforcement
+- **Enum from_str()**: All StrEnums provide `from_str()` classmethod for case-insensitive lookup
+- **Utils as Shared Leaf**: `utils/` imports only stdlib + third-party, never first-party code
 
-### Directory Structure
 
 ```
-src/{{ project_slug }}/
-  core/           # Domain logic, entities, interfaces
-  application/    # Use cases, services, DTOs, commands
-  adapters/       # Infrastructure implementations
-  ports/          # API, Web, CLI entry points
-  config/         # Settings, DI container
-  utils/          # Shared utilities
+backend/src/{{ project_slug }}/
+  core/           # Domain logic, entities, enums, interfaces, value objects
+  application/    # Use cases, services, DTOs, commands, queries, mappers
+  adapters/       # Infrastructure implementations (DB, cache, email, storage)
+  ports/          # API routes, Web controllers, CLI commands, schemas, DI container
+  config/         # Settings, constants
+  infrastructure/ # Low-level primitives (DB engines, security, scheduling)
+  utils/          # Shared utilities (stdlib + third-party only)
+  ai/             # LLM adapters, agents, embeddings, prompt templates
 ```
 
-### Data Flow
 
 1. Request enters via **Port** (API route, CLI command, web controller)
 2. Port delegates to **Application Service**
@@ -49,7 +48,6 @@ src/{{ project_slug }}/
 4. **Adapters** implement interfaces for persistence, cache, events
 5. Response flows back through the same path
 
-### Configuration
 
 Settings are loaded from environment variables with pydantic-settings.
 Environment-specific settings classes override base defaults.

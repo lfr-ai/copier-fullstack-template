@@ -1,0 +1,162 @@
+"""Unit tests for API schemas (UserResponse, CreateUserRequest)."""
+
+from __future__ import annotations
+
+import pytest
+from pydantic import ValidationError
+
+from {{ project_slug }}.ports.api.schemas.user_schema import CreateUserRequest, UserResponse
+
+class TestUserResponse:
+    """Test suite for UserResponse schema."""
+
+    def test_valid_response(self) -> None:
+        """Verify valid UserResponse creation."""
+        response = UserResponse(
+            id=1,
+            email="user@example.com",
+            display_name="Jane Doe",
+            is_active=True,
+        )
+        assert response.id == 1
+        assert response.email == "user@example.com"
+        assert response.display_name == "Jane Doe"
+        assert response.is_active is True
+
+    def test_id_must_be_positive(self) -> None:
+        """Verify id=0 raises ValidationError."""
+        with pytest.raises(ValidationError):
+            UserResponse(
+                id=0,
+                email="user@example.com",
+                display_name="Jane",
+                is_active=True,
+            )
+
+    def test_negative_id_rejected(self) -> None:
+        """Verify negative id raises ValidationError."""
+        with pytest.raises(ValidationError):
+            UserResponse(
+                id=-1,
+                email="user@example.com",
+                display_name="Jane",
+                is_active=True,
+            )
+
+    def test_strips_whitespace(self) -> None:
+        """Verify whitespace stripped from string fields."""
+        response = UserResponse(
+            id=1,
+            email="  user@example.com  ",
+            display_name="  Jane  ",
+            is_active=True,
+        )
+        assert response.email == "user@example.com"
+        assert response.display_name == "Jane"
+
+    def test_default_is_active(self) -> None:
+        """Verify is_active defaults to True."""
+        response = UserResponse(
+            id=1,
+            email="user@example.com",
+            display_name="Jane",
+        )
+        assert response.is_active is True
+
+    def test_serialization(self) -> None:
+        """Verify JSON serialization round-trip."""
+        response = UserResponse(
+            id=1,
+            email="user@example.com",
+            display_name="Jane",
+            is_active=False,
+        )
+        data = response.model_dump()
+        assert data["id"] == 1
+        assert data["is_active"] is False
+
+class TestCreateUserRequest:
+    """Test suite for CreateUserRequest schema."""
+
+    def test_valid_request(self) -> None:
+        """Verify valid CreateUserRequest creation."""
+        request = CreateUserRequest(
+            email="user@example.com",
+            display_name="Jane Doe",
+            password="securepassword123",
+        )
+        assert request.email == "user@example.com"
+        assert request.display_name == "Jane Doe"
+        assert request.password == "securepassword123"
+
+    def test_email_required(self) -> None:
+        """Verify missing email raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserRequest(  # type: ignore[call-arg]
+                display_name="Jane",
+                password="securepassword123",
+            )
+
+    def test_email_min_length(self) -> None:
+        """Verify email too short raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserRequest(
+                email="a@b",
+                display_name="Jane",
+                password="securepassword123",
+            )
+
+    def test_email_max_length(self) -> None:
+        """Verify email too long raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserRequest(
+                email="a" * 250 + "@b.com",
+                display_name="Jane",
+                password="securepassword123",
+            )
+
+    def test_display_name_min_length(self) -> None:
+        """Verify empty display name raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserRequest(
+                email="user@example.com",
+                display_name="",
+                password="securepassword123",
+            )
+
+    def test_display_name_max_length(self) -> None:
+        """Verify display name exceeding max raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserRequest(
+                email="user@example.com",
+                display_name="x" * 101,
+                password="securepassword123",
+            )
+
+    def test_password_min_length(self) -> None:
+        """Verify short password raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserRequest(
+                email="user@example.com",
+                display_name="Jane",
+                password="short",
+            )
+
+    def test_password_max_length(self) -> None:
+        """Verify password exceeding max raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserRequest(
+                email="user@example.com",
+                display_name="Jane",
+                password="x" * 129,
+            )
+
+    def test_strips_whitespace(self) -> None:
+        """Verify whitespace stripped from string fields."""
+        request = CreateUserRequest(
+            email="  user@example.com  ",
+            display_name="  Jane  ",
+            password="securepassword123",
+        )
+        assert request.email == "user@example.com"
+        assert request.display_name == "Jane"

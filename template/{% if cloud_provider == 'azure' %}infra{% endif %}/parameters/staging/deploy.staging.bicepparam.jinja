@@ -1,0 +1,136 @@
+using '../../deploy.bicep'
+
+param projectName = '{{ project_slug | replace("_", "-") }}'
+param env = 'staging'
+param location = '{{ azure_location }}'
+
+param keyVault = {
+skuName: 'standard'
+keyVaultName: ''
+principalIds: []
+enableSoftDelete: true
+enablePurgeProtection: true
+enableRbacAuthorization: true
+softDeleteRetentionInDays: 90
+publicNetworkAccess: 'Enabled'
+networkAcls: {
+bypass: 'AzureServices'
+defaultAction: 'Deny'
+ipRules: []
+virtualNetworkRules: []
+}
+deploy: true
+}
+
+param appInsights = {
+kind: 'web'
+applicationType: 'web'
+workspaceResourceId: ''
+publicNetworkAccessForIngestion: 'Enabled'
+publicNetworkAccessForQuery: 'Enabled'
+retentionInDays: 90
+disableLocalAuth: true
+deploy: true
+}
+
+param logAnalytics = {
+workspaceName: ''
+retentionInDays: 90
+deploy: true
+}
+{%- if use_redis %}
+
+param redis = {
+cacheName: ''
+skuName: 'Standard'
+skuFamily: 'C'
+skuCapacity: 1
+redisVersion: '6'
+minimumTlsVersion: '1.2'
+enableNonSslPort: false
+publicNetworkAccess: 'Enabled'
+disableAccessKeyAuthentication: false
+enableEntraAuth: true
+enableManagedIdentity: true
+updateChannel: 'Stable'
+maxMemoryPolicy: 'allkeys-lru'
+maxMemoryDelta: '50'
+maxFragmentationMemoryReserved: '50'
+notifyKeyspaceEvents: ''
+zones: []
+shardCount: 0
+replicasPerPrimary: 0
+enableRdbPersistence: false
+rdbBackupFrequencyInSeconds: 3600
+enableAofPersistence: false
+patchScheduleDayOfWeek: 'Saturday'
+patchScheduleStartHourUtc: 2
+patchScheduleMaintenanceWindow: 'PT5H'
+firewallRules: []
+enableDiagnostics: true
+deploy: true
+}
+{%- endif %}
+{%- if use_azure_openai %}
+
+param openai = {
+accountName: ''
+skuName: 'S0'
+customSubDomainName: ''
+publicNetworkAccess: 'Enabled'
+disableLocalAuth: true
+chatModelName: 'gpt-4o'
+chatModelVersion: '2024-08-06'
+chatDeploymentSkuName: 'Standard'
+chatDeploymentCapacity: 15
+embeddingModelName: 'text-embedding-3-large'
+embeddingModelVersion: ''
+embeddingDeploymentSkuName: 'Standard'
+embeddingDeploymentCapacity: 15
+deployChatModel: true
+deployEmbeddingModel: true
+deploy: true
+}
+{%- endif %}
+{%- if use_ai_search %}
+
+param aiSearch = {
+searchServiceName: ''
+skuName: 'basic'
+replicaCount: 1
+partitionCount: 1
+semanticSearch: 'free'
+hostingMode: 'default'
+publicNetworkAccess: 'enabled'
+disableLocalAuth: true
+deploy: true
+}
+{%- endif %}
+{%- if use_document_intelligence %}
+
+param documentIntelligence = {
+accountName: ''
+skuName: 'S0'
+customSubDomainName: ''
+publicNetworkAccess: 'Enabled'
+disableLocalAuth: true
+deploy: true
+}
+{%- endif %}
+{%- if database_backend == 'azure_postgresql' %}
+
+param postgres = {
+serverName: ''
+skuName: 'Standard_B2ms'
+skuTier: 'Burstable'
+version: '17'
+storageSizeGB: 32
+adminLogin: 'pgadmin'
+adminPassword: '' // Set via --parameters or Key Vault reference
+highAvailabilityMode: 'Disabled'
+backupRetentionDays: 14
+geoRedundantBackup: 'Disabled'
+publicNetworkAccess: 'Enabled'
+deploy: true
+}
+{%- endif %}

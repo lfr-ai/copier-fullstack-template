@@ -1,0 +1,199 @@
+
+Recommended VS Code setup for {{ project_name }}.
+
+
+Open the multi-root workspace for the best experience:
+
+```
+{{ project_slug }}.code-workspace
+```
+
+This provides:
+
+- Four workspace folders — Root, Backend (src), Frontend, Tests
+- Language-specific formatters (Ruff → Python, Prettier → JS/TS/JSON/YAML/MD)
+- Debug launch configurations for FastAPI, pytest, and the CLI
+- Task definitions for `dev`, `test`, `lint`, and `typecheck`
+- Pre-configured extension recommendations
+
+---
+
+
+
+| Extension | Purpose |
+| -------------------------------------------- | ----------------------------------- |
+| `ms-python.python` | Python language support |
+| `ms-python.debugpy` | Python debugging |
+| `charliermarsh.ruff` | Python linting & formatting |
+| `astral-sh.ty` | Ty type checker |
+| `dbaeumer.vscode-eslint` | JavaScript/TypeScript linting |
+| `esbenp.prettier-vscode` | Prettier formatter |
+| `vitest.explorer` | Vitest test runner |
+| `bradlc.vscode-tailwindcss` | Tailwind CSS IntelliSense |
+| `naumovs.color-highlight` | Inline colour preview |
+| `tamasfe.even-better-toml` | TOML support |
+| `redhat.vscode-yaml` | YAML support |
+| `samuelcolvin.jinjahtml` | Jinja template syntax |
+| `editorconfig.editorconfig` | EditorConfig support |
+| `davidanson.vscode-markdownlint` | Markdown linting |
+| `shd101wyy.markdown-preview-enhanced` | Rich Markdown preview |
+| `ms-azuretools.vscode-containers` | Container management |
+| `exiasr.hadolint` | Dockerfile linting |
+| `timonwong.shellcheck` | Shell script linting |
+| `waderyan.gitblame` | Inline git blame |
+| `codezombiech.gitignore` | .gitignore language support |
+| `github.copilot-chat` | GitHub Copilot Chat |
+| `streetsidesoftware.code-spell-checker` | Spell checking |
+| `vscode-icons-team.vscode-icons` | File icon theme |
+| `wayou.vscode-todo-highlight` | TODO/FIXME highlighting |
+| `dvirtz.parquet-viewer` | Parquet file viewer |
+| `tomoki1207.pdf` | PDF viewer |
+| `postman.postman-for-vscode` | API testing |
+| `upstash.context7-mcp` | MCP documentation server |
+
+
+| Extension | Condition |
+| ------------------------------------------- | ------------------------------ |
+| `ms-playwright.playwright` | `use_playwright = true` |
+| `ms-vscode-remote.remote-containers` | `use_devcontainer = true` |
+| `mtxr.sqltools` | `database_backend = postgresql` |
+| `mtxr.sqltools-driver-pg` | `database_backend = postgresql` |
+| `ms-azuretools.vscode-azure-github-copilot` | `cloud_provider = azure` |
+| `ms-azuretools.vscode-azure-mcp-server` | `cloud_provider = azure` |
+| `ms-azuretools.vscode-azureresourcegroups` | `cloud_provider = azure` |
+| `ms-azuretools.vscode-bicep` | `cloud_provider = azure` |
+| `ms-vscode.azure-repos` | `cloud_provider = azure` |
+| `ms-vscode.azurecli` | `cloud_provider = azure` |
+| `ms-azure-devops.azure-pipelines` | `cloud_provider = azure` |
+
+
+Install these per-developer, not in workspace recommendations:
+
+```powershell
+code --install-extension ms-vscode-remote.remote-ssh
+code --install-extension ms-vscode-remote.remote-ssh-edit
+code --install-extension ms-vscode-remote.remote-wsl
+code --install-extension ms-vscode.remote-explorer
+code --install-extension ms-vscode.remote-repositories
+code --install-extension ms-vscode.remote-server
+code --install-extension github.remotehub
+
+code --install-extension ms-mssql.mssql
+code --install-extension ms-dotnettools.vscode-dotnet-runtime
+
+code --install-extension ms-windows-ai-studio.windows-ai-studio
+code --install-extension teamsdevapp.vscode-ai-foundry
+
+code --install-extension streetsidesoftware.code-spell-checker-danish
+
+code --install-extension patricklee.vsnotes
+
+code --install-extension ms-vscode.powershell
+```
+
+---
+
+
+These are *personal preference* shortcuts. The project works perfectly with
+VS Code defaults. Copy the block below into your **user** `keybindings.json`
+(`Ctrl+K Ctrl+S` → open keyboard shortcuts JSON):
+
+```jsonc
+[
+  // ── Terminal ──────────────────────────────────────────────────
+  { "key": "ctrl+m",      "command": "workbench.action.terminal.split",
+    "when": "terminalFocus && terminalProcessSupported || terminalFocus && terminalWebExtensionContributedProfile" },
+  { "key": "ctrl+oem_3",  "command": "workbench.action.terminal.new",
+    "when": "terminalProcessSupported || terminalWebExtensionContributedProfile" },
+  { "key": "ctrl+down",   "command": "workbench.action.terminal.scrollToBottom",
+    "when": "terminalFocusInAny && terminalHasBeenCreated && !terminalAltBufferActive" },
+  { "key": "ctrl+up",     "command": "workbench.action.terminal.scrollToTop",
+    "when": "terminalFocusInAny && terminalHasBeenCreated && !terminalAltBufferActive" },
+  { "key": "ctrl+delete", "command": "workbench.action.terminal.kill" },
+
+  // ── Navigation ────────────────────────────────────────────────
+  { "key": "ctrl+d",         "command": "workbench.view.explorer",
+    "when": "viewContainer.workbench.view.explorer.enabled" },
+  { "key": "ctrl+e",         "command": "workbench.action.findInFiles" },
+  { "key": "ctrl+n",         "command": "workbench.action.splitEditorRight" },
+  { "key": "ctrl+q",         "command": "workbench.action.openGlobalKeybindings" },
+  { "key": "ctrl+k ctrl+i",  "command": "workbench.action.openWorkspace" },
+
+  // ── Editor ────────────────────────────────────────────────────
+  { "key": "ctrl+shift+j",  "command": "editor.action.revealDefinition",
+    "when": "editorHasDefinitionProvider && editorTextFocus" },
+  { "key": "ctrl+alt+o",    "command": "editor.action.changeAll",
+    "when": "editorTextFocus && !editorReadonly" },
+  { "key": "ctrl+r ctrl+s", "command": "editor.action.rename",
+    "when": "editorHasRenameProvider && editorTextFocus && !editorReadonly" },
+  { "key": "alt+f",         "command": "editor.action.quickFix",
+    "when": "editorHasCodeActionsProvider && textInputFocus && !editorReadonly" },
+
+  // ── Debugging ─────────────────────────────────────────────────
+  { "key": "ctrl+d r", "command": "workbench.action.debug.restart",    "when": "inDebugMode" },
+  { "key": "ctrl+d d", "command": "workbench.action.debug.disconnect", "when": "focusedSessionIsAttach && inDebugMode" },
+  { "key": "ctrl+d c", "command": "workbench.action.debug.continue",  "when": "debugState == 'stopped'" },
+  { "key": "ctrl+d s", "command": "workbench.action.debug.stop",      "when": "inDebugMode && !focusedSessionIsAttach" },
+
+  // ── SQL Tools ─────────────────────────────────────────────────
+  { "key": "ctrl+shift+s",             "command": "workbench.view.extension.sqltoolsActivityBarContainer" },
+  { "key": "ctrl+1",                   "command": "sqltools.executeCurrentQuery" },
+  { "key": "ctrl+alt+q",               "command": "sqltools.newSqlFile" },
+  { "key": "ctrl+oem_comma ctrl+oem_6","command": "sqltools.runFromBookmarks",
+    "when": "!config.sqltools.disableChordKeybindings" },
+
+  // ── Copilot / Chat ───────────────────────────────────────────
+  { "key": "ctrl+alt+e",         "command": "github.copilot.chat.explain" },
+  { "key": "ctrl+alt+g",         "command": "github.copilot.chat.generateDocs" },
+  { "key": "ctrl+u",             "command": "workbench.action.chat.undoEdit" },
+  { "key": "ctrl+alt+oem_minus", "command": "workbench.action.chat.openSessionTargetPicker" },
+
+  // ── Auxiliary bar ─────────────────────────────────────────────
+  { "key": "ctrl+alt+m",         "command": "workbench.action.maximizeAuxiliaryBar" },
+  { "key": "ctrl+alt+oem_comma", "command": "workbench.action.restoreAuxiliaryBar" }
+]
+```
+
+---
+
+
+Add these to your **user** `settings.json` (the workspace file already sets
+the project-specific subset):
+
+```jsonc
+{
+  // Terminal profiles (Windows)
+  "terminal.external.windowsExec": "C:\\Windows\\System32\\wsl.exe",
+  "terminal.integrated.defaultProfile.windows": "PowerShell 7",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell 7": { "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
+    "zsh": { "path": "C:\\Windows\\System32\\wsl.exe", "args": ["-e", "zsh"] }
+  },
+
+  // Copilot
+  "github.copilot.chat.codesearch.enabled": true,
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.nextEditSuggestions.allowWhitespaceOnlyChanges": false,
+
+  // Spell checker — add your language
+  "cSpell.language": "en, da",
+
+  // Notes (if using patricklee.vsnotes)
+  "vsnotes.defaultNotePath": "<your-notes-folder>"
+}
+```
+
+---
+
+
+| File | Tool | Purpose |
+| --------------------------------- | -------------- | ---------------------------------- |
+| `.editorconfig` | EditorConfig | Whitespace & encoding conventions |
+| `.prettierrc.json` | Prettier | JS/TS/JSON/YAML/MD formatter rules |
+| `.prettierignore` | Prettier | Paths Prettier should skip |
+| `.markdownlint-cli2.yaml` | markdownlint | Markdown style rules |
+| `.hadolint.yaml` | Hadolint | Dockerfile linting rules |
+| `backend/pyproject.toml [tool.ruff]` | Ruff | Python linting & formatting |
+| `cspell.json` | cSpell | Spell-check dictionary & ignores |
+| `eslint.config.js` | ESLint | TypeScript linting (frontend/) |
+| `tsconfig.json` | TypeScript | Compiler options (frontend/) |

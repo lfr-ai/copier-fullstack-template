@@ -1,0 +1,43 @@
+{%- if database_backend == "postgresql" or use_redis or use_celery %}
+
+services:
+  app:
+    environment:
+      {{ project_slug | upper }}_ENVIRONMENT: test
+      {{ project_slug | upper }}_DEBUG: "false"
+      {{ project_slug | upper }}_LOG_LEVEL: WARNING
+{%- if database_backend == "postgresql" %}
+      {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://postgres:test-password@db:5432/{{ project_slug }}_test
+{%- endif %}
+{%- if use_celery %}
+      {{ project_slug | upper }}_CELERY_TASK_ALWAYS_EAGER: "true"
+{%- endif %}
+{%- if use_celery %}
+
+  worker:
+    environment:
+      {{ project_slug | upper }}_ENVIRONMENT: test
+      {{ project_slug | upper }}_DEBUG: "false"
+      {{ project_slug | upper }}_LOG_LEVEL: WARNING
+{%- if database_backend == "postgresql" %}
+      {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://postgres:test-password@db:5432/{{ project_slug }}_test
+{%- endif %}
+      {{ project_slug | upper }}_CELERY_TASK_ALWAYS_EAGER: "true"
+{%- endif %}
+{%- if database_backend == "postgresql" %}
+
+  db:
+    tmpfs:
+      - /var/lib/postgresql/data:size=256m
+    volumes: !reset []
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test-password
+      POSTGRES_DB: {{ project_slug }}_test
+{%- endif %}
+{%- if use_redis %}
+
+  redis:
+    command: redis-server --save "" --appendonly no
+{%- endif %}
+{%- endif %}

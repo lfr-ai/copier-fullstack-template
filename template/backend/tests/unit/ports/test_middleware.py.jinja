@@ -1,0 +1,44 @@
+"""Unit tests for API middleware."""
+
+from __future__ import annotations
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from {{ project_slug }}.ports.api.app import create_api_app
+
+@pytest.mark.asyncio
+class TestRequestIdMiddleware:
+    """Test suite for RequestIdMiddleware."""
+
+    async def test_response_contains_request_id(self) -> None:
+        """Verify response includes X-Request-ID header."""
+        app = create_api_app()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.get("/api/v1/health")
+        assert "X-Request-ID" in response.headers
+
+    async def test_echoes_provided_request_id(self) -> None:
+        """Verify provided X-Request-ID echoed back."""
+        app = create_api_app()
+        transport = ASGITransport(app=app)
+        custom_id = "test-request-id-123"
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.get(
+                "/api/v1/health",
+                headers={"X-Request-ID": custom_id},
+            )
+        assert response.headers["X-Request-ID"] == custom_id
+
+@pytest.mark.asyncio
+class TestErrorHandlerMiddleware:
+    """Test suite for global error handlers."""
+
+    async def test_not_found_returns_404(self) -> None:
+        """Verify nonexistent route returns 404-like response."""
+        app = create_api_app()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.get("/api/v1/nonexistent")
+        assert response.status_code in (404, 405)

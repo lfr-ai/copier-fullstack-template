@@ -14,8 +14,17 @@ _exclude:
 
 _skip_if_exists:
   - ".env"
+  - ".env.dev"
+  - ".env.development"
+  - ".env.production"
+  - ".env.staging"
+  - ".env.test"
+  - "CHANGELOG.md"
+  - "backend/seeds/initial_data.json"
 
-#  Project metadata 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Project metadata
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 project_name:
   type: str
@@ -53,12 +62,25 @@ copyright_year:
   help: "Copyright year"
   default: "{{ '%Y' | strftime }}"
 
-#  Technical choices 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Backend language (Python only — extensible later)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+backend_language:
+  type: str
+  help: "Backend language (Python only for now; extensible later)"
+  default: "python"
+  choices:
+    Python: "python"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Technical choices
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 python_version:
   type: str
   help: "Minimum Python version"
-  default: "3.12"
+  default: "3.13"
   choices:
     - "3.12"
     - "3.13"
@@ -71,22 +93,45 @@ node_version:
     - "20"
     - "22"
 
+frontend_framework:
+  type: str
+  help: "Frontend framework (Lit or React, both use Vite + TypeScript)"
+  default: "lit"
+  choices:
+    Lit (lightweight Web Components + Vite): "lit"
+    React (React 19 + Vite): "react"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Database
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 database_backend:
   type: str
   help: "Database backend"
   default: "postgresql"
   choices:
-    - "postgresql"
-    - "sqlite"
+    None (no database): "none"
+    PostgreSQL (local container): "postgresql"
+    Azure Database for PostgreSQL Flexible Server: "azure_postgresql"
+  when: "{{ cloud_provider == 'none' or cloud_provider == 'azure' }}"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Feature flags
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 use_celery:
   type: bool
-  help: "Include Celery async task processing"
+  help: "Include Celery async task processing (requires Redis)"
   default: true
 
 use_redis:
   type: bool
-  help: "Include Redis caching layer"
+  help: "Include Redis caching layer and message broker"
+  default: true
+
+use_caddy:
+  type: bool
+  help: "Include Caddy reverse proxy (TLS, compression, security headers)"
   default: true
 
 use_auth:
@@ -104,6 +149,11 @@ use_devcontainer:
   help: "Include devcontainer configuration"
   default: true
 
+with_opencode:
+  type: bool
+  help: "Include OpenCode AI coding agent install script and configuration"
+  default: false
+
 container_runtime:
   type: str
   help: "Container runtime"
@@ -112,6 +162,24 @@ container_runtime:
     - "podman"
     - "docker"
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Cloud & infrastructure
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+cloud_provider:
+  type: str
+  help: "Cloud provider for infrastructure-as-code and CLI tooling"
+  default: "none"
+  choices:
+    None (local only): "none"
+    Azure: "azure"
+
+azure_location:
+  type: str
+  help: "Azure region for resource deployment"
+  default: "swedencentral"
+  when: "{{ cloud_provider == 'azure' }}"
+
 secret_backend:
   type: str
   help: "Secret management backend"
@@ -119,6 +187,33 @@ secret_backend:
   choices:
     Env files only: "env"
     Azure Key Vault: "azure_kv"
+  when: "{{ cloud_provider == 'azure' or cloud_provider == 'none' }}"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  AI / RAG infrastructure (Azure only)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+use_azure_openai:
+  type: bool
+  help: "Include Azure OpenAI Service (GPT models + embeddings for RAG)"
+  default: false
+  when: "{{ cloud_provider == 'azure' }}"
+
+use_ai_search:
+  type: bool
+  help: "Include Azure AI Search (vector/hybrid/semantic search for RAG)"
+  default: false
+  when: "{{ cloud_provider == 'azure' }}"
+
+use_document_intelligence:
+  type: bool
+  help: "Include Azure Document Intelligence (PDF/document ingestion for RAG)"
+  default: false
+  when: "{{ cloud_provider == 'azure' }}"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  License
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 license:
   type: str
@@ -130,22 +225,51 @@ license:
     - "GPL-3.0"
     - "Proprietary"
 
-#  Post-generation tasks 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Post-generation tasks
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 _tasks:
   - command: "git init"
     when: "{{ _copier_operation == 'copy' }}"
   - command: "git add ."
     when: "{{ _copier_operation == 'copy' }}"
+  - command: "git commit -m 'feat: initial scaffold from copier-fullstack-template'"
+    when: "{{ _copier_operation == 'copy' }}"
 
 _message_after_copy: |
-  Your project "{{ project_name }}" has been created successfully!
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  Project "{{ project_name }}" created successfully!         ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  This template is designed for LOCAL usage — no remote URL needed.
+  You cloned/forked this repo, and ran:
+
+      uvx copier copy --trust . ../{{ project_slug }}
 
   Next steps:
 
     1. cd {{ _copier_conf.dst_path }}
-    2. zsh scripts/setup.zsh   # Full project setup
-    3. task dev                 # Start development server
+    2. zsh scripts/install/install-all.zsh    # Install ALL prerequisites
+    3. zsh scripts/bootstrap.zsh              # Full project bootstrap
+    4. task dev                               # Start development server
+
+  Or if prerequisites are already installed:
+
+    1. cd {{ _copier_conf.dst_path }}
+    2. zsh scripts/setup.zsh                  # Quick setup (deps + pre-commit)
+    3. task dev
+
+  On Windows (PowerShell as Admin):
+
+    1. .\scripts\install\install-all.ps1      # Installs WSL2, VS Code, Git, etc.
+    2. # Restart, then in WSL/Ubuntu:
+    3. zsh scripts/install/install-all.zsh
+    4. zsh scripts/bootstrap.zsh
+    5. task dev
+
+  To update later:    uvx copier update --trust
+  To re-apply:        uvx copier copy --trust <template-dir> <destination>
 
   See README.md for full documentation.
 

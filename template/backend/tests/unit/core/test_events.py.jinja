@@ -1,0 +1,71 @@
+"""Unit tests for user domain events."""
+
+from __future__ import annotations
+
+from datetime import UTC
+
+import pytest
+
+from {{ project_slug }}.core.entities.base import DomainEvent
+from {{ project_slug }}.core.events.user_events import UserCreated, UserDeactivated
+
+class TestUserCreated:
+    """Test suite for UserCreated event."""
+
+    def test_user_created_inherits_domain_event(self) -> None:
+        """Verify UserCreated is a DomainEvent subclass."""
+        assert issubclass(UserCreated, DomainEvent)
+
+    def test_user_created_stores_fields(self) -> None:
+        """Verify event stores user_id and email."""
+        event = UserCreated(user_id="u-1", email="test@example.com")
+        assert event.user_id == "u-1"
+        assert event.email == "test@example.com"
+
+    def test_user_created_defaults(self) -> None:
+        """Verify default empty strings for optional fields."""
+        event = UserCreated()
+        assert event.user_id == ""
+        assert event.email == ""
+
+    def test_user_created_has_event_id(self) -> None:
+        """Verify event receives unique identifier."""
+        event = UserCreated(user_id="u-1", email="a@b.com")
+        assert event.event_id is not None
+        assert len(event.event_id) > 0
+
+    def test_user_created_has_utc_timestamp(self) -> None:
+        """Verify event timestamp is UTC."""
+        event = UserCreated(user_id="u-1", email="a@b.com")
+        assert event.occurred_at.tzinfo == UTC
+
+    def test_user_created_is_frozen(self) -> None:
+        """Verify event is immutable."""
+        event = UserCreated(user_id="u-1", email="a@b.com")
+        with pytest.raises(AttributeError):
+            event.user_id = "mutated"  # type: ignore[misc]
+
+class TestUserDeactivated:
+    """Test suite for UserDeactivated event."""
+
+    def test_user_deactivated_inherits_domain_event(self) -> None:
+        """Verify UserDeactivated is a DomainEvent subclass."""
+        assert issubclass(UserDeactivated, DomainEvent)
+
+    def test_user_deactivated_stores_fields(self) -> None:
+        """Verify event stores user_id and reason."""
+        event = UserDeactivated(user_id="u-1", reason="inactivity")
+        assert event.user_id == "u-1"
+        assert event.reason == "inactivity"
+
+    def test_user_deactivated_defaults(self) -> None:
+        """Verify default empty strings for optional fields."""
+        event = UserDeactivated()
+        assert event.user_id == ""
+        assert event.reason == ""
+
+    def test_user_deactivated_is_frozen(self) -> None:
+        """Verify event is immutable."""
+        event = UserDeactivated(user_id="u-1", reason="test")
+        with pytest.raises(AttributeError):
+            event.reason = "changed"  # type: ignore[misc]

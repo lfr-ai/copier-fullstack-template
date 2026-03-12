@@ -1,0 +1,79 @@
+"""Unit tests for CQRS QueryHandler base class."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import pytest
+
+from {{ project_slug }}.application.queries.base import QueryHandler
+
+pytestmark = pytest.mark.asyncio
+
+
+
+
+@dataclass(frozen=True, slots=True)
+class _GetItemQuery:
+    """Sample query payload."""
+
+    item_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class _ItemResult:
+    """Sample query result."""
+
+    item_id: str
+    name: str
+
+
+class _GetItemHandler(QueryHandler[_GetItemQuery, _ItemResult | None]):
+    """Concrete handler returning a canned result."""
+
+    def __init__(self, store: dict[str, str]) -> None:
+        self._store = store
+
+    async def handle(self, query: _GetItemQuery) -> _ItemResult | None:
+        name = self._store.get(query.item_id)
+        if name is None:
+            return None
+        return _ItemResult(item_id=query.item_id, name=name)
+
+
+class _CountHandler(QueryHandler[str, int]):
+    """Handler returning a fixed count per prefix."""
+
+    async def handle(self, query: str) -> int:
+        return len(query)
+
+
+
+
+class TestQueryHandler:
+    """Test suite for abstract QueryHandler."""
+
+    async def test_concrete_handler_returns_result(self) -> None:
+        """Verify concrete subclass handles query and returns result."""
+        store = {"item-1": "Widget"}
+        handler = _GetItemHandler(store)
+        result = await handler.handle(_GetItemQuery(item_id="item-1"))
+        assert result is not None
+        assert result.name == "Widget"
+
+    async def test_handler_returns_none_for_missing(self) -> None:
+        """Verify handler returns None when item not found."""
+        handler = _GetItemHandler({})
+        result = await handler.handle(_GetItemQuery(item_id="missing"))
+        assert result is None
+
+    async def test_handler_with_simple_types(self) -> None:
+        """Verify handler works with built-in types."""
+        handler = _CountHandler()
+        result = await handler.handle("hello")
+        assert result == 5
+
+    def test_cannot_instantiate_abstract(self) -> None:
+        """Verify QueryHandler cannot be instantiated directly."""
+        with pytest.raises(TypeError):
+            QueryHandler()  # type: ignore[abstract]

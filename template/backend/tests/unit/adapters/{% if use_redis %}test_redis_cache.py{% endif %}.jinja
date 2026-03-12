@@ -1,0 +1,152 @@
+{%- if use_redis %}
+"""Unit tests for RedisCacheAdapter."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from {{ project_slug }}.adapters.cache.redis_cache import (
+CACHE_KEY_PREFIX,
+DEFAULT_TTL_SECONDS,
+RedisCacheAdapter,
+)
+
+pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
+
+
+@pytest.fixture
+def mock_redis() -> AsyncMock:
+"""Create mock async Redis client."""
+client = AsyncMock()
+client.get = AsyncMock(return_value=None)
+client.setex = AsyncMock()
+client.delete = AsyncMock(return_value=0)
+client.exists = AsyncMock(return_value=0)
+return client
+
+
+@pytest.fixture
+def adapter(mock_redis: AsyncMock) -> RedisCacheAdapter:
+"""Create RedisCacheAdapter with mock client."""
+return RedisCacheAdapter(mock_redis)
+
+
+class TestRedisCacheAdapterKeyPrefix:
+"""Test suite for key prefix handling."""
+
+def test_default_prefix(self, adapter: RedisCacheAdapter) -> None:
+"""Verify default key prefix."""
+assert adapter._key_prefix == CACHE_KEY_PREFIX # noqa: SLF001
+
+def test_custom_prefix(self, mock_redis: AsyncMock) -> None:
+"""Verify custom key prefix is applied."""
+adapter = RedisCacheAdapter(mock_redis, key_prefix="custom:ns")
+key = adapter._build_key("test") # noqa: SLF001
+assert key == "custom:ns:test"
+
+def test_build_key_format(self, adapter: RedisCacheAdapter) -> None:
+"""Verify key is built with prefix:key format."""
+key = adapter._build_key("mykey") # noqa: SLF001
+assert key == f"{CACHE_KEY_PREFIX}:mykey"
+
+
+class TestRedisCacheAdapterGet:
+"""Test suite for get operation."""
+
+async def test_get_returns_value(
+self,
+mock_redis: AsyncMock,
+adapter: RedisCacheAdapter,
+) -> None:
+"""Verify get returns cached value."""
+mock_redis.get.return_value = "cached-data"
+result = await adapter.get("key1")
+assert result == "cached-data"
+mock_redis.get.assert_awaited_once_with(f"{CACHE_KEY_PREFIX}:key1")
+
+async def test_get_returns_none_on_miss(
+self,
+mock_redis: AsyncMock,
+adapter: RedisCacheAdapter,
+) -> None:
+"""Verify get returns None on cache miss."""
+mock_redis.get.return_value = None
+result = await adapter.get("missing")
+assert result is None
+
+
+class TestRedisCacheAdapterSet:
+"""Test suite for set operation."""
+
+async def test_set_uses_default_ttl(
+self,
+mock_redis: AsyncMock,
+adapter: RedisCacheAdapter,
+) -> None:
+"""Verify set uses default TTL when none specified."""
+await adapter.set(key="key1", value="value1")
+mock_redis.setex.assert_awaited_once_with(
+name=f"{CACHE_KEY_PREFIX}:key1",
+time=DEFAULT_TTL_SECONDS,
+value="value1",
+)
+
+async def test_set_uses_custom_ttl(
+self,
+mock_redis: AsyncMock,
+adapter: RedisCacheAdapter,
+) -> None:
+"""Verify set uses custom TTL."""
+await adapter.set(key="key1", value="value1", ttl_seconds=60)
+mock_redis.setex.assert_awaited_once_with(
+name=f"{CACHE_KEY_PREFIX}:key1",
+time=60,
+value="value1",
+)
+
+
+class TestRedisCacheAdapterDelete:
+"""Test suite for delete operation."""
+
+async def test_delete_returns_true_on_success(
+self,
+mock_redis: AsyncMock,
+adapter: RedisCacheAdapter,
+) -> None:
+"""Verify delete returns True when key existed."""
+mock_redis.delete.return_value = 1
+assert await adapter.delete("key1") is True
+
+async def test_delete_returns_false_on_miss(
+self,
+mock_redis: AsyncMock,
+adapter: RedisCacheAdapter,
+) -> None:
+"""Verify delete returns False when key not found."""
+mock_redis.delete.return_value = 0
+assert await adapter.delete("missing") is False
+
+
+class TestRedisCacheAdapterExists:
+"""Test suite for exists operation."""
+
+async def test_exists_returns_true(
+self,
+mock_redis: AsyncMock,
+adapter: RedisCacheAdapter,
+) -> None:
+"""Verify exists returns True when key exists."""
+mock_redis.exists.return_value = 1
+assert await adapter.exists("key1") is True
+
+async def test_exists_returns_false(
+self,
+mock_redis: AsyncMock,
+adapter: RedisCacheAdapter,
+) -> None:
+"""Verify exists returns False when key missing."""
+mock_redis.exists.return_value = 0
+assert await adapter.exists("missing") is False
+{%- endif %}

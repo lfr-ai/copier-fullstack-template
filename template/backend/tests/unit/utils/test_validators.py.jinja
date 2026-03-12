@@ -1,0 +1,55 @@
+"""Unit tests for validation utilities."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.core.validators import is_strong_password, is_valid_email
+
+class TestEmailValidation:
+    """Test suite for email validation."""
+
+    @pytest.mark.parametrize(
+        "email",
+        [
+            "user@example.com",
+            "user.name+tag@domain.co",
+            "test123@sub.domain.org",
+        ],
+    )
+    def test_valid_emails(self, email: str) -> None:
+        """Verify valid emails pass validation."""
+        assert is_valid_email(email) is True
+
+    @pytest.mark.parametrize(
+        "email",
+        [
+            "",
+            "not-an-email",
+            "@nodomain.com",
+            "user@",
+            "user@.com",
+        ],
+    )
+    def test_invalid_emails(self, email: str) -> None:
+        """Verify invalid emails fail validation."""
+        assert is_valid_email(email) is False
+
+class TestPasswordValidation:
+    """Test suite for password strength validation."""
+
+    def test_strong_password(self) -> None:
+        """Verify strong password passes validation."""
+        assert is_strong_password("SecurePass1") is True
+
+    def test_too_short(self) -> None:
+        """Verify short password fails."""
+        assert is_strong_password("Short1") is False
+
+    def test_no_uppercase(self) -> None:
+        """Verify password without uppercase fails."""
+        assert is_strong_password("lowercase1") is False
+
+    def test_no_digit(self) -> None:
+        """Verify password without digit fails."""
+        assert is_strong_password("NoDigitHere") is False

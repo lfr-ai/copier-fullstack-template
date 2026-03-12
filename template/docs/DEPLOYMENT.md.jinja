@@ -1,6 +1,4 @@
-# Deployment Guide
 
-## Environments
 
 | Environment | Purpose | Branch |
 |------------|---------|--------|
@@ -9,9 +7,7 @@
 | `staging` | Pre-production | `main` (manual) |
 | `prod` | Production | `main` (approved) |
 
-## Container Deployment
 
-### Build and Run
 
 ```bash
 task docker:build          # Build container images
@@ -19,14 +15,20 @@ task docker:up             # Start services
 task docker:down           # Stop services
 ```
 
-### Production Compose
 
 ```bash
 {{ container_runtime }} compose -f compose.yml up -d
 ```
+{% if use_caddy %}
+
+```bash
+{{ container_runtime }} compose -f compose.yml -f compose.prod.yml --profile gateway up -d --build
+```
+
+Caddy provides automatic HTTPS. Set `CADDY_DOMAIN` in your environment.
+{% endif %}
 {% if secret_backend == 'azure_kv' %}
 
-## Azure Key Vault Integration
 
 Production deployments use Azure Key Vault for secret management:
 
@@ -35,7 +37,6 @@ Production deployments use Azure Key Vault for secret management:
 3. Secrets are loaded automatically via `DefaultAzureCredential`
 {% endif %}
 
-## Environment Variables
 
 Production environments should configure all variables from `.env.example`
 through the deployment platform's secret management system.
@@ -44,14 +45,12 @@ through the deployment platform's secret management system.
 
 See `docs/CONFIG.md` for the full variable reference.
 
-## Health Checks
 
 The application exposes health endpoints:
 
 - `/api/v1/health`  basic liveness check
 - `/api/v1/health/ready`  readiness check (includes database)
 
-## Database Migrations
 
 Before deploying a new version with schema changes:
 
@@ -59,7 +58,6 @@ Before deploying a new version with schema changes:
 task backend:db:upgrade    # Apply pending migrations
 ```
 
-## Rollback
 
 To rollback a deployment:
 
@@ -69,3 +67,25 @@ To rollback a deployment:
    ```bash
    task backend:db:downgrade
    ```
+{% if cloud_provider == "azure" %}
+
+
+Deploy Azure resources using Bicep:
+
+```bash
+az login
+
+az deployment sub create \
+  --location westeurope \
+  --template-file infra/deploy.bicep \
+  --parameters infra/parameters/dev/deploy.dev.bicepparam
+
+az deployment sub create \
+  --location westeurope \
+  --template-file infra/deploy.bicep \
+  --parameters infra/parameters/prod/deploy.prod.bicepparam
+```
+
+See [infra/README.md](../infra/README.md) for full infrastructure documentation.
+{% endif %}
+

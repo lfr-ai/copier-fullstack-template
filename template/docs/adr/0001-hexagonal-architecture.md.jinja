@@ -1,17 +1,13 @@
-# ADR-0001: Use Hexagonal Architecture
 
-## Status
 
 Accepted
 
-## Context
 
 {{ project_name }} requires a clear separation of concerns to enable
 independent testing, flexible infrastructure swapping, and long-term
 maintainability. The team evaluated layered, hexagonal (ports & adapters),
 and clean architecture patterns.
 
-## Decision
 
 Adopt hexagonal architecture with the following layer structure:
 
@@ -24,19 +20,15 @@ Adopt hexagonal architecture with the following layer structure:
 Dependencies flow inward: presentation -> application -> domain.
 Infrastructure implements protocols defined in application/ports/.
 
-## Consequences
 
-### Positive
 
 - Infrastructure can be swapped without changing business logic
 - Domain logic is independently testable
 - Clear dependency boundaries prevent accidental coupling
 
-### Negative
 
 - More boilerplate for simple CRUD operations
 - Learning curve for developers unfamiliar with the pattern
 
-### Neutral
 
 - Requires discipline in maintaining layer boundaries

@@ -4,6 +4,9 @@ includes:
   backend: ./tasks/backend.yml
   frontend: ./tasks/frontend.yml
   docker: ./tasks/docker.yml
+{%- if cloud_provider == "azure" %}
+  infra: ./tasks/infra.yml
+{%- endif %}
 
 tasks:
   default:
@@ -22,9 +25,40 @@ tasks:
       - backend:dev
       - frontend:dev
 
+  dev:backend:
+    desc: "Start backend only"
+    cmds:
+      - task: backend:dev
+
+  dev:frontend:
+    desc: "Start frontend only"
+    cmds:
+      - task: frontend:dev
+
+  dev:db:
+    desc: "Start database service only"
+    cmds:
+      - task: docker:db
+
   start:
     desc: "Start all Docker services"
     cmds: [task: docker:up]
+
+  start:dev:
+    desc: "Start all Docker services with dev environment overrides"
+    cmds: [task: docker:dev]
+
+  start:staging:
+    desc: "Start all Docker services with staging overrides"
+    cmds: [task: docker:staging]
+
+  start:test:
+    desc: "Start all Docker services with test overrides"
+    cmds: [task: docker:test]
+
+  start:prod:
+    desc: "Start all Docker services with production overrides"
+    cmds: [task: docker:prod]
 
   build:
     desc: "Build frontend and backend for production"
@@ -32,9 +66,21 @@ tasks:
       - task: frontend:build
       - task: backend:build
 
-  test:
-    desc: "Run all tests"
+  build:backend:
+    desc: "Build backend package"
     cmds:
+      - task: backend:build
+
+  build:frontend:
+    desc: "Build frontend for production"
+    cmds:
+      - task: frontend:build
+
+  test:
+    desc: "Run all tests (registry + backend + frontend)"
+    cmds:
+      - task: registry:check
+      - task: registry:test
       - task: backend:test
       - task: frontend:test:unit
 
@@ -52,17 +98,87 @@ tasks:
     desc: "Run tests with coverage reports"
     cmds:
       - task: backend:test:coverage
+
+  test:property:
+    desc: "Run property-based tests"
+    cmds:
+      - task: backend:test:property
+
+  test:performance:
+    desc: "Run performance tests"
+    cmds:
+      - task: backend:test:performance
 {% if use_playwright %}
   test:e2e:
     desc: "Run Playwright E2E tests"
     cmds:
       - task: frontend:test:e2e
 {% endif %}
+  test:frontend:
+    desc: "Run frontend tests (Vitest)"
+    cmds:
+      - task: frontend:test:unit
+
   lint:
     desc: "Run all linters"
     cmds:
       - task: backend:lint
       - task: frontend:lint
+      - task: lint:containers
+      - task: lint:shell
+      - task: lint:yaml
+      - task: lint:markdown
+      - task: lint:spelling
+
+  lint:python:
+    desc: "Lint Python code (ruff check + format check)"
+    cmds:
+      - task: backend:lint
+      - task: backend:format:check
+
+  lint:types:
+    desc: "Type check Python code"
+    cmds:
+      - task: backend:typecheck
+
+  lint:frontend:
+    desc: "Lint and type check frontend"
+    cmds:
+      - task: frontend:lint
+      - task: frontend:typecheck
+
+  lint:containers:
+    desc: "Lint Containerfiles with hadolint"
+    cmds:
+      - hadolint Containerfile
+{% if use_caddy %}
+      - hadolint caddy/Containerfile
+{% endif %}
+
+  lint:shell:
+    desc: "Lint shell scripts with ShellCheck (best-effort — ShellCheck lacks native zsh support)"
+    cmds:
+      - find scripts/ -name '*.zsh' -exec shellcheck --shell=bash -e SC1071,SC2296 {} +
+
+  lint:yaml:
+    desc: "Lint YAML files with yamllint"
+    cmds:
+      - yamllint -c .yamllint.yml .
+
+  lint:markdown:
+    desc: "Lint Markdown files"
+    cmds:
+      - npx markdownlint-cli2 '**/*.md' '#node_modules'
+
+  lint:spelling:
+    desc: "Check spelling with typos"
+    cmds:
+      - typos .
+
+  lint:secrets:
+    desc: "Scan for leaked secrets"
+    cmds:
+      - cd backend && uv run detect-secrets scan --baseline ../.secrets.baseline
 
   format:
     desc: "Format all code"
@@ -84,25 +200,151 @@ tasks:
 
   registry:generate:
     desc: "Generate registry constants from naming_registry.json"
+    dir: registry
     cmds:
-      - uv run python tools/generate_registry.py
+      - uv run python generate_registry.py
     sources:
-      - data/naming_registry.json
+      - naming_registry.json
     generates:
-      - src/{{ project_slug }}/data/registry_constants.py
-      - frontend/src/js/registry_constants.js
+      - ../backend/src/{{ project_slug }}/core/registry_constants.py
+      - ../frontend/src/config/registry_constants.ts
+      - ../.env.ports
+
+  registry:validate:
+    desc: "Validate naming_registry.json structure without generating files"
+    dir: registry
+    cmds:
+      - uv run python generate_registry.py --validate
+
+  registry:check:
+    desc: "CI gate — verify generated files are up-to-date with the registry"
+    dir: registry
+    cmds:
+      - uv run python generate_registry.py --check
+
+  registry:test:
+    desc: "Run registry unit + property tests"
+    cmds:
+      - cd backend && uv run pytest ../registry/tests/ -v --tb=short {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  registry:diff:
+    desc: "Show diff of what registry generation would change (dry-run)"
+    dir: registry
+    cmds:
+      - uv run python generate_registry.py --diff
 
   db:migrate:
     desc: "Run Alembic migrations"
     cmds:
-      - uv run alembic upgrade head
+      - cd backend && uv run alembic upgrade head
 
   db:revision:
     desc: "Create new Alembic migration"
     cmds:
-      - uv run alembic revision --autogenerate -m "{% raw %}{{.CLI_ARGS}}{% endraw %}"
+      - cd backend && uv run alembic revision --autogenerate -m "{% raw %}{{.CLI_ARGS}}{% endraw %}"
 
   db:downgrade:
     desc: "Rollback last migration"
     cmds:
-      - uv run alembic downgrade -1
+      - cd backend && uv run alembic downgrade -1
+
+  db:seed:
+    desc: "Seed the database with development data"
+    cmds:
+      - zsh scripts/seed_database.zsh
+
+  db:reset:
+    desc: "Drop, recreate, migrate, and seed the database"
+    cmds:
+      - cd backend && uv run alembic downgrade base
+      - cd backend && uv run alembic upgrade head
+      - task: db:seed
+
+  pre-commit:
+    desc: "Run pre-commit on all files"
+    cmds:
+      - cd backend && uv run pre-commit run --all-files
+
+  generate:types:
+    desc: "Generate TypeScript types from the running backend's OpenAPI schema"
+    vars:
+      OPENAPI_PORT: 8199
+      OPENAPI_HOST: 127.0.0.1
+    cmds:
+      - cd backend && uv run uvicorn {{ project_slug }}.ports.api.app:create_api_app --factory --host {% raw %}{{.OPENAPI_HOST}}{% endraw %} --port {% raw %}{{.OPENAPI_PORT}}{% endraw %} &
+      - |
+        until curl -sf http://{% raw %}{{.OPENAPI_HOST}}{% endraw %}:{% raw %}{{.OPENAPI_PORT}}{% endraw %}/api/openapi.json >/dev/null 2>&1; do
+          sleep 0.5
+        done
+      - cd frontend && npx openapi-typescript http://{% raw %}{{.OPENAPI_HOST}}{% endraw %}:{% raw %}{{.OPENAPI_PORT}}{% endraw %}/api/openapi.json -o src/types/api.ts
+      - kill %1 2>/dev/null || true
+
+  security:audit:
+    desc: "Run security audits on all dependencies"
+    cmds:
+      - cd backend && uv run pip-audit 2>/dev/null || echo "pip-audit not installed, skipping"
+      - cd frontend && pnpm audit --audit-level moderate || true
+      - cd backend && uv run detect-secrets scan --baseline ../.secrets.baseline
+
+  health:
+    desc: "Check health of all running services"
+    cmds:
+      - zsh scripts/health-check.zsh
+
+  migrate:
+    desc: "Run database migrations (alias for db:migrate)"
+    cmds:
+      - task: db:migrate
+
+  migrate:create:
+    desc: "Create new migration (alias for db:revision)"
+    cmds:
+      - task: db:revision
+
+  migrate:rollback:
+    desc: "Rollback last migration (alias for db:downgrade)"
+    cmds:
+      - task: db:downgrade
+
+  seed:
+    desc: "Seed the database (alias for db:seed)"
+    cmds:
+      - task: db:seed
+
+  install:
+    desc: "Install all project dependencies"
+    cmds:
+      - task: backend:install
+      - task: frontend:install
+{% if with_opencode %}
+  install:opencode:
+    desc: "Install or update the OpenCode AI coding agent"
+    cmds:
+      - zsh scripts/install/install-opencode.zsh
+{% endif %}
+
+  coverage:
+    desc: "Run tests with coverage reports (alias for test:coverage)"
+    cmds:
+      - task: test:coverage
+
+  up:
+    desc: "Start all Docker services (alias for docker:up)"
+    cmds:
+      - task: docker:up
+
+  down:
+    desc: "Stop all Docker services (alias for docker:down)"
+    cmds:
+      - task: docker:down
+
+  logs:
+    desc: "Show Docker service logs (alias for docker:logs)"
+    cmds:
+      - task: docker:logs
+{% if use_celery %}
+  worker:
+    desc: "Start Celery worker (alias for backend:worker)"
+    cmds:
+      - task: backend:worker
+{% endif %}

@@ -1,0 +1,51 @@
+{%- if use_redis %}
+"""Unit tests for Redis client configuration."""
+
+from __future__ import annotations
+
+from unittest.mock import patch, MagicMock
+
+import pytest
+
+pytestmark = pytest.mark.unit
+
+
+class TestCreateRedisClient:
+    """Test suite for create_redis_client factory."""
+
+    @patch("{{ project_slug }}.config.redis.get_settings")
+    @patch("{{ project_slug }}.config.redis.Redis")
+    def test_creates_client_from_settings(
+        self,
+        mock_redis_cls: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify Redis client created from settings redis_url."""
+        from {{ project_slug }}.config.redis import create_redis_client
+
+        mock_settings.return_value.redis_url = "redis://localhost:6379/0"
+        mock_redis_cls.from_url.return_value = MagicMock()
+        client = create_redis_client()
+        mock_redis_cls.from_url.assert_called_once_with(
+            "redis://localhost:6379/0",
+            decode_responses=True,
+            socket_timeout=5.0,
+            socket_connect_timeout=5.0,
+        )
+
+    @patch("{{ project_slug }}.config.redis.get_settings")
+    @patch("{{ project_slug }}.config.redis.Redis")
+    def test_returns_redis_instance(
+        self,
+        mock_redis_cls: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify function returns the Redis from_url result."""
+        from {{ project_slug }}.config.redis import create_redis_client
+
+        mock_settings.return_value.redis_url = "redis://localhost:6379/0"
+        expected = MagicMock()
+        mock_redis_cls.from_url.return_value = expected
+        result = create_redis_client()
+        assert result is expected
+{%- endif %}

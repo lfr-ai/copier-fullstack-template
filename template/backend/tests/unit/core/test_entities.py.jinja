@@ -1,0 +1,27 @@
+"""Unit tests for core domain entities."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.core.entities.user import User
+
+class TestUserEntity:
+    """Test suite for User entity."""
+
+    def test_create_user(self) -> None:
+        """Verify user entity creation with valid data."""
+        user = User(
+            id="user-1",
+            email="test@example.com",
+            display_name="Test User",
+        )
+        assert user.id == "user-1"
+        assert user.email == "test@example.com"
+        assert user.display_name == "Test User"
+
+    def test_user_equality(self) -> None:
+        """Verify entities are equal by identity."""
+        user_a = User(id="user-1", email="a@example.com", display_name="A")
+        user_b = User(id="user-1", email="b@example.com", display_name="B")
+        assert user_a.id == user_b.id

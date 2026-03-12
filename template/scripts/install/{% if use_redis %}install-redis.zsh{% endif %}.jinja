@@ -1,0 +1,121 @@
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+
+detect_platform() {
+emulate -L zsh
+
+local os_type
+os_type="$(uname -s)"
+
+case "${os_type}" in
+Linux)
+if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+print "wsl"
+else
+print "linux"
+fi
+;;
+Darwin) print "macos" ;;
+*) print "unknown" ;;
+esac
+}
+
+check_existing() {
+emulate -L zsh
+
+if command -v redis-server &>/dev/null; then
+local version
+version="$(redis-server --version 2>/dev/null | grep -oP 'v=\K[0-9.]+')"
+print "Redis already installed: v${version}"
+return 0
+fi
+return 1
+}
+
+install_redis_linux() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "Installing Redis on Linux..."
+
+if command -v apt-get &>/dev/null; then
+curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+2>/dev/null || true
+print "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs)
+main" | sudo tee /etc/apt/sources.list.d/redis.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y redis
+elif command -v dnf &>/dev/null; then
+sudo dnf install -y redis
+elif command -v pacman &>/dev/null; then
+sudo pacman -Syu --noconfirm redis
+else
+print "Unsupported package manager. Install Redis manually."
+return 1
+fi
+
+print "Redis installed successfully"
+}
+
+install_redis_macos() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "Installing Redis on macOS..."
+
+if command -v brew &>/dev/null; then
+brew install redis
+else
+print "Install Homebrew first: https://brew.sh/"
+return 1
+fi
+
+print "Redis installed successfully"
+}
+
+verify_install() {
+emulate -L zsh
+
+if command -v redis-server &>/dev/null; then
+print ""
+print "Redis: $(redis-server --version 2>/dev/null)"
+print ""
+print "Note: For development, prefer the containerized Redis in compose.yml"
+print " Start with: {{ container_runtime }} compose up redis -d"
+return 0
+else
+print "ERROR: Redis installation could not be verified"
+return 1
+fi
+}
+
+main() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "=== Redis Server Installer ==="
+print ""
+
+if check_existing; then
+print "Redis is already installed, skipping."
+return 0
+fi
+
+local platform
+platform="$(detect_platform)"
+
+case "${platform}" in
+linux|wsl) install_redis_linux ;;
+macos) install_redis_macos ;;
+*)
+print "Unsupported platform: ${platform}"
+print "Install manually: https://redis.io/docs/getting-started/"
+return 1
+;;
+esac
+
+verify_install
+}
+
+main "$@"

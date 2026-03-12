@@ -1,0 +1,123 @@
+"""Unit tests for domain enumerations."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.core.enums.environment import Environment
+from {{ project_slug }}.core.enums.service_status import ServiceStatus
+from {{ project_slug }}.core.enums.sort_order import SortOrder
+from {{ project_slug }}.core.enums.status import Status
+
+class TestEnvironmentEnum:
+    """Test suite for Environment enumeration."""
+
+    def test_all_environments_defined(self) -> None:
+        """Verify all expected environments exist."""
+        expected = {"LOCAL", "DEV", "TEST", "STAGING", "PRODUCTION"}
+        actual = {e.name for e in Environment}
+        assert actual == expected
+
+    def test_environment_is_str_enum(self) -> None:
+        """Verify environment values are strings."""
+        for env in Environment:
+            assert isinstance(env.value, str)
+
+    def test_environment_auto_generates_lowercase(self) -> None:
+        """Verify auto() generates lowercase string values."""
+        assert Environment.LOCAL.value == "local"
+        assert Environment.PRODUCTION.value == "production"
+
+    def test_environment_from_value(self) -> None:
+        """Verify construction from string value."""
+        assert Environment("local") is Environment.LOCAL
+        assert Environment("production") is Environment.PRODUCTION
+
+    def test_environment_from_str(self) -> None:
+        """Verify from_str classmethod handles case-insensitive lookup."""
+        assert Environment.from_str("LOCAL") is Environment.LOCAL
+        assert Environment.from_str("production") is Environment.PRODUCTION
+
+    def test_environment_from_str_invalid_raises(self) -> None:
+        """Verify from_str raises ValueError for unknown values."""
+        with pytest.raises(ValueError, match="Unknown Environment"):
+            Environment.from_str("bogus")
+
+class TestStatusEnum:
+    """Test suite for Status enumeration."""
+
+    def test_all_statuses_defined(self) -> None:
+        """Verify all expected statuses exist."""
+        expected = {"ACTIVE", "INACTIVE", "SUSPENDED", "DELETED"}
+        actual = {s.name for s in Status}
+        assert actual == expected
+
+    def test_status_is_str_enum(self) -> None:
+        """Verify status values are strings."""
+        for status in Status:
+            assert isinstance(status.value, str)
+
+    def test_status_auto_generates_lowercase(self) -> None:
+        """Verify auto() generates lowercase string values."""
+        assert Status.ACTIVE.value == "active"
+        assert Status.DELETED.value == "deleted"
+
+    def test_status_from_str(self) -> None:
+        """Verify from_str classmethod handles case-insensitive lookup."""
+        assert Status.from_str("ACTIVE") is Status.ACTIVE
+        assert Status.from_str("deleted") is Status.DELETED
+
+    def test_status_from_str_invalid_raises(self) -> None:
+        """Verify from_str raises ValueError for unknown values."""
+        with pytest.raises(ValueError, match="Unknown Status"):
+            Status.from_str("bogus")
+
+
+class TestServiceStatusEnum:
+    """Test suite for ServiceStatus enumeration."""
+
+    def test_all_service_statuses_defined(self) -> None:
+        """Verify all expected service statuses exist."""
+        expected = {"HEALTHY", "DEGRADED", "UNHEALTHY"}
+        actual = {s.name for s in ServiceStatus}
+        assert actual == expected
+
+    def test_service_status_is_str_enum(self) -> None:
+        """Verify service status values are strings."""
+        for status in ServiceStatus:
+            assert isinstance(status.value, str)
+
+    def test_service_status_from_str(self) -> None:
+        """Verify from_str classmethod handles case-insensitive lookup."""
+        assert ServiceStatus.from_str("HEALTHY") is ServiceStatus.HEALTHY
+        assert ServiceStatus.from_str("degraded") is ServiceStatus.DEGRADED
+
+    def test_service_status_from_str_invalid_raises(self) -> None:
+        """Verify from_str raises ValueError for unknown values."""
+        with pytest.raises(ValueError, match="Unknown ServiceStatus"):
+            ServiceStatus.from_str("unknown")
+
+
+class TestSortOrderEnum:
+    """Test suite for SortOrder enumeration."""
+
+    def test_all_sort_orders_defined(self) -> None:
+        """Verify all expected sort orders exist."""
+        expected = {"ASC", "DESC"}
+        actual = {s.name for s in SortOrder}
+        assert actual == expected
+
+    def test_sort_order_is_str_enum(self) -> None:
+        """Verify sort order values are strings."""
+        for order in SortOrder:
+            assert isinstance(order.value, str)
+
+    def test_sort_order_from_str(self) -> None:
+        """Verify from_str classmethod handles case-insensitive lookup."""
+        assert SortOrder.from_str("ASC") is SortOrder.ASC
+        assert SortOrder.from_str("desc") is SortOrder.DESC
+
+    def test_sort_order_from_str_invalid_raises(self) -> None:
+        """Verify from_str raises ValueError for unknown values."""
+        with pytest.raises(ValueError, match="Unknown SortOrder"):
+            SortOrder.from_str("random")

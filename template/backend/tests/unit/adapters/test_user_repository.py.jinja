@@ -1,0 +1,96 @@
+"""Unit tests for user repository implementation."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from {{ project_slug }}.adapters.persistence.repositories.user_repository import UserRepository
+
+
+@pytest.fixture
+def mock_session() -> AsyncMock:
+    """Create a mock AsyncSession for repository tests."""
+    session = AsyncMock()
+    session.execute = AsyncMock()
+    session.get = AsyncMock(return_value=None)
+    session.flush = AsyncMock()
+    session.refresh = AsyncMock()
+    return session
+
+
+@pytest.fixture
+def repository(mock_session: AsyncMock) -> UserRepository:
+    """Create UserRepository backed by a mock session."""
+    return UserRepository(mock_session)
+
+
+class TestUserRepositoryGetByEmail:
+    """Test suite for get_by_email operation."""
+
+    @pytest.mark.asyncio
+    async def test_get_by_email_returns_user_when_found(
+        self,
+        repository: UserRepository,
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify get_by_email returns user model when matched."""
+        expected = MagicMock()
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = expected
+        mock_session.execute.return_value = result_mock
+
+        result = await repository.get_by_email("user@example.com")
+        assert result is expected
+
+    @pytest.mark.asyncio
+    async def test_get_by_email_returns_none_when_missing(
+        self,
+        repository: UserRepository,
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify get_by_email returns None for non-existent email."""
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = None
+        mock_session.execute.return_value = result_mock
+
+        result = await repository.get_by_email("nobody@example.com")
+        assert result is None
+
+
+class TestUserRepositoryGetActiveUsers:
+    """Test suite for get_active_users operation."""
+
+    @pytest.mark.asyncio
+    async def test_get_active_users_returns_list(
+        self,
+        repository: UserRepository,
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify get_active_users returns filtered user list."""
+        users = [MagicMock(), MagicMock()]
+        scalars_mock = MagicMock()
+        scalars_mock.all.return_value = users
+        result_mock = MagicMock()
+        result_mock.scalars.return_value = scalars_mock
+        mock_session.execute.return_value = result_mock
+
+        result = await repository.get_active_users(offset=0, limit=10)
+        assert result == users
+
+    @pytest.mark.asyncio
+    async def test_get_active_users_respects_pagination(
+        self,
+        repository: UserRepository,
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify get_active_users passes offset and limit to the query."""
+        scalars_mock = MagicMock()
+        scalars_mock.all.return_value = []
+        result_mock = MagicMock()
+        result_mock.scalars.return_value = scalars_mock
+        mock_session.execute.return_value = result_mock
+
+        await repository.get_active_users(offset=5, limit=25)
+        mock_session.execute.assert_awaited_once()

@@ -1,0 +1,69 @@
+"""FastAPI application factory."""
+
+from __future__ import annotations
+
+import structlog
+from fastapi import FastAPI
+
+from {{ project_slug }}.config.constants import API_V1_PREFIX
+from {{ project_slug }}.ports.api.middleware.cors import setup_cors
+from {{ project_slug }}.ports.api.middleware.error_handler import register_error_handlers
+from {{ project_slug }}.ports.api.middleware.rate_limit import configure_rate_limiting
+from {{ project_slug }}.ports.api.middleware.request_id import RequestIdMiddleware
+from {{ project_slug }}.ports.api.middleware.security_headers import SecurityHeadersMiddleware
+from {{ project_slug }}.ports.api.middleware.timing import TimingMiddleware
+from {{ project_slug }}.ports.api.router import api_router
+
+__all__ = ["create_api_app"]
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+def create_api_app(*, debug: bool = False) -> FastAPI:
+    """Create and configure FastAPI application.
+
+    Factory function wiring middleware, routes, and error handlers.
+
+    Args:
+        debug (bool): Enable debug mode with verbose logging.
+
+    Returns:
+        FastAPI: Configured FastAPI instance.
+    """
+    app = FastAPI(
+        title="{{ project_name }}",
+        version="v1",
+        debug=debug,
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+    )
+
+    _configure_middleware(app)
+    _register_routes(app)
+    register_error_handlers(app)
+    configure_rate_limiting(app)
+
+    logger.info("API application created (debug=%s)", debug)
+    return app
+
+
+def _configure_middleware(app: FastAPI) -> None:
+    """Configure application middleware stack.
+
+    Args:
+        app (FastAPI): FastAPI application instance.
+    """
+    app.add_middleware(TimingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RequestIdMiddleware)
+    setup_cors(app)
+
+
+def _register_routes(app: FastAPI) -> None:
+    """Register API route modules.
+
+    Args:
+        app (FastAPI): FastAPI application instance.
+    """
+    app.include_router(api_router, prefix=API_V1_PREFIX)

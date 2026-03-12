@@ -1,0 +1,393 @@
+// ── Resource-group-scoped orchestrator ────────────────────────────
+// Called by deploy.bicep after the resource group is created.
+
+targetScope = 'resourceGroup'
+
+// ── Parameters ───────────────────────────────────────────────────
+
+@description('Project name')
+param projectName string
+
+@description('Environment for deployment')
+@allowed(['dev', 'test', 'staging', 'prod'])
+param env string
+
+@description('Location for the resources. Default: resource group location.')
+param location string = resourceGroup().location
+
+@description('Key Vault settings')
+param keyVault object = {
+skuName: 'standard'
+keyVaultName: ''
+principalIds: []
+enableSoftDelete: true
+enablePurgeProtection: true
+enableRbacAuthorization: true
+softDeleteRetentionInDays: 90
+publicNetworkAccess: 'Enabled'
+networkAcls: {
+bypass: 'AzureServices'
+defaultAction: 'Deny'
+ipRules: []
+virtualNetworkRules: []
+}
+deploy: true
+}
+
+@description('Application Insights settings')
+param appInsights object = {
+kind: 'web'
+applicationType: 'web'
+workspaceResourceId: ''
+publicNetworkAccessForIngestion: 'Enabled'
+publicNetworkAccessForQuery: 'Enabled'
+retentionInDays: 90
+disableLocalAuth: true
+deploy: true
+}
+
+@description('Log Analytics settings')
+param logAnalytics object = {
+workspaceName: ''
+retentionInDays: 90
+deploy: true
+}
+{%- if use_redis %}
+
+@description('Azure Cache for Redis settings')
+param redis object = {
+cacheName: ''
+skuName: 'Basic'
+skuFamily: 'C'
+skuCapacity: 0
+redisVersion: '6'
+minimumTlsVersion: '1.2'
+enableNonSslPort: false
+publicNetworkAccess: 'Enabled'
+disableAccessKeyAuthentication: false
+enableEntraAuth: false
+enableManagedIdentity: false
+updateChannel: 'Stable'
+maxMemoryPolicy: 'allkeys-lru'
+maxMemoryDelta: ''
+maxFragmentationMemoryReserved: ''
+notifyKeyspaceEvents: ''
+zones: []
+shardCount: 0
+replicasPerPrimary: 0
+enableRdbPersistence: false
+rdbBackupFrequencyInSeconds: 3600
+enableAofPersistence: false
+patchScheduleDayOfWeek: ''
+patchScheduleStartHourUtc: 2
+patchScheduleMaintenanceWindow: ''
+firewallRules: []
+enableDiagnostics: false
+deploy: true
+}
+{%- endif %}
+{%- if database_backend == 'azure_postgresql' %}
+
+@description('Azure Database for PostgreSQL Flexible Server settings')
+param postgres object = {
+serverName: ''
+skuName: 'Standard_B1ms'
+skuTier: 'Burstable'
+version: '17'
+storageSizeGB: 32
+adminLogin: 'pgadmin'
+adminPassword: ''
+highAvailabilityMode: 'Disabled'
+backupRetentionDays: 7
+geoRedundantBackup: 'Disabled'
+publicNetworkAccess: 'Enabled'
+deploy: true
+}
+{%- endif %}
+{%- if use_azure_openai %}
+
+@description('Azure OpenAI Service settings')
+param openai object = {
+accountName: ''
+skuName: 'S0'
+customSubDomainName: ''
+publicNetworkAccess: 'Enabled'
+disableLocalAuth: false
+chatModelName: 'gpt-4o'
+chatModelVersion: '2024-08-06'
+chatDeploymentSkuName: 'Standard'
+chatDeploymentCapacity: 10
+embeddingModelName: 'text-embedding-3-large'
+embeddingModelVersion: ''
+embeddingDeploymentSkuName: 'Standard'
+embeddingDeploymentCapacity: 10
+deployChatModel: true
+deployEmbeddingModel: true
+deploy: true
+}
+{%- endif %}
+{%- if use_ai_search %}
+
+@description('Azure AI Search settings')
+param aiSearch object = {
+searchServiceName: ''
+skuName: 'basic'
+replicaCount: 1
+partitionCount: 1
+semanticSearch: 'free'
+hostingMode: 'default'
+publicNetworkAccess: 'enabled'
+disableLocalAuth: false
+deploy: true
+}
+{%- endif %}
+{%- if use_document_intelligence %}
+
+@description('Azure Document Intelligence settings')
+param documentIntelligence object = {
+accountName: ''
+skuName: 'S0'
+customSubDomainName: ''
+publicNetworkAccess: 'Enabled'
+disableLocalAuth: false
+deploy: true
+}
+{%- endif %}
+
+// ── Derived values ───────────────────────────────────────────────
+
+var sanitizedProject = toLower(replace(projectName, '_', '-'))
+var namePrefix = '${sanitizedProject}-${env}'
+
+var commonTags = {
+project: projectName
+environment: env
+}
+
+// ── Key Vault ────────────────────────────────────────────────────
+
+module keyVaultMod 'modules/keyVault.bicep' = {
+name: 'deployKeyVault'
+params: {
+namePrefix: namePrefix
+location: location
+skuName: keyVault.skuName
+keyVaultName: keyVault.keyVaultName
+principalIds: keyVault.principalIds
+tags: commonTags
+enableSoftDelete: keyVault.enableSoftDelete
+enablePurgeProtection: keyVault.enablePurgeProtection
+enableRbacAuthorization: keyVault.enableRbacAuthorization
+softDeleteRetentionInDays: keyVault.softDeleteRetentionInDays
+publicNetworkAccess: keyVault.publicNetworkAccess
+networkAcls: keyVault.networkAcls
+enabled: keyVault.deploy
+}
+}
+
+// ── Log Analytics ────────────────────────────────────────────────
+
+module logAnalyticsMod 'modules/logAnalytics.bicep' = {
+name: 'deployLogAnalytics'
+params: {
+namePrefix: namePrefix
+location: location
+workspaceName: logAnalytics.workspaceName
+retentionInDays: logAnalytics.retentionInDays
+tags: commonTags
+enabled: logAnalytics.deploy || (appInsights.deploy && empty(appInsights.workspaceResourceId))
+}
+}
+
+// ── Application Insights ─────────────────────────────────────────
+
+module appInsightsMod 'modules/appInsights.bicep' = {
+name: 'deployAppInsights'
+params: {
+namePrefix: namePrefix
+location: location
+workspaceResourceId: empty(appInsights.workspaceResourceId)
+? logAnalyticsMod.outputs.logAnalyticsResourceId
+: appInsights.workspaceResourceId
+kind: appInsights.kind
+applicationType: appInsights.applicationType
+publicNetworkAccessForIngestion: appInsights.publicNetworkAccessForIngestion
+publicNetworkAccessForQuery: appInsights.publicNetworkAccessForQuery
+retentionInDays: appInsights.retentionInDays
+disableLocalAuth: appInsights.disableLocalAuth
+tags: commonTags
+enabled: appInsights.deploy
+}
+}
+{%- if use_redis %}
+
+// ── Azure Cache for Redis ────────────────────────────────────────
+
+module redisMod 'modules/redis.bicep' = {
+name: 'deployRedis'
+dependsOn: [
+logAnalyticsMod
+]
+params: {
+namePrefix: namePrefix
+location: location
+cacheName: redis.cacheName
+skuName: redis.skuName
+skuFamily: redis.skuFamily
+skuCapacity: redis.skuCapacity
+redisVersion: redis.redisVersion
+minimumTlsVersion: redis.minimumTlsVersion
+enableNonSslPort: redis.enableNonSslPort
+publicNetworkAccess: redis.publicNetworkAccess
+disableAccessKeyAuthentication: redis.disableAccessKeyAuthentication
+enableEntraAuth: redis.enableEntraAuth
+enableManagedIdentity: redis.enableManagedIdentity
+updateChannel: redis.updateChannel
+maxMemoryPolicy: redis.maxMemoryPolicy
+maxMemoryDelta: redis.maxMemoryDelta
+maxFragmentationMemoryReserved: redis.maxFragmentationMemoryReserved
+notifyKeyspaceEvents: redis.notifyKeyspaceEvents
+zones: redis.zones
+shardCount: redis.shardCount
+replicasPerPrimary: redis.replicasPerPrimary
+enableRdbPersistence: redis.enableRdbPersistence
+rdbBackupFrequencyInSeconds: redis.rdbBackupFrequencyInSeconds
+enableAofPersistence: redis.enableAofPersistence
+patchScheduleDayOfWeek: redis.patchScheduleDayOfWeek
+patchScheduleStartHourUtc: redis.patchScheduleStartHourUtc
+patchScheduleMaintenanceWindow: redis.patchScheduleMaintenanceWindow
+firewallRules: redis.firewallRules
+enableDiagnostics: redis.enableDiagnostics
+logAnalyticsWorkspaceId: (redis.enableDiagnostics && logAnalytics.deploy)
+? logAnalyticsMod.outputs.logAnalyticsResourceId
+: ''
+tags: commonTags
+enabled: redis.deploy
+}
+}
+{%- endif %}
+{%- if database_backend == 'azure_postgresql' %}
+
+// ── PostgreSQL Flexible Server ───────────────────────────────────
+
+module postgresMod 'modules/postgresFlexible.bicep' = {
+name: 'deployPostgres'
+params: {
+namePrefix: namePrefix
+location: location
+serverName: postgres.serverName
+skuName: postgres.skuName
+skuTier: postgres.skuTier
+version: postgres.version
+storageSizeGB: postgres.storageSizeGB
+administratorLogin: postgres.adminLogin
+administratorLoginPassword: postgres.adminPassword
+highAvailabilityMode: postgres.highAvailabilityMode
+backupRetentionDays: postgres.backupRetentionDays
+geoRedundantBackup: postgres.geoRedundantBackup
+publicNetworkAccess: postgres.publicNetworkAccess
+tags: commonTags
+enabled: postgres.deploy
+}
+}
+{%- endif %}
+{%- if use_azure_openai %}
+
+// ── Azure OpenAI Service ─────────────────────────────────────────
+
+module openaiMod 'modules/openai.bicep' = {
+name: 'deployOpenAI'
+params: {
+namePrefix: namePrefix
+location: location
+accountName: openai.accountName
+skuName: openai.skuName
+customSubDomainName: openai.customSubDomainName
+publicNetworkAccess: openai.publicNetworkAccess
+disableLocalAuth: openai.disableLocalAuth
+chatModelName: openai.chatModelName
+chatModelVersion: openai.chatModelVersion
+chatDeploymentSkuName: openai.chatDeploymentSkuName
+chatDeploymentCapacity: openai.chatDeploymentCapacity
+embeddingModelName: openai.embeddingModelName
+embeddingModelVersion: openai.embeddingModelVersion
+embeddingDeploymentSkuName: openai.embeddingDeploymentSkuName
+embeddingDeploymentCapacity: openai.embeddingDeploymentCapacity
+deployChatModel: openai.deployChatModel
+deployEmbeddingModel: openai.deployEmbeddingModel
+tags: commonTags
+enabled: openai.deploy
+}
+}
+{%- endif %}
+{%- if use_ai_search %}
+
+// ── Azure AI Search ──────────────────────────────────────────────
+
+module aiSearchMod 'modules/aiSearch.bicep' = {
+name: 'deployAISearch'
+params: {
+namePrefix: namePrefix
+location: location
+searchServiceName: aiSearch.searchServiceName
+skuName: aiSearch.skuName
+replicaCount: aiSearch.replicaCount
+partitionCount: aiSearch.partitionCount
+semanticSearch: aiSearch.semanticSearch
+hostingMode: aiSearch.hostingMode
+publicNetworkAccess: aiSearch.publicNetworkAccess
+disableLocalAuth: aiSearch.disableLocalAuth
+tags: commonTags
+enabled: aiSearch.deploy
+}
+}
+{%- endif %}
+{%- if use_document_intelligence %}
+
+// ── Azure Document Intelligence ──────────────────────────────────
+
+module docIntelligenceMod 'modules/documentIntelligence.bicep' = {
+name: 'deployDocIntelligence'
+params: {
+namePrefix: namePrefix
+location: location
+accountName: documentIntelligence.accountName
+skuName: documentIntelligence.skuName
+customSubDomainName: documentIntelligence.customSubDomainName
+publicNetworkAccess: documentIntelligence.publicNetworkAccess
+disableLocalAuth: documentIntelligence.disableLocalAuth
+tags: commonTags
+enabled: documentIntelligence.deploy
+}
+}
+{%- endif %}
+
+// ── Outputs ──────────────────────────────────────────────────────
+
+output keyVaultName string = keyVault.deploy ? keyVaultMod.outputs.keyVaultName : ''
+output keyVaultUri string = keyVault.deploy ? keyVaultMod.outputs.keyVaultUri : ''
+output logAnalyticsId string = logAnalytics.deploy ? logAnalyticsMod.outputs.logAnalyticsResourceId : ''
+output appInsightsConnectionString string = appInsights.deploy ? appInsightsMod.outputs.appInsightsConnectionString : ''
+{%- if use_redis %}
+output redisCacheHostName string = redis.deploy ? redisMod.outputs.redisCacheHostName : ''
+output redisCachePort int = redis.deploy ? redisMod.outputs.redisCachePort : 0
+output redisCacheName string = redis.deploy ? redisMod.outputs.redisCacheName : ''
+output redisCacheResourceId string = redis.deploy ? redisMod.outputs.redisCacheResourceId : ''
+{%- endif %}
+{%- if database_backend == 'azure_postgresql' %}
+output postgresServerFqdn string = postgres.deploy ? postgresMod.outputs.serverFqdn : ''
+output postgresServerName string = postgres.deploy ? postgresMod.outputs.serverName : ''
+{%- endif %}
+{%- if use_azure_openai %}
+output openaiEndpoint string = openai.deploy ? openaiMod.outputs.openaiEndpoint : ''
+output openaiAccountName string = openai.deploy ? openaiMod.outputs.openaiAccountName : ''
+{%- endif %}
+{%- if use_ai_search %}
+output aiSearchEndpoint string = aiSearch.deploy ? aiSearchMod.outputs.searchServiceEndpoint : ''
+output aiSearchServiceName string = aiSearch.deploy ? aiSearchMod.outputs.searchServiceName : ''
+{%- endif %}
+{%- if use_document_intelligence %}
+output docIntelligenceEndpoint string = documentIntelligence.deploy ? docIntelligenceMod.outputs.docIntelligenceEndpoint
+: ''
+output docIntelligenceName string = documentIntelligence.deploy ? docIntelligenceMod.outputs.docIntelligenceName : ''
+{%- endif %}

@@ -1,0 +1,36 @@
+"""Unit tests for console email adapter."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.adapters.email.console_email_adapter import ConsoleEmailAdapter
+
+
+@pytest.fixture
+def adapter() -> ConsoleEmailAdapter:
+    """Create console email adapter instance."""
+    return ConsoleEmailAdapter()
+
+
+class TestConsoleEmailSend:
+    """Test suite for console email send operation."""
+
+    @pytest.mark.asyncio
+    async def test_send_does_not_raise(self, adapter: ConsoleEmailAdapter) -> None:
+        """Verify send completes without error."""
+        await adapter.send(
+            to="user@example.com",
+            subject="Test Subject",
+            body="Hello, World!",
+        )
+
+    @pytest.mark.asyncio
+    async def test_send_with_custom_from(self, adapter: ConsoleEmailAdapter) -> None:
+        """Verify send accepts custom from_addr."""
+        await adapter.send(
+            to="user@example.com",
+            subject="Test",
+            body="Body",
+            from_addr="custom@example.com",
+        )

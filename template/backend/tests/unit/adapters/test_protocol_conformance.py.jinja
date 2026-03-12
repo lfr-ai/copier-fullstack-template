@@ -1,0 +1,59 @@
+"""Protocol conformance tests.
+
+Verifies that concrete adapter implementations satisfy
+their corresponding interface protocols using runtime_checkable.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
+from {{ project_slug }}.adapters.messaging.memory_event_bus import MemoryEventBus
+from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import SQLAlchemyUnitOfWork
+from {{ project_slug }}.core.interfaces.cache import CachePort
+from {{ project_slug }}.core.interfaces.event_bus import EventBus
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+class TestCachePortConformance:
+    """Verify adapters satisfy CachePort protocol."""
+
+    def test_memory_cache_is_cache_port(self) -> None:
+        """Verify MemoryCacheAdapter is an instance of CachePort."""
+        adapter = MemoryCacheAdapter()
+        assert isinstance(adapter, CachePort)
+
+class TestEventBusConformance:
+    """Verify adapters satisfy EventBus protocol."""
+
+    def test_memory_event_bus_is_event_bus(self) -> None:
+        """Verify MemoryEventBus is an instance of EventBus."""
+        bus = MemoryEventBus()
+        assert isinstance(bus, EventBus)
+
+class TestUnitOfWorkConformance:
+    """Verify adapters satisfy UnitOfWork protocol."""
+
+    def test_sqlalchemy_uow_is_unit_of_work(self) -> None:
+        """Verify SQLAlchemyUnitOfWork is an instance of UnitOfWork."""
+        from unittest.mock import MagicMock
+
+        mock_factory = MagicMock()
+        uow = SQLAlchemyUnitOfWork(mock_factory)
+        assert isinstance(uow, UnitOfWork)
+
+{%- if use_redis %}
+
+class TestRedisCachePortConformance:
+    """Verify RedisCacheAdapter satisfies CachePort protocol."""
+
+    def test_redis_cache_is_cache_port(self) -> None:
+        """Verify RedisCacheAdapter is an instance of CachePort."""
+        from unittest.mock import MagicMock
+
+        from {{ project_slug }}.adapters.cache.redis_cache import RedisCacheAdapter
+
+        mock_client = MagicMock()
+        adapter = RedisCacheAdapter(mock_client)
+        assert isinstance(adapter, CachePort)
+{%- endif %}

@@ -1,0 +1,25 @@
+
+
+Accepted
+
+
+{{ '%Y-%m-%d' | strftime }}
+
+
+We need a configuration system that supports environment variables, `.env` files, type validation,
+and environment-specific overrides (local, test, production).
+
+
+Use `pydantic-settings` for application configuration:
+
+- Type-safe settings with validation
+- Environment variable loading with prefix support
+- `.env` file support via `python-dotenv`
+- Nested settings objects for logical grouping
+- Settings hierarchy: defaults → `.env` → environment variables → CLI flags
+
+
+- **Positive**: Fail-fast on misconfiguration at startup
+- **Positive**: Full IDE autocompletion on settings
+- **Positive**: Environment-specific settings classes (LocalSettings, ProductionSettings)
+- **Negative**: Slight startup overhead for validation

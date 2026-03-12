@@ -1,0 +1,480 @@
+$ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue" # Speed up Invoke-WebRequest
+
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RESULTS = @()
+
+function Log-Result {
+param([string]$Component, [string]$Status)
+$script:RESULTS += [PSCustomObject]@{ Component = $Component; Status = $Status }
+}
+
+function Test-Administrator {
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = New-Object Security.Principal.WindowsPrincipal($identity)
+return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Install-Winget {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+Write-Host "winget already available"
+Log-Result "winget" "OK (existing)"
+return
+}
+Write-Host "Installing winget (App Installer)..."
+try {
+Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+Log-Result "winget" "OK"
+}
+catch {
+Write-Warning "winget installation failed. Install from Microsoft Store: 'App Installer'"
+Log-Result "winget" "FAILED"
+}
+}
+
+function Install-WSL2 {
+Write-Host ""
+Write-Host "--- WSL2 ---"
+$wsl2Script = Join-Path $ScriptDir "install-wsl2.ps1"
+if (Test-Path $wsl2Script) {
+try {
+& $wsl2Script
+Log-Result "WSL2" "OK"
+}
+catch {
+Write-Warning "WSL2 installation had issues: $_"
+Log-Result "WSL2" "FAILED"
+}
+}
+else {
+Write-Host "WARNING: install-wsl2.ps1 not found"
+Log-Result "WSL2" "SKIPPED"
+}
+}
+
+function Install-VSCode {
+Write-Host ""
+Write-Host "--- VS Code ---"
+$vscodeScript = Join-Path $ScriptDir "install-vscode.ps1"
+if (Test-Path $vscodeScript) {
+try {
+& $vscodeScript
+Log-Result "VS Code" "OK"
+}
+catch {
+Write-Warning "VS Code installation had issues: $_"
+Log-Result "VS Code" "FAILED"
+}
+}
+else {
+Write-Host "WARNING: install-vscode.ps1 not found"
+Log-Result "VS Code" "SKIPPED"
+}
+}
+
+function Install-Git {
+Write-Host ""
+Write-Host "--- Git ---"
+if (Get-Command git -ErrorAction SilentlyContinue) {
+Write-Host "Git already installed: $(git --version)"
+Log-Result "Git" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id Git.Git -e --accept-source-agreements --accept-package-agreements
+}
+else {
+Write-Host "Downloading Git installer..."
+$installerUrl = "https://github.com/git-for-windows/git/releases/latest/download/Git-64-bit.exe"
+$installerPath = Join-Path $env:TEMP "GitInstaller.exe"
+Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+Start-Process -FilePath $installerPath -ArgumentList "/VERYSILENT", "/NORESTART" -Wait
+Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
+}
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "Git" "OK"
+}
+catch {
+Write-Warning "Git installation failed: $_"
+Log-Result "Git" "FAILED"
+}
+}
+
+function Install-Python {
+Write-Host ""
+Write-Host "--- Python {{ python_version }} ---"
+if (Get-Command python -ErrorAction SilentlyContinue) {
+$pyVersion = python --version 2>&1
+Write-Host "Python already installed: $pyVersion"
+Log-Result "Python" "OK (existing)"
+}
+else {
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id Python.Python.{{ python_version }} -e --accept-source-agreements --accept-package-agreements
+}
+else {
+Write-Host "Download Python {{ python_version }}+ from https://python.org/downloads/"
+}
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "Python" "OK"
+}
+catch {
+Write-Warning "Python installation failed: $_"
+Log-Result "Python" "FAILED"
+}
+}
+}
+
+function Install-UV {
+Write-Host ""
+Write-Host "--- uv (Python package manager) ---"
+if (Get-Command uv -ErrorAction SilentlyContinue) {
+Write-Host "uv already installed: $(uv --version)"
+Log-Result "uv" "OK (existing)"
+return
+}
+try {
+Write-Host "Installing uv..."
+irm https://astral.sh/uv/install.ps1 | iex
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User") +
+";$env:USERPROFILE\.local\bin;$env:USERPROFILE\.cargo\bin"
+Log-Result "uv" "OK"
+}
+catch {
+Write-Warning "uv installation failed: $_"
+Log-Result "uv" "FAILED"
+}
+}
+
+function Install-NodePnpm {
+Write-Host ""
+Write-Host "--- Node.js {{ node_version }} + pnpm ---"
+if (Get-Command node -ErrorAction SilentlyContinue) {
+Write-Host "Node.js already installed: $(node --version)"
+Log-Result "Node.js" "OK (existing)"
+}
+else {
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements
+}
+else {
+Write-Host "Download Node.js {{ node_version }} LTS from https://nodejs.org/"
+}
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "Node.js" "OK"
+}
+catch {
+Write-Warning "Node.js installation failed: $_"
+Log-Result "Node.js" "FAILED"
+}
+}
+
+if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+Write-Host "pnpm already installed: $(pnpm --version)"
+Log-Result "pnpm" "OK (existing)"
+}
+else {
+try {
+if (Get-Command corepack -ErrorAction SilentlyContinue) {
+corepack enable
+corepack prepare pnpm@latest --activate
+}
+else {
+npm install -g pnpm
+}
+Log-Result "pnpm" "OK"
+}
+catch {
+Write-Warning "pnpm installation failed: $_"
+Log-Result "pnpm" "FAILED"
+}
+}
+}
+
+function Install-ContainerRuntime {
+Write-Host ""
+Write-Host "--- {{ container_runtime | capitalize }} ---"
+{% if container_runtime == "docker" %}
+if (Get-Command docker -ErrorAction SilentlyContinue) {
+Write-Host "Docker already installed: $(docker --version)"
+Log-Result "Docker" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id Docker.DockerDesktop -e --accept-source-agreements --accept-package-agreements
+Write-Host "Docker Desktop installed. Launch it to complete setup."
+}
+else {
+Write-Host "Download Docker Desktop from https://docs.docker.com/desktop/install/windows-install/"
+}
+Log-Result "Docker" "OK"
+}
+catch {
+Write-Warning "Docker installation failed: $_"
+Log-Result "Docker" "FAILED"
+}
+{% else %}
+if (Get-Command podman -ErrorAction SilentlyContinue) {
+Write-Host "Podman already installed: $(podman --version)"
+Log-Result "Podman" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id RedHat.Podman -e --accept-source-agreements --accept-package-agreements
+Write-Host "Podman installed. Initialize with: podman machine init && podman machine start"
+}
+else {
+Write-Host "Download Podman from https://podman.io/"
+}
+Log-Result "Podman" "OK"
+}
+catch {
+Write-Warning "Podman installation failed: $_"
+Log-Result "Podman" "FAILED"
+}
+{% endif %}
+}
+
+function Install-GoTask {
+Write-Host ""
+Write-Host "--- go-task ---"
+if (Get-Command task -ErrorAction SilentlyContinue) {
+Write-Host "go-task already installed: $(task --version)"
+Log-Result "go-task" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id Task.Task -e --accept-source-agreements --accept-package-agreements
+}
+else {
+Write-Host "Download go-task from https://taskfile.dev/installation/"
+}
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "go-task" "OK"
+}
+catch {
+Write-Warning "go-task installation failed: $_"
+Log-Result "go-task" "FAILED"
+}
+}
+
+function Install-Hadolint {
+Write-Host ""
+Write-Host "--- hadolint ---"
+if (Get-Command hadolint -ErrorAction SilentlyContinue) {
+Write-Host "hadolint already installed"
+Log-Result "hadolint" "OK (existing)"
+return
+}
+try {
+$hadolintUrl = "https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Windows-x86_64.exe"
+$hadolintDest = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\hadolint.exe"
+Write-Host "Downloading hadolint..."
+Invoke-WebRequest -Uri $hadolintUrl -OutFile $hadolintDest -UseBasicParsing
+Log-Result "hadolint" "OK"
+}
+catch {
+Write-Warning "hadolint installation failed: $_"
+Log-Result "hadolint" "FAILED"
+}
+}
+
+function Install-ShellCheck {
+Write-Host ""
+Write-Host "--- ShellCheck ---"
+if (Get-Command shellcheck -ErrorAction SilentlyContinue) {
+Write-Host "ShellCheck already installed"
+Log-Result "ShellCheck" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id koalaman.shellcheck -e --accept-source-agreements --accept-package-agreements 2>$null
+if ($LASTEXITCODE -ne 0) {
+Write-Host "ShellCheck not available via winget; install via scoop or WSL"
+}
+}
+Log-Result "ShellCheck" "OK"
+}
+catch {
+Write-Warning "ShellCheck: recommend installing inside WSL instead"
+Log-Result "ShellCheck" "SKIPPED (WSL recommended)"
+}
+}
+{% if use_caddy %}
+
+function Install-Caddy {
+Write-Host ""
+Write-Host "--- Caddy (reverse proxy) ---"
+if (Get-Command caddy -ErrorAction SilentlyContinue) {
+Write-Host "Caddy already installed: $(caddy version)"
+Log-Result "Caddy" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id CaddyServer.Caddy -e --accept-source-agreements --accept-package-agreements
+}
+else {
+Write-Host "Download Caddy from https://caddyserver.com/download"
+}
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "Caddy" "OK"
+}
+catch {
+Write-Warning "Caddy installation failed: $_"
+Log-Result "Caddy" "FAILED"
+}
+}
+{% endif %}
+{% if use_redis %}
+
+function Install-Redis {
+Write-Host ""
+Write-Host "--- Redis ---"
+Write-Host "Redis is containerized in this project (compose.yml)."
+Write-Host "For native Windows, consider Memurai: https://www.memurai.com/"
+Log-Result "Redis" "OK (containerized)"
+}
+{% endif %}
+{% if cloud_provider == "azure" %}
+
+function Install-AzureCLI {
+Write-Host ""
+Write-Host "--- Azure CLI ---"
+if (Get-Command az -ErrorAction SilentlyContinue) {
+Write-Host "Azure CLI already installed: $(az version --output tsv 2>&1 | Select-Object -First 1)"
+Log-Result "Azure CLI" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id Microsoft.AzureCLI -e --accept-source-agreements --accept-package-agreements
+}
+else {
+Write-Host "Downloading Azure CLI installer..."
+$installerUrl = "https://aka.ms/installazurecliwindowsx64"
+$installerPath = Join-Path $env:TEMP "AzureCLI.msi"
+Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+Start-Process msiexec.exe -ArgumentList "/i", $installerPath, "/quiet", "/norestart" -Wait
+Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
+}
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "Azure CLI" "OK"
+}
+catch {
+Write-Warning "Azure CLI installation failed: $_"
+Log-Result "Azure CLI" "FAILED"
+}
+}
+{% endif %}
+
+function Install-OpenCode {
+Write-Host ""
+Write-Host "--- OpenCode (AI coding assistant) ---"
+if (Get-Command opencode -ErrorAction SilentlyContinue) {
+Write-Host "OpenCode already installed"
+Log-Result "OpenCode" "OK (existing)"
+return
+}
+try {
+if (Get-Command npm -ErrorAction SilentlyContinue) {
+npm i -g opencode-ai
+}
+elseif (Get-Command scoop -ErrorAction SilentlyContinue) {
+scoop install opencode
+}
+else {
+Write-Host "Install via: npm i -g opencode-ai OR scoop install opencode"
+Log-Result "OpenCode" "SKIPPED (no npm/scoop)"
+return
+}
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "OpenCode" "OK"
+}
+catch {
+Write-Warning "OpenCode installation failed: $_"
+Log-Result "OpenCode" "FAILED"
+}
+}
+
+function Print-Summary {
+Write-Host ""
+Write-Host "╔══════════════════════════════════════════╗"
+Write-Host "║ Installation Summary (Windows) ║"
+Write-Host "╠══════════════════════════════════════════╣"
+foreach ($r in $script:RESULTS) {
+$comp = $r.Component.PadRight(20)
+Write-Host "║ $comp $($r.Status)"
+}
+Write-Host "╚══════════════════════════════════════════╝"
+Write-Host ""
+}
+
+
+Write-Host "╔══════════════════════════════════════════════════════╗"
+Write-Host "║ Windows Development Environment — Full Setup ║"
+Write-Host "║ Project: {{ project_name }} ║"
+Write-Host "║ Python {{ python_version }} | Node {{ node_version }} | {{ container_runtime | capitalize }} ║"
+Write-Host "╚══════════════════════════════════════════════════════╝"
+Write-Host ""
+
+if (-not (Test-Administrator)) {
+Write-Warning "Some installations require Administrator privileges."
+Write-Warning "Consider re-running as Administrator for full setup."
+Write-Host ""
+}
+
+Install-Winget
+Install-Git
+Install-WSL2
+Install-VSCode
+Install-Python
+Install-UV
+Install-NodePnpm
+Install-ContainerRuntime
+Install-GoTask
+Install-Hadolint
+Install-ShellCheck
+{% if use_caddy %}
+
+Install-Caddy
+{% endif %}
+{% if use_redis %}
+
+Install-Redis
+{% endif %}
+{% if cloud_provider == "azure" %}
+
+Install-AzureCLI
+{% endif %}
+
+Install-OpenCode
+
+Print-Summary
+
+Write-Host "Next steps:"
+Write-Host ""
+Write-Host " If WSL2 was just installed, RESTART your machine first."
+Write-Host ""
+Write-Host " cd {{ _copier_conf.dst_path }}"
+Write-Host " zsh scripts/bootstrap.zsh # Full project bootstrap"
+Write-Host " task dev # Start development"
+Write-Host ""
+Write-Host " Or inside WSL/Ubuntu for full Linux toolchain:"
+Write-Host " zsh scripts/install/install-all.zsh"
+Write-Host ""

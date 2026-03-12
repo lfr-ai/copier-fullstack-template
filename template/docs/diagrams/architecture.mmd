@@ -1,0 +1,44 @@
+graph TB
+    subgraph External
+        Client[Client / Browser]
+        ExtAPI[External APIs]
+        DB[(Database)]
+        Redis[(Redis)]
+    end
+
+    subgraph Ports
+        API[FastAPI Routes]
+        CLI[CLI Commands]
+    end
+
+    subgraph Application
+        Services[Services]
+        Commands[Commands]
+        Queries[Queries]
+    end
+
+    subgraph Core
+        Entities[Entities]
+        ValueObjects[Value Objects]
+        Interfaces[Repository Interfaces]
+    end
+
+    subgraph Adapters
+        RepoImpl[SQLAlchemy Repositories]
+        CacheImpl[Redis/Memory Cache]
+        HTTPImpl[HTTP Client]
+    end
+
+    Client --> API
+    API --> Services
+    CLI --> Services
+    Services --> Commands
+    Services --> Queries
+    Commands --> Interfaces
+    Queries --> Interfaces
+    Interfaces -.-> RepoImpl
+    Interfaces -.-> CacheImpl
+    Interfaces -.-> HTTPImpl
+    RepoImpl --> DB
+    CacheImpl --> Redis
+    HTTPImpl --> ExtAPI

@@ -1,0 +1,38 @@
+"""Unit tests for rate limiting middleware configuration."""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+
+import pytest
+
+from {{ project_slug }}.ports.api.middleware.rate_limit import (
+    DEFAULT_RATE_LIMIT,
+    configure_rate_limiting,
+    limiter,
+)
+
+class TestRateLimitConfiguration:
+    """Test suite for rate limiting module-level config."""
+
+    def test_default_rate_limit_value(self) -> None:
+        """Verify default rate limit constant."""
+        assert DEFAULT_RATE_LIMIT == "60/minute"
+
+    def test_limiter_has_default_limits(self) -> None:
+        """Verify limiter instance includes the default limit."""
+        assert limiter._default_limits is not None  # noqa: SLF001
+
+    def test_configure_sets_app_state(self) -> None:
+        """Verify configure_rate_limiting sets app.state.limiter."""
+        mock_app = MagicMock()
+        mock_app.state = MagicMock()
+        configure_rate_limiting(mock_app)
+        assert mock_app.state.limiter is limiter
+
+    def test_configure_adds_exception_handler(self) -> None:
+        """Verify configure_rate_limiting registers exception handler."""
+        mock_app = MagicMock()
+        mock_app.state = MagicMock()
+        configure_rate_limiting(mock_app)
+        mock_app.add_exception_handler.assert_called_once()

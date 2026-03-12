@@ -1,4 +1,3 @@
-# Configuration Reference  {{ project_name }}
 
 All configuration is loaded from environment variables with the
 `{{ project_slug | upper }}_` prefix, powered by
@@ -6,35 +5,24 @@ All configuration is loaded from environment variables with the
 
 ---
 
-## Environment Variable Reference
 
-### Core
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `{{ project_slug | upper }}_ENVIRONMENT` | `str` | `local` | Deployment environment (`local`, `dev`, `test`, `staging`, `prod`) |
 | `{{ project_slug | upper }}_DEBUG` | `bool` | `false` | Enable debug mode |
 | `{{ project_slug | upper }}_LOG_LEVEL` | `str` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `{{ project_slug | upper }}_ALLOWED_ORIGINS` | `list[str]` | `["http://localhost:5173"]` | CORS allowed origins (JSON array) |
+| `{{ project_slug | upper }}_CORS_ALLOWED_ORIGINS` | `list[str]` | `[]` | CORS allowed origins for non-local environments |
 | `{{ project_slug | upper }}_SECRET_KEY` | `str` | *(required)* | Application secret key |
-{% if database_backend == 'postgresql' %}
+{% if database_backend in ('postgresql', 'azure_postgresql') %}
 
-### Database (PostgreSQL)
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `{{ project_slug | upper }}_DATABASE_URL` | `str` | `postgresql+asyncpg://` | Full database connection URL |
-{% elif database_backend == 'sqlite' %}
-
-### Database (SQLite)
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_DATABASE_URL` | `str` | `sqlite+aiosqlite:///` | SQLite database path |
+| `{{ project_slug | upper }}_DATABASE_URL` | `str` | `postgresql+psycopg://` | Full database connection URL |
 {% endif %}
 {% if use_redis %}
 
-### Redis
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -42,7 +30,6 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_auth %}
 
-### Authentication
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -52,7 +39,6 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_celery %}
 
-### Celery
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -61,7 +47,6 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if secret_backend == 'azure_kv' %}
 
-### Azure Key Vault
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -73,7 +58,6 @@ All configuration is loaded from environment variables with the
 
 ---
 
-## Configuration Layering
 
 Configuration is resolved in this priority order (highest wins):
 
@@ -83,7 +67,6 @@ Configuration is resolved in this priority order (highest wins):
 
 ---
 
-## Secrets Management
 
 - **Local development**: Store secrets in `.env` (git-ignored)
 - **CI/CD**: Use pipeline secrets / protected variables
@@ -97,7 +80,6 @@ Configuration is resolved in this priority order (highest wins):
 
 ---
 
-## `.env.example`
 
 Copy `.env.example` to `.env` and fill in secret values:
 

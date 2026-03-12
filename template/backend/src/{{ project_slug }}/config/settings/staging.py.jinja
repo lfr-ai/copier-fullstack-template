@@ -1,0 +1,26 @@
+"""Staging environment settings.
+
+Production-like but with slightly more permissive logging to aid
+integration testing and QA validation.
+"""
+
+from __future__ import annotations
+
+from {{ project_slug }}.config.settings.base import BaseAppSettings
+from {{ project_slug }}.core.enums.environment import Environment
+
+__all__ = ["StagingSettings"]
+
+
+class StagingSettings(BaseAppSettings):
+    """Settings for staging / pre-production environment.
+
+    Mirrors production security posture with INFO-level logging
+    for easier debugging during QA cycles.
+    """
+
+    environment: Environment = Environment.STAGING
+    debug: bool = False
+    log_level: str = "INFO"
+    host: str = "0.0.0.0"  # noqa: S104  – intentional: container networking
+    database_echo: bool = False

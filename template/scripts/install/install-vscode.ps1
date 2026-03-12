@@ -1,5 +1,3 @@
-# Install Visual Studio Code on Windows
-# Run from PowerShell as Administrator
 
 $ErrorActionPreference = "Stop"
 

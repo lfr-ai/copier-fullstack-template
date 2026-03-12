@@ -1,0 +1,293 @@
+"""Exhaustive unit tests for application DTOs.
+
+Covers BaseDTO, PaginationParams, PaginatedResponse, ErrorDTO,
+CreateUserDTO, and UserDTO with property-based testing where appropriate.
+"""
+
+from __future__ import annotations
+
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+from pydantic import ValidationError
+
+from {{ project_slug }}.application.dtos.base import BaseDTO, ErrorDTO, PaginatedResponse
+from {{ project_slug }}.application.dtos.pagination import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    PaginationParams,
+)
+from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
+
+
+class TestBaseDTO:
+    """Test suite for BaseDTO configuration."""
+
+    def test_strips_whitespace(self) -> None:
+        """Verify BaseDTO strips leading/trailing whitespace from strings."""
+
+        class _SampleDTO(BaseDTO):
+            name: str
+
+        dto = _SampleDTO(name="  hello  ")
+        assert dto.name == "hello"
+
+    def test_frozen_prevents_mutation(self) -> None:
+        """Verify BaseDTO is frozen — attribute re-assignment raises."""
+
+        class _StrictDTO(BaseDTO):
+            count: int
+
+        dto = _StrictDTO(count=5)
+        with pytest.raises(ValidationError):
+            dto.count = 99  # type: ignore[misc]
+
+    def test_from_attributes(self) -> None:
+        """Verify BaseDTO supports from_attributes mode."""
+
+        class _AttrSource:
+            name = "test-value"
+
+        class _AttrDTO(BaseDTO):
+            name: str
+
+        dto = _AttrDTO.model_validate(_AttrSource(), from_attributes=True)
+        assert dto.name == "test-value"
+
+
+class TestPaginationParams:
+    """Test suite for PaginationParams DTO."""
+
+    def test_defaults(self) -> None:
+        """Verify PaginationParams uses correct defaults."""
+        params = PaginationParams()
+        assert params.offset == 0
+        assert params.limit == DEFAULT_PAGE_SIZE
+
+    def test_custom_values(self) -> None:
+        """Verify PaginationParams accepts custom offset and limit."""
+        params = PaginationParams(offset=20, limit=50)
+        assert params.offset == 20
+        assert params.limit == 50
+
+    def test_offset_must_be_non_negative(self) -> None:
+        """Verify negative offset raises ValidationError."""
+        with pytest.raises(ValidationError):
+            PaginationParams(offset=-1)
+
+    def test_limit_must_be_positive(self) -> None:
+        """Verify zero limit raises ValidationError."""
+        with pytest.raises(ValidationError):
+            PaginationParams(limit=0)
+
+    def test_limit_cannot_exceed_max(self) -> None:
+        """Verify limit above MAX_PAGE_SIZE raises ValidationError."""
+        with pytest.raises(ValidationError):
+            PaginationParams(limit=MAX_PAGE_SIZE + 1)
+
+    def test_limit_at_max_is_valid(self) -> None:
+        """Verify limit exactly at MAX_PAGE_SIZE is accepted."""
+        params = PaginationParams(limit=MAX_PAGE_SIZE)
+        assert params.limit == MAX_PAGE_SIZE
+
+    @given(
+        offset=st.integers(min_value=0, max_value=10_000),
+        limit=st.integers(min_value=1, max_value=MAX_PAGE_SIZE),
+    )
+    def test_valid_ranges_always_accepted(self, offset: int, limit: int) -> None:
+        """Property: any valid offset/limit pair is accepted."""
+        params = PaginationParams(offset=offset, limit=limit)
+        assert params.offset == offset
+        assert params.limit == limit
+
+
+class TestPaginatedResponse:
+    """Test suite for PaginatedResponse envelope DTO."""
+
+    def test_create_paginated_response(self) -> None:
+        """Verify paginated response creation."""
+        response = PaginatedResponse[str](
+            items=["a", "b"],
+            total=10,
+            offset=0,
+            limit=20,
+        )
+        assert response.items == ["a", "b"]
+        assert response.total == 10
+
+    def test_has_more_true(self) -> None:
+        """Verify has_more returns True when more pages exist."""
+        response = PaginatedResponse[str](
+            items=["a"],
+            total=50,
+            offset=0,
+            limit=20,
+        )
+        assert response.has_more is True
+
+    def test_has_more_false_at_end(self) -> None:
+        """Verify has_more returns False when at last page."""
+        response = PaginatedResponse[str](
+            items=["a"],
+            total=21,
+            offset=20,
+            limit=20,
+        )
+        assert response.has_more is False
+
+    def test_has_more_false_exact(self) -> None:
+        """Verify has_more False when offset+limit equals total."""
+        response = PaginatedResponse[str](
+            items=["a", "b"],
+            total=20,
+            offset=0,
+            limit=20,
+        )
+        assert response.has_more is False
+
+    def test_negative_total_rejected(self) -> None:
+        """Verify negative total raises validation error."""
+        with pytest.raises(ValidationError):
+            PaginatedResponse[str](items=[], total=-1, offset=0, limit=20)
+
+    def test_zero_limit_rejected(self) -> None:
+        """Verify zero limit raises validation error."""
+        with pytest.raises(ValidationError):
+            PaginatedResponse[str](items=[], total=0, offset=0, limit=0)
+
+    def test_negative_offset_rejected(self) -> None:
+        """Verify negative offset raises validation error."""
+        with pytest.raises(ValidationError):
+            PaginatedResponse[str](items=[], total=0, offset=-1, limit=20)
+
+    def test_empty_items(self) -> None:
+        """Verify empty items list is valid."""
+        response = PaginatedResponse[str](items=[], total=0, offset=0, limit=10)
+        assert response.items == []
+        assert response.has_more is False
+
+    @given(
+        total=st.integers(min_value=0, max_value=10_000),
+        offset=st.integers(min_value=0, max_value=10_000),
+        limit=st.integers(min_value=1, max_value=1000),
+    )
+    def test_has_more_property(self, total: int, offset: int, limit: int) -> None:
+        """Property: has_more is True iff offset+limit < total."""
+        response = PaginatedResponse[str](
+            items=[],
+            total=total,
+            offset=offset,
+            limit=limit,
+        )
+        assert response.has_more == ((offset + limit) < total)
+
+
+class TestErrorDTO:
+    """Test suite for ErrorDTO."""
+
+    def test_create_error_response(self) -> None:
+        """Verify error response creation."""
+        response = ErrorDTO(
+            error_code="NOT_FOUND",
+            message="Resource not found",
+        )
+        assert response.error_code == "NOT_FOUND"
+        assert response.message == "Resource not found"
+        assert response.details is None
+
+    def test_error_response_with_details(self) -> None:
+        """Verify error response with additional details."""
+        response = ErrorDTO(
+            error_code="VALIDATION_ERROR",
+            message="Invalid input",
+            details={"field": "email", "reason": "invalid format"},
+        )
+        assert response.details is not None
+        assert response.details["field"] == "email"
+
+    def test_strips_whitespace(self) -> None:
+        """Verify whitespace stripped from string fields."""
+        response = ErrorDTO(
+            error_code="  NOT_FOUND  ",
+            message="  spaced  ",
+        )
+        assert response.error_code == "NOT_FOUND"
+        assert response.message == "spaced"
+
+
+class TestCreateUserDTO:
+    """Test suite for CreateUserDTO validation."""
+
+    def test_valid_creation(self) -> None:
+        """Verify valid CreateUserDTO is accepted."""
+        dto = CreateUserDTO(email="user@example.com", display_name="Jane")
+        assert dto.email == "user@example.com"
+        assert dto.display_name == "Jane"
+
+    def test_email_too_short(self) -> None:
+        """Verify short email raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserDTO(email="a@b", display_name="Jane")
+
+    def test_email_too_long(self) -> None:
+        """Verify email exceeding max length raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserDTO(email="a" * 250 + "@b.com", display_name="Jane")
+
+    def test_display_name_cannot_be_empty(self) -> None:
+        """Verify empty display name raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserDTO(email="user@example.com", display_name="")
+
+    def test_display_name_max_length(self) -> None:
+        """Verify display name exceeding max raises ValidationError."""
+        with pytest.raises(ValidationError):
+            CreateUserDTO(email="user@example.com", display_name="x" * 101)
+
+    def test_whitespace_stripped(self) -> None:
+        """Verify whitespace stripped from email and display_name."""
+        dto = CreateUserDTO(email="  user@example.com  ", display_name="  Jane  ")
+        assert dto.email == "user@example.com"
+        assert dto.display_name == "Jane"
+
+
+class TestUserDTO:
+    """Test suite for UserDTO."""
+
+    def test_model_validate_from_attributes(self) -> None:
+        """Verify UserDTO can be created from attribute source."""
+
+        class _UserLike:
+            id = "u-1"
+            email = "test@example.com"
+            display_name = "Test"
+            is_active = True
+
+        dto = UserDTO.model_validate(_UserLike(), from_attributes=True)
+        assert dto.id == "u-1"
+        assert dto.email == "test@example.com"
+        assert dto.is_active is True
+
+    def test_serialization_round_trip(self) -> None:
+        """Verify UserDTO serializes and deserializes correctly."""
+        dto = UserDTO(
+            id="u-2",
+            email="alice@test.com",
+            display_name="Alice",
+            is_active=False,
+        )
+        data = dto.model_dump()
+        restored = UserDTO.model_validate(data)
+        assert restored == dto
+
+    def test_json_round_trip(self) -> None:
+        """Verify UserDTO JSON serialization round-trip."""
+        dto = UserDTO(
+            id="u-3",
+            email="bob@test.com",
+            display_name="Bob",
+            is_active=True,
+        )
+        json_str = dto.model_dump_json()
+        restored = UserDTO.model_validate_json(json_str)
+        assert restored == dto

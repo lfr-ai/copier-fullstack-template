@@ -1,0 +1,150 @@
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+
+SCRIPT_DIR="${0:A:h}"
+LOG_DIR="${SCRIPT_DIR}/../../.bootstrap/logs"
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+RESULTS=()
+
+log_result() {
+emulate -L zsh
+
+local component="${1}"
+local status="${2}"
+RESULTS+=("${component}:${status}")
+}
+
+run_installer() {
+emulate -L zsh
+
+local component="${1}"
+local script="${2}"
+shift 2
+
+print ""
+print "════════════════════════════════════════"
+print " Installing: ${component}"
+print "════════════════════════════════════════"
+print ""
+
+if [[ ! -f "${script}" ]]; then
+print "WARNING: Script not found: ${script}"
+log_result "${component}" "SKIPPED"
+return 0
+fi
+
+if zsh "${script}" "$@"; then
+log_result "${component}" "OK"
+else
+print "WARNING: ${component} installation had issues"
+log_result "${component}" "FAILED"
+fi
+}
+
+detect_platform() {
+emulate -L zsh
+
+local os_type
+os_type="$(uname -s)"
+
+case "${os_type}" in
+Linux)
+if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+print "wsl"
+else
+print "linux"
+fi
+;;
+Darwin) print "macos" ;;
+*) print "unknown" ;;
+esac
+}
+
+print_summary() {
+emulate -L zsh
+
+print ""
+print "╔══════════════════════════════════════════╗"
+print "║ Installation Summary ║"
+print "╠══════════════════════════════════════════╣"
+
+local component status
+for entry in "${RESULTS[@]}"; do
+component="${entry%%:*}"
+status="${entry##*:}"
+print -f "║ %-20s %s\n" "${component}" "${status}"
+done
+
+print "╚══════════════════════════════════════════╝"
+print ""
+}
+
+save_log() {
+emulate -L zsh
+
+mkdir -p "${LOG_DIR}"
+
+local log_file="${LOG_DIR}/install-${TIMESTAMP}.json"
+local json_entries=""
+
+for entry in "${RESULTS[@]}"; do
+local component="${entry%%:*}"
+local status="${entry##*:}"
+if [[ -n "${json_entries}" ]]; then
+json_entries="${json_entries},"
+fi
+json_entries="${json_entries}\"${component}\": \"${status}\""
+done
+
+print "{\"timestamp\": \"${TIMESTAMP}\", \"platform\": \"$(detect_platform)\", \"results\": {${json_entries}}}" >
+"${log_file}"
+print "Log saved to ${log_file}"
+}
+
+main() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+local platform
+platform="$(detect_platform)"
+
+print "╔══════════════════════════════════════════╗"
+print "║ Full Development Environment Setup ║"
+print "║ Platform: ${platform} ║"
+print "╚══════════════════════════════════════════╝"
+
+run_installer "Git" "${SCRIPT_DIR}/install-git.zsh"
+run_installer "Zsh" "${SCRIPT_DIR}/install-zsh.zsh"
+run_installer "Python + uv" "${SCRIPT_DIR}/install-python.zsh"
+run_installer "Node.js + pnpm" "${SCRIPT_DIR}/install-node.zsh"
+run_installer "Container Engine" "${SCRIPT_DIR}/install-container.zsh"
+run_installer "Task CLI" "${SCRIPT_DIR}/install-task.zsh"
+run_installer "VS Code" "${SCRIPT_DIR}/install-vscode.zsh"
+
+run_installer "Linters" "${SCRIPT_DIR}/install-linters.zsh"
+{% if use_devcontainer %}
+run_installer "DevContainer" "${SCRIPT_DIR}/setup-devcontainer.zsh"
+{% endif %}
+{% if use_caddy %}
+run_installer "Caddy" "${SCRIPT_DIR}/install-caddy.zsh"
+{% endif %}
+{% if use_redis %}
+run_installer "Redis" "${SCRIPT_DIR}/install-redis.zsh"
+{% endif %}
+{% if cloud_provider != "none" %}
+run_installer "Cloud CLI" "${SCRIPT_DIR}/install-cloud-cli.zsh"
+{% endif %}
+{% if with_opencode %}
+run_installer "OpenCode" "${SCRIPT_DIR}/install-opencode.zsh"
+{% endif %}
+
+print_summary
+save_log
+
+print "All installations complete"
+print ""
+print "Next: run 'zsh scripts/bootstrap.zsh' to set up the project"
+}
+
+main "$@"

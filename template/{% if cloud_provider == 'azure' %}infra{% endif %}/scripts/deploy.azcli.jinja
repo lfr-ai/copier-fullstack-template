@@ -1,0 +1,67 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT NO_UNSET
+
+# Description:
+# Deploy the subscription-scoped Bicep template `infra/deploy.bicep` for the
+# specified environment. Accepts a project name and deploys a single environment,
+# or all environments when --all is given.
+#
+# Usage:
+# ./deploy.azcli -p my-project -e dev # deploys dev only
+# ./deploy.azcli -p my-project -e prod # deploys prod only
+# ./deploy.azcli -p my-project # deploys dev + prod (default)
+# ./deploy.azcli -p my-project --all # deploys dev, test, staging, prod
+
+zparseopts -F -- {p,-project}:=project {e,-env}:=env_arg {a,-all}=all_flag
+
+: "${project:?Usage: [-p project-name|--project project-name]}"
+
+readonly ARG_INDEX=2
+project=${project[$ARG_INDEX]}
+
+SCRIPT_DIR="${0:A:h}"
+INFRA_DIR="${SCRIPT_DIR:h}"
+
+deploy_env() {
+local target_env="${1}"
+local bicepparams="${INFRA_DIR}/parameters/${target_env}/deploy.${target_env}.bicepparam"
+
+if [[ ! -f "$bicepparams" ]]; then
+print "ERROR: Parameter file not found: ${bicepparams}" >&2
+exit 1
+fi
+
+# Ensure the using reference points to deploy.bicep
+sed -i "1s|^using '../../main\.bicep'|using '../../deploy.bicep'|" "$bicepparams"
+
+print "==> Deploying ${target_env} environment..."
+
+az deployment sub create \
+--location {{ azure_location }} \
+--template-file "${INFRA_DIR}/deploy.bicep" \
+--parameters "$bicepparams" \
+--parameters projectName="$project" env="$target_env" \
+--name "deploy-{{ project_slug | replace("_", "-") }}-${target_env}-$(date +%Y%m%d%H%M%S)" \
+--only-show-errors
+
+# Restore the using reference
+sed -i "1s|^using '../../deploy\.bicep'|using '../../main.bicep'|" "$bicepparams"
+
+print "==> Deployment complete for ${target_env}"
+}
+
+if [[ -n "${env_arg:-}" ]]; then
+# Single environment deployment
+deploy_env "${env_arg[$ARG_INDEX]}"
+elif [[ -n "${all_flag:-}" ]]; then
+# Deploy all environments
+for e in dev test staging prod; do
+deploy_env "$e"
+done
+else
+# Default: deploy dev + prod
+for e in dev prod; do
+deploy_env "$e"
+done
+fi

@@ -1,0 +1,37 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Description:
+# Deploy the resource-group scoped Bicep template `infra/main.bicep` into an
+# existing resource-group using the parameters file for the chosen environment.
+#
+# Usage:
+# ./main.azcli -r my-resource-group -p my-project -e dev
+# ./main.azcli --rg my-resource-group --project my-project --env prod
+
+zparseopts -F -- {r,-rg}:=rg {p,-project}:=project {e,-env}:=env
+
+: "${rg:?Usage: [-r resource-group|--rg resource-group]}"
+: "${project:?Usage: [-p project-name|--project project-name]}"
+: "${env:?Usage: [-e environment|--env environment]}"
+
+readonly ARG_INDEX=2
+rg=${rg[$ARG_INDEX]}
+project=${project[$ARG_INDEX]}
+env=${env[$ARG_INDEX]}
+
+SCRIPT_DIR="${0:A:h}"
+INFRA_DIR="${SCRIPT_DIR:h}"
+
+bicepparams="${INFRA_DIR}/parameters/${env}/deploy.${env}.bicepparam"
+sed -i "1s|^using '../../deploy\.bicep'|using '../../main.bicep'|" "$bicepparams"
+
+az deployment group create \
+--resource-group "$rg" \
+--template-file "${INFRA_DIR}/main.bicep" \
+--parameters "$bicepparams" \
+--parameters projectName="$project" env="$env" \
+--only-show-errors
+
+sed -i "1s|^using '../../main\.bicep'|using '../../deploy.bicep'|" "$bicepparams"

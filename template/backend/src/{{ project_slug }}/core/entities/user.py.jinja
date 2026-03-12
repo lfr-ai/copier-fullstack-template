@@ -1,0 +1,24 @@
+"""User domain entity."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime
+
+from {{ project_slug }}.core.entities.base import Entity, utcnow
+
+__all__ = ["User"]
+
+
+@dataclass(slots=True)
+class User(Entity):
+    """User domain entity with authentication attributes.
+
+    Represents a user in the system with email-based
+    identification and activation status.
+    """
+
+    email: str = ""
+    display_name: str = ""
+    is_active: bool = True
+    created_at: datetime = field(default_factory=utcnow)

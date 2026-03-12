@@ -1,0 +1,31 @@
+{%- if use_redis %}
+"""Redis client configuration."""
+
+from __future__ import annotations
+
+from typing import Final
+
+from redis.asyncio import Redis
+
+from {{ project_slug }}.config.settings import get_settings
+
+__all__ = ["create_redis_client"]
+
+_SOCKET_TIMEOUT_SECONDS: Final[float] = 5.0
+_SOCKET_CONNECT_TIMEOUT_SECONDS: Final[float] = 5.0
+
+
+def create_redis_client() -> Redis[str]:
+"""Create async Redis client from settings.
+
+Returns:
+Configured async Redis client.
+"""
+settings = get_settings()
+return Redis.from_url(
+settings.redis_url,
+decode_responses=True,
+socket_timeout=_SOCKET_TIMEOUT_SECONDS,
+socket_connect_timeout=_SOCKET_CONNECT_TIMEOUT_SECONDS,
+)
+{%- endif %}

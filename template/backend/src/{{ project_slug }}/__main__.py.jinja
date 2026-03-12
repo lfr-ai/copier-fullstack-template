@@ -1,0 +1,10 @@
+"""Enable python -m {{ project_slug }} execution."""
+
+from __future__ import annotations
+
+__all__ = []
+
+from {{ project_slug }}.ports.cli.app import main
+
+if __name__ == "__main__":
+    main()

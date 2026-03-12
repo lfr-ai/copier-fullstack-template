@@ -1,0 +1,44 @@
+{%- if use_celery %}
+"""Unit tests for Celery background tasks."""
+
+from __future__ import annotations
+
+from unittest.mock import patch
+
+from {{ project_slug }}.application.tasks.example_tasks import (
+cleanup_expired_sessions,
+send_welcome_email,
+)
+
+
+class TestSendWelcomeEmail:
+"""Test suite for send_welcome_email task."""
+
+def test_returns_sent_status(self) -> None:
+"""Verify task returns success dict with user_id and status."""
+result = send_welcome_email(
+None,
+user_id="user-1",
+email="test@example.com",
+)
+assert result == {"user_id": "user-1", "status": "sent"}
+
+def test_includes_user_id_in_result(self) -> None:
+"""Verify the returned dict contains the provided user_id."""
+result = send_welcome_email(
+None,
+user_id="abc-123",
+email="a@b.com",
+)
+assert result["user_id"] == "abc-123"
+
+
+class TestCleanupExpiredSessions:
+"""Test suite for cleanup_expired_sessions task."""
+
+def test_returns_removed_count(self) -> None:
+"""Verify task returns dict with removed count."""
+result = cleanup_expired_sessions(None)
+assert "removed" in result
+assert isinstance(result["removed"], int)
+{%- endif %}

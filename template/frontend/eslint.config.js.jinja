@@ -1,0 +1,37 @@
+import tseslint from 'typescript-eslint';
+{% if frontend_framework == 'react' -%}
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+{% endif %}
+export default tseslint.config(
+{
+files: ['src/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
+extends: [...tseslint.configs.strict],
+languageOptions: {
+ecmaVersion: 'latest',
+sourceType: 'module',
+},
+{%- if frontend_framework == 'react' %}
+plugins: {
+'react-hooks': reactHooks,
+'react-refresh': reactRefresh,
+},
+{%- endif %}
+rules: {
+'@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+'@typescript-eslint/no-explicit-any': 'error',
+'no-console': 'warn',
+'no-debugger': 'error',
+eqeqeq: ['error', 'always'],
+'prefer-const': 'error',
+'no-var': 'error',
+{%- if frontend_framework == 'react' %}
+...reactHooks.configs.recommended.rules,
+'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+{%- endif %}
+},
+},
+{
+ignores: ['dist/', 'node_modules/', 'coverage/', 'playwright-report/'],
+},
+);

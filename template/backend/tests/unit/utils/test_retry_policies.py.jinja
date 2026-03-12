@@ -1,0 +1,137 @@
+"""Unit tests for centralized retry policies."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.utils.retry_policies import (
+    API_BACKOFF_MAX,
+    API_BACKOFF_MIN,
+    API_BACKOFF_MULTIPLIER,
+    API_RETRY_ATTEMPTS,
+    HTTP_BACKOFF_MAX,
+    HTTP_BACKOFF_MIN,
+    HTTP_BACKOFF_MULTIPLIER,
+    HTTP_RETRY_ATTEMPTS,
+    api_retry,
+    http_retry,
+)
+
+class TestRetryPolicyConstants:
+    """Test suite for retry policy constants."""
+
+    def test_http_retry_attempts_positive(self) -> None:
+        """Verify HTTP retry attempts is a positive integer."""
+        assert HTTP_RETRY_ATTEMPTS > 0
+
+    def test_http_backoff_min_less_than_max(self) -> None:
+        """Verify HTTP backoff min < max."""
+        assert HTTP_BACKOFF_MIN < HTTP_BACKOFF_MAX
+
+    def test_http_backoff_multiplier_positive(self) -> None:
+        """Verify HTTP backoff multiplier is positive."""
+        assert HTTP_BACKOFF_MULTIPLIER > 0
+
+    def test_api_retry_attempts_positive(self) -> None:
+        """Verify API retry attempts is a positive integer."""
+        assert API_RETRY_ATTEMPTS > 0
+
+    def test_api_backoff_min_less_than_max(self) -> None:
+        """Verify API backoff min < max."""
+        assert API_BACKOFF_MIN < API_BACKOFF_MAX
+
+    def test_api_backoff_multiplier_positive(self) -> None:
+        """Verify API backoff multiplier is positive."""
+        assert API_BACKOFF_MULTIPLIER > 0
+
+    def test_api_retry_more_than_http(self) -> None:
+        """Verify API retry attempts > HTTP retry attempts."""
+        assert API_RETRY_ATTEMPTS > HTTP_RETRY_ATTEMPTS
+
+class TestHTTPRetryDecorator:
+    """Test suite for http_retry decorator."""
+
+    def test_http_retry_is_callable(self) -> None:
+        """Verify http_retry is a callable decorator."""
+        assert callable(http_retry)
+
+    @pytest.mark.asyncio
+    async def test_http_retry_passes_on_success(self) -> None:
+        """Verify http_retry decorated function succeeds on first try."""
+        call_count = 0
+
+        @http_retry
+        async def succeeds() -> str:
+            nonlocal call_count
+            call_count += 1
+            return "ok"
+
+        result = await succeeds()
+        assert result == "ok"
+        assert call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_http_retry_retries_on_connection_error(self) -> None:
+        """Verify http_retry retries on ConnectionError then succeeds."""
+        call_count = 0
+
+        @http_retry
+        async def flaky() -> str:
+            nonlocal call_count
+            call_count += 1
+            if call_count < HTTP_RETRY_ATTEMPTS:
+                msg = "connection lost"
+                raise ConnectionError(msg)
+            return "recovered"
+
+        result = await flaky()
+        assert result == "recovered"
+        assert call_count == HTTP_RETRY_ATTEMPTS
+
+    @pytest.mark.asyncio
+    async def test_http_retry_reraises_after_max_attempts(self) -> None:
+        """Verify http_retry re-raises after exhausting retries."""
+
+        @http_retry
+        async def always_fails() -> str:
+            msg = "persistent failure"
+            raise ConnectionError(msg)
+
+        with pytest.raises(ConnectionError, match="persistent failure"):
+            await always_fails()
+
+class TestAPIRetryDecorator:
+    """Test suite for api_retry decorator."""
+
+    def test_api_retry_is_callable(self) -> None:
+        """Verify api_retry is a callable decorator."""
+        assert callable(api_retry)
+
+    @pytest.mark.asyncio
+    async def test_api_retry_passes_on_success(self) -> None:
+        """Verify api_retry decorated function succeeds on first try."""
+
+        @api_retry
+        async def succeeds() -> str:
+            return "ok"
+
+        result = await succeeds()
+        assert result == "ok"
+
+    @pytest.mark.asyncio
+    async def test_api_retry_retries_on_os_error(self) -> None:
+        """Verify api_retry retries on OSError."""
+        call_count = 0
+
+        @api_retry
+        async def flaky() -> str:
+            nonlocal call_count
+            call_count += 1
+            if call_count < 2:
+                msg = "network error"
+                raise OSError(msg)
+            return "recovered"
+
+        result = await flaky()
+        assert result == "recovered"
+        assert call_count == 2

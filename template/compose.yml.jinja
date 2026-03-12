@@ -1,13 +1,14 @@
 x-common-env: &common-env
-  APP_ENVIRONMENT: local
+  {{ project_slug | upper }}_ENVIRONMENT: local
 {%- if database_backend == "postgresql" %}
   {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/{{ project_slug }}
-{%- else %}
-  {{ project_slug | upper }}_DATABASE_URL: sqlite+aiosqlite:///./data/app.db
+{%- elif database_backend == "azure_postgresql" %}
+  # When using Azure PostgreSQL, set the connection string via .env or environment variable.
+  # {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://user:pass@your-server.postgres.database.azure.com:5432/{{ project_slug }}?sslmode=require
 {%- endif %}
-  {{ project_slug | upper }}_SECRET_KEY: {{ '' }}
+  {{ project_slug | upper }}_SECRET_KEY: change-me-in-production
 {%- if use_redis %}
-  {{ project_slug | upper }}_REDIS_URL: {{ '' }}
+  {{ project_slug | upper }}_REDIS_URL: redis://redis:6379/0
 {%- endif %}
 
 services:
@@ -15,12 +16,14 @@ services:
     build:
       context: .
       dockerfile: Containerfile
+      target: dev
     ports:
       - "8000:8000"
     environment:
       <<: *common-env
     volumes:
-      - ./src:/app/src:ro
+      - ./backend/src:/app/src:ro
+      - ./logs:/app/logs
 {%- if use_redis or database_backend == "postgresql" %}
     depends_on:
 {%- endif %}
@@ -38,15 +41,61 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    networks:
+      - backend
+{%- if use_caddy %}
+      - frontend
+{%- endif %}
 
   frontend:
     build:
       context: frontend
+      target: dev
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend/src:/app/frontend/src:ro
+      - ./frontend/src:/app/src:ro
     command: ["pnpm", "dev", "--host"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://localhost:3000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - frontend
+
+{%- if use_caddy %}
+  caddy:
+    image: caddy:2.9-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      BACKEND_HOST: app
+      BACKEND_PORT: "8000"
+      FRONTEND_HOST: frontend
+      FRONTEND_PORT: "3000"
+    depends_on:
+      app:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://localhost:80 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - frontend
+    profiles:
+      - gateway
+{%- endif %}
 {%- if use_redis %}
 
   redis:
@@ -60,6 +109,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    networks:
+      - backend
 {%- endif %}
 {%- if database_backend == "postgresql" %}
 
@@ -78,6 +129,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
 {%- endif %}
 {%- if use_celery %}
 
@@ -85,21 +138,69 @@ services:
     build:
       context: .
       dockerfile: Containerfile
+      target: dev
     environment:
       <<: *common-env
     command: ["celery", "-A", "{{ project_slug }}.config.celery:celery_app", "worker", "--loglevel=info"]
-{%- if use_redis %}
     depends_on:
-      - redis
+{%- if use_redis %}
+      redis:
+        condition: service_healthy
 {%- endif %}
+{%- if database_backend == "postgresql" %}
+      db:
+        condition: service_healthy
 {%- endif %}
-{%- if use_redis or database_backend == "postgresql" %}
+    healthcheck:
+      test: ["CMD", "celery", "-A", "{{ project_slug }}.config.celery:celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - backend
+
+  beat:
+    build:
+      context: .
+      dockerfile: Containerfile
+      target: dev
+    environment:
+      <<: *common-env
+    command: ["celery", "-A", "{{ project_slug }}.config.celery:celery_app", "beat", "--loglevel=info", "--pidfile=/tmp/celerybeat.pid"]
+    depends_on:
+{%- if use_redis %}
+      redis:
+        condition: service_healthy
+{%- endif %}
+{%- if database_backend == "postgresql" %}
+      db:
+        condition: service_healthy
+{%- endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/celerybeat.pid && kill -0 $(cat /tmp/celerybeat.pid)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - backend
+{%- endif %}
 
 volumes:
-{%- endif %}
 {%- if use_redis %}
   redis-data:
 {%- endif %}
 {%- if database_backend == "postgresql" %}
   postgres-data:
 {%- endif %}
+{%- if use_caddy %}
+  caddy_data:
+  caddy_config:
+{%- endif %}
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge

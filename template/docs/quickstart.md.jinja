@@ -1,6 +1,4 @@
-# Quickstart Guide
 
-## Prerequisites
 
 - Python {{ python_version }}+
 - [UV](https://docs.astral.sh/uv/) package manager
@@ -8,53 +6,38 @@
 - [pnpm](https://pnpm.io/) for frontend
 - {{ container_runtime }} for containers
 
-## Setup
 
 ```bash
-# Clone and setup
 git clone <repository-url>
 cd {{ project_slug }}
 
-# Install dependencies
 task backend:dev
 
-# Start development server
 task backend:serve
 
-# Or use containers
 task docker:up
 ```
 
-## Common Tasks
 
 ```bash
-# Run tests
 task backend:test
 
-# Run linters
 task backend:lint
 
-# Format code
 task backend:format
 
-# Type check
 task backend:typecheck
 
-# Frontend development
 task frontend:dev
 
-# Run all containers
 task docker:up
 
-# View logs
 task docker:logs
 ```
 
-## Project Structure
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed overview.
 
-## API Documentation
 
 Start the server and visit:
 - Swagger UI: http://localhost:8000/api/docs

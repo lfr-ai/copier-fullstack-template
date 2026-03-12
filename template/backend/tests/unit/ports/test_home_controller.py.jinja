@@ -1,0 +1,45 @@
+"""Unit tests for home web controller."""
+
+from __future__ import annotations
+
+from unittest.mock import patch, MagicMock
+
+import pytest
+
+class TestHomeController:
+    """Test suite for home page web controller."""
+
+    def test_router_has_root_route(self) -> None:
+        """Verify router registers GET / endpoint."""
+        from {{ project_slug }}.ports.web.controllers.home import router
+
+        routes = [r.path for r in router.routes]
+        assert "/" in routes
+
+    def test_home_route_returns_html(self) -> None:
+        """Verify home route is configured for HTML response."""
+        from {{ project_slug }}.ports.web.controllers.home import router
+
+        for route in router.routes:
+            if getattr(route, "path", None) == "/":
+                endpoint = getattr(route, "endpoint", None)
+                assert endpoint is not None
+                break
+        else:
+            pytest.fail("Root route not found")
+
+    @pytest.mark.asyncio
+    async def test_home_calls_template_response(self) -> None:
+        """Verify home controller calls TemplateResponse with correct context."""
+        with patch(
+            "{{ project_slug }}.ports.web.controllers.home.templates"
+        ) as mock_templates:
+            mock_templates.TemplateResponse.return_value = MagicMock()
+            from {{ project_slug }}.ports.web.controllers.home import home
+
+            mock_request = MagicMock()
+            await home(mock_request)
+            mock_templates.TemplateResponse.assert_called_once_with(
+                "pages/home.html.j2",
+                {"request": mock_request, "title": "Home"},
+            )

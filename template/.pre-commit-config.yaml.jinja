@@ -1,5 +1,4 @@
 repos:
-  # ── General ──────────────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -17,7 +16,6 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
 
-  # ── Python: Ruff ─────────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.4
     hooks:
@@ -25,7 +23,6 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
-  # ── Python: ty type checker ──────────────────────────────────
   - repo: local
     hooks:
       - id: ty-check
@@ -35,7 +32,6 @@ repos:
         types: [python]
         pass_filenames: false
 
-  # ── JavaScript/TypeScript ────────────────────────────────────
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: v10.0.2
     hooks:
@@ -50,36 +46,41 @@ repos:
       - id: prettier
         types_or: [javascript, typescript, css, json, yaml, markdown, html]
 
-  # ── Commit messages ──────────────────────────────────────────
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.13.9
     hooks:
       - id: commitizen
         stages: [commit-msg]
 
-  # ── Secrets ──────────────────────────────────────────────────
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: [--baseline, .secrets.baseline]
 
-  # ── Shell ────────────────────────────────────────────────────
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
         args: [--severity=warning]
 
-  # ── YAML ─────────────────────────────────────────────────────
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.38.0
     hooks:
       - id: yamllint
         args: [-c, .yamllint.yml]
 
-  # ── Docker ───────────────────────────────────────────────────
   - repo: https://github.com/hadolint/hadolint
     rev: v2.14.0
     hooks:
       - id: hadolint-docker
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.30.3
+    hooks:
+      - id: typos
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.17.2
+    hooks:
+      - id: markdownlint-cli2

@@ -1,23 +1,49 @@
-# Security Policy
 
-## Reporting a Vulnerability
 
 If you discover a security vulnerability in {{ project_name }},
 please report it responsibly.
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email the maintainers directly.
+Instead, please email the maintainers at **{{ author_email }}**.
 
-## Supported Versions
+
+- Description of the vulnerability.
+- Steps to reproduce.
+- Potential impact assessment.
+- Suggested fix, if any.
+
+
+| Action | Timeframe |
+|--------|-----------|
+| Acknowledgement | Within 48 hours |
+| Initial assessment | Within 5 business days |
+| Patch release | Within 30 days of confirmation |
+
+
+The following are in scope for security reports:
+
+- {{ project_name }} backend API.
+- Authentication and authorization flows.
+- Data storage and encryption.
+- Container images published by this project.
+- CI/CD pipeline configuration.
+
+Out of scope:
+
+- Third-party dependencies (report upstream instead).
+- Denial-of-service attacks against development environments.
+
 
 | Version | Supported |
 |---------|-----------|
 | Latest  | Yes       |
 
-## Security Practices
 
-- Dependencies updated regularly via Renovate
-- Security scanning in CI pipeline (Bandit, safety)
-- Pre-commit hooks to prevent credential leaks
-- SAST analysis on pull requests
+- Dependencies updated regularly via Renovate.
+- Security scanning in CI pipeline (CodeQL, pip-audit).
+- Pre-commit hooks to prevent credential leaks.
+- SAST analysis on pull requests.
+- Non-root container images with read-only filesystems.
+- Security headers middleware (CSP, HSTS, X-Frame-Options).
+- Rate limiting on API endpoints.
