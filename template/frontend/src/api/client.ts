@@ -1,24 +1,33 @@
 /**
  * HTTP API client for backend communication.
  */
-const API_BASE = '/api/v1';
+import { config } from '@/config/env';
+
+const API_BASE = config.apiBaseUrl;
+
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 interface RequestOptions {
-  method?: string;
+  method?: HttpMethod;
   body?: unknown;
   headers?: Record<string, string>;
 }
 
-export async function apiRequest<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
+/**
+ * Send typed HTTP request to the backend API.
+ *
+ * @param path - API path relative to `/api/v1`
+ * @param options - Request method, body, and headers
+ * @returns Parsed JSON response cast to `T`
+ * @throws {Error} On non-2xx HTTP status
+ */
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, headers = {} } = options;
 
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
-      'Content-Type': 'application/json',
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,

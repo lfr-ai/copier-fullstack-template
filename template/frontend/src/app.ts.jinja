@@ -1,0 +1,41 @@
+{%- if frontend_framework == "lit" %}
+/**
+* Main application entry point — Lit web components.
+*/
+import { LitElement, html, css } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import './styles/main.css';
+
+@customElement('app-root')
+export class AppRoot extends LitElement {
+static styles = css`
+:host {
+display: block;
+font-family: system-ui, -apple-system, sans-serif;
+}
+`;
+
+render() {
+return html`
+<main>
+  <h1>Welcome</h1>
+  <p>Application is running.</p>
+</main>
+`;
+}
+}
+
+declare global {
+interface HTMLElementTagNameMap {
+'app-root': AppRoot;
+}
+}
+{%- elif frontend_framework == "react" %}
+/**
+* Main application entry point — React.
+*
+* This bootstrapper imports the React root from app.tsx.
+* Vite's React plugin handles JSX transformation.
+*/
+import './bootstrap';
+{%- endif %}

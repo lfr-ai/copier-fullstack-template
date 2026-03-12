@@ -5,6 +5,10 @@ on:
   push:
     tags: ["v*"]
 
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   packages: write
@@ -41,18 +45,35 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: Containerfile
+          target: prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    if: contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha')
+    steps:
+      - uses: actions/checkout@v6
+      - name: Deploy to staging
+        run: echo "Staging deploy step — configure for your infrastructure"
+        # Example: docker compose -f compose.yml -f compose.staging.yml --env-file .env.staging up -d
+
   deploy:
-    name: Deploy
+    name: Deploy to Production
     needs: build-and-push
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
+    if: "!contains(github.ref, '-rc') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha')"
     steps:
       - uses: actions/checkout@v6
       - name: Deploy to production
         run: echo "Deploy step - configure for your infrastructure"
+        # Example: docker compose -f compose.yml -f compose.prod.yml --env-file .env.production up -d
 {% endraw %}

@@ -1,37 +1,42 @@
-# {{ project_name }} Setup Guide
 
-## Prerequisites
 
 - Python {{ python_version }}+ (managed via UV)
 - Node.js {{ node_version }}+ with pnpm
 - [Task](https://taskfile.dev) (task runner)
 - {{ container_runtime | title }} (container engine)
+- VS Code (recommended — open `{{ project_slug }}.code-workspace`)
 
-## Quick Start
 
 ```bash
-# Clone and enter project
 git clone <repository-url>
 cd {{ project_slug }}
 
-# Bootstrap everything
 task setup
 
-# Start all services
 task up
 
-# Run tests
 task test
 ```
 
-## Backend Setup
+
+Open the **multi-root workspace** for pre-configured settings, launch
+configs, and extension recommendations:
+
+```
+{{ project_slug }}.code-workspace
+```
+
+When prompted, install the recommended extensions. Full details,
+optional extensions, keybindings, and user settings are in
+`docs/VSCODE.md`.
+
 
 ```bash
+cd backend
 uv sync --all-groups
 uv run pytest
 ```
 
-## Frontend Setup
 
 ```bash
 cd frontend
@@ -39,7 +44,6 @@ pnpm install
 pnpm run dev
 ```
 
-## Environment Variables
 
 Copy `.env.example` to `.env` and configure:
 

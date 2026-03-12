@@ -1,0 +1,31 @@
+emulate -L zsh
+
+setopt ERR_EXIT PIPE_FAIL
+
+readonly SCRIPT_DIR="${0:A:h}"
+readonly PROJECT_ROOT="${SCRIPT_DIR:h:h:h}"
+readonly BACKUP_DIR="${1:-${PROJECT_ROOT}/backups}"
+readonly TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+
+[[ -f "${PROJECT_ROOT}/.env" ]] && source "${PROJECT_ROOT}/.env"
+
+readonly DB_HOST="${POSTGRES_HOST:-localhost}"
+readonly DB_PORT="${POSTGRES_PORT:-5432}"
+readonly DB_NAME="${POSTGRES_DB:-{{ project_slug }}}"
+readonly DB_USER="${POSTGRES_USER:-{{ project_slug }}}"
+
+mkdir -p "${BACKUP_DIR}"
+
+readonly BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${TIMESTAMP}.sql.gz"
+
+print "Backing up ${DB_NAME}@${DB_HOST}:${DB_PORT} → ${BACKUP_FILE}"
+
+pg_dump \
+--host="${DB_HOST}" \
+--port="${DB_PORT}" \
+--username="${DB_USER}" \
+--format=custom \
+--compress=9 \
+"${DB_NAME}" > "${BACKUP_FILE}"
+
+print "Backup complete: ${BACKUP_FILE} ($(du -h "${BACKUP_FILE}" | cut -f1))"

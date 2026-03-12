@@ -1,0 +1,516 @@
+"""Generate registry constants from naming_registry.json.
+
+Reads the central naming registry and generates:
+    - Python constants → backend/src/{{ project_slug }}/core/registry_constants.py
+    - TypeScript constants → frontend/src/config/registry_constants.ts
+    - Environment port file → .env.ports
+
+All paths are resolved relative to ``__file__`` so the script works
+correctly regardless of the current working directory (e.g. when
+Taskfile uses ``dir: registry``).
+
+Usage:
+    cd registry && uv run python generate_registry.py            # Generate all
+    cd registry && uv run python generate_registry.py --validate  # Validate only
+    cd registry && uv run python generate_registry.py --diff      # Dry-run diff
+    cd registry && uv run python generate_registry.py --check     # CI gate: verify files are up-to-date
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import re
+import sys
+from pathlib import Path
+from typing import Final
+
+__all__ = ["generate", "main"]
+
+_BASE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
+_REGISTRY_DIR: Final[Path] = _BASE_DIR / "registry"
+
+REGISTRY_PATH: Final[Path] = _REGISTRY_DIR / "naming_registry.json"
+OUTPUT_PY: Final[Path] = (
+    _BASE_DIR / "backend" / "src" / "{{ project_slug }}" / "core" / "registry_constants.py"
+)
+OUTPUT_TS: Final[Path] = (
+    _BASE_DIR / "frontend" / "src" / "config" / "registry_constants.ts"
+)
+OUTPUT_ENV: Final[Path] = _BASE_DIR / ".env.ports"
+
+_HEADER_PY: Final[str] = '"""Auto-generated registry constants — DO NOT EDIT MANUALLY."""\n'
+_HEADER_TS: Final[str] = "// Auto-generated registry constants — DO NOT EDIT MANUALLY.\n"
+
+logger = logging.getLogger(__name__)
+
+_NON_ALNUM_RE: Final[re.Pattern[str]] = re.compile(r"[^a-zA-Z0-9]")
+_ROUTE_PARAM_RE: Final[re.Pattern[str]] = re.compile(r"\{(\w+)\}")
+
+
+def _to_pascal_case(text: str) -> str:
+    """Convert snake_case or kebab-case to PascalCase.
+
+    Args:
+        text (str): Input string in any case convention.
+
+    Returns:
+        str: PascalCase string (empty string for empty input).
+    """
+    if not text:
+        return ""
+    return _NON_ALNUM_RE.sub(" ", text).title().replace(" ", "")
+
+
+def _to_camel_case(text: str) -> str:
+    """Convert snake_case or kebab-case to camelCase.
+
+    Args:
+        text (str): Input string in any case convention.
+
+    Returns:
+        str: camelCase string.
+    """
+    pascal = _to_pascal_case(text)
+    return pascal[0].lower() + pascal[1:] if pascal else ""
+
+
+
+
+def _validate_registry(registry: dict[str, object]) -> list[str]:
+    """Validate the registry schema and return list of errors.
+
+    Args:
+        registry (dict[str, object]): Parsed JSON registry data.
+
+    Returns:
+        list[str]: List of validation error messages (empty if valid).
+    """
+    errors: list[str] = []
+    if registry.get("schema_version") != 1:
+        errors.append("schema_version must be 1")
+
+    metadata = registry.get("metadata")
+    if not isinstance(metadata, dict):
+        errors.append("metadata section is required")
+    else:
+        for key in ("version", "last_updated", "maintainer"):
+            if key not in metadata:
+                errors.append(f"metadata.{key} is required")
+
+    if not isinstance(registry.get("enums"), dict):
+        errors.append("enums section is required")
+    if not isinstance(registry.get("unified_fields"), dict):
+        errors.append("unified_fields section is required")
+    if not isinstance(registry.get("ports"), dict):
+        errors.append("ports section is required")
+    return errors
+
+
+
+
+def _build_enum_import(members: list[str] | dict[str, int]) -> str:
+    """Determine correct enum base class import.
+
+    Args:
+        members (list[str] | dict[str, int]): Enum members — list for StrEnum, dict for IntEnum.
+
+    Returns:
+        str: Import statement string.
+    """
+    if isinstance(members, dict):
+        return "from enum import IntEnum"
+    return "from enum import StrEnum"
+
+
+def _generate_python_enums(enums: dict[str, object]) -> list[str]:
+    """Generate Python enum classes from registry enums section.
+
+    Args:
+        enums (dict[str, object]): Mapping of enum name to members.
+
+    Returns:
+        list[str]: Generated Python source lines.
+    """
+    lines: list[str] = []
+    imports: set[str] = set()
+    enum_lines: list[str] = []
+
+    for name, members in enums.items():
+        imports.add(_build_enum_import(members))
+        if isinstance(members, list):
+            enum_lines.append(f"\n\nclass {name}(StrEnum):")
+            for member in members:
+                enum_lines.append(f'    {member.upper()} = "{member}"')
+        elif isinstance(members, dict):
+            enum_lines.append(f"\n\nclass {name}(IntEnum):")
+            for member_name, value in members.items():
+                enum_lines.append(f"    {member_name} = {value}")
+
+    lines.extend(sorted(imports))
+    lines.extend(enum_lines)
+    lines.append("")
+    return lines
+
+
+def _generate_python_unified_fields(unified_fields: dict[str, object]) -> list[str]:
+    """Generate ORM and Pydantic namespace classes from unified_fields.
+
+    Args:
+        unified_fields (dict[str, object]): Mapping of model name to field definitions.
+
+    Returns:
+        list[str]: Generated Python source lines.
+    """
+    lines: list[str] = []
+    orm_classes: list[str] = []
+    pydantic_classes: list[str] = []
+
+    for model_name, fields in unified_fields.items():
+        if not isinstance(fields, dict):
+            continue
+
+        orm_classes.append(f"\n\nclass _ORM{model_name}:")
+        has_orm_fields = False
+        for field_name, mapping in fields.items():
+            if isinstance(mapping, dict):
+                orm_val = mapping.get("orm", field_name)
+                if orm_val is not None:
+                    orm_classes.append(f'    {field_name}: str = "{orm_val}"')
+                    has_orm_fields = True
+            else:
+                orm_classes.append(f'    {field_name}: str = "{mapping}"')
+                has_orm_fields = True
+        if not has_orm_fields:
+            orm_classes.append("    pass")
+
+        pydantic_classes.append(f"\n\nclass _Pydantic{model_name}:")
+        has_fields = False
+        for field_name, mapping in fields.items():
+            if isinstance(mapping, dict):
+                pydantic_val = mapping.get("pydantic")
+                if pydantic_val is not None:
+                    pydantic_classes.append(f'    {field_name}: str = "{pydantic_val}"')
+                    has_fields = True
+            else:
+                pydantic_classes.append(f'    {field_name}: str = "{mapping}"')
+                has_fields = True
+        if not has_fields:
+            pydantic_classes.append("    pass")
+
+    lines.extend(orm_classes)
+    lines.extend(pydantic_classes)
+    lines.append("")
+
+    orm_models = [m for m in unified_fields if isinstance(unified_fields[m], dict)]
+    if orm_models:
+        lines.append("\n\nclass ORM:")
+        for model_name in orm_models:
+            lines.append(f"    {model_name} = _ORM{model_name}()")
+
+        lines.append("\n\nclass Pydantic:")
+        for model_name in orm_models:
+            lines.append(f"    {model_name} = _Pydantic{model_name}()")
+        lines.append("")
+    return lines
+
+
+def _generate_python_routes(routes: dict[str, object]) -> list[str]:
+    """Generate route constant classes.
+
+    Args:
+        routes (dict[str, object]): Mapping of route group name to config.
+
+    Returns:
+        list[str]: Generated Python source lines.
+    """
+    lines: list[str] = []
+    for route_name, config in routes.items():
+        if not isinstance(config, dict):
+            continue
+        class_name = _to_pascal_case(route_name) + "Routes"
+        prefix = config.get("prefix", "")
+        lines.append(f"\n\nclass _{class_name}:")
+        lines.append(f'    PREFIX: str = "{prefix}"')
+        endpoints = config.get("endpoints", {})
+        for ep_name, ep_path in endpoints.items():
+            full_path = f"{prefix}{ep_path}"
+            lines.append(f'    {ep_name.upper()}: str = "{full_path}"')
+
+    route_names = [r for r in routes if isinstance(routes[r], dict)]
+    if route_names:
+        lines.append("\n\nclass Routes:")
+        for route_name in route_names:
+            class_name = _to_pascal_case(route_name) + "Routes"
+            attr_name = route_name
+            lines.append(f"    {attr_name} = _{class_name}()")
+        lines.append("")
+    return lines
+
+
+def _generate_python_ports(ports: dict[str, int]) -> list[str]:
+    """Generate port constant class.
+
+    Args:
+        ports (dict[str, int]): Mapping of port name to port number.
+
+    Returns:
+        list[str]: Generated Python source lines.
+    """
+    lines = ["\n\nclass Ports:"]
+    for name, value in ports.items():
+        lines.append(f"    {name}: int = {value}")
+    lines.append("")
+    return lines
+
+
+def _generate_python_metadata(metadata: dict[str, object]) -> list[str]:
+    """Generate metadata constants.
+
+    Args:
+        metadata (dict[str, object]): Registry metadata section.
+
+    Returns:
+        list[str]: Generated Python source lines.
+    """
+    version = metadata.get("version", "0.0.0")
+    return [
+        "\n\n# ── Registry Metadata ───────────────────────────────────────────",
+        f'REGISTRY_VERSION: str = "{version}"',
+        "REGISTRY_SCHEMA_VERSION: int = 1",
+        "",
+    ]
+
+
+def _generate_python_constants(registry: dict[str, object]) -> str:
+    """Generate the full Python constants module.
+
+    Args:
+        registry (dict[str, object]): Complete parsed registry data.
+
+    Returns:
+        str: Full Python source code string.
+    """
+    lines = [_HEADER_PY, "from __future__ import annotations\n"]
+
+    if "enums" in registry:
+        lines.extend(_generate_python_enums(registry["enums"]))
+    if "unified_fields" in registry:
+        lines.extend(_generate_python_unified_fields(registry["unified_fields"]))
+    if "routes" in registry:
+        lines.extend(_generate_python_routes(registry["routes"]))
+    if "ports" in registry:
+        lines.extend(_generate_python_ports(registry["ports"]))
+    if "metadata" in registry:
+        lines.extend(_generate_python_metadata(registry["metadata"]))
+
+    return "\n".join(lines)
+
+
+
+
+def _generate_ts_enums(enums: dict[str, object]) -> list[str]:
+    """Generate TypeScript enum objects.
+
+    Args:
+        enums (dict[str, object]): Mapping of enum name to members.
+
+    Returns:
+        list[str]: Generated TypeScript source lines.
+    """
+    lines: list[str] = []
+    for name, members in enums.items():
+        if isinstance(members, list):
+            lines.append(f"export const {name} = {{")
+            for member in members:
+                lines.append(f'  {member.upper()}: "{member}",')
+            lines.append("} as const;")
+            lines.append(f"export type {name} = (typeof {name})[keyof typeof {name}];\n")
+        elif isinstance(members, dict):
+            lines.append(f"export const {name} = {{")
+            for member_name, value in members.items():
+                lines.append(f"  {member_name}: {value},")
+            lines.append("} as const;")
+            lines.append(f"export type {name} = (typeof {name})[keyof typeof {name}];\n")
+    return lines
+
+
+def _generate_ts_routes(routes: dict[str, object]) -> list[str]:
+    """Generate TypeScript route builders with parameterized path expansion.
+
+    Args:
+        routes (dict[str, object]): Mapping of route group name to config.
+
+    Returns:
+        list[str]: Generated TypeScript source lines.
+    """
+    lines: list[str] = []
+    for route_name, config in routes.items():
+        if not isinstance(config, dict):
+            continue
+        prefix = config.get("prefix", "")
+        endpoints = config.get("endpoints", {})
+        obj_name = _to_camel_case(route_name)
+        lines.append(f"    {obj_name}: {{")
+        lines.append(f'      PREFIX: "{prefix}",')
+        for ep_name, ep_path in endpoints.items():
+            full_path = f"{prefix}{ep_path}"
+            param = _ROUTE_PARAM_RE.search(full_path)
+            if param:
+                param_name = param.group(1)
+                template = full_path.replace(
+                    "{" + param_name + "}", "${" + param_name + "}"
+                )
+                lines.append(
+                    f"      {ep_name}: ({param_name}: string | number) =>"
+                    f" `{template}`,"
+                )
+            else:
+                lines.append(f'      {ep_name}: "{full_path}",')
+        lines.append("    },")
+    return lines
+
+
+def _generate_ts_constants(registry: dict[str, object]) -> str:
+    """Generate the full TypeScript constants module.
+
+    Args:
+        registry (dict[str, object]): Complete parsed registry data.
+
+    Returns:
+        str: Full TypeScript source code string.
+    """
+    lines = [_HEADER_TS, ""]
+
+    if "enums" in registry:
+        lines.extend(_generate_ts_enums(registry["enums"]))
+
+    lines.append("export const Registry = {")
+
+    if "routes" in registry:
+        lines.append("  Routes: {")
+        lines.extend(_generate_ts_routes(registry["routes"]))
+        lines.append("  },")
+
+    if "ports" in registry:
+        lines.append("  Ports: {")
+        for name, value in registry["ports"].items():
+            lines.append(f"    {name}: {value},")
+        lines.append("  },")
+
+    metadata = registry.get("metadata", {})
+    lines.append(f'  version: "{metadata.get("version", "0.0.0")}",')
+    lines.append("} as const;\n")
+
+    return "\n".join(lines)
+
+
+
+
+def _generate_env_ports(ports: dict[str, int]) -> str:
+    """Generate .env.ports for Docker Compose variable substitution.
+
+    Args:
+        ports (dict[str, int]): Mapping of port name to port number.
+
+    Returns:
+        str: Env file content string.
+    """
+    lines = ["# AUTO-GENERATED FILE — DO NOT EDIT MANUALLY.", ""]
+    for name, value in ports.items():
+        lines.append(f"PORT_{name}={value}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+
+
+def generate(*, validate_only: bool = False, diff: bool = False, check: bool = False) -> int:
+    """Read registry and generate constants.
+
+    Args:
+        validate_only (bool): Only validate structure, do not generate files.
+        diff (bool): Print what would be generated without writing files.
+        check (bool): Verify generated files are up-to-date without writing (CI gate).
+
+    Returns:
+        int: Exit code (0 = success, 1 = errors).
+    """
+    if not REGISTRY_PATH.exists():
+        logger.error("Registry not found: %s", REGISTRY_PATH)
+        return 1
+
+    with REGISTRY_PATH.open(encoding="utf-8") as fh:
+        registry = json.load(fh)
+
+    if not isinstance(registry, dict):
+        logger.error("Registry root must be a JSON object")
+        return 1
+
+    errors = _validate_registry(registry)
+    if errors:
+        for err in errors:
+            logger.error("Validation: %s", err)
+        return 1
+
+    if validate_only:
+        logger.info("Registry is valid")
+        return 0
+
+    py_content = _generate_python_constants(registry)
+    ts_content = _generate_ts_constants(registry)
+    env_content = _generate_env_ports(registry.get("ports", {}))
+
+    if diff:
+        logger.info("=== Python ===\n%s", py_content)
+        logger.info("=== TypeScript ===\n%s", ts_content)
+        logger.info("=== .env.ports ===\n%s", env_content)
+        return 0
+
+    if check:
+        stale: list[str] = []
+        for path, expected in [
+            (OUTPUT_PY, py_content),
+            (OUTPUT_TS, ts_content),
+            (OUTPUT_ENV, env_content),
+        ]:
+            if not path.exists():
+                stale.append(f"  MISSING: {path}")
+            elif path.read_text(encoding="utf-8") != expected:
+                stale.append(f"  STALE:   {path}")
+        if stale:
+            logger.error("Generated files are out-of-date:\n%s", "\n".join(stale))
+            logger.error("Run: task registry:generate")
+            return 1
+        logger.info("All generated files are up-to-date")
+        return 0
+
+    OUTPUT_PY.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_PY.write_text(py_content, encoding="utf-8")
+    logger.info("Generated %s", OUTPUT_PY)
+
+    OUTPUT_TS.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_TS.write_text(ts_content, encoding="utf-8")
+    logger.info("Generated %s", OUTPUT_TS)
+
+    OUTPUT_ENV.write_text(env_content, encoding="utf-8")
+    logger.info("Generated %s", OUTPUT_ENV)
+
+    return 0
+
+
+def main() -> None:
+    """CLI entry point for registry generation."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    parser = argparse.ArgumentParser(description="Generate registry constants")
+    parser.add_argument("--validate", action="store_true", help="Validate only")
+    parser.add_argument("--diff", action="store_true", help="Dry-run diff preview")
+    parser.add_argument("--check", action="store_true", help="CI gate: verify files are up-to-date")
+    args = parser.parse_args()
+    code = generate(validate_only=args.validate, diff=args.diff, check=args.check)
+    sys.exit(code)
+
+
+if __name__ == "__main__":
+    main()

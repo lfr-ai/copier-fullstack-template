@@ -1,0 +1,167 @@
+"""Property-based tests for the registry generator.
+
+Tests string helpers and generator functions with Hypothesis
+to verify invariants across many random inputs.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
+
+_REGISTRY_DIR = Path(__file__).resolve().parents[3] / "registry"
+sys.path.insert(0, str(_REGISTRY_DIR))
+
+from generate_registry import (  # noqa: E402
+    _to_camel_case,
+    _to_pascal_case,
+    _validate_registry,
+)
+
+pytestmark = pytest.mark.property
+
+
+
+_IDENTIFIER = st.from_regex(r"[a-z][a-z0-9_]{0,30}", fullmatch=True)
+_KEBAB = st.from_regex(r"[a-z][a-z0-9\-]{0,30}", fullmatch=True)
+_MIXED = st.one_of(_IDENTIFIER, _KEBAB)
+
+
+
+
+class TestToPascalCase:
+    """Property tests for _to_pascal_case."""
+
+    @given(text=_MIXED)
+    @settings(max_examples=200)
+    def test_result_starts_with_uppercase(self, text: str) -> None:
+        result = _to_pascal_case(text)
+        assert result == "" or result[0].isupper()
+
+    @given(text=_MIXED)
+    @settings(max_examples=200)
+    def test_result_has_no_separators(self, text: str) -> None:
+        result = _to_pascal_case(text)
+        assert "_" not in result
+        assert "-" not in result
+        assert " " not in result
+
+    @given(text=_MIXED)
+    @settings(max_examples=200)
+    def test_result_is_alphanumeric(self, text: str) -> None:
+        result = _to_pascal_case(text)
+        assert result.isalnum() or result == ""
+
+    def test_known_conversions(self) -> None:
+        assert _to_pascal_case("claim_status") == "ClaimStatus"
+        assert _to_pascal_case("my-kebab-var") == "MyKebabVar"
+        assert _to_pascal_case("simple") == "Simple"
+
+
+class TestToCamelCase:
+    """Property tests for _to_camel_case."""
+
+    @given(text=_MIXED)
+    @settings(max_examples=200)
+    def test_result_starts_with_lowercase(self, text: str) -> None:
+        result = _to_camel_case(text)
+        assert result == "" or result[0].islower()
+
+    @given(text=_MIXED)
+    @settings(max_examples=200)
+    def test_shares_body_with_pascal(self, text: str) -> None:
+        """After the first char, camelCase == PascalCase."""
+        pascal = _to_pascal_case(text)
+        camel = _to_camel_case(text)
+        if len(pascal) > 1:
+            assert camel[1:] == pascal[1:]
+
+    def test_known_conversions(self) -> None:
+        assert _to_camel_case("claim_status") == "claimStatus"
+        assert _to_camel_case("my-kebab-var") == "myKebabVar"
+
+
+
+
+class TestValidateRegistry:
+    """Property tests for _validate_registry."""
+
+    def test_minimal_valid_registry_passes(self) -> None:
+        registry = {
+            "schema_version": 1,
+            "metadata": {
+                "version": "1.0.0",
+                "last_updated": "2025-01-01",
+                "maintainer": "test",
+            },
+            "enums": {},
+            "unified_fields": {},
+            "ports": {},
+        }
+        assert _validate_registry(registry) == []
+
+    def test_missing_schema_version_fails(self) -> None:
+        registry = {
+            "metadata": {
+                "version": "1.0.0",
+                "last_updated": "2025-01-01",
+                "maintainer": "test",
+            },
+            "enums": {},
+            "unified_fields": {},
+            "ports": {},
+        }
+        errors = _validate_registry(registry)
+        assert any("schema_version" in e for e in errors)
+
+    def test_wrong_schema_version_fails(self) -> None:
+        registry = {
+            "schema_version": 99,
+            "metadata": {
+                "version": "1.0.0",
+                "last_updated": "2025-01-01",
+                "maintainer": "test",
+            },
+            "enums": {},
+            "unified_fields": {},
+            "ports": {},
+        }
+        errors = _validate_registry(registry)
+        assert any("schema_version" in e for e in errors)
+
+    def test_missing_metadata_fields_reports_errors(self) -> None:
+        registry = {
+            "schema_version": 1,
+            "metadata": {},
+            "enums": {},
+            "unified_fields": {},
+            "ports": {},
+        }
+        errors = _validate_registry(registry)
+        assert len(errors) >= 3  # version, last_updated, maintainer
+
+    @given(extra_keys=st.dictionaries(st.text(min_size=1, max_size=10), st.text(max_size=10), max_size=3))
+    @settings(max_examples=50)
+    def test_extra_keys_do_not_cause_errors(self, extra_keys: dict) -> None:
+        """Unknown top-level keys should be tolerated."""
+        registry = {
+            "schema_version": 1,
+            "metadata": {
+                "version": "1.0.0",
+                "last_updated": "2025-01-01",
+                "maintainer": "test",
+            },
+            "enums": {},
+            "unified_fields": {},
+            "ports": {},
+            **extra_keys,
+        }
+        errors = _validate_registry(registry)
+        assert errors == []

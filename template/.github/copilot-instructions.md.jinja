@@ -3,9 +3,7 @@ description: Coding conventions and guidelines
 applyTo: "**/*.py, **/*.html.j2, **/*.js, **/*.ts, **/*.css, **/*.zsh, **/*.azcli"
 ---
 
-# Coding Conventions for {{ project_name }}
 
-## Status
 
 This document defines coding standards, conventions, and best practices for this codebase
 
@@ -32,7 +30,6 @@ Apply principles from PEP 20 (The Zen of Python) throughout:
 
 ---
 
-## Architecture
 
 This project follows hexagonal architecture (ports & adapters).
 
@@ -45,35 +42,28 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## File Naming and Extensions
 
-### Python Files
 
 - Python modules should use snake_case: `my_module.py`
 - Test files should be prefixed with `test_`: `test_my_module.py`
 
-### Shell Scripts
 
 - Shell scripts MUST use `.zsh` extension: `setup_redis.zsh`
 - Azure CLI scripts MUST use `.azcli` extension: `deploy.azcli`
 - Never use `.sh` extension in this repository
 
-### Template Files
 
 - Jinja2 templates MUST use `.html.j2` extension: `index.html.j2`
 - Never use `.html.jinja2`, `.jinja`, or `.jinja2` extensions
 
-### Frontend Files
 
 - TypeScript files use `.ts` extension: `app.ts`
-- JavaScript files use `.js` extension: `registry_constants.js`
+- TypeScript files use `.ts` extension: `registry_constants.ts`
 - CSS files use `.css` extension: `styles.css`
 
 ---
 
-## General Guidelines
 
-### Readability and Clarity
 
 - Always prioritize readability and clarity
 - Write concise, efficient, and idiomatic code that is also easily understandable
@@ -81,7 +71,6 @@ This project follows hexagonal architecture (ports & adapters).
 - Comments should be short, concise, and to the point
 - Avoid long explanations or reasoning in comments
 
-### Code Structure and Organization
 
 - Follow a logical structure in code organization
 - Make modular code that promotes reusability, separation of concerns, and single responsibility
@@ -90,14 +79,12 @@ This project follows hexagonal architecture (ports & adapters).
 - Provide docstrings following Google conventions
 - Ensure that sentences in docstrings are complete and clear and NEVER start with articles such as "a", "an", or "the"
 
-### Defensive and Robust Programming
 
 - Account for common edge cases like empty inputs, invalid data types, and large datasets
 - Handle edge cases and write clear exception handling
 - Enforce and ensure that all new code or changes to existing code, under no circumstances introduce regression of existing functionality
 - Never use magic numbers under any circumstance; define them as constants with meaningful names
 
-### Design and Principles
 
 - Always prefer modular and object-oriented design where applicable
 - Adhere to OOP principles where applicable
@@ -105,24 +92,19 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## Naming Conventions
 
-### File and Variable Naming
 
 - Files should always use snake_case
 - Classes should always use PascalCase
 - Functions and variables should always use snake_case
 - Use consistent naming conventions and follow language-specific best practices
 
-### Constants and Magic Numbers
 
 - Never use magic numbers under any circumstance; define them as constants with meaningful names or make use of enumerations and helper functions where applicable
 
 ---
 
-## Privacy and Underscore Prefixing
 
-### When to use a leading underscore `_`
 
 - Use `_` to indicate non-public API in modules, classes, and functions
 - Module-level (global) names: prefix with `_` if intended for internal use only and not part of the public interface exported by the package
@@ -131,26 +113,21 @@ This project follows hexagonal architecture (ports & adapters).
 - Functions in modules: prefix with `_` when they are internal helpers and not part of the module's public API
 - Class variables: prefix with `_` for internal configuration/state not intended for external access
 
-### Do not use double underscore `__` for name mangling
 
 - Avoid `__name` unless you explicitly need Python's name mangling within inheritance; prefer single underscore `_name` for non-public
 
-### Constants and underscore
 
 - Prefer public, UPPER_SNAKE_CASE for constants that are part of the public API
 - Use `_UPPER_SNAKE_CASE` for constants that are internal-only to a module or class
 - Do NOT annotate internal (`_`-prefixed) constants with `Final`; reserve `Final` for public API constants only
 
-### Public API clarity
 
 - Clearly separate public vs. internal by imports in `__init__.py`; avoid `from module import *` and explicitly export public names via `__all__` when useful
 - Keep docstrings and documentation aligned: do not document underscored members as public features
 
 ---
 
-## Python-Specific Guidelines
 
-### Best Practices
 
 - Python {{ python_version }}+, type hints everywhere
 - Always use UV for dependency management and project setup
@@ -160,7 +137,6 @@ This project follows hexagonal architecture (ports & adapters).
 - Ruff for linting and formatting
 - Taskfile for task running
 
-### Type Annotations
 
 - Prefer modern builtins (`list[int]`, `dict[str, object]`) over `typing` aliases
 - Do NOT import or use the `typing` module for basic built-in primitives or generic types unless you need advanced typing features not available as builtins (e.g., `TypedDict`, `Protocol`, `TypeVar`)
@@ -168,44 +144,35 @@ This project follows hexagonal architecture (ports & adapters).
 - Ensure functions have descriptive names and include precise type hints
 - When types become complex, prefer small type aliases, dataclasses, or pydantic models to keep signatures readable
 
-### Advanced Type Annotations
 
-#### Use Annotated for enhanced type information
 
 - Use `Annotated` from `typing` to add metadata to type hints
 - Particularly useful with Pydantic `Field` for validation constraints
 
-#### Use TypeAlias for complex type signatures
 
 - Define type aliases using `TypeAlias` from `typing` for complex, reusable types
 - Always annotate the alias variable with `TypeAlias` for clarity
 
-#### Use Literal for fixed value sets
 
 - Use `Literal` from `typing` for parameters that accept only specific values
 
-#### Use Final for constants and immutable attributes
 
 - Use `Final` from `typing` to mark **public** constants and immutable class/module variables
 - Do NOT use `Final` for internal (`_`-prefixed) constants -- the underscore prefix already signals non-public status
 - Signals intent that a value should never be reassigned
 
-#### Use @final decorator for classes and methods
 
 - Use `@final` from `typing` to prevent inheritance or method overriding
 - Apply to classes that should not be subclassed
 - Apply to methods that should not be overridden in subclasses
 
-#### Use NoReturn for functions that never return
 
 - Use `NoReturn` from `typing` for functions that always raise exceptions or exit
 
-### API Routes and Rate Limiting
 
 - Always implement sensible rate limiting for API routes
 - Prefer slowapi and configure sensible limits
 
-### Performance and Data Structures
 
 - Favor efficient choices by default: pick the data structure that matches the access pattern:
   - `list`: ordered, indexable, mutable -- for indexing and appends
@@ -214,33 +181,28 @@ This project follows hexagonal architecture (ports & adapters).
   - `dict`: optimized mapping for key-value lookups
   - `collections.deque`: pops/pushes at both ends
 
-### Dataclasses
 
 - Use `@dataclass` from `dataclasses` module for simple data structures
 - Always use `frozen=True` for immutable data classes to ensure thread safety and hashability
 - Always use `slots=True` to reduce memory overhead and improve attribute access speed
 - Prefer dataclasses over plain classes for data containers without complex behavior
 
-### Caching and Memoization
 
 - Prefer `functools.lru_cache(maxsize=...)` for pure, deterministic functions called frequently with the same inputs
 - Do not cache functions that accept mutable arguments or depend on external mutable state
 - Always specify `maxsize` explicitly (never rely on defaults)
 
-### Cached Properties
 
 - Use `@cached_property` from `functools` for expensive computations that should be calculated once per instance
 - Cached properties are evaluated once on first access and then stored on the instance
 - Use for idempotent operations that may be expensive or involve I/O
 
-### Concurrency and Parallelism
 
 - I/O-bound tasks: prefer threading or async I/O (`threading`, `asyncio`)
 - CPU-bound tasks: prefer multiprocessing or process pools
 - Minimize shared mutable state between threads/processes
 - Prefer vectorized operations before introducing parallelism
 
-### Logging
 
 - Always prefer structured logging over print statements
 - Use structured logging with structlog
@@ -249,7 +211,6 @@ This project follows hexagonal architecture (ports & adapters).
 - For exception handlers, prefer `logger.exception()` which automatically includes `exc_info=True`
 - Never log sensitive data (passwords, tokens, PII)
 
-### Retry Policies and Resilience
 
 - Use `@tenacity.retry()` decorator for operations that may fail transiently
 - Define retry policies in a centralized location (e.g., `utils/retry_policies.py`)
@@ -261,14 +222,11 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## SQLAlchemy ORM Guidelines
 
-### Database Models
 
 - Never use raw SQL queries; always use ORM
 - Use SQLAlchemy 2.0+ syntax with `Mapped` and `mapped_column`
 
-### Database Indices
 
 - Always add indices to columns used in:
   - Foreign keys
@@ -281,12 +239,10 @@ This project follows hexagonal architecture (ports & adapters).
 - Avoid over-indexing; each index adds overhead to write operations
 {% if database_backend == "postgresql" %}
 
-### Enum Handling in SQLAlchemy
 
 - Use PostgreSQL native enums with `sqlalchemy.dialects.postgresql.ENUM`
 {% endif %}
 
-### Timestamps and Audit Fields
 
 - Use `server_default=func.now()` for creation timestamps
 - Use `onupdate=func.now()` for modification timestamps
@@ -294,15 +250,12 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## Pydantic Models Guidelines
 
-### Model Configuration
 
 - Always use `ConfigDict` to configure Pydantic models
 - Enable `str_strip_whitespace=True` to automatically strip whitespace
 - Enable `validate_assignment=True` to validate on attribute assignment
 
-### Field Definitions
 
 - Always use `Annotated` with `Field` for field metadata
 - Every field MUST have a `description` parameter
@@ -310,7 +263,6 @@ This project follows hexagonal architecture (ports & adapters).
 - Use `validation_alias` for accepting multiple input field names
 - Use `serialization_alias` for consistent output field names
 
-### Validation Constraints
 
 - Use appropriate validators in `Field`:
   - `gt`, `ge`, `lt`, `le` for numeric bounds
@@ -319,31 +271,25 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## Enum Guidelines
 
-### Enum Definition
 
 - Use `@unique` decorator from `enum` module to prevent duplicate values
 - Use `StrEnum` for string-valued enums
 - Use `IntEnum` for integer-valued enums
 - Use `auto()` for automatic value assignment when exact values don't matter
 
-### Enum Usage in Code
 
 - Always use enum members, not raw values: `Environment.PROD` not `"prod"`
 - Access enum name with `.name` property and value with `.value` property
 
 ---
 
-## Error Handling and Exception Chaining
 
-### Exception Chaining
 
 - Always use `raise ... from e` to preserve exception context
 - Never use bare `raise` without proper exception chaining
 - Use `raise ... from None` only when you explicitly want to suppress the original exception
 
-### Exception Handling Patterns
 
 - Catch specific exceptions, not bare `except:`
 - Log exceptions before re-raising or wrapping
@@ -351,15 +297,12 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## Function Signature Guidelines
 
-### Keyword-Only Arguments
 
 - Use `*` in function signatures to enforce keyword-only arguments
 - Improves readability and prevents positional argument mistakes
 - Use for functions with multiple optional parameters or boolean flags
 
-### Function Argument Ordering
 
 - Positional arguments first (required parameters)
 - Then `*` to separate keyword-only arguments
@@ -368,7 +311,6 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## Punctuation and Formatting Guidelines
 
 - Do NOT use punctuation (periods, commas, semicolons) in:
   - Short comments
@@ -383,7 +325,6 @@ This project follows hexagonal architecture (ports & adapters).
 ---
 {% if use_redis %}
 
-## Redis Integration
 
 - Use the `redis` library for Redis operations
 - Create connection pools for efficient connection management
@@ -394,16 +335,13 @@ This project follows hexagonal architecture (ports & adapters).
 ---
 {% endif %}
 
-## Testing Guidelines
 
-### Test Frameworks and Tools
 
 - Use `pytest` for unit and integration tests
 - Use `hypothesis` for property-based testing
 - Use `tox` for testing across multiple Python versions
-- Store tests in `tests/` directory with structure mirroring `src/`
+- Store tests in `backend/tests/` directory with structure mirroring `backend/src/`
 
-### Test Coverage and Edge Cases
 
 - Always include test cases for critical paths of the application
 - Include comments for edge cases and the expected behavior in those cases
@@ -411,14 +349,11 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## Frontend Development
 
-### JavaScript/TypeScript
 
 - Use TypeScript for type safety when possible
 - Use Vite for build tooling and hot module replacement
 
-### Package Management
 
 - Use `pnpm` for package management (faster and more efficient than npm)
 - Install packages with: `pnpm install`
@@ -426,25 +361,21 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## Centralized Naming Registry
 
-- Maintain all naming constants in `data/naming_registry.json`
-- Generate Python constants with `tools/generate_registry.py`
+- Maintain all naming constants in `registry/naming_registry.json`
+- Generate Python + TypeScript constants with `registry/generate_registry.py`
 - Never hardcode field/column names; always use registry constants
 - Update `naming_registry.json` for any new fields
-- Run generator script after registry changes
+- Run `task registry:generate` after registry changes
 
 ---
 
-## Code Style and Formatting
 
-### Formatting and Indentation
 
-- Ensure lines do not exceed 88 characters
+- Ensure lines do not exceed 99 characters
 - Maintain proper indentation (use 4 spaces for each level of indentation)
 - Use blank lines to separate functions, classes, and code blocks where appropriate
 
-### Documentation and Comments
 
 - Place function and class docstrings immediately after the relevant keyword
 - Comments should be short, concise, and to the point
@@ -455,7 +386,6 @@ This project follows hexagonal architecture (ports & adapters).
 
 ---
 
-## Shell / zsh
 
 - All shell scripts in this repository MUST be written for zsh and follow idiomatic zsh practices
 - Use the shebang: `#!/usr/bin/env zsh`
@@ -465,7 +395,6 @@ This project follows hexagonal architecture (ports & adapters).
 - All variables declared inside a function should use `local`
 - Use `zparseopts` for option parsing
 
-### Azure CLI scripts (.azcli)
 
 - Azure CLI scripts that are primarily collections of `az` commands should use the `.azcli` extension
 - `.azcli` files should also be valid zsh scripts (use the same zsh header and idioms)

@@ -1,0 +1,55 @@
+
+The `registry/` directory is the **centralized naming registry** for {{ project_name }}.
+It defines all cross-stack constants — enums, field mappings, routes, and ports — in a
+single JSON file, from which Python and TypeScript constants are generated.
+
+
+| File | Purpose |
+|------|---------|
+| `naming_registry.json` | Canonical naming definitions (enums, fields, routes, ports) |
+| `generate_registry.py` | Code generator producing Python + TypeScript + `.env.ports` |
+
+
+| Output | Path |
+|--------|------|
+| Python constants | `backend/src/{{ project_slug }}/core/registry_constants.py` |
+| TypeScript constants | `frontend/src/config/registry_constants.ts` |
+| Docker Compose ports | `.env.ports` |
+
+
+```bash
+task registry:generate     # Generate all outputs
+task registry:validate     # Validate registry structure only
+task registry:diff         # Preview what would be generated (dry-run)
+```
+
+
+1. Edit `naming_registry.json` (add fields, enums, routes, ports)
+2. Run `task registry:generate`
+3. Run tests to verify generated code
+4. Commit the updated registry **and** generated files together
+
+
+```json
+{
+  "schema_version": 1,
+  "metadata": { "version": "0.1.0", "last_updated": "...", "maintainer": "..." },
+  "enums": { "EnumName": ["member1", "member2"] },
+  "unified_fields": {
+    "ModelName": {
+      "field": { "orm": "snake_case", "pydantic": "camelCase", "alias": "..." }
+    }
+  },
+  "api_fields": { "resource": { "field": "name" } },
+  "routes": {
+    "resource": { "prefix": "/api/v1/resource", "endpoints": { "list": "", "detail": "/{id}" } }
+  },
+  "ports": { "BACKEND": 8000, "FRONTEND_DEV": 5173 }
+}
+```
+
+
+- **Never** hardcode field names, routes, or ports — always use generated constants
+- Keep `naming_registry.json` as the single source of truth
+- Both backend and frontend must consume generated constants
+- Run the generator after every registry change

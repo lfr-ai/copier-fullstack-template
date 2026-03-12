@@ -1,0 +1,140 @@
+"""Unit tests for DI container setup."""
+
+from __future__ import annotations
+
+from unittest.mock import patch, MagicMock
+
+import pytest
+
+from {{ project_slug }}.ports.container import Container, get_container
+
+TEST_DATABASE_URL = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+
+_CONTAINER_PATCHES = (
+    "{{ project_slug }}.ports.container.get_settings",
+    "{{ project_slug }}.ports.container.create_session_factory",
+    "{{ project_slug }}.ports.container.create_engine",
+)
+
+def _apply_container_patches(func):
+    """Stack the three standard container patches onto *func*."""
+    for target in reversed(_CONTAINER_PATCHES):
+        func = patch(target)(func)
+    return func
+
+def _configure_mock_settings(mock_settings: MagicMock) -> None:
+    """Set mock settings to sensible defaults."""
+    mock_settings.return_value.database_url = TEST_DATABASE_URL
+    mock_settings.return_value.database_echo = False
+
+class TestContainer:
+    """Test suite for Container factory methods."""
+
+    @_apply_container_patches
+    def test_init_creates_engine_and_session_factory(
+        self,
+        mock_engine: MagicMock,
+        mock_factory: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify Container creates engine and session factory on init."""
+        _configure_mock_settings(mock_settings)
+        container = Container()
+        mock_engine.assert_called_once_with(
+            TEST_DATABASE_URL,
+            echo=False,
+        )
+        mock_factory.assert_called_once()
+
+    @_apply_container_patches
+    def test_unit_of_work_returns_instance(
+        self,
+        mock_engine: MagicMock,
+        mock_factory: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify unit_of_work() returns SQLAlchemyUnitOfWork."""
+        from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import (
+            SQLAlchemyUnitOfWork,
+        )
+
+        _configure_mock_settings(mock_settings)
+        container = Container()
+        uow = container.unit_of_work()
+        assert isinstance(uow, SQLAlchemyUnitOfWork)
+
+    @_apply_container_patches
+    def test_cache_returns_memory_cache(
+        self,
+        mock_engine: MagicMock,
+        mock_factory: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify cache() returns MemoryCacheAdapter."""
+        from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
+
+        _configure_mock_settings(mock_settings)
+        container = Container()
+        cache = container.cache()
+        assert isinstance(cache, MemoryCacheAdapter)
+
+    @_apply_container_patches
+    def test_event_bus_returns_memory_event_bus(
+        self,
+        mock_engine: MagicMock,
+        mock_factory: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify event_bus() returns MemoryEventBus."""
+        from {{ project_slug }}.adapters.messaging.memory_event_bus import MemoryEventBus
+
+        _configure_mock_settings(mock_settings)
+        container = Container()
+        bus = container.event_bus()
+        assert isinstance(bus, MemoryEventBus)
+
+    @_apply_container_patches
+    def test_cache_returns_new_instance_each_call(
+        self,
+        mock_engine: MagicMock,
+        mock_factory: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify cache() creates new instance per call."""
+        _configure_mock_settings(mock_settings)
+        container = Container()
+        c1 = container.cache()
+        c2 = container.cache()
+        assert c1 is not c2
+
+class TestGetContainer:
+    """Test suite for get_container singleton."""
+
+    @_apply_container_patches
+    def test_returns_container_instance(
+        self,
+        mock_engine: MagicMock,
+        mock_factory: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify get_container returns Container instance."""
+        _configure_mock_settings(mock_settings)
+        get_container.cache_clear()
+        container = get_container()
+        assert isinstance(container, Container)
+        get_container.cache_clear()
+
+    @_apply_container_patches
+    def test_singleton_returns_same_instance(
+        self,
+        mock_engine: MagicMock,
+        mock_factory: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Verify get_container returns cached singleton."""
+        _configure_mock_settings(mock_settings)
+        get_container.cache_clear()
+        c1 = get_container()
+        c2 = get_container()
+        assert c1 is c2
+        get_container.cache_clear()

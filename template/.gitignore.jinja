@@ -1,9 +1,7 @@
-# === OS ===
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# === Editor ===
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -15,7 +13,6 @@ Desktop.ini
 *~
 .idea/
 
-# === Python ===
 __pycache__/
 *.py[cod]
 *$py.class
@@ -35,36 +32,35 @@ htmlcov/
 .ty/
 .tox/
 
-# === Node ===
 node_modules/
 .pnpm-store/
 .vite/
 coverage/
 playwright-report/
 test-results/
+frontend/dist/
 
-# === Docker ===
 *.log
 
-# === Environment ===
 .env
 .env.local
 .env.*.local
 !.env.example
 
-# === Secrets ===
 *.pem
 *.key
+*.crt
 
-# === Build ===
 *.whl
 *.tar.gz
 
-# === Lock files (track these) ===
-# !uv.lock
-# !pnpm-lock.yaml
+*.db
 
-# === Misc ===
+
+.task/
+
 .traycer/
 logs/
+!logs/.gitkeep
 tmp/
+.bootstrap/

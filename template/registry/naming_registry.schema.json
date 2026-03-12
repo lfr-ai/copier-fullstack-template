@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Naming Registry",
+  "description": "Schema for the central naming registry that drives code generation across backend and frontend.",
+  "type": "object",
+  "required": ["schema_version", "metadata", "enums", "unified_fields", "ports"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Registry schema version. Must be 1."
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["version", "last_updated", "maintainer"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" },
+        "last_updated": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "maintainer": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "enums": {
+      "type": "object",
+      "description": "Enum definitions. Values can be a list of strings (StrEnum) or a dict of name→int (IntEnum).",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          {
+            "type": "object",
+            "additionalProperties": { "type": "integer" },
+            "minProperties": 1
+          }
+        ]
+      }
+    },
+    "unified_fields": {
+      "type": "object",
+      "description": "Model field mappings (ORM ↔ Pydantic ↔ alias).",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "object",
+              "properties": {
+                "orm": { "type": ["string", "null"] },
+                "pydantic": { "type": ["string", "null"] },
+                "alias": { "type": ["string", "null"] }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
+    },
+    "api_fields": {
+      "type": "object",
+      "description": "API-facing field name maps per resource.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "string" }
+      }
+    },
+    "routes": {
+      "type": "object",
+      "description": "Route group definitions with prefix and endpoint paths.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["prefix", "endpoints"],
+        "properties": {
+          "prefix": { "type": "string" },
+          "endpoints": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "ports": {
+      "type": "object",
+      "description": "Named port assignments for services.",
+      "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 65535 }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,77 @@
+"""User application service for orchestrating user operations."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.adapters.persistence.repositories.user_repository import UserRepository
+from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
+from {{ project_slug }}.application.mappers.user_mapper import UserMapper
+from {{ project_slug }}.application.services.base import BaseService
+from {{ project_slug }}.core.entities.user import User
+from {{ project_slug }}.core.events.user_events import UserCreated
+from {{ project_slug }}.core.exceptions.base import NotFoundError
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+__all__ = ["UserService"]
+
+
+class UserService(BaseService):
+    """Application service for user management.
+
+    Orchestrates user creation, retrieval, and lifecycle
+    operations through repository and unit of work patterns.
+
+    Repositories are created from the UoW's active session
+    inside each transactional context to guarantee they share
+    the same database session.
+    """
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+    ) -> None:
+        """Initialize user service.
+
+        Args:
+            uow (UnitOfWork): Unit of work for transactional boundaries.
+        """
+        super().__init__(uow=uow)
+
+    async def create_user(self, dto: CreateUserDTO) -> UserDTO:
+        """Create new user from DTO.
+
+        Args:
+            dto (CreateUserDTO): User creation data transfer object.
+
+        Returns:
+            UserDTO: Created user as DTO.
+        """
+        user = User(email=dto.email, display_name=dto.display_name)
+        user.register_event(UserCreated(user_id=user.id, email=user.email))
+
+        async with self._uow as uow:
+            repo = UserRepository(session=uow.session)
+            created = await repo.add(user)
+            await uow.commit()
+
+        self._logger.info("Created user %s with email %s", created.id, created.email)
+        return UserMapper.to_dto(created)
+
+    async def get_user(self, user_id: str) -> UserDTO:
+        """Retrieve user by identifier.
+
+        Args:
+            user_id (str): Unique user identifier.
+
+        Returns:
+            UserDTO: User DTO.
+
+        Raises:
+            NotFoundError: When user with given ID does not exist.
+        """
+        async with self._uow as uow:
+            repo = UserRepository(session=uow.session)
+            user = await repo.get_by_id(user_id)
+        if user is None:
+            raise NotFoundError(entity_type="User", entity_id=user_id)
+        return UserMapper.to_dto(user)

@@ -1,0 +1,71 @@
+"""AI service — orchestrates LLM interactions.
+
+Depends on the AIProvider protocol; the concrete provider
+is injected via the DI container.
+"""
+
+from __future__ import annotations
+
+__all__ = ["AIService"]
+
+import structlog
+
+from {{ project_slug }}.ai.models import CompletionRequest, CompletionResponse
+from {{ project_slug }}.ai.providers import AIProvider
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class AIService:
+    """High-level AI orchestration service.
+
+    Args:
+        provider (AIProvider): Injected LLM provider implementation.
+    """
+
+    def __init__(self, provider: AIProvider) -> None:
+        """Initialize AI service.
+
+        Args:
+            provider (AIProvider): Injected LLM provider implementation.
+        """
+        self._provider = provider
+
+    async def complete(self, request: CompletionRequest) -> CompletionResponse:
+        """Execute a completion request through the configured provider.
+
+        Args:
+            request (CompletionRequest): Validated completion request.
+
+        Returns:
+            CompletionResponse: Completion response with generated content.
+
+        Raises:
+            RuntimeError: If the provider call fails.
+        """
+        logger.info(
+            "AI completion requested",
+            prompt_length=len(request.prompt),
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+        )
+        try:
+            content = await self._provider.complete(
+                prompt=request.prompt,
+                system_prompt=request.system_prompt,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+            )
+        except Exception:
+            logger.exception("AI completion failed")
+            raise
+
+        response = CompletionResponse(
+            content=content,
+            model=type(self._provider).__name__,
+        )
+        logger.info(
+            "AI completion succeeded",
+            content_length=len(response.content),
+        )
+        return response

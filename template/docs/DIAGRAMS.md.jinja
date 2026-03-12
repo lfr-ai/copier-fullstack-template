@@ -1,6 +1,4 @@
-# Architecture Diagrams
 
-## High-Level Architecture
 
 ```mermaid
 graph TB
@@ -24,10 +22,8 @@ graph TB
     end
 
     subgraph "Infrastructure Layer"
-{%- if database_backend == 'postgresql' %}
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
         DB[(PostgreSQL)]
-{%- elif database_backend == 'sqlite' %}
-        DB[(SQLite)]
 {%- endif %}
         ORM[ORM Models]
         REPO[Repositories]
@@ -59,7 +55,6 @@ graph TB
 {%- endif %}
 ```
 
-## Hexagonal Architecture (Ports & Adapters)
 
 ```mermaid
 graph LR
@@ -120,7 +115,6 @@ graph LR
 {%- endif %}
 ```
 
-## Container Architecture
 
 ```mermaid
 graph TB
@@ -154,7 +148,6 @@ graph TB
 {%- endif %}
 ```
 
-## Data Flow
 
 ```mermaid
 sequenceDiagram

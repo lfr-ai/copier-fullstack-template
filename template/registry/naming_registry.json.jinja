@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "version": "0.1.0",
+    "last_updated": "{{ '%Y-%m-%d' | strftime }}",
+    "maintainer": "{{ author_name }}"
+  },
+  "enums": {
+    "Status": ["active", "inactive", "suspended", "deleted"],
+    "Environment": ["local", "dev", "test", "staging", "production"]
+  },
+  "unified_fields": {
+    "User": {
+      "id": { "orm": "id", "pydantic": "id", "alias": "id" },
+      "email": { "orm": "email", "pydantic": "email", "alias": "email" },
+      "display_name": { "orm": "display_name", "pydantic": "displayName", "alias": "display_name" },
+      "password_hash": { "orm": "password_hash", "pydantic": null, "alias": null },
+      "is_active": { "orm": "is_active", "pydantic": "isActive", "alias": "is_active" },
+      "created_at": { "orm": "created_at", "pydantic": "createdAt", "alias": "created_at" },
+      "updated_at": { "orm": "updated_at", "pydantic": "updatedAt", "alias": "updated_at" }
+    }
+  },
+  "routes": {
+    "users": {
+      "prefix": "/api/v1/users",
+      "endpoints": {
+        "list": "",
+        "detail": "/{id}",
+        "create": "",
+        "update": "/{id}",
+        "delete": "/{id}"
+      }
+    },
+    "health": {
+      "prefix": "/api/v1/health",
+      "endpoints": {
+        "check": ""
+      }
+    },
+    "frontend": {
+      "prefix": "/",
+      "endpoints": {
+        "home": "",
+        "dashboard": "/dashboard"
+      }
+    }
+  },
+  "ports": {
+    "BACKEND": 8000,
+    "FRONTEND_DEV": 5173,
+    "CADDY_HTTP": 80,
+    "CADDY_HTTPS": 443,
+    "POSTGRESQL": 5432,
+    "REDIS": 6379
+  }
+}

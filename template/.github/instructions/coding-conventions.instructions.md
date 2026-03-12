@@ -1,178 +1,186 @@
 ---
-description: Coding conventions enforcement automation guidelines
-applyTo: "**/*.py"
+description: Python coding conventions — enforcement patterns and modern standards
+applyTo: '**/*.py'
 ---
 
-# Coding Conventions Enforcement Instructions
 
-## Purpose
 
-This document provides guidelines for automated enforcement of coding conventions
-as specified in [copilot-instructions.md](../copilot-instructions.md).
-
-## When to Use
-
-- During code reviews to identify convention violations
-- When onboarding new team members to ensure consistency
-- As part of refactoring efforts
-- Before major releases to ensure code quality
-
-## Automated Enforcement Patterns
-
-### 1. Dataclass Optimization
-
-**Detect:**
 
 ```python
 @dataclass
-class MyClass:
-    ...
-```
+class MyClass: ...
 
-**Required:**
-
-```python
 @dataclass(frozen=True, slots=True)
-class MyClass:
-    ...
+class MyClass: ...
 ```
 
-**Rationale:** `frozen=True` for immutability; `slots=True` for memory reduction.
-
-### 2. Enum Validation
-
-**Detect:**
 
 ```python
 class MyEnum(StrEnum):
-    VALUE1 = auto()
-```
+    VALUE = auto()
 
-**Required:**
-
-```python
 @unique
 class MyEnum(StrEnum):
-    VALUE1 = auto()
+    """Descriptive purpose. Never starts with articles."""
+    VALUE = auto()
 ```
 
-**Rationale:** Prevents duplicate enum values.
+- ALL string enums: `StrEnum` + `@unique` + `auto()`
+- ALL integer enums: `IntEnum` + `@unique`
+- `auto()` unless exact value is external contract (comment explaining why)
+- Member names: `UPPER_SNAKE_CASE`
+- Defined in `utils/enums.py` or `core/enums/`
+- NEVER use raw string literals where enum members should be
+- Provide `from_str()` classmethod for external input parsing
 
-### 3. Type Hints - Any to object
-
-**Detect:**
 
 ```python
 from typing import Any
 def func(param: Any) -> Any: ...
-```
 
-**Required:**
-
-```python
 def func(param: object) -> object: ...
 ```
 
-**Rationale:** `object` provides minimal type safety; `Any` disables type checking.
 
-### 4. Constants with Final
+```python
+from typing import Optional, Union, List, Dict, Tuple, Set
+x: Optional[str]
+y: Union[int, str]
+z: List[int]
 
-**Detect:**
+x: str | None
+y: int | str
+z: list[int]
+```
+
+- ZERO `typing.List`, `Dict`, `Tuple`, `Set`, `Optional`, `Union`
+- `typing` imports ONLY for: `TypeVar`, `Protocol`, `TypeAlias`, `Annotated`, `Final`, `Literal`,
+  `NoReturn`, `Generic`, `runtime_checkable`, `TypedDict`, `final`, `overload`, `TYPE_CHECKING`,
+  `Self`, `override`
+- Use `match/case` for multi-branch dispatch over types, enums, literals
+- Use `@override` on overriding methods
+- Use `Self` for fluent/builder return types
+
 
 ```python
 MAX_RETRIES = 3
-```
 
-**Required for public constants:**
-
-```python
-from typing import Final
 MAX_RETRIES: Final[int] = 3
-```
 
-**Exception -- internal (`_`-prefixed) constants:**
-
-Do NOT apply `Final` to internal constants prefixed with `_`.
-The underscore prefix already signals non-public status.
-
-```python
-# Correct -- no Final for internal constants
 _INTERNAL_BUFFER_SIZE = 4096
-_DEFAULT_ENCODING = "utf-8"
-
-# Public constants require Final
-MAX_RETRIES: Final[int] = 3
 ```
 
-### 5. F-String Logging (CRITICAL)
+- ZERO literal numbers in logic — extract to `Final` constant or `_UPPER_SNAKE`
+- ZERO hardcoded config strings — `AppSettings` or named constants
+- ZERO hardcoded field/column names — naming registry
+- ZERO hardcoded URLs/paths/timeouts/retries — named constants
 
-**Detect:**
 
 ```python
 logger.info(f"Processing {item_id}")
-```
+logger.error("Failed: {}".format(msg))
 
-**Required:**
-
-```python
 logger.info("Processing %s", item_id)
 ```
 
-**Rationale:** Lazy evaluation, only formats if log level is active.
+- ALL log messages: `%s` formatting — ZERO f-strings, `.format()`, `+`
+- ALL modules: `logger = logging.getLogger(__name__)`
+- ALL exception handlers: `logger.exception()` or `logger.error(..., exc_info=True)`
+- ZERO `print()` in source code (CLI `rich.console` excepted)
+- ZERO sensitive data in logs (password, token, secret, key, credential)
+- Log messages do NOT end with periods
+- Log enum values as `.value` or `.name` explicitly
 
-### 6. Exception Chaining
-
-**Detect:**
 
 ```python
 except Exception as e:
     raise NewError("Failed")
-```
 
-**Required:**
-
-```python
 except Exception as e:
+    logger.error("Operation failed for %s", resource_id, exc_info=True)
     raise NewError("Failed") from e
 ```
 
-### 7. Shell Script Extensions
+- ALWAYS `raise ... from e` — chain exceptions
+- ZERO bare `except:` — always specific types
+- ZERO silent `except Exception:` without re-raise or explicit `# Explicitly silenced: <reason>`
+- Exceptions logged BEFORE re-raising
+- Error messages: `%s` formatting, NOT f-strings
+- Domain exceptions at domain/application boundaries
+- HTTP exceptions ONLY in `ports/api/`
+- `raise ... from None` ONLY with explicit justification comment
 
-All shell scripts must use `.zsh` extension with proper shebang:
 
 ```zsh
-#!/usr/bin/env zsh
 emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT
 ```
 
-### 8. Log Message Punctuation
+- `.zsh` extension (never `.sh`)
+- `.azcli` extension for Azure CLI scripts (valid zsh)
+- `local` for all variables inside functions
+- `zparseopts` for option parsing
 
-**Detect:**
 
 ```python
 logger.info("Task completed.")
-```
 
-**Required:**
-
-```python
 logger.info("Task completed")
 ```
 
-No trailing punctuation in log messages or short comments.
 
-## Batch Enforcement Priorities
+```python
+def process(data, validate=True, timeout=30.0): ...
 
-1. **Critical:** F-string logging (performance impact)
-2. **High:** Dataclass slots (memory impact)
-3. **High:** Enum @unique (correctness)
-4. **Medium:** Type hints Any to object (type safety)
-5. **Medium:** Public constants with Final (maintainability)
-6. **Low:** Unused imports, punctuation (cleanliness)
+def process(
+    data: list[dict[str, object]],
+    *,
+    validate: bool = True,
+    timeout: float = 30.0,
+) -> ProcessedData: ...
+```
 
-## References
+When `*` is required:
 
-- Main conventions: [copilot-instructions.md](../copilot-instructions.md)
-- PEP 8: https://peps.python.org/pep-0008/
-- Python typing: https://docs.python.org/3/library/typing.html
+- 3+ params (excluding self/cls) where at least one has a default
+- ANY boolean flag parameter
+- ANY optional/config param (timeout, retries, limit, offset, ttl, mode)
+- ALL factory functions (`create_*`, `build_*`, `make_*`)
+- ALL public API functions in `ports/`
+- ALL service methods in `application/services/`
+- ALL utility functions in `utils/`
+
+When `*` is NOT required:
+
+- 0–2 params with no defaults
+- ALL params required, distinct types, unambiguous ordering
+- Dunder methods following Python protocols (`__eq__`, `__hash__`)
+- Callbacks matching external contracts (FastAPI DI)
+
+
+- `from __future__ import annotations` at top of EVERY Python file
+- EVERY function has return type (including `-> None`)
+- EVERY parameter has type annotation
+- EVERY `@property` has return type
+- ALL class attributes typed
+- Default values match their type annotation
+
+
+- EVERY public module, class, method, function: docstring
+- First line: imperative, ends with period, does NOT start with "A"/"An"/"The"
+- `Args:` — each parameter described (NO types in docstring)
+- `Returns:` — describes return value
+- `Raises:` — lists exceptions
+- Remove `:param:`/`@param` style — Google style only
+
+
+- `_` prefix on ALL non-public module-level functions, methods, attributes
+- `_UPPER_SNAKE_CASE` on ALL internal-only constants
+- NO `__` name mangling unless explicitly justified
+- `__all__` in `__init__.py` files exporting public API
+
+
+1. **Critical:** F-string logging, exception chaining (correctness + performance)
+2. **High:** Dataclass slots, enum @unique, type coverage (correctness + memory)
+3. **Medium:** Constants with Final, keyword-only args, modern syntax (maintainability)
+4. **Low:** Unused imports, punctuation, underscore compliance (cleanliness)

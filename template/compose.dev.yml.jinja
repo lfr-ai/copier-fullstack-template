@@ -1,0 +1,30 @@
+{# Dev compose override — shared development server with debug + source mounts. -#}
+services:
+  app:
+    build:
+      target: dev
+    volumes:
+      - ./backend/src:/app/src
+      - ./logs:/app/logs
+    environment:
+      {{ project_slug | upper }}_ENVIRONMENT: dev
+      {{ project_slug | upper }}_DEBUG: "true"
+      {{ project_slug | upper }}_LOG_LEVEL: DEBUG
+    command: ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  frontend:
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+{%- if use_celery %}
+
+  worker:
+    build:
+      target: dev
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      {{ project_slug | upper }}_ENVIRONMENT: dev
+      {{ project_slug | upper }}_DEBUG: "true"
+      {{ project_slug | upper }}_LOG_LEVEL: DEBUG
+{%- endif %}

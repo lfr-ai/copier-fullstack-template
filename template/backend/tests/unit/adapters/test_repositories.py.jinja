@@ -1,0 +1,142 @@
+"""Unit tests for SQLAlchemy repository implementations."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from {{ project_slug }}.adapters.persistence.repositories.base import SQLAlchemyRepository
+
+
+@pytest.fixture
+def mock_session() -> AsyncMock:
+    """Create a mock AsyncSession for repository tests."""
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=None)
+    session.flush = AsyncMock()
+    session.refresh = AsyncMock()
+    session.merge = AsyncMock()
+    session.delete = AsyncMock()
+    session.execute = AsyncMock()
+    session.scalar = AsyncMock(return_value=0)
+    return session
+
+
+@pytest.fixture
+def model_class() -> type:
+    """Create a dummy model class for testing."""
+    return MagicMock
+
+
+@pytest.fixture
+def repository(
+    mock_session: AsyncMock,
+    model_class: type,
+) -> SQLAlchemyRepository[MagicMock]:
+    """Create a SQLAlchemyRepository backed by mocks."""
+    return SQLAlchemyRepository(session=mock_session, model_class=model_class)
+
+
+class TestSQLAlchemyRepositoryGetById:
+    """Test suite for get_by_id operation."""
+
+    @pytest.mark.asyncio
+    async def test_get_by_id_returns_entity(
+        self,
+        repository: SQLAlchemyRepository[MagicMock],
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify get_by_id returns entity when found."""
+        expected = MagicMock()
+        mock_session.get.return_value = expected
+        result = await repository.get_by_id("1")
+        assert result is expected
+
+    @pytest.mark.asyncio
+    async def test_get_by_id_returns_none_when_missing(
+        self,
+        repository: SQLAlchemyRepository[MagicMock],
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify get_by_id returns None for non-existent entity."""
+        mock_session.get.return_value = None
+        result = await repository.get_by_id("999")
+        assert result is None
+
+
+class TestSQLAlchemyRepositoryAdd:
+    """Test suite for add operation."""
+
+    @pytest.mark.asyncio
+    async def test_add_flushes_and_refreshes(
+        self,
+        repository: SQLAlchemyRepository[MagicMock],
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify add calls flush and refresh on the session."""
+        instance = MagicMock()
+        await repository.add(instance)
+        mock_session.add.assert_called_once_with(instance)
+        mock_session.flush.assert_awaited_once()
+        mock_session.refresh.assert_awaited_once_with(instance)
+
+
+class TestSQLAlchemyRepositoryUpdate:
+    """Test suite for update operation."""
+
+    @pytest.mark.asyncio
+    async def test_update_merges_and_flushes(
+        self,
+        repository: SQLAlchemyRepository[MagicMock],
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify update calls merge and flush on the session."""
+        instance = MagicMock()
+        mock_session.merge.return_value = instance
+        result = await repository.update(instance)
+        mock_session.merge.assert_awaited_once_with(instance)
+        mock_session.flush.assert_awaited_once()
+        assert result is instance
+
+
+class TestSQLAlchemyRepositoryDelete:
+    """Test suite for delete operation."""
+
+    @pytest.mark.asyncio
+    async def test_delete_returns_true_when_found(
+        self,
+        repository: SQLAlchemyRepository[MagicMock],
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify delete returns True when entity exists."""
+        mock_session.get.return_value = MagicMock()
+        result = await repository.delete("1")
+        assert result is True
+        mock_session.delete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_delete_returns_false_when_not_found(
+        self,
+        repository: SQLAlchemyRepository[MagicMock],
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify delete returns False when entity does not exist."""
+        mock_session.get.return_value = None
+        result = await repository.delete("999")
+        assert result is False
+
+
+class TestSQLAlchemyRepositoryCount:
+    """Test suite for count operation."""
+
+    @pytest.mark.asyncio
+    async def test_count_returns_integer(
+        self,
+        repository: SQLAlchemyRepository[MagicMock],
+        mock_session: AsyncMock,
+    ) -> None:
+        """Verify count returns the scalar result."""
+        mock_session.scalar.return_value = 42
+        result = await repository.count()
+        assert result == 42

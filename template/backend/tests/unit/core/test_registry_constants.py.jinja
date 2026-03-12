@@ -1,0 +1,79 @@
+"""Unit tests for generated registry constants.
+
+These tests verify that the *generated* registry_constants module
+exposes expected symbols and that values match the source JSON.
+They run after `task registry:generate` has produced the constants.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from types import ModuleType
+
+import pytest
+
+
+pytestmark = pytest.mark.unit
+
+_REGISTRY_FILE = Path(__file__).resolve().parents[4] / "registry" / "naming_registry.json"
+
+
+@pytest.fixture(scope="module")
+def registry_data() -> dict[str, object]:
+    """Load the source naming registry JSON."""
+    return json.loads(_REGISTRY_FILE.read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="module")
+def constants_module() -> ModuleType:
+    """Import the generated constants module."""
+    from {{ project_slug }}.core import registry_constants  # type: ignore[import-untyped]
+
+    return registry_constants
+
+
+class TestRegistryConstantsExist:
+    """Verify the generated module exposes key attributes."""
+
+    def test_module_has_ports(self, constants_module: ModuleType) -> None:
+        """Verify PORTS attribute exists on the module."""
+        assert hasattr(constants_module, "PORTS")
+
+    def test_ports_is_dict(self, constants_module: ModuleType) -> None:
+        """Verify PORTS is a dict."""
+        assert isinstance(constants_module.PORTS, dict)
+
+
+class TestPortsMatchSource:
+    """Verify generated port values match the source JSON."""
+
+    def test_all_ports_present(
+        self, registry_data: dict[str, object], constants_module: ModuleType
+    ) -> None:
+        """Verify every port from JSON is present in the module."""
+        source_ports = registry_data.get("ports", {})
+        for key in source_ports:
+            upper_key = key.upper()
+            assert upper_key in constants_module.PORTS, f"Missing port: {upper_key}"
+
+    def test_port_values_are_ints(self, constants_module: ModuleType) -> None:
+        """Verify all port values are integers."""
+        for key, val in constants_module.PORTS.items():
+            assert isinstance(val, int), f"Port {key} should be int, got {type(val)}"
+
+
+class TestEnumsGenerated:
+    """Verify that enum entries from the registry become Python enums."""
+
+    def test_enum_classes_exist(
+        self, registry_data: dict[str, object], constants_module: ModuleType
+    ) -> None:
+        """Verify each enum from JSON has a class in the generated module."""
+        for enum_name in registry_data.get("enums", {}):
+            pascal_name = "".join(
+                word.capitalize() for word in enum_name.replace("-", "_").split("_")
+            )
+            assert hasattr(constants_module, pascal_name), (
+                f"Expected enum class {pascal_name} in generated module"
+            )

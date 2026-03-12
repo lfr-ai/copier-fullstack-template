@@ -1,0 +1,144 @@
+"""Global error handler middleware for FastAPI."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Final
+
+import structlog
+from fastapi.responses import JSONResponse
+
+from {{ project_slug }}.core.exceptions.base import (
+    AuthorizationError,
+    ConflictError,
+    DomainError,
+    NotFoundError,
+)
+from {{ project_slug }}.core.exceptions.validation import ValidationError
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI, Request
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+__all__ = ["register_error_handlers"]
+
+HTTP_NOT_FOUND: Final[int] = 404
+HTTP_CONFLICT: Final[int] = 409
+HTTP_FORBIDDEN: Final[int] = 403
+HTTP_UNPROCESSABLE: Final[int] = 422
+HTTP_INTERNAL_ERROR: Final[int] = 500
+
+
+def register_error_handlers(app: FastAPI) -> None:
+    """Register global exception handlers on FastAPI app.
+
+    Args:
+        app (FastAPI): FastAPI application instance.
+    """
+
+    @app.exception_handler(NotFoundError)
+    async def _not_found_handler(_request: Request, exc: NotFoundError) -> JSONResponse:
+        """Handle NotFoundError as 404.
+
+        Args:
+            _request (Request): Incoming HTTP request (unused).
+            exc (NotFoundError): The raised exception.
+
+        Returns:
+            JSONResponse: JSON error response with 404 status.
+        """
+        return JSONResponse(
+            status_code=HTTP_NOT_FOUND,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(ConflictError)
+    async def _conflict_handler(_request: Request, exc: ConflictError) -> JSONResponse:
+        """Handle ConflictError as 409.
+
+        Args:
+            _request (Request): Incoming HTTP request (unused).
+            exc (ConflictError): The raised exception.
+
+        Returns:
+            JSONResponse: JSON error response with 409 status.
+        """
+        return JSONResponse(
+            status_code=HTTP_CONFLICT,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(AuthorizationError)
+    async def _auth_handler(
+        request: Request,
+        exc: AuthorizationError,
+    ) -> JSONResponse:
+        """Handle AuthorizationError as 403 with audit logging.
+
+        Args:
+            request (Request): Incoming HTTP request.
+            exc (AuthorizationError): The raised exception.
+
+        Returns:
+            JSONResponse: JSON error response with 403 status.
+        """
+        logger.warning("Authorization denied on %s %s: %s", request.method, request.url, exc)
+        return JSONResponse(
+            status_code=HTTP_FORBIDDEN,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(ValidationError)
+    async def _validation_handler(
+        _request: Request,
+        exc: ValidationError,
+    ) -> JSONResponse:
+        """Handle ValidationError as 422.
+
+        Args:
+            _request (Request): Incoming HTTP request (unused).
+            exc (ValidationError): The raised exception.
+
+        Returns:
+            JSONResponse: JSON error response with 422 status.
+        """
+        content: dict[str, object] = {"detail": str(exc)}
+        if exc.field:
+            content["field"] = exc.field
+        return JSONResponse(
+            status_code=HTTP_UNPROCESSABLE,
+            content=content,
+        )
+
+    @app.exception_handler(DomainError)
+    async def _domain_handler(_request: Request, exc: DomainError) -> JSONResponse:
+        """Handle DomainError as 422.
+
+        Args:
+            _request (Request): Incoming HTTP request (unused).
+            exc (DomainError): The raised exception.
+
+        Returns:
+            JSONResponse: JSON error response with 422 status.
+        """
+        return JSONResponse(
+            status_code=HTTP_UNPROCESSABLE,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(Exception)
+    async def _generic_handler(request: Request, _exc: Exception) -> JSONResponse:
+        """Handle uncaught exceptions as 500.
+
+        Args:
+            request (Request): Incoming HTTP request.
+            _exc (Exception): The raised exception (unused).
+
+        Returns:
+            JSONResponse: JSON error response with 500 status.
+        """
+        logger.exception("Unhandled exception on %s %s", request.method, request.url)
+        return JSONResponse(
+            status_code=HTTP_INTERNAL_ERROR,
+            content={"detail": "Internal server error"},
+        )

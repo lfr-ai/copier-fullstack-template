@@ -1,0 +1,147 @@
+"""Base application settings using pydantic-settings."""
+
+from __future__ import annotations
+
+from typing import Final
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from {{ project_slug }}.config.constants import (
+    DEFAULT_PORT,
+    MAX_PORT,
+{%- if use_auth %}
+    TOKEN_EXPIRY_MINUTES,
+{%- endif %}
+)
+from {{ project_slug }}.core.enums.environment import Environment
+
+__all__ = ["BaseAppSettings"]
+
+_DEFAULT_HOST: Final[str] = "127.0.0.1"
+
+
+class BaseAppSettings(BaseSettings):
+    """Base settings with environment variable loading.
+
+    Reads from .env file and environment variables with
+    configurable prefix.
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="{{ project_slug | upper }}_",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    environment: Environment = Field(
+        default=Environment.LOCAL,
+        description="Deployment environment.",
+        examples=["local", "dev", "staging", "production"],
+    )
+    debug: bool = Field(
+        default=False,
+        description="Enable debug mode.",
+        examples=[False, True],
+    )
+    log_level: str = Field(
+        default="INFO",
+        description="Logging level.",
+        examples=["INFO", "DEBUG", "WARNING"],
+    )
+    secret_key: str = Field(
+        default="change-me-in-production",
+        description="Application secret key for signing.",
+        examples=["my-super-secret-key-at-least-32-chars"],
+    )
+
+    database_url: str = Field(
+{%- if database_backend == "postgresql" %}
+        default="postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}",
+        description="Async database connection URL.",
+        examples=["postgresql+psycopg://user:pass@localhost/db"],
+{%- elif database_backend == "azure_postgresql" %}
+        default="",
+        description="Azure PostgreSQL Flexible Server connection URL. Set via environment or Key Vault.",
+        examples=["postgresql+psycopg://user:pass@myserver.postgres.database.azure.com:5432/{{ project_slug }}?sslmode=require"],
+{%- else %}
+        default="",
+        description="Database connection URL. Leave empty if no database is configured.",
+        examples=["postgresql+psycopg://user:pass@localhost/db"],
+{%- endif %}
+    )
+    database_echo: bool = Field(
+        default=False,
+        description="Echo SQL queries to log.",
+        examples=[False, True],
+    )
+
+    host: str = Field(
+        default=_DEFAULT_HOST,
+        description="Server bind host.",
+        examples=["127.0.0.1", "0.0.0.0"],
+    )
+    port: int = Field(
+        default=DEFAULT_PORT,
+        gt=0,
+        le=MAX_PORT,
+        description="Server bind port.",
+        examples=[8000, 8080],
+    )
+
+    cors_allowed_origins: list[str] = Field(
+        default_factory=list,
+        description="Allowed CORS origins for non-local environments.",
+        examples=[["https://example.com"]],
+    )
+{%- if use_redis %}
+
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis connection URL.",
+        examples=["redis://localhost:6379/0"],
+    )
+    redis_ttl: int = Field(
+        default=3600,
+        gt=0,
+        description="Default Redis TTL in seconds.",
+        examples=[3600, 7200],
+    )
+{%- endif %}
+{%- if use_celery %}
+
+    celery_broker_url: str = Field(
+        default="redis://localhost:6379/1",
+        description="Celery broker connection URL.",
+        examples=["redis://localhost:6379/1"],
+    )
+    celery_result_backend: str = Field(
+        default="redis://localhost:6379/2",
+        description="Celery result backend URL.",
+        examples=["redis://localhost:6379/2"],
+    )
+{%- endif %}
+{%- if use_auth %}
+
+    jwt_secret_key: str = Field(
+        default="change-me-jwt-secret",
+        description="JWT signing secret key.",
+        examples=["my-jwt-secret-key-at-least-32-chars"],
+    )
+    jwt_expire_minutes: int = Field(
+        default=TOKEN_EXPIRY_MINUTES,
+        gt=0,
+        description="JWT token expiration in minutes.",
+        examples=[30, 60],
+    )
+{%- endif %}
+{%- if secret_backend == "azure_kv" %}
+
+    azure_key_vault_url: str = Field(
+        default="",
+        description="Azure Key Vault URL.",
+        examples=["https://my-vault.vault.azure.net/"],
+    )
+{%- endif %}

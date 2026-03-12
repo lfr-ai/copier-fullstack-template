@@ -1,19 +1,17 @@
-#!/usr/bin/env zsh
 emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT
 
-# Install Task CLI (taskfile.dev)
 
 install_task() {
     emulate -L zsh
     setopt PIPE_FAIL ERR_EXIT
 
     if command -v task &>/dev/null; then
-        echo "Task already installed: $(task --version)"
+        print "Task already installed: $(task --version)"
         return 0
     fi
 
-    echo "Installing Task..."
+    print "Installing Task..."
 
     local os_type
     os_type="$(uname -s)"
@@ -31,13 +29,20 @@ install_task() {
             fi
             ;;
         *)
-            echo "ERROR: Unsupported OS: ${os_type}"
-            echo "Install from: https://taskfile.dev/installation/"
+            print "ERROR: Unsupported OS: ${os_type}"
+            print "Install from: https://taskfile.dev/installation/"
             return 1
             ;;
     esac
 
-    echo "Task installed: $(task --version)"
+    print "Task installed: $(task --version)"
 }
 
-install_task
+main() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    install_task
+}
+
+main "$@"

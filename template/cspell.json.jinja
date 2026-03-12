@@ -1,0 +1,74 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "dictionaries": [
+    "python",
+    "typescript",
+    "node",
+    "html",
+    "css",
+    "bash",
+    "docker",
+    "softwareTerms"
+  ],
+  "words": [
+    "{{ project_slug }}",
+    "{{ project_name | lower | replace(' ', '') }}",
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "sqlalchemy",
+    "alembic",
+    "asyncpg",
+    "psycopg",
+    "httpx",
+    "structlog",
+    "jinja",
+    "celery",
+    "redis",
+    "tailwindcss",
+    "vitest",
+    "vite",
+    "eslint",
+    "prettier",
+    "ruff",
+    "hadolint",
+    "shellcheck",
+    "editorconfig",
+    "markdownlint",
+    "devcontainer",
+    "pyproject",
+    "fullstack",
+    "hexagonal",
+    "copier",
+    "uv"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    ".venv/**",
+    "dist/**",
+    "build/**",
+    "htmlcov/**",
+    "coverage/**",
+    "*.lock",
+    "uv.lock",
+    "pnpm-lock.yaml",
+    "*.parquet",
+    "**/__pycache__/**",
+    ".tox/**",
+    ".ruff_cache/**",
+    ".ty/**"
+  ],
+  "overrides": [
+    {
+      "filename": "**/*.py",
+      "language": "en",
+      "dictionaries": ["python"]
+    },
+    {
+      "filename": "**/*.ts",
+      "language": "en",
+      "dictionaries": ["typescript"]
+    }
+  ]
+}

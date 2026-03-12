@@ -1,0 +1,28 @@
+
+
+Accepted
+
+
+{{ '%Y-%m-%d' | strftime }}
+
+
+We need a task runner for common development commands (build, test, lint, deploy).
+Traditional `Makefile` is ubiquitous but has significant pain points: tab-vs-space issues,
+platform inconsistencies, lack of built-in task dependencies, and an obscure syntax.
+
+
+Use [go-task](https://taskfile.dev/) as the project task runner:
+
+- YAML-based syntax (familiar, readable)
+- Cross-platform (Windows, macOS, Linux)
+- Built-in task dependencies and parallelism
+- File-based change detection (only run if sources changed)
+- Includes support for splitting tasks across files
+
+
+- **Positive**: YAML syntax is familiar to most developers
+- **Positive**: Cross-platform without WSL on Windows
+- **Positive**: Built-in `sources`/`generates` for incremental builds
+- **Positive**: Included tasks from separate files (backend.yml, frontend.yml, docker.yml)
+- **Negative**: Less ubiquitous than Make
+- **Negative**: Requires installing `task` binary

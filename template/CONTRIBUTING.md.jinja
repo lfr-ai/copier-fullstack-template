@@ -1,0 +1,121 @@
+
+Thank you for your interest in contributing! This guide will help you get started.
+
+---
+
+
+Ensure you have all prerequisites installed:
+
+```bash
+zsh scripts/install/install-all.zsh
+zsh scripts/bootstrap.zsh
+```
+
+See [docs/SETUP.md](docs/SETUP.md) for detailed setup instructions.
+
+---
+
+
+
+```bash
+git checkout -b feat/your-feature-name
+```
+
+Follow the branch naming convention:
+
+- `feat/` — new features
+- `fix/` — bug fixes
+- `refactor/` — code changes that neither fix a bug nor add a feature
+- `docs/` — documentation-only changes
+- `test/` — test-only changes
+- `chore/` — maintenance tasks
+
+
+```bash
+task dev          # Start development servers
+task test:unit    # Run unit tests
+task lint         # Run all linters
+```
+
+
+We use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```bash
+git commit -m "feat(users): add email verification endpoint"
+git commit -m "fix(auth): resolve token refresh race condition"
+git commit -m "docs(api): update OpenAPI schema examples"
+```
+
+Format: `type(scope): description`
+
+**Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`, `revert`
+
+
+```bash
+git push origin feat/your-feature-name
+```
+
+---
+
+
+
+- **Line length**: 99 characters
+- **Type hints**: required on all public functions and methods
+- **Docstrings**: Google-style on all public modules, classes, functions
+- **Formatter**: `ruff format`
+- **Linter**: `ruff check`
+- **Type checker**: `ty check`
+- **Architecture**: hexagonal — core has zero framework imports
+
+
+- **Strict mode**: enabled (`strict: true`)
+- **No `any`**: use `unknown` or proper generics
+- **Formatter**: Prettier
+- **Linter**: ESLint
+
+
+- **Extension**: `.zsh`
+- **Shebang**: `#!/usr/bin/env zsh`
+- **Linter**: ShellCheck
+
+---
+
+
+```bash
+task test              # All tests
+task test:unit         # Unit tests only
+task test:integration  # Integration tests
+task test:e2e          # End-to-end (Playwright)
+task test:coverage     # With coverage report
+```
+
+All new features must include tests. Aim for ≥80% coverage on core and application layers.
+
+---
+
+
+- [ ] Code follows the project's coding standards
+- [ ] Tests added/updated for all changes
+- [ ] Documentation updated if applicable
+- [ ] All CI checks pass
+- [ ] No secrets or credentials committed
+- [ ] Commit messages follow conventional commits format
+
+---
+
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture guide.
+
+**Key rules:**
+
+1. **Core layer** has ZERO external imports (only stdlib + typing)
+2. **Dependency direction** is always inward: adapters → ports → application → core
+3. **No circular dependencies** between modules
+4. **No business logic** in adapters, ports, infrastructure, or middleware
+
+---
+
+
+- Check [docs/](docs/) for detailed guides
+- Open an issue for bugs or feature requests
+- Review existing ADRs in [docs/adr/](docs/adr/) for architectural decisions

@@ -7,15 +7,18 @@
       "request": "launch",
       "module": "uvicorn",
       "args": [
-        "{{ project_slug }}.main:app",
+        "{{ project_slug }}.ports.api.app:create_api_app",
+        "--factory",
         "--host", "0.0.0.0",
         "--port", "8000",
         "--reload"
       ],
+      "cwd": "${workspaceFolder}/backend",
       "jinja": true,
       "justMyCode": false,
       "env": {
-        "APP_ENVIRONMENT": "local"
+        "{{ project_slug | upper }}_ENVIRONMENT": "local",
+        "PYTHONPATH": "${workspaceFolder}/backend/src"
       }
     },
     {
@@ -24,7 +27,43 @@
       "request": "launch",
       "module": "pytest",
       "args": ["tests/", "-v"],
-      "justMyCode": false
+      "cwd": "${workspaceFolder}/backend",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend/src"
+      }
+    },
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "justMyCode": false,
+      "env": {
+        "{{ project_slug | upper }}_ENVIRONMENT": "local",
+        "PYTHONPATH": "${workspaceFolder}/backend/src"
+      }
+    },
+    {
+      "name": "Frontend: Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/frontend/src"
+    },
+    {
+      "name": "Frontend: Edge",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/frontend/src"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack",
+      "configurations": ["Python: FastAPI", "Frontend: Chrome"],
+      "stopAll": true
     }
   ]
 }

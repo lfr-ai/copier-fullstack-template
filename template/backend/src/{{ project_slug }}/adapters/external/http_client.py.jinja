@@ -1,0 +1,78 @@
+"""Async HTTP client adapter for external service calls."""
+
+from __future__ import annotations
+
+from typing import Final
+
+import httpx
+import structlog
+
+from {{ project_slug }}.utils.retry_policies import http_retry
+
+__all__ = ["HTTPClientAdapter"]
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+DEFAULT_TIMEOUT_SECONDS: Final[float] = 30.0
+
+
+class HTTPClientAdapter:
+    """Async HTTP client with retry support.
+
+    Wraps httpx.AsyncClient with tenacity retry policies
+    for resilient external API communication.
+    """
+
+    def __init__(
+        self,
+        *,
+        base_url: str = "",
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Initialize HTTP client adapter.
+
+        Args:
+            base_url (str): Base URL for all requests.
+            timeout (float): Request timeout in seconds.
+            headers (dict[str, str] | None): Default request headers.
+        """
+        self._client = httpx.AsyncClient(
+            base_url=base_url,
+            timeout=timeout,
+            headers=headers or {},
+        )
+
+    async def close(self) -> None:
+        """Close underlying HTTP client."""
+        await self._client.aclose()
+
+    @http_retry
+    async def get(self, url: str, **kwargs: object) -> httpx.Response:
+        """Send GET request with retry policy.
+
+        Args:
+            url (str): Request URL (appended to base_url).
+            **kwargs: Additional httpx request arguments.
+
+        Returns:
+            httpx.Response: HTTP response.
+        """
+        response = await self._client.get(url, **kwargs)
+        response.raise_for_status()
+        return response
+
+    @http_retry
+    async def post(self, url: str, **kwargs: object) -> httpx.Response:
+        """Send POST request with retry policy.
+
+        Args:
+            url (str): Request URL (appended to base_url).
+            **kwargs: Additional httpx request arguments.
+
+        Returns:
+            httpx.Response: HTTP response.
+        """
+        response = await self._client.post(url, **kwargs)
+        response.raise_for_status()
+        return response

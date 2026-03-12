@@ -9,12 +9,15 @@ indent_style = space
 indent_size = 4
 
 [*.py]
-max_line_length = 88
+max_line_length = 99
 
 [*.{ts,js,json,css,html}]
 indent_size = 2
 
 [*.{yml,yaml}]
+indent_size = 2
+
+[*.toml]
 indent_size = 2
 
 [*.md]

@@ -1,0 +1,34 @@
+
+
+Accepted
+
+
+{{ '%Y-%m-%d' | strftime }}
+
+
+We need a database strategy that supports both production workloads and local/test development.
+
+
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+- **Production**: PostgreSQL (via `psycopg` / `asyncpg`)
+{%- if database_backend == 'azure_postgresql' %}
+- **Cloud**: Azure Database for PostgreSQL Flexible Server (managed)
+{%- endif %}
+- **Development/Testing**: PostgreSQL via Docker Compose or Azure-hosted instance
+{%- else %}
+- **No database backend** is currently configured for this project.
+{%- endif %}
+
+The repository pattern and SQLAlchemy 2.0 async engine provide database-agnostic access.
+The database backend is selected via a `copier.yml` template variable and environment configuration.
+
+
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+- **Positive**: PostgreSQL with full ACID, JSON, and extension support (pgvector, pgcrypto).
+- **Positive**: Same engine in dev and production eliminates environment drift.
+- **Negative**: Requires a running PostgreSQL instance for development (Docker Compose provides this).
+- **Negative**: Some integration tests need a real PostgreSQL container.
+{%- else %}
+- **Positive**: Simple setup with no database dependencies.
+- **Negative**: No persistent storage until a database backend is added.
+{%- endif %}

@@ -1,0 +1,81 @@
+{%- if with_opencode %}
+{
+"$schema": "https://opencode.ai/config.json",
+"provider": {
+"anthropic": {
+"name": "Anthropic"
+}
+},
+"model": {
+"build": "anthropic/claude-opus-4-6",
+"plan": "anthropic/claude-opus-4-6",
+"general": "anthropic/claude-sonnet-4-20250514"
+},
+"instructions": "You are working on the {{ project_name }} project ({{ project_slug }}), a Python backend (FastAPI +
+SQLAlchemy{% if use_redis %} + Redis{% endif %}{% if database_backend != 'none' %} + PostgreSQL{% endif %}) with a
+TypeScript/{{ frontend_framework | capitalize }} frontend. Follow the coding conventions in AGENTS.md and
+CONTRIBUTING.md. Use uv for Python dependency management. Use pnpm for frontend. {% if database_backend != 'none'
+%}Never use raw SQL — always use SQLAlchemy ORM. {% endif %}Always use type hints, dataclasses with frozen=True and
+slots=True, and structured logging via structlog.",
+"agent": {
+"coordinator": {
+"model": "anthropic/claude-opus-4-6",
+"description": "Central orchestrator — delegates complex tasks to specialized subagents",
+"default": true
+},
+"planner": {
+"model": "anthropic/claude-opus-4-6",
+"description": "Read-only planning subagent — generates structured implementation plans"
+},
+"architect": {
+"model": "anthropic/claude-opus-4-6",
+"description": "Read-only architecture validation — enforces hexagonal boundaries"
+},
+"implementer": {
+"model": "anthropic/claude-sonnet-4-20250514",
+"description": "Code-writing subagent — implements features following project conventions"
+},
+"reviewer": {
+"model": "anthropic/claude-opus-4-6",
+"description": "Read-only code reviewer — multi-dimension quality analysis"
+},
+"tester": {
+"model": "anthropic/claude-sonnet-4-20250514",
+"description": "Test generation subagent — unit, integration, property, and E2E tests"
+},
+"security-auditor": {
+"model": "anthropic/claude-opus-4-6",
+"description": "Read-only security auditor — OWASP/CWE vulnerability scanning"
+},
+"doc-writer": {
+"model": "anthropic/claude-sonnet-4-20250514",
+"description": "Documentation subagent — docstrings, ADRs, guides, and CHANGELOG"
+}
+},
+"permission": {
+"allow": [
+"Read(*)",
+"Edit(*)",
+"Bash(task *)",
+"Bash(uv *)",
+"Bash(pnpm *)",
+"Bash(git diff*)",
+"Bash(git log*)",
+"Bash(git status*)",
+"Bash(python -m pytest*)",
+"Bash(ruff *)",
+"Bash(mypy *)"
+],
+"deny": [
+"Bash(rm -rf /)*",
+"Bash(git push*)",
+"Bash(git merge*)",
+"Bash(docker rm*)"
+]
+},
+"formatter": {
+"line_length": 120,
+"indent": 4
+}
+}
+{%- endif %}

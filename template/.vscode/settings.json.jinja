@@ -1,8 +1,50 @@
 {
-  "files.autoSave": "onFocusChange",
-  "files.eol": "\n",
+  // ── Terminal ──────────────────────────────────────────────────
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.defaultProfile.windows": "PowerShell 7",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell 7": {
+      "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+    },
+    "zsh": {
+      "path": "C:\\Windows\\System32\\wsl.exe",
+      "args": ["-e", "zsh"]
+    }
+  },
+  "terminal.external.windowsExec": "C:\\Windows\\System32\\wsl.exe",
+
+  // ── Python ────────────────────────────────────────────────────
+  "python.terminal.activateEnvironment": false,
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.diagnosticMode": "workspace",
+  "python.defaultInterpreterPath": "./backend/.venv/bin/python",
+  "python.analysis.extraPaths": ["${workspaceFolder}/backend/src"],
+  "python.testing.cwd": "${workspaceFolder}/backend",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests", "-q", "--tb=short"],
+
+  // ── Ruff ──────────────────────────────────────────────────────
+  "ruff.lineLength": 99,
+  "ruff.lint.args": ["--config=backend/pyproject.toml"],
+  "ruff.format.args": ["--config=backend/pyproject.toml"],
+
+  // ── Editor ────────────────────────────────────────────────────
+  "editor.aiStats.enabled": false,
+  "editor.autoIndentOnPaste": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.shellcheck": "explicit",
+    "source.fixAll.ruff": "explicit",
+    "source.organizeImports.ruff": "explicit",
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  },
   "editor.formatOnSave": true,
-  "editor.rulers": [88],
+  "editor.folding": false,
+  "editor.rulers": [99],
+  "editor.tabCompletion": "on",
+  "editor.trimAutoWhitespace": true,
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
   "editor.bracketPairColorization.enabled": true,
@@ -14,7 +56,107 @@
   "editor.stickyScroll.enabled": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
 
+  // ── Diff Editor ───────────────────────────────────────────────
+  "diffEditor.ignoreTrimWhitespace": true,
+
+  // ── Language-Specific Formatters ──────────────────────────────
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "prettier.printWidth": 99
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "prettier.printWidth": 99
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "prettier.printWidth": 99
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "prettier.printWidth": 99
+  },
+  "[less]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "prettier.printWidth": 99
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "prettier.printWidth": 99
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "prettier.printWidth": 99
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "prettier.printWidth": 99
+  },{% if cloud_provider == 'azure' %}
+  "[azure-pipelines]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },{% endif %}
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+
+  // ── JavaScript/TypeScript ─────────────────────────────────────
+  "html.format.indentInnerHtml": true,
+  "javascript.referencesCodeLens.enabled": true,
+  "javascript.referencesCodeLens.showOnAllFunctions": true,
+  "javascript.suggest.completeFunctionCalls": true,
+  "javascript.inlayHints.functionLikeReturnTypes.enabled": true,
+  "javascript.inlayHints.parameterNames.enabled": "all",
+  "javascript.inlayHints.parameterTypes.enabled": true,
+  "javascript.inlayHints.propertyDeclarationTypes.enabled": true,
+  "javascript.inlayHints.variableTypes.enabled": true,
+  "typescript.suggest.completeFunctionCalls": true,
+  "typescript.inlayHints.enumMemberValues.enabled": true,
+  "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+  "typescript.inlayHints.parameterNames.enabled": "all",
+  "typescript.inlayHints.parameterTypes.enabled": true,
+  "typescript.inlayHints.propertyDeclarationTypes.enabled": true,
+  "typescript.inlayHints.variableTypes.enabled": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // ── ESLint ────────────────────────────────────────────────────
+  "eslint.useFlatConfig": true,
+  "eslint.validate": [
+    "javascript", "javascriptreact", "typescript", "typescriptreact"
+  ],
+
+  // ── Files ─────────────────────────────────────────────────────
+  "files.associations": {
+    "*.css": "tailwindcss",
+    "*.html.j2": "jinja-html",
+    "*.zsh": "shellscript",
+    "*.azcli": "shellscript",
+    "Caddyfile": "caddyfile",
+    "Taskfile.yml": "yaml",
+    ".env.*": "dotenv"{% if cloud_provider == 'azure' %},
+    "**/ci/*.yml": "azure-pipelines"{% endif %}
+  },
+  "files.autoSave": "afterDelay",
   "files.trimTrailingWhitespace": true,
+  "files.eol": "\n",
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
   "files.exclude": {
@@ -26,202 +168,83 @@
     "**/*.egg-info": true
   },
 
+  // ── Workbench ─────────────────────────────────────────────────
+  "workbench.iconTheme": "vscode-icons",
+  "workbench.panel.defaultLocation": "right",
+  "workbench.colorCustomizations": {
+    "editorRuler.foreground": "#FF69B4"
+  },
+  "workbench.editor.closeOnFileDelete": true,
+
+  // ── vsicons ───────────────────────────────────────────────────
+  "vsicons.associations.folders": [
+    {
+      "icon": "test",
+      "extensions": ["tests"],
+      "format": "svg",
+      "overrides": "test"
+    }
+  ],
+
+  // ── Spell Checking ────────────────────────────────────────────
+  "cSpell.language": "en,da",
+
+  // ── TOML ──────────────────────────────────────────────────────
+  "evenBetterToml.formatter.arrayAutoCollapse": true,
+  "evenBetterToml.formatter.arrayAutoExpand": true,
+
+  // ── Extensions ────────────────────────────────────────────────
+  "extensions.ignoreRecommendations": true,
+
+  // ── Copilot / Chat ────────────────────────────────────────────
+  "chat.instructionsFilesLocations": {
+    ".github/instructions": true,
+    ".claude/rules": true
+  },
+  "chat.agent.maxRequests": 250,
+  "chat.detectParticipant.enabled": false,
+  "chat.useAgentSkills": true,
+  "github.copilot.chat.codesearch.enabled": true,
+  "github.copilot.chat.alternateGptPrompt.enabled": true,
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.nextEditSuggestions.allowWhitespaceOnlyChanges": false,
+
+  // ── Search Exclusions ─────────────────────────────────────────
   "search.exclude": {
     "**/node_modules": true,
     "**/dist": true,
-    "**/coverage": true,
-    "**/.vite": true,
-    "pnpm-lock.yaml": true,
-    "uv.lock": true,
     "**/__pycache__": true,
     "**/.venv": true,
-    "**/htmlcov": true
-  },
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.formatOnSave": true,
-    "editor.tabSize": 4,
-    "editor.codeActionsOnSave": {
-      "source.fixAll.ruff": "explicit",
-      "source.organizeImports.ruff": "explicit"
-    }
-  },
-  "python.analysis.typeCheckingMode": "standard",
-  "python.analysis.autoImportCompletions": true,
-  "python.analysis.diagnosticMode": "workspace",
-  "python.defaultInterpreterPath": "./.venv/bin/python",
-  "python.analysis.extraPaths": ["${workspaceFolder}/src"],
-  "python.testing.cwd": "${workspaceFolder}",
-  "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["tests", "-q", "--tb=short"],
-
-  "ruff.lineLength": 88,
-  "ruff.lint.args": ["--config=pyproject.toml"],
-  "ruff.format.args": ["--config=pyproject.toml"],
-
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
-  },
-  "[html]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
-  },
-  "[css]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
-  },
-  "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
-  },
-  "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
-  },
-  "[yaml]": {
-    "editor.defaultFormatter": "redhat.vscode-yaml",
-    "editor.tabSize": 2
-  },
-  "[toml]": {
-    "editor.defaultFormatter": "tamasfe.even-better-toml"
-  },
-  "[markdown]": {
-    "editor.wordWrap": "on",
-    "editor.quickSuggestions": {
-      "comments": "off",
-      "strings": "off",
-      "other": "off"
-    }
+    "**/logs": true,
+    "**/htmlcov": true,
+    "**/.ruff_cache": true,
+    "**/.mypy_cache": true,
+    "**/.pytest_cache": true,
+    "**/pnpm-lock.yaml": true,
+    "**/uv.lock": true
   },
 
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
-    "source.fixAll.ruff": "explicit",
-    "source.organizeImports.ruff": "explicit",
-    "source.organizeImports": "never"
-  },
-
-  "workbench.iconTheme": "material-icon-theme",
-  "material-icon-theme.folders.associations": {
-    "domain": "rules",
-    "application": "app",
-    "infrastructure": "server",
-    "presentation": "views",
-    "adapters": "plugin",
-    "repositories": "database",
-    "use_cases": "functions",
-    "commands": "command",
-    "queries": "search",
-    "dto": "mappings",
-    "events": "event",
-    "event_handlers": "handler",
-    "factories": "tools",
-    "policies": "guard",
-    "ports": "interface",
-    "workflows": "flow",
-    "value_objects": "class",
-    "entities": "model",
-    "services": "middleware",
-    "mcp": "connection",
-    "rag": "search",
-    "llm": "ai",
-    "ai": "robot",
-    "prompts": "messages",
-    "resources": "assets",
-    "testing": "test",
-    "utils": "utils",
-    "core": "core",
-    "db": "database",
-    "orm": "database",
-    "mappers": "mappings",
-    "uow": "context",
-    "di": "container",
-    "persistence": "database",
-    "cli": "console",
-    "api": "routes",
-    "queue": "queue",
-    "registry": "keys",
-    "fixtures": "mock",
-    "mocks": "mock",
-    "unit": "test",
-    "integration": "test",
-    "property": "test",
-    "performance": "benchmark",
-    "strategies": "config",
-    "managers": "admin",
-    "handlers": "handler",
-    "controllers": "controller",
-    "models": "class",
-    "schemas": "mappings",
-    "validators": "guard",
-    "config": "settings",
-    "common": "shared",
-    "clauses": "rules",
-    "workers": "queue",
-    "http": "connection",
-    "middleware": "middleware",
-    "middlewares": "middleware",
-    "tasks": "tasks",
-    "scripts": "scripts"
-  },
-  "material-icon-theme.files.associations": {
-    "naming_registry.json": "keys",
-    "registry_constants.py": "keys",
-    "registry_constants.ts": "keys",
-    "registry_constants.js": "keys",
-    "Taskfile.yml": "taskfile",
-    "compose.yaml": "docker",
-    "compose.dev.yaml": "docker",
-    "Caddyfile": "caddy",
-    "tox.ini": "test",
-    "conftest.py": "test",
-    "feature_flags.py": "lock",
-    "message_bus.py": "event",
-    "bootstrap.py": "rocket"
-  },
-
-  "docker.composeCommand": "{{ container_runtime }} compose",
-
+  // ── CSS ───────────────────────────────────────────────────────
   "css.validate": true,
   "css.lint.unknownAtRules": "ignore",
 
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
-
-  "eslint.useFlatConfig": true,
-  "eslint.validate": [
-    "javascript", "javascriptreact", "typescript", "typescriptreact"
-  ],
-
+  // ── Vitest ────────────────────────────────────────────────────
   "vitest.vitestPackagePath": "${workspaceFolder}/frontend/node_modules/vitest/package.json",
 {% if use_playwright %}
+  // ── Playwright ────────────────────────────────────────────────
   "playwright.reuseBrowser": true,
   "playwright.configs": ["frontend/playwright.config.ts"],
 {% endif %}
-
-  "terminal.integrated.defaultProfile.linux": "zsh",
-  "terminal.integrated.defaultProfile.osx": "zsh",
-  "terminal.integrated.defaultProfile.windows": "Git Bash",
-
+  // ── Git ───────────────────────────────────────────────────────
   "git.enableSmartCommit": true,
   "git.confirmSync": false,
   "git.autofetch": true,
 
+  // ── Emmet ─────────────────────────────────────────────────────
   "emmet.includeLanguages": {
     "jinja-html": "html"
   },
 
-  "files.associations": {
-    "*.html.j2": "jinja-html",
-    "*.zsh": "shellscript",
-    "*.azcli": "shellscript",
-    "Caddyfile": "caddyfile",
-    "Taskfile.yml": "yaml",
-    ".env.*": "dotenv"
-  }
+  // ── Container ─────────────────────────────────────────────────
+  "docker.composeCommand": "{{ container_runtime }} compose"
 }

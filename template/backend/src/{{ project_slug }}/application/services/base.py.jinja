@@ -1,0 +1,28 @@
+"""Base application service with common patterns."""
+
+from __future__ import annotations
+
+import structlog
+
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+__all__ = ["BaseService"]
+
+
+class BaseService:
+    """Base service providing unit of work and logging.
+
+    All application services should inherit from this
+    to get consistent transactional behavior.
+    """
+
+    def __init__(self, *, uow: UnitOfWork) -> None:
+        """Initialize service with unit of work.
+
+        Args:
+            uow (UnitOfWork): Unit of work for transactional boundaries.
+        """
+        self._uow = uow
+        self._logger: structlog.stdlib.BoundLogger = structlog.get_logger(
+            f"{__name__}.{self.__class__.__name__}"
+        )

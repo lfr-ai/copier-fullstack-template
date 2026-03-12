@@ -7,7 +7,7 @@ services:
       - ..:/workspace:cached
     command: sleep infinity
     environment:
-      - APP_ENVIRONMENT=local
+      - {{ project_slug | upper }}_ENVIRONMENT=local
 {%- if use_redis %}
 
   redis:

@@ -1,0 +1,71 @@
+"""User API response and request schemas."""
+
+from __future__ import annotations
+
+from typing import Annotated
+
+from pydantic import Field
+
+from {{ project_slug }}.core.constants import (
+    DISPLAY_NAME_MAX_LENGTH,
+    DISPLAY_NAME_MIN_LENGTH,
+    EMAIL_MAX_LENGTH,
+    EMAIL_MIN_LENGTH,
+    MIN_PASSWORD_LENGTH,
+    PASSWORD_MAX_LENGTH,
+)
+
+from .base import BaseSchema
+
+__all__ = ["CreateUserRequest", "UserResponse"]
+
+
+class UserResponse(BaseSchema):
+    """User API response schema."""
+
+    id: Annotated[str, Field(
+        ...,
+        description="User identifier",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
+    )]
+    email: Annotated[str, Field(
+        ...,
+        description="User email address",
+        examples=["user@example.com"],
+    )]
+    display_name: Annotated[str, Field(
+        ...,
+        description="User display name",
+        examples=["Jane Doe"],
+    )]
+    is_active: Annotated[bool, Field(
+        default=True,
+        description="Whether user is active",
+        examples=[True],
+    )]
+
+
+class CreateUserRequest(BaseSchema):
+    """User creation request schema."""
+
+    email: Annotated[str, Field(
+        ...,
+        min_length=EMAIL_MIN_LENGTH,
+        max_length=EMAIL_MAX_LENGTH,
+        description="User email address",
+        examples=["user@example.com"],
+    )]
+    display_name: Annotated[str, Field(
+        ...,
+        min_length=DISPLAY_NAME_MIN_LENGTH,
+        max_length=DISPLAY_NAME_MAX_LENGTH,
+        description="User display name",
+        examples=["Jane Doe"],
+    )]
+    password: Annotated[str, Field(
+        ...,
+        min_length=MIN_PASSWORD_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+        description="User password",
+        examples=["securepassword123"],
+    )]

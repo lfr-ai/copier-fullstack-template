@@ -1,0 +1,164 @@
+"""Unit tests for common API schemas."""
+
+from __future__ import annotations
+
+import pytest
+from pydantic import ValidationError
+
+from {{ project_slug }}.core.enums import ServiceStatus, SortOrder
+from {{ project_slug }}.ports.api.schemas.error_response import ErrorDetail, ErrorResponse
+from {{ project_slug }}.ports.api.schemas.health import DependencyHealth, HealthResponse
+from {{ project_slug }}.ports.api.schemas.pagination import PaginatedResponse, PaginationParams
+from {{ project_slug }}.ports.api.schemas.sorting import SortParams
+
+
+class TestDependencyHealth:
+    """Test suite for DependencyHealth model."""
+
+    def test_minimal_fields(self) -> None:
+        """Verify model accepts only required fields."""
+        dep = DependencyHealth(name="database", status=ServiceStatus.HEALTHY)
+        assert dep.name == "database"
+        assert dep.status == ServiceStatus.HEALTHY
+        assert dep.latency_ms is None
+        assert dep.message is None
+
+    def test_all_fields(self) -> None:
+        """Verify model accepts all optional fields."""
+        dep = DependencyHealth(
+            name="redis",
+            status=ServiceStatus.DEGRADED,
+            latency_ms=12.5,
+            message="High latency",
+        )
+        assert dep.latency_ms == 12.5
+        assert dep.message == "High latency"
+
+    def test_negative_latency_rejected(self) -> None:
+        """Verify negative latency_ms raises ValidationError."""
+        with pytest.raises(ValidationError):
+            DependencyHealth(
+                name="db",
+                status=ServiceStatus.HEALTHY,
+                latency_ms=-1.0,
+            )
+
+
+class TestHealthResponse:
+    """Test suite for HealthResponse model."""
+
+    def test_defaults(self) -> None:
+        """Verify dependencies defaults to empty list."""
+        resp = HealthResponse(status=ServiceStatus.HEALTHY, version="1.0.0")
+        assert resp.dependencies == []
+
+    def test_with_dependencies(self) -> None:
+        """Verify nested dependencies serialize correctly."""
+        dep = DependencyHealth(name="db", status=ServiceStatus.HEALTHY)
+        resp = HealthResponse(
+            status=ServiceStatus.HEALTHY,
+            version="2.0.0",
+            dependencies=[dep],
+        )
+        assert len(resp.dependencies) == 1
+        assert resp.dependencies[0].name == "db"
+
+
+class TestPaginationParams:
+    """Test suite for PaginationParams model."""
+
+    def test_defaults(self) -> None:
+        """Verify sensible defaults (page=1, page_size=20)."""
+        params = PaginationParams()
+        assert params.page == 1
+        assert params.page_size == 20
+
+    def test_page_zero_rejected(self) -> None:
+        """Verify page < 1 raises ValidationError."""
+        with pytest.raises(ValidationError):
+            PaginationParams(page=0)
+
+    def test_page_size_over_100_rejected(self) -> None:
+        """Verify page_size > 100 raises ValidationError."""
+        with pytest.raises(ValidationError):
+            PaginationParams(page_size=101)
+
+
+class TestPaginatedResponse:
+    """Test suite for PaginatedResponse model."""
+
+    def test_valid_response(self) -> None:
+        """Verify generic paginated response serializes correctly."""
+        resp = PaginatedResponse[str](
+            items=["a", "b"],
+            total=10,
+            page=1,
+            page_size=2,
+            pages=5,
+        )
+        assert resp.items == ["a", "b"]
+        assert resp.total == 10
+
+    def test_negative_total_rejected(self) -> None:
+        """Verify total < 0 raises ValidationError."""
+        with pytest.raises(ValidationError):
+            PaginatedResponse[str](
+                items=[],
+                total=-1,
+                page=1,
+                page_size=20,
+                pages=0,
+            )
+
+
+class TestSortParams:
+    """Test suite for SortParams model."""
+
+    def test_defaults(self) -> None:
+        """Verify defaults (sort_by=None, sort_order=ASC)."""
+        params = SortParams()
+        assert params.sort_by is None
+        assert params.sort_order == SortOrder.ASC
+
+    def test_custom_values(self) -> None:
+        """Verify custom sort_by and order accepted."""
+        params = SortParams(sort_by="created_at", sort_order=SortOrder.DESC)
+        assert params.sort_by == "created_at"
+        assert params.sort_order == SortOrder.DESC
+
+
+class TestErrorDetail:
+    """Test suite for ErrorDetail model."""
+
+    def test_minimal(self) -> None:
+        """Verify only required message field needed."""
+        detail = ErrorDetail(message="Something went wrong")
+        assert detail.field is None
+        assert detail.code is None
+
+    def test_all_fields(self) -> None:
+        """Verify all fields accepted."""
+        detail = ErrorDetail(field="email", message="Required", code="REQUIRED")
+        assert detail.field == "email"
+        assert detail.code == "REQUIRED"
+
+
+class TestErrorResponse:
+    """Test suite for ErrorResponse model."""
+
+    def test_minimal(self) -> None:
+        """Verify response with only required fields."""
+        resp = ErrorResponse(status=400, message="Bad Request")
+        assert resp.errors == []
+        assert resp.request_id is None
+
+    def test_with_errors(self) -> None:
+        """Verify response with nested error details."""
+        resp = ErrorResponse(
+            status=422,
+            message="Validation failed",
+            errors=[ErrorDetail(field="email", message="Invalid")],
+            request_id="req-123",
+        )
+        assert len(resp.errors) == 1
+        assert resp.request_id == "req-123"
