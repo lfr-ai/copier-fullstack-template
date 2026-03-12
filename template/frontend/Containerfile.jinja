@@ -1,0 +1,48 @@
+
+FROM node:{{ node_version }}-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+RUN pnpm build
+
+FROM node:{{ node_version }}-alpine AS dev
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["pnpm", "dev", "--host"]
+
+FROM node:{{ node_version }}-alpine AS prod
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@9 --activate && \
+    pnpm add -g serve
+
+COPY --from=builder /app/dist /app/dist
+
+RUN addgroup -g 1000 -S appuser && \
+    adduser -u 1000 -S appuser -G appuser
+
+USER appuser
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+
+CMD ["serve", "-s", "dist", "-l", "3000"]

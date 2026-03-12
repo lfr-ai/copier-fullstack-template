@@ -1,0 +1,77 @@
+
+services:
+  app:
+    build:
+      target: prod
+    image: {{ project_slug }}-app:latest
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ["/tmp", "/app/logs"]
+    environment:
+      {{ project_slug | upper }}_ENVIRONMENT: production
+      {{ project_slug | upper }}_LOG_LEVEL: WARNING
+    deploy:
+      resources:
+        limits:
+          cpus: "${APP_CPU_LIMIT:-2.0}"
+          memory: ${APP_MEMORY_LIMIT:-1024M}
+{%- if use_celery %}
+
+  worker:
+    build:
+      target: prod
+    image: {{ project_slug }}-app:latest
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ["/tmp", "/app/logs"]
+    environment:
+      {{ project_slug | upper }}_ENVIRONMENT: production
+      {{ project_slug | upper }}_LOG_LEVEL: WARNING
+    deploy:
+      resources:
+        limits:
+          cpus: "${WORKER_CPU_LIMIT:-1.0}"
+          memory: ${WORKER_MEMORY_LIMIT:-512M}
+{%- endif %}
+
+{%- if use_caddy %}
+
+  frontend:
+    deploy:
+      replicas: 0
+
+  caddy:
+    build:
+      context: .
+      dockerfile: caddy/Containerfile
+    image: {{ project_slug }}-caddy:latest
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    profiles: []  # override gateway profile from base compose.yml
+    environment:
+      CADDY_DOMAIN: ${CADDY_DOMAIN:?CADDY_DOMAIN is required in production}
+      BACKEND_PORT: "8000"
+      FRONTEND_PORT: "3000"
+{%- else %}
+
+  frontend:
+    build:
+      target: prod
+    image: {{ project_slug }}-frontend:latest
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+{%- endif %}
+{%- if use_redis %}
+
+  redis:
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+{%- endif %}
+{%- if database_backend == "postgresql" %}
+
+  db:
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+{%- endif %}

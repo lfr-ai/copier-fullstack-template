@@ -1,0 +1,138 @@
+---
+description: Testing conventions, patterns, and structure for the backend test suite
+applyTo: "backend/tests/**/*.py"
+---
+
+
+
+```
+backend/tests/
+├── conftest.py              # Root fixtures (DB session, engine, app client) — defined ONCE
+├── unit/                    # Fast, isolated, no I/O
+│   ├── core/                # Entities, VOs, events, errors, ports
+│   ├── application/         # Services, DTOs, commands, queries, mappers, tasks
+│   ├── adapters/            # Repositories (mocked session), cache, messaging, auth
+│   ├── ports/               # App factories, middleware, error handlers
+│   ├── utils/               # Enums, validators, logger, retry, date, string, crypto
+│   └── config/              # Settings, celery config, DI container
+├── integration/             # Real DB, real Redis, real adapters
+├── property/                # Hypothesis property-based tests
+├── performance/             # Benchmarks
+├── factories/               # Per-entity test data factories
+└── utils/                   # assertion_helpers.py, mock_builder.py, fixture_factory.py
+```
+
+
+| Element         | Pattern                                       |
+| --------------- | --------------------------------------------- |
+| Test files      | `test_<module_name>.py`                       |
+| Test classes    | `TestClassName` (no `unittest.TestCase`)      |
+| Test functions  | `test_<action>_<scenario>_<expected_outcome>` |
+
+```python
+def test_create_user_with_valid_email_returns_user_entity() -> None: ...
+def test_authenticate_with_expired_token_raises_auth_error() -> None: ...
+
+def test_user(): ...
+def test_1(): ...
+```
+
+
+EVERY source module MUST have corresponding test(s):
+
+| Source                              | Test                                          |
+| ----------------------------------- | --------------------------------------------- |
+| `core/base.py`                     | `unit/core/test_base.py`                      |
+| `core/errors.py`                   | `unit/core/test_errors.py`                    |
+| `core/ports.py`                    | `unit/core/test_ports.py`                     |
+| `core/entities/*`                  | `unit/core/test_*_entity.py`                  |
+| `core/value_objects/*`             | `unit/core/test_value_objects.py`             |
+| `core/events/*`                    | `unit/core/test_events.py`                    |
+| `core/enums/*`                     | `unit/core/test_enums.py`                     |
+| `application/services/*`          | `unit/application/test_*_service.py`          |
+| `application/dtos/*`              | `unit/application/test_*_dto.py`              |
+| `application/mappers/*`           | `unit/application/test_*_mapper.py`           |
+| `adapters/persistence/repos/*`    | `unit/adapters/test_*_repository.py`          |
+| `adapters/cache/*`                | `unit/adapters/test_*_cache.py`               |
+| `adapters/messaging/*`            | `unit/adapters/test_*_event_bus.py`           |
+| `ports/api/routes/*`              | `integration/test_api_routes.py`              |
+| `ports/api/error_handlers.py`     | `unit/ports/test_error_handlers.py`           |
+| `utils/*`                          | `unit/utils/test_*.py` (one per util module)  |
+| `config/settings.py`              | `unit/config/test_settings.py`                |
+
+Target: ≥ 90% line coverage on `backend/src/{{ project_slug }}/`
+
+
+```python
+@pytest.mark.unit          # Fast, isolated, no I/O
+@pytest.mark.integration   # Real DB or external service
+@pytest.mark.property      # Hypothesis property-based
+@pytest.mark.performance   # Benchmarks
+@pytest.mark.slow          # Takes > 5 seconds
+@pytest.mark.smoke         # Critical path — must pass before deploy
+```
+
+Configure in `pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+markers = [
+    "unit: Fast, isolated, no I/O",
+    "integration: Real adapters and services",
+    "property: Hypothesis property-based",
+    "performance: Benchmarks",
+    "slow: Tests > 5 seconds",
+    "smoke: Critical path",
+]
+```
+
+
+- ALL test functions: `-> None` return type
+- ALL tests: AAA pattern (Arrange, Act, Assert) — blank line between each
+- ALL async tests: `pytest-asyncio` correctly configured
+- ZERO `print()` — use `capsys` or assertions
+- ZERO `time.sleep` — mock or async wait
+- Edge cases: empty inputs, `None`, boundary values, invalid types
+- Exception paths: `pytest.raises(ExcType, match=...)` with match verification
+- `*` enforcement: tests confirming positional usage raises `TypeError`
+
+
+- `conftest.py`: `async_session`, `async_engine`, `test_client` — defined ONCE at root
+- `@pytest.fixture` with explicit scope (`function` default, `session` for DB engine)
+- Fixture names describe what they return: `active_user`, `expired_token`
+- Database fixtures transactional (rollback after each test)
+- Prefer `factory_boy` factories over raw fixture data
+
+
+- Mock at the boundary (ports/interfaces), NEVER inside core
+- Prefer dependency injection over monkey-patching
+- Never mock what you don't own — wrap external libraries first
+- ZERO real DB/Redis in unit tests
+
+
+```python
+from hypothesis import given, strategies as st
+
+@given(st.sampled_from(MyEnum))
+def test_enum_round_trip(member: MyEnum) -> None:
+    assert MyEnum(member.value) == member
+```
+
+- `tests/property/test_value_objects.py`: strategies for all VOs
+- `@given(st.sampled_from(MyEnum))` for enum-typed inputs
+- Configure `max_examples` and `deadline` for CI
+- Test invariants (idempotency, round-trips, commutativity), not single examples
+
+
+- `tests/utils/assertion_helpers.py`: `assert_domain_error()`, custom helpers
+- `tests/utils/mock_builder.py`: `build_mock_repository()`, `build_mock_cache()`
+- `tests/utils/fixture_factory.py`: `build_entity_fixture()` with defaults + overrides
+- `tests/factories/`: per-entity test data factories
+
+
+- Remove tests testing framework behavior (not your code)
+- Remove tests only testing mock configuration
+- Remove tests with no assertions
+- Fix tests passing for wrong reasons (swallowed exceptions)
+- Fix order-dependent tests
+- Fix tests sharing mutable state

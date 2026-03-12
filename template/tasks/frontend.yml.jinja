@@ -13,6 +13,18 @@ tasks:
     cmds:
       - pnpm build
 
+  build:staging:
+    desc: "Build for staging"
+    dir: frontend
+    cmds:
+      - pnpm build:staging
+
+  build:test:
+    desc: "Build for test"
+    dir: frontend
+    cmds:
+      - pnpm build:test
+
   install:
     desc: "Install frontend dependencies"
     dir: frontend
@@ -23,7 +35,7 @@ tasks:
     desc: "Run unit tests"
     dir: frontend
     cmds:
-      - pnpm test:unit
+      - pnpm test
 
   test:coverage:
     desc: "Run tests with coverage"

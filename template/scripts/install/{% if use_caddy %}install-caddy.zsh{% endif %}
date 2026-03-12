@@ -1,0 +1,152 @@
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+
+CADDY_MIN_VERSION="2.9"
+
+detect_platform() {
+    emulate -L zsh
+
+    local os_type
+    os_type="$(uname -s)"
+
+    case "${os_type}" in
+        Linux)
+            if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+                print "wsl"
+            else
+                print "linux"
+            fi
+            ;;
+        Darwin) print "macos" ;;
+        *)      print "unknown" ;;
+    esac
+}
+
+check_existing() {
+    emulate -L zsh
+
+    if command -v caddy &>/dev/null; then
+        local version
+        version="$(caddy version 2>/dev/null | head -1 | sed 's/v//' | cut -d' ' -f1)"
+        print "Caddy already installed: v${version}"
+        return 0
+    fi
+    return 1
+}
+
+install_caddy_linux() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    print "Installing Caddy on Linux..."
+
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null || true
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y caddy
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y 'dnf-command(copr)' 2>/dev/null || true
+        sudo dnf copr enable -y @caddy/caddy
+        sudo dnf install -y caddy
+    elif command -v yum &>/dev/null; then
+        sudo yum install -y yum-plugin-copr 2>/dev/null || true
+        sudo yum copr enable -y @caddy/caddy
+        sudo yum install -y caddy
+    elif command -v pacman &>/dev/null; then
+        sudo pacman -Syu --noconfirm caddy
+    else
+        print "Unsupported package manager. Installing from binary..."
+        install_caddy_binary
+        return
+    fi
+
+    print "Caddy installed successfully via package manager"
+}
+
+install_caddy_binary() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    local arch
+    arch="$(uname -m)"
+    case "${arch}" in
+        x86_64)  arch="amd64" ;;
+        aarch64) arch="arm64" ;;
+        armv7l)  arch="armv7" ;;
+    esac
+
+    local os="linux"
+    [[ "$(uname -s)" == "Darwin" ]] && os="mac"
+
+    local url="https://caddyserver.com/api/download?os=${os}&arch=${arch}"
+    local dest="/usr/local/bin/caddy"
+
+    print "Downloading Caddy binary..."
+    curl -fsSL "${url}" -o /tmp/caddy
+    chmod +x /tmp/caddy
+    sudo mv /tmp/caddy "${dest}"
+    print "Caddy binary installed to ${dest}"
+}
+
+install_caddy_macos() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    print "Installing Caddy on macOS..."
+
+    if command -v brew &>/dev/null; then
+        brew install caddy
+    else
+        print "Homebrew not found. Installing from binary..."
+        install_caddy_binary
+    fi
+
+    print "Caddy installed successfully"
+}
+
+verify_install() {
+    emulate -L zsh
+
+    if command -v caddy &>/dev/null; then
+        print ""
+        print "Caddy version: $(caddy version 2>/dev/null)"
+        print "Caddy installed successfully"
+        return 0
+    else
+        print "ERROR: Caddy installation could not be verified"
+        return 1
+    fi
+}
+
+main() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    print "=== Caddy Reverse Proxy Installer ==="
+    print ""
+
+    if check_existing; then
+        print "Caddy is already installed, skipping."
+        return 0
+    fi
+
+    local platform
+    platform="$(detect_platform)"
+
+    case "${platform}" in
+        linux|wsl) install_caddy_linux ;;
+        macos)     install_caddy_macos ;;
+        *)
+            print "Unsupported platform: ${platform}"
+            print "Install manually: https://caddyserver.com/docs/install"
+            return 1
+            ;;
+    esac
+
+    verify_install
+}
+
+main "$@"

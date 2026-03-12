@@ -1,9 +1,28 @@
-# Development overrides
 services:
   app:
+    build:
+      target: dev
     volumes:
-      - ./src:/app/src
+      - ./backend/src:/app/src
+      - ./data:/app/data
+      - ./logs:/app/logs
     environment:
-      APP_ENVIRONMENT: local
+      {{ project_slug | upper }}_ENVIRONMENT: local
       {{ project_slug | upper }}_DEBUG: "true"
+      {{ project_slug | upper }}_LOG_LEVEL: DEBUG
     command: ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  frontend:
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+{%- if use_celery %}
+
+  worker:
+    build:
+      target: dev
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      {{ project_slug | upper }}_DEBUG: "true"
+{%- endif %}

@@ -1,50 +1,49 @@
 {
   // Renovate configuration — https://docs.renovatebot.com/configuration-options/
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    ":semanticCommits",
-    "docker:enableMajor",
-    "group:allNonMajor"
-  ],
-  "labels": ["dependencies"],
-  "rangeStrategy": "bump",
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security"]
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:recommended', ':semanticCommits', 'docker:enableMajor', 'group:allNonMajor'],
+  labels: ['dependencies'],
+  rangeStrategy: 'bump',
+  timezone: 'UTC',
+  schedule: ['after 6am and before 9am every weekday'],
+  prConcurrentLimit: 5,
+  vulnerabilityAlerts: {
+    enabled: true,
+    labels: ['security'],
   },
-  "packageRules": [
+  packageRules: [
     {
-      "matchManagers": ["pip_requirements", "pep621"],
-      "groupName": "python dependencies",
-      "automerge": true,
-      "matchUpdateTypes": ["minor", "patch"]
+      matchManagers: ['pip_requirements', 'pep621'],
+      groupName: 'python dependencies',
+      automerge: true,
+      matchUpdateTypes: ['minor', 'patch'],
     },
     {
-      "matchManagers": ["npm"],
-      "groupName": "frontend dependencies",
-      "automerge": true,
-      "matchUpdateTypes": ["minor", "patch"]
+      matchManagers: ['npm'],
+      groupName: 'frontend dependencies',
+      automerge: true,
+      matchUpdateTypes: ['minor', 'patch'],
     },
     {
-      "matchManagers": ["github-actions"],
-      "groupName": "github actions",
-      "automerge": true
+      matchManagers: ['github-actions'],
+      groupName: 'github actions',
+      automerge: true,
+      matchUpdateTypes: ['minor', 'patch'],
     },
     {
-      "matchManagers": ["docker-compose", "dockerfile"],
-      "groupName": "container images",
-      "automerge": false
+      matchManagers: ['docker-compose', 'dockerfile'],
+      groupName: 'container images',
+      automerge: false,
     },
     // Automerge ruff and ty patch/minor updates
     {
-      "matchPackageNames": ["ruff", "astral-sh/ruff-pre-commit", "ty"],
-      "automerge": true,
-      "matchUpdateTypes": ["minor", "patch"]
+      matchPackageNames: ['ruff', 'astral-sh/ruff-pre-commit', 'ty'],
+      automerge: true,
+      matchUpdateTypes: ['minor', 'patch'],
     },
     {
-      "matchUpdateTypes": ["major"],
-      "automerge": false
-    }
-  ]
+      matchUpdateTypes: ['major'],
+      automerge: false,
+    },
+  ],
 }

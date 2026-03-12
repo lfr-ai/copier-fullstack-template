@@ -1,0 +1,41 @@
+"""Settings module with environment-based factory."""
+
+from __future__ import annotations
+
+__all__ = ["get_settings"]
+
+import os
+from functools import lru_cache
+from typing import Final
+
+from {{ project_slug }}.config.settings.base import BaseAppSettings
+from {{ project_slug }}.config.settings.dev import DevSettings
+from {{ project_slug }}.config.settings.local import LocalSettings
+from {{ project_slug }}.config.settings.production import ProductionSettings
+from {{ project_slug }}.config.settings.staging import StagingSettings
+from {{ project_slug }}.config.settings.test import TestSettings
+from {{ project_slug }}.core.enums.environment import Environment
+
+_SETTINGS_MAP: Final[dict[Environment, type[BaseAppSettings]]] = {
+    Environment.LOCAL: LocalSettings,
+    Environment.DEV: DevSettings,
+    Environment.TEST: TestSettings,
+    Environment.STAGING: StagingSettings,
+    Environment.PRODUCTION: ProductionSettings,
+}
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> BaseAppSettings:
+    """Create settings instance based on environment variable.
+
+    Reads {{ project_slug | upper }}_ENVIRONMENT to select the appropriate settings class.
+    Cached so a single instance is reused throughout the application.
+
+    Returns:
+        BaseAppSettings: Configured application settings.
+    """
+    env_name = os.getenv("{{ project_slug | upper }}_ENVIRONMENT", "local")
+    environment = Environment(env_name.lower())
+    settings_class = _SETTINGS_MAP.get(environment, LocalSettings)
+    return settings_class()

@@ -1,0 +1,47 @@
+"""FastAPI dependency-injection helpers.
+
+Centralise reusable ``Depends(...)`` callables here so that route
+modules stay thin.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Annotated
+
+from fastapi import Depends, Request
+
+if TYPE_CHECKING:
+    from {{ project_slug }}.application.services.user_service import UserService
+    from {{ project_slug }}.config.settings.base import BaseAppSettings
+
+__all__ = ["SettingsDep", "UserServiceDep"]
+
+
+def _get_settings(request: Request) -> "BaseAppSettings":
+    """Retrieve the settings instance stored on ``app.state``.
+
+    Args:
+        request (Request): Incoming HTTP request.
+
+    Returns:
+        BaseAppSettings: Application settings attached to ``app.state``.
+    """
+    return request.app.state.settings  # type: ignore[return-value]
+
+
+def _get_user_service(request: Request) -> "UserService":
+    """Retrieve a ``UserService`` from the DI container.
+
+    Args:
+        request (Request): Incoming HTTP request.
+
+    Returns:
+        UserService: Service instance from the DI container.
+    """
+    from {{ project_slug }}.ports.container import get_container
+
+    return get_container().user_service()
+
+
+SettingsDep = Annotated["BaseAppSettings", Depends(_get_settings)]
+UserServiceDep = Annotated["UserService", Depends(_get_user_service)]

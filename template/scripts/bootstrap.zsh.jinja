@@ -1,107 +1,129 @@
-#!/usr/bin/env zsh
 emulate -L zsh
-setopt PIPE_FAIL ERR_EXIT
+setopt PIPE_FAIL ERR_EXIT NO_UNSET
 
-# Full project bootstrap: install all dependencies and verify environment
 
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="${SCRIPT_DIR:h}"
 
 check_command() {
-    emulate -L zsh
-    local cmd="${1}"
-    local install_hint="${2}"
+emulate -L zsh
+local cmd="${1}"
+local install_hint="${2}"
 
-    if ! command -v "${cmd}" &>/dev/null; then
-        echo "ERROR: ${cmd} not found"
-        echo "  Install with: ${install_hint}"
-        return 1
-    fi
+if ! command -v "${cmd}" &>/dev/null; then
+print "ERROR: ${cmd} not found"
+print " Install with: ${install_hint}"
+return 1
+fi
 }
 
 verify_prerequisites() {
-    emulate -L zsh
-    setopt PIPE_FAIL ERR_EXIT
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
 
-    local missing_count=0
+local missing_count=0
 
-    echo "=== Checking prerequisites ==="
+print "=== Checking prerequisites ==="
 
-    check_command "git" "https://git-scm.com/downloads" || ((missing_count++))
-    check_command "task" "https://taskfile.dev/installation" || ((missing_count++))
-    check_command "uv" "curl -LsSf https://astral.sh/uv/install.sh | sh" || ((missing_count++))
-    check_command "node" "https://nodejs.org/" || ((missing_count++))
-    check_command "pnpm" "corepack enable && corepack prepare pnpm@latest --activate" || ((missing_count++))
+check_command "git" "https://git-scm.com/downloads" || ((missing_count++))
+check_command "task" "https://taskfile.dev/installation" || ((missing_count++))
+check_command "uv" "curl -LsSf https://astral.sh/uv/install.sh | sh" || ((missing_count++))
+check_command "node" "https://nodejs.org/" || ((missing_count++))
+check_command "pnpm" "corepack enable && corepack prepare pnpm@latest --activate" || ((missing_count++))
+check_command "{{ container_runtime }}" "zsh scripts/install/install-container.zsh" || ((missing_count++))
+{% if use_caddy %}
+check_command "caddy" "zsh scripts/install/install-caddy.zsh" || ((missing_count++))
+{% endif %}
+{% if cloud_provider == "azure" %}
+check_command "az" "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash" || ((missing_count++))
+{% endif %}
 
-    if (( missing_count > 0 )); then
-        echo ""
-        echo "ERROR: ${missing_count} prerequisite(s) missing"
-        return 1
-    fi
+if (( missing_count > 0 )); then
+print ""
+print "ERROR: ${missing_count} prerequisite(s) missing"
+print " Run: zsh scripts/install/install-all.zsh"
+return 1
+fi
 
-    echo "All prerequisites satisfied"
-    echo ""
+print "All prerequisites satisfied"
+print ""
 }
 
 install_dependencies() {
-    emulate -L zsh
-    setopt PIPE_FAIL ERR_EXIT
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
 
-    echo "=== Installing backend dependencies ==="
-    cd "${PROJECT_ROOT}"
-    uv sync --all-groups
-    echo "Backend dependencies installed"
-    echo ""
+print "=== Installing backend dependencies ==="
+cd "${PROJECT_ROOT}/backend"
+uv sync --all-groups
+print "Backend dependencies installed"
+print ""
 
-    echo "=== Installing frontend dependencies ==="
-    cd "${PROJECT_ROOT}/frontend"
-    pnpm install --frozen-lockfile 2>/dev/null || pnpm install
-    echo "Frontend dependencies installed"
-    echo ""
+print "=== Installing frontend dependencies ==="
+cd "${PROJECT_ROOT}/frontend"
+pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+print "Frontend dependencies installed"
+print ""
+
+print "=== Setting up pre-commit hooks ==="
+cd "${PROJECT_ROOT}/backend"
+uv run pre-commit install
+uv run pre-commit install --hook-type commit-msg
+print "Pre-commit hooks installed"
+print ""
 }
 
 setup_environment() {
-    emulate -L zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
 
-    cd "${PROJECT_ROOT}"
+cd "${PROJECT_ROOT}"
 
-    if [[ ! -f .env ]]; then
-        echo "=== Creating .env from .env.example ==="
-        cp .env.example .env
-        echo ".env created  review and update values"
-        echo ""
-    fi
+if [[ ! -f .env ]]; then
+print "=== Creating .env from .env.example ==="
+cp .env.example .env
+print ".env created review and update values"
+print ""
+fi
 }
 
 verify_setup() {
-    emulate -L zsh
+emulate -L zsh
+setopt PIPE_FAIL
 
-    echo "=== Environment Summary ==="
-    echo "Git:    $(git --version 2>/dev/null || echo 'NOT FOUND')"
-    echo "Task:   $(task --version 2>/dev/null || echo 'NOT FOUND')"
-    echo "UV:     $(uv --version 2>/dev/null || echo 'NOT FOUND')"
-    echo "Python: $(python3 --version 2>/dev/null || echo 'NOT FOUND')"
-    echo "Node:   $(node --version 2>/dev/null || echo 'NOT FOUND')"
-    echo "pnpm:   $(pnpm --version 2>/dev/null || echo 'NOT FOUND')"
-    echo ""
-    echo "Bootstrap complete. Run 'task dev' to start developing."
+print "=== Environment Summary ==="
+print "Git: $(git --version 2>/dev/null || print 'NOT FOUND')"
+print "Task: $(task --version 2>/dev/null || print 'NOT FOUND')"
+print "UV: $(uv --version 2>/dev/null || print 'NOT FOUND')"
+print "Python: $(python3 --version 2>/dev/null || print 'NOT FOUND')"
+print "Node: $(node --version 2>/dev/null || print 'NOT FOUND')"
+print "pnpm: $(pnpm --version 2>/dev/null || print 'NOT FOUND')"
+print "Container: $({{ container_runtime }} --version 2>/dev/null || print 'NOT FOUND')"
+{% if use_caddy %}
+print "Caddy: $(caddy version 2>/dev/null || print 'NOT FOUND')"
+{% endif %}
+{% if cloud_provider == "azure" %}
+print "Azure CLI: $(az version --output tsv 2>/dev/null | head -1 || print 'NOT FOUND')"
+{% endif %}
+print ""
+print "Bootstrap complete. Run 'task dev' to start developing."
 }
 
 main() {
-    emulate -L zsh
-    setopt PIPE_FAIL ERR_EXIT
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
 
-    cd "${PROJECT_ROOT}"
+cd "${PROJECT_ROOT}"
 
-    echo "========================================="
-    echo "  {{ project_name }}  Bootstrap"
-    echo "========================================="
-    echo ""
+print "========================================="
+print " {{ project_name }} Bootstrap"
+print "========================================="
+print ""
 
-    verify_prerequisites
-    setup_environment
-    install_dependencies
-    verify_setup
+verify_prerequisites
+setup_environment
+install_dependencies
+verify_setup
 }
 
 main "$@"

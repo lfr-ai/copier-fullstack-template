@@ -1,0 +1,54 @@
+"""Health check response schemas."""
+
+from __future__ import annotations
+
+from typing import Annotated
+
+from pydantic import Field
+
+from {{ project_slug }}.core.enums import ServiceStatus
+from {{ project_slug }}.ports.api.schemas.base import BaseSchema
+
+__all__ = ["DependencyHealth", "HealthResponse"]
+
+
+class DependencyHealth(BaseSchema):
+    """Health info for a single dependency (database, cache, etc.)."""
+
+    name: Annotated[str, Field(
+        description="Dependency name",
+        examples=["database", "redis"],
+    )]
+    status: Annotated[ServiceStatus, Field(
+        description="Health status of the dependency",
+        examples=[ServiceStatus.HEALTHY],
+    )]
+    latency_ms: Annotated[float | None, Field(
+        default=None,
+        ge=0,
+        description="Response latency in milliseconds",
+        examples=[12.5, 0.8],
+    )]
+    message: Annotated[str | None, Field(
+        default=None,
+        description="Optional diagnostic message",
+        examples=["Connection pool exhausted"],
+    )]
+
+
+class HealthResponse(BaseSchema):
+    """Aggregate health check response."""
+
+    status: Annotated[ServiceStatus, Field(
+        description="Overall service status",
+        examples=[ServiceStatus.HEALTHY],
+    )]
+    version: Annotated[str, Field(
+        description="Application version",
+        examples=["1.0.0", "2.3.1"],
+    )]
+    dependencies: Annotated[list[DependencyHealth], Field(
+        default_factory=list,
+        description="Health status of each dependency",
+        examples=[[{"name": "postgres", "status": "healthy", "latency_ms": 1.2}]],
+    )]

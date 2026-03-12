@@ -1,0 +1,57 @@
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+
+setup_devcontainer_cli() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    if command -v devcontainer &>/dev/null; then
+        print "devcontainer CLI already installed: $(devcontainer --version)"
+        return 0
+    fi
+
+    print "Installing devcontainer CLI..."
+
+    if command -v pnpm &>/dev/null; then
+        pnpm add -g @devcontainers/cli
+    elif command -v npm &>/dev/null; then
+        npm install -g @devcontainers/cli
+    else
+        print "ERROR: pnpm or npm required to install devcontainer CLI"
+        return 1
+    fi
+
+    print "devcontainer CLI installed: $(devcontainer --version)"
+}
+
+verify_devcontainer_config() {
+    emulate -L zsh
+
+    local config_path=".devcontainer/devcontainer.json"
+
+    if [[ ! -f "${config_path}" ]]; then
+        print "WARNING: ${config_path} not found"
+        return 1
+    fi
+
+    print "Devcontainer config found at ${config_path}"
+    print ""
+    print "To use:"
+    print "  1. Open this folder in VS Code"
+    print "  2. Press Ctrl+Shift+P -> 'Reopen in Container'"
+    print "  3. Or run: devcontainer up --workspace-folder ."
+}
+
+main() {
+    emulate -L zsh
+    setopt PIPE_FAIL ERR_EXIT
+
+    setup_devcontainer_cli
+    verify_devcontainer_config
+
+    print ""
+    print "Devcontainer setup complete"
+}
+
+main "$@"

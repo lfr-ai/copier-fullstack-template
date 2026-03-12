@@ -1,0 +1,44 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Description :
+# Grant a user or service principal access to an Azure Key Vault via
+# Key Vault Secrets Officer RBAC role assignment.
+#
+# Usage :
+# ./add-kv-user.azcli -v my-vault -u user@example.com
+# ./add-kv-user.azcli --vault my-vault --upn user@example.com --role "Key Vault Secrets User"
+
+zparseopts -F -- {v,-vault}:=vault {u,-upn}:=upn {r,-role}:=role
+
+: "${vault:?Usage: [-v vault-name|--vault vault-name]}"
+: "${upn:?Usage: [-u user-principal-name|--upn user-principal-name]}"
+
+readonly ARG_INDEX=2
+vault=${vault[$ARG_INDEX]}
+upn=${upn[$ARG_INDEX]}
+role=${role[$ARG_INDEX]:-"Key Vault Secrets Officer"}
+
+echo "Looking up Key Vault '${vault}' resource id..."
+kv_id=$(az keyvault show --name "$vault" --query id --output tsv)
+
+echo "Looking up principal id for '${upn}'..."
+principal_id=$(az ad user show --id "$upn" --query id --output tsv 2>/dev/null || \
+az ad sp show --id "$upn" --query id --output tsv 2>/dev/null)
+
+if [[ -z "$principal_id" ]]; then
+echo "ERROR: Could not find principal for '${upn}'." >&2
+exit 1
+fi
+
+echo "Assigning role '${role}' on Key Vault '${vault}' to '${upn}'..."
+az role assignment create \
+--role "$role" \
+--assignee-object-id "$principal_id" \
+--assignee-principal-type User \
+--scope "$kv_id" \
+--only-show-errors \
+--output none
+
+echo "Role '${role}' assigned to '${upn}' on Key Vault '${vault}'."

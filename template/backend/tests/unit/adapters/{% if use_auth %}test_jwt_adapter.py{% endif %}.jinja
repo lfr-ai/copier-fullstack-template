@@ -1,0 +1,113 @@
+{%- if use_auth %}
+"""Unit tests for JWT authentication adapter."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+
+import pytest
+from freezegun import freeze_time
+
+from {{ project_slug }}.adapters.auth.jwt_adapter import ALGORITHM, JWTAdapter, TokenPayload
+
+pytestmark = pytest.mark.unit
+
+_SECRET = "test-secret-key-for-testing-only"
+_EXPIRE_MINUTES = 30
+
+
+@pytest.fixture
+def jwt_adapter() -> JWTAdapter:
+"""Create JWTAdapter with test configuration."""
+return JWTAdapter(secret_key=_SECRET, access_token_expire_minutes=_EXPIRE_MINUTES)
+
+
+class TestJWTAdapterPassword:
+"""Test suite for password hashing and verification."""
+
+def test_hash_password_returns_hash(self, jwt_adapter: JWTAdapter) -> None:
+"""Verify hash_password returns a bcrypt hash."""
+hashed = jwt_adapter.hash_password("mysecret")
+assert hashed != "mysecret"
+assert hashed.startswith("$2b$") or hashed.startswith("$2a$")
+
+def test_verify_password_correct(self, jwt_adapter: JWTAdapter) -> None:
+"""Verify correct password passes verification."""
+hashed = jwt_adapter.hash_password("correct-password")
+assert jwt_adapter.verify_password(plain_password="correct-password", hashed_password=hashed) is True
+
+def test_verify_password_incorrect(self, jwt_adapter: JWTAdapter) -> None:
+"""Verify wrong password fails verification."""
+hashed = jwt_adapter.hash_password("correct-password")
+assert jwt_adapter.verify_password(plain_password="wrong-password", hashed_password=hashed) is False
+
+def test_hash_produces_unique_values(self, jwt_adapter: JWTAdapter) -> None:
+"""Verify hashing same password twice yields different hashes."""
+h1 = jwt_adapter.hash_password("same")
+h2 = jwt_adapter.hash_password("same")
+assert h1 != h2
+
+
+class TestJWTAdapterTokenCreation:
+"""Test suite for token creation."""
+
+def test_create_token_returns_string(self, jwt_adapter: JWTAdapter) -> None:
+"""Verify create_access_token returns a JWT string."""
+token = jwt_adapter.create_access_token("user@example.com")
+assert isinstance(token, str)
+assert len(token) > 0
+
+def test_create_token_is_decodable(self, jwt_adapter: JWTAdapter) -> None:
+"""Verify created token can be decoded back."""
+token = jwt_adapter.create_access_token("user@example.com")
+payload = jwt_adapter.decode_token(token)
+assert payload is not None
+assert payload.sub == "user@example.com"
+
+def test_token_uses_correct_algorithm(self) -> None:
+"""Verify ALGORITHM constant is HS256."""
+assert ALGORITHM == "HS256"
+
+
+class TestJWTAdapterTokenDecoding:
+"""Test suite for token decoding."""
+
+def test_decode_valid_token(self, jwt_adapter: JWTAdapter) -> None:
+"""Verify valid token decodes to TokenPayload."""
+token = jwt_adapter.create_access_token("alice")
+payload = jwt_adapter.decode_token(token)
+assert isinstance(payload, TokenPayload)
+assert payload.sub == "alice"
+assert isinstance(payload.exp, datetime)
+
+def test_decode_invalid_token_returns_none(self, jwt_adapter: JWTAdapter) -> None:
+"""Verify invalid token returns None."""
+result = jwt_adapter.decode_token("not-a-valid-jwt")
+assert result is None
+
+def test_decode_wrong_secret_returns_none(self) -> None:
+"""Verify token signed with different secret returns None."""
+adapter1 = JWTAdapter(secret_key="secret-a")
+adapter2 = JWTAdapter(secret_key="secret-b")
+token = adapter1.create_access_token("user")
+result = adapter2.decode_token(token)
+assert result is None
+
+@freeze_time("2025-01-01 12:00:00")
+def test_decode_expired_token_returns_none(self) -> None:
+"""Verify expired token returns None."""
+adapter = JWTAdapter(secret_key=_SECRET, access_token_expire_minutes=0)
+from jose import jwt as jose_jwt
+
+expire = datetime(2025, 1, 1, 11, 0, tzinfo=UTC) # 1 hour ago
+payload = {"sub": "user", "exp": expire}
+token = jose_jwt.encode(payload, _SECRET, algorithm=ALGORITHM)
+result = adapter.decode_token(token)
+assert result is None
+
+def test_token_payload_is_frozen(self) -> None:
+"""Verify TokenPayload is immutable."""
+payload = TokenPayload(sub="test", exp=datetime.now(tz=UTC))
+with pytest.raises(AttributeError):
+payload.sub = "changed" # type: ignore[misc]
+{%- endif %}

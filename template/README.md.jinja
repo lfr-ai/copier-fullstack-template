@@ -1,57 +1,96 @@
-# {{ project_name }}
 
 {{ project_description }}
 
-## Quick Start
 
-### Prerequisites
 
-- Python {{ python_version }}+
-- [UV](https://docs.astral.sh/uv/) package manager
-- [go-task](https://taskfile.dev/) task runner
-- [pnpm](https://pnpm.io/) for frontend
-- {{ container_runtime }} for containers
+| Tool | Version | Purpose | Auto-installed? |
+|------|---------|---------|-----------------|
+| Python | {{ python_version }}+ | Backend runtime | Yes (via `uv`) |
+| [uv](https://docs.astral.sh/uv/) | latest | Python package manager | Yes |
+| [go-task](https://taskfile.dev/) | 3.x | Task runner | Yes |
+| Node.js | {{ node_version }} LTS | Frontend runtime | Yes (via `fnm`) |
+| [pnpm](https://pnpm.io/) | 9.x | Node package manager | Yes (via `corepack`) |
+| {{ container_runtime | capitalize }} | latest | Container runtime | Yes |
+| [pre-commit](https://pre-commit.com/) | latest | Git hooks | Yes (via `uv`) |
+{% if use_caddy -%}
+| [Caddy](https://caddyserver.com/) | 2.9+ | Reverse proxy (HTTPS) | Yes |
+{% endif -%}
+{% if use_redis -%}
+| [Redis](https://redis.io/) | 7.x | Cache / message broker | Yes (container) |
+{% endif -%}
+{% if cloud_provider == "azure" -%}
+| [Azure CLI](https://aka.ms/InstallAzureCli) | latest | Azure management | Yes |
+{% endif -%}
 
-### Setup
+> **Don't have these?** Run `zsh scripts/install/install-all.zsh` to install **everything** automatically.
+> On **Windows**: run `.\scripts\install\install-all.ps1` first (as Administrator), then the zsh script in WSL.
+
 
 ```bash
-# Install dependencies
-task backend:dev
+zsh scripts/install/install-all.zsh   # installs Python, uv, Node, pnpm, Docker, etc.
+zsh scripts/bootstrap.zsh             # installs deps, pre-commit, creates .env
+task dev                               # start developing!
+```
 
-# Start development server
-uv run uvicorn {{ project_slug }}.main:app --reload
 
-# Or use containers
+```bash
+task setup
+
+task dev
+
+task dev:backend     # Backend with hot reload
+task dev:frontend    # Frontend with HMR
+
 task docker:up
 ```
 
-### Development Commands
 
 | Command | Description |
 |---------|-------------|
-| `task backend:dev` | Install Python dependencies |
-| `task backend:test` | Run test suite via tox |
-| `task backend:lint` | Run linters (Ruff) |
-| `task backend:format` | Auto-format code |
-| `task backend:typecheck` | Run type checker |
-| `task frontend:dev` | Start frontend dev server |
-| `task frontend:test` | Run frontend tests |
+| `task setup` | Full project setup (deps + pre-commit + .env) |
+| `task dev` | Start backend + frontend in dev mode |
+| `task build` | Build everything for production |
+| `task test` | Run all tests |
+| `task test:unit` | Run unit tests only |
+| `task test:integration` | Run integration tests |
+{% if use_playwright -%}
+| `task test:e2e` | Run Playwright E2E tests |
+{% endif -%}
+| `task test:coverage` | Run tests with coverage report |
+| `task lint` | Run all linters |
+| `task format` | Auto-format all code |
+| `task typecheck` | Run type checkers |
 | `task docker:up` | Start all containers |
 | `task docker:down` | Stop all containers |
+| `task db:migrate` | Run database migrations |
+| `task registry:generate` | Generate code from naming registry |
+| `task clean` | Remove all build artifacts and caches |
 
-### API Documentation
 
 - Swagger UI: http://localhost:8000/api/docs
 - ReDoc: http://localhost:8000/api/redoc
+- Health: http://localhost:8000/api/v1/health
 
-## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed overview.
 
-## Contributing
+This project follows **hexagonal (ports-and-adapters) architecture**:
+
+```
+backend/src/{{ project_slug }}/
+├── core/            # Pure domain — ZERO external imports
+├── application/     # Use cases, services, DTOs, mappers
+├── ports/           # Inbound adapters (API routes, CLI, web)
+│   └── api/middleware/  # HTTP cross-cutting concerns
+├── adapters/        # Outbound adapters (DB, cache, messaging)
+├── infrastructure/  # Low-level (database, HTTP, security, observability)
+├── config/          # Settings, DI container
+├── ai/              # LLM/agent tooling
+└── utils/           # Shared utilities
+```
+
 
 See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
-## License
 
 {{ license }}

@@ -1,0 +1,12 @@
+{%- if use_celery %}
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT NO_UNSET
+
+local CELERY_CONCURRENCY="${CELERY_CONCURRENCY:-2}"
+print "Starting Celery worker (concurrency=${CELERY_CONCURRENCY})..."
+
+uv run celery -A {{ project_slug }}.config.celery:celery_app worker \
+--loglevel=info \
+--concurrency="${CELERY_CONCURRENCY}" \
+--queues=default
+{%- endif %}

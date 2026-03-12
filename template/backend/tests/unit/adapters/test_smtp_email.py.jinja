@@ -1,0 +1,90 @@
+"""Unit tests for SMTP email adapter."""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from {{ project_slug }}.adapters.email.smtp_email_adapter import SmtpEmailAdapter
+
+
+@pytest.fixture
+def adapter() -> SmtpEmailAdapter:
+    """Create SmtpEmailAdapter with test configuration."""
+    return SmtpEmailAdapter(
+        "smtp.test.local",
+        port=587,
+        username="user",
+        password="pass",
+    )
+
+
+@pytest.fixture
+def adapter_no_auth() -> SmtpEmailAdapter:
+    """Create SmtpEmailAdapter without authentication."""
+    return SmtpEmailAdapter("smtp.test.local", port=25)
+
+
+class TestSmtpEmailSend:
+    """Test suite for send operation."""
+
+    @pytest.mark.asyncio
+    async def test_send_calls_smtp(self, adapter: SmtpEmailAdapter) -> None:
+        """Verify send opens SMTP connection and sends message."""
+        with patch("smtplib.SMTP") as mock_smtp:
+            ctx = MagicMock()
+            mock_smtp.return_value.__enter__ = MagicMock(return_value=ctx)
+            mock_smtp.return_value.__exit__ = MagicMock(return_value=False)
+
+            await adapter.send(
+                to="user@example.com",
+                subject="Test",
+                body="Hello",
+            )
+
+            mock_smtp.assert_called_once_with("smtp.test.local", 587)
+            ctx.starttls.assert_called_once()
+            ctx.login.assert_called_once_with("user", "pass")
+            ctx.send_message.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_send_without_auth_skips_login(
+        self,
+        adapter_no_auth: SmtpEmailAdapter,
+    ) -> None:
+        """Verify send without credentials skips TLS and login."""
+        with patch("smtplib.SMTP") as mock_smtp:
+            ctx = MagicMock()
+            mock_smtp.return_value.__enter__ = MagicMock(return_value=ctx)
+            mock_smtp.return_value.__exit__ = MagicMock(return_value=False)
+
+            await adapter_no_auth.send(
+                to="user@example.com",
+                subject="Test",
+                body="No auth",
+            )
+
+            ctx.starttls.assert_not_called()
+            ctx.login.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_send_uses_custom_from_addr(
+        self,
+        adapter: SmtpEmailAdapter,
+    ) -> None:
+        """Verify send respects custom from_addr."""
+        with patch("smtplib.SMTP") as mock_smtp:
+            ctx = MagicMock()
+            mock_smtp.return_value.__enter__ = MagicMock(return_value=ctx)
+            mock_smtp.return_value.__exit__ = MagicMock(return_value=False)
+
+            await adapter.send(
+                to="user@example.com",
+                subject="Hello",
+                body="Body",
+                from_addr="custom@example.com",
+            )
+
+            sent_msg = ctx.send_message.call_args[0][0]
+            assert sent_msg["From"] == "custom@example.com"

@@ -1,0 +1,217 @@
+version: "3"
+
+tasks:
+  # ── Validation ────────────────────────────────────────────────────
+
+  validate:
+    desc: "Validate all Bicep templates"
+    cmds:
+      - cmd: find infra -name '*.bicep' -exec az bicep build --file {} --stdout \; > /dev/null
+        platforms: [linux, darwin]
+      - cmd: powershell -NoProfile -Command "Get-ChildItem -Recurse infra -Filter *.bicep | ForEach-Object { az bicep build --file $_.FullName --stdout | Out-Null }"
+        platforms: [windows]
+      - echo "All Bicep templates validated successfully"
+
+  validate:deploy:
+    desc: "Validate deployment Bicep template"
+    cmds:
+      - az bicep build --file infra/deploy.bicep --stdout > /dev/null
+
+  validate:main:
+    desc: "Validate main Bicep template"
+    cmds:
+      - az bicep build --file infra/main.bicep --stdout > /dev/null
+
+  # ── What-if (preview) ────────────────────────────────────────────
+
+  what-if:dev:
+    desc: "Preview changes for dev environment"
+    cmds:
+      - |
+        az deployment sub what-if \
+          --location {{ azure_location }} \
+          --template-file infra/deploy.bicep \
+          --parameters infra/parameters/dev/deploy.dev.bicepparam \
+          --parameters projectName="{{ project_slug }}" env="dev"
+
+  what-if:test:
+    desc: "Preview changes for test environment"
+    cmds:
+      - |
+        az deployment sub what-if \
+          --location {{ azure_location }} \
+          --template-file infra/deploy.bicep \
+          --parameters infra/parameters/test/deploy.test.bicepparam \
+          --parameters projectName="{{ project_slug }}" env="test"
+
+  what-if:staging:
+    desc: "Preview changes for staging environment"
+    cmds:
+      - |
+        az deployment sub what-if \
+          --location {{ azure_location }} \
+          --template-file infra/deploy.bicep \
+          --parameters infra/parameters/staging/deploy.staging.bicepparam \
+          --parameters projectName="{{ project_slug }}" env="staging"
+
+  what-if:prod:
+    desc: "Preview changes for prod environment"
+    cmds:
+      - |
+        az deployment sub what-if \
+          --location {{ azure_location }} \
+          --template-file infra/deploy.bicep \
+          --parameters infra/parameters/prod/deploy.prod.bicepparam \
+          --parameters projectName="{{ project_slug }}" env="prod"
+
+  # ── Deploy (subscription-scoped) ─────────────────────────────────
+
+  deploy:dev:
+    desc: "Deploy dev environment"
+    cmds:
+      - cmd: zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e dev
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/deploy.azcli -p "{{ project_slug }}" -e dev
+        platforms: [windows]
+
+  deploy:test:
+    desc: "Deploy test environment"
+    cmds:
+      - cmd: zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e test
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/deploy.azcli -p "{{ project_slug }}" -e test
+        platforms: [windows]
+
+  deploy:staging:
+    desc: "Deploy staging environment"
+    prompt: "Deploy to STAGING? This may affect pre-production services."
+    cmds:
+      - cmd: zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e staging
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/deploy.azcli -p "{{ project_slug }}" -e staging
+        platforms: [windows]
+
+  deploy:prod:
+    desc: "Deploy production environment"
+    prompt: "Deploy to PRODUCTION? This may affect live services."
+    cmds:
+      - cmd: zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e prod
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/deploy.azcli -p "{{ project_slug }}" -e prod
+        platforms: [windows]
+
+  # ── Deploy (resource-group-scoped) ───────────────────────────────
+
+  deploy:rg:dev:
+    desc: "Deploy resource-group scoped resources only (dev)"
+    cmds:
+      - cmd: zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-dev-rg" -p "{{ project_slug }}" -e dev
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-dev-rg" -p "{{ project_slug }}" -e dev
+        platforms: [windows]
+
+  deploy:rg:test:
+    desc: "Deploy resource-group scoped resources only (test)"
+    cmds:
+      - cmd: zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-test-rg" -p "{{ project_slug }}" -e test
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-test-rg" -p "{{ project_slug }}" -e test
+        platforms: [windows]
+
+  deploy:rg:staging:
+    desc: "Deploy resource-group scoped resources only (staging)"
+    prompt: "Deploy RG resources to STAGING?"
+    cmds:
+      - cmd: zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-staging-rg" -p "{{ project_slug }}" -e staging
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-staging-rg" -p "{{ project_slug }}" -e staging
+        platforms: [windows]
+
+  deploy:rg:prod:
+    desc: "Deploy resource-group scoped resources only (prod)"
+    prompt: "Deploy RG resources to PRODUCTION?"
+    cmds:
+      - cmd: zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-prod-rg" -p "{{ project_slug }}" -e prod
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-prod-rg" -p "{{ project_slug }}" -e prod
+        platforms: [windows]
+
+  # ── Resource inspection ──────────────────────────────────────────
+
+  resources:list:
+    desc: "List all Azure resources in the project resource groups"
+    cmds:
+      - |
+        for env in dev test staging prod; do
+          rg="{{ project_slug | replace("_", "-") }}-${env}-rg"
+          echo ""
+          echo "=== ${rg} ==="
+          az resource list --resource-group "$rg" --output table 2>/dev/null || echo "  (not found)"
+        done
+
+  resources:groups:
+    desc: "List all resource groups"
+    cmds:
+      - az group list --output table
+{% if secret_backend == "azure_kv" %}
+
+  # ── Key Vault operations ─────────────────────────────────────────
+
+  kv:add-secret:
+    desc: "Add a secret to Key Vault"
+    vars:
+      VAULT: '{% raw %}{{default "" .VAULT}}{% endraw %}'
+      NAME: '{% raw %}{{default "" .NAME}}{% endraw %}'
+      VALUE: '{% raw %}{{default "" .VALUE}}{% endraw %}'
+    preconditions:
+      - sh: test -n "{% raw %}{{.VAULT}}{% endraw %}"
+        msg: "VAULT is required. Usage: task infra:kv:add-secret VAULT=my-vault NAME=my-secret VALUE=my-value"
+      - sh: test -n "{% raw %}{{.NAME}}{% endraw %}"
+        msg: "NAME is required."
+      - sh: test -n "{% raw %}{{.VALUE}}{% endraw %}"
+        msg: "VALUE is required."
+    cmds:
+      - cmd: zsh infra/scripts/add-kv-secret.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -n "{% raw %}{{.NAME}}{% endraw %}" -s "{% raw %}{{.VALUE}}{% endraw %}"
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/add-kv-secret.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -n "{% raw %}{{.NAME}}{% endraw %}" -s "{% raw %}{{.VALUE}}{% endraw %}"
+        platforms: [windows]
+
+  kv:add-user:
+    desc: "Grant Key Vault access to a user or service principal"
+    vars:
+      VAULT: '{% raw %}{{default "" .VAULT}}{% endraw %}'
+      UPN: '{% raw %}{{default "" .UPN}}{% endraw %}'
+    preconditions:
+      - sh: test -n "{% raw %}{{.VAULT}}{% endraw %}"
+        msg: "VAULT is required. Usage: task infra:kv:add-user VAULT=my-vault UPN=user@example.com"
+      - sh: test -n "{% raw %}{{.UPN}}{% endraw %}"
+        msg: "UPN is required."
+    cmds:
+      - cmd: zsh infra/scripts/add-kv-user.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -u "{% raw %}{{.UPN}}{% endraw %}"
+        platforms: [linux, darwin]
+      - cmd: bash infra/scripts/add-kv-user.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -u "{% raw %}{{.UPN}}{% endraw %}"
+        platforms: [windows]
+
+  kv:list:
+    desc: "List Key Vault secrets"
+    vars:
+      VAULT: '{% raw %}{{default "" .VAULT}}{% endraw %}'
+    preconditions:
+      - sh: test -n "{% raw %}{{.VAULT}}{% endraw %}"
+        msg: "VAULT is required. Usage: task infra:kv:list VAULT=my-vault"
+    cmds:
+      - az keyvault secret list --vault-name "{% raw %}{{.VAULT}}{% endraw %}" --output table
+{% endif %}
+
+  # ── Cleanup ──────────────────────────────────────────────────────
+
+  clean:
+    desc: "Delete all project resource groups (DESTRUCTIVE)"
+    prompt: "This will DELETE all Azure resources across ALL environments. Are you sure?"
+    cmds:
+      - |
+        for env in dev test staging prod; do
+          rg="{{ project_slug | replace("_", "-") }}-${env}-rg"
+          echo "Deleting ${rg}..."
+          az group delete --name "$rg" --yes --no-wait 2>/dev/null || echo "  ${rg} not found"
+        done

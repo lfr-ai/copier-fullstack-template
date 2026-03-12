@@ -1,0 +1,366 @@
+
+This file provides instructions for AI coding agents (GitHub Copilot, Cursor, Cline, OpenCode, etc.)
+working within this codebase.
+
+---
+
+
+This project follows **hexagonal architecture** (ports and adapters) with strict layering:
+
+```text
+┌─────────────────────────────────────────┐
+│  Ports (API routes, CLI, webhooks)      │  ← Framework-specific entry points
+├─────────────────────────────────────────┤
+│  Application (services, commands, DTOs) │  ← Orchestration, use cases
+├─────────────────────────────────────────┤
+│  Core (entities, value objects, events) │  ← Pure domain, ZERO framework imports
+├─────────────────────────────────────────┤
+│  Adapters (DB, cache, HTTP, email)      │  ← External integration implementations
+├─────────────────────────────────────────┤
+│  Infrastructure (engines, clients)      │  ← Low-level technical concerns
+└─────────────────────────────────────────┘
+```
+
+
+**Always inward**: `adapters → ports → application → core`
+
+- **Core** imports NOTHING external. Only `stdlib` and `typing`.
+- **Application** imports from `core` only. No framework imports.
+- **Ports** imports from `application` and `core`. FastAPI/Typer allowed here.
+- **Adapters** imports from all inner layers. SQLAlchemy, httpx, redis allowed here.
+- **Infrastructure** provides low-level primitives (DB engines, HTTP clients, security).
+- **Utils** is a shared leaf — `stdlib` + third-party only. NO first-party imports.
+- **Config** is a separate pillar — settings, constants. Not part of the layer stack.
+
+
+- NO business logic in adapters, ports, infrastructure, or middleware
+- NO ORM models in core — core uses pure dataclasses (`frozen=True`, `slots=True`)
+- NO Pydantic models in core — Pydantic is a port/adapter concern
+- NO circular dependencies between any modules
+- NO `from __future__ import annotations` omission — it is **required** in every file
+- NO relative imports except within `__init__.py`
+- NO `print()` — use `structlog` or `logging`
+- NO `Any` type — use proper generics or `Unknown`
+- NO mutable default arguments
+- NO `assert` for runtime validation
+- NO `eval()`, `exec()`, `__import__()`, or `pickle.loads()` on untrusted input
+- NO f-strings in logging calls — use `%s` formatting
+
+
+All constructors and multi-parameter functions must use `*` to enforce keyword-only arguments:
+
+```python
+def __init__(self, *, name: str, value: int) -> None: ...
+async def upload(self, *, key: str, data: BinaryIO) -> str: ...
+```
+
+
+All `StrEnum` types must inherit from `ParseableEnum` (defined in `core/enums/base.py`),
+which provides a `from_str()` classmethod for case-insensitive lookup:
+
+```python
+from {{ project_slug }}.core.enums.base import ParseableEnum
+
+@unique
+class MyStatus(ParseableEnum):
+    active = auto()
+    inactive = auto()
+
+```
+
+---
+
+
+
+- Python 3.12+ syntax (`type` statements, `X | Y` unions, `match`)
+- Full type hints on all functions, methods, and class attributes
+- Google-style docstrings on all public modules, classes, functions, methods
+- Line length: 99 characters
+- All `__init__.py` must define `__all__`
+- Use `pathlib.Path` over `os.path`
+- Use `datetime.UTC` for timezone-aware datetimes
+- Use `decimal.Decimal` for monetary values
+- Use `collections.abc` over `typing` for generic types
+- Context managers for all resource management
+- Exception chaining: `raise NewError(...) from original_error`
+- Constants: `Final` type annotation
+
+
+- Strict mode (`strict: true`)
+- No `any` — use `unknown` or proper generics
+- Functional components with typed props
+- Tailwind CSS for styling
+
+
+- `.zsh` extension with `#!/usr/bin/env zsh`
+- `setopt ERR_EXIT PIPE_FAIL` at top
+- All variables quoted: `"${var}"`
+- ShellCheck compliant
+
+---
+
+
+```text
+backend/src/{{ project_slug }}/
+├── adapters/       # External integrations (DB repos, cache, HTTP clients)
+├── ai/             # LLM/agent tooling
+├── application/    # Use cases, services, DTOs
+├── config/         # Settings, logging, constants
+├── core/           # Pure domain (entities, enums, interfaces, value objects)
+├── infrastructure/ # DB engines, HTTP clients, security primitives
+├── ports/          # API routes, CLI, webhooks, DI container
+└── utils/          # Shared utilities
+
+backend/tests/
+├── conftest.py             # Root-level shared fixtures (engine, session, client)
+├── unit/                   # Pure logic, no I/O — mirrors src/ structure
+│   ├── adapters/
+│   ├── ai/
+│   ├── application/
+│   ├── config/
+│   ├── core/               # Includes test_registry_constants.py
+│   ├── infrastructure/
+│   ├── ports/
+│   └── utils/
+├── integration/            # Tests with real DB / external services
+├── property/               # Hypothesis property-based tests (incl. test_generate_registry.py)
+├── performance/            # Benchmarks and performance regression tests
+├── factories/              # Factory classes for test data
+├── fixtures/               # Shared test data (database.py, cache.py)
+├── mocks/                  # Reusable mock objects
+└── utils/                  # Assertion helpers, fixture factories, mock builders
+
+frontend/
+├── src/                    # Application source (components, hooks, lib, api)
+└── tests/
+    ├── setup.ts            # Global test setup (DOM cleanup, browser API stubs)
+    ├── unit/               # Vitest unit tests — mirrors src/ structure
+    │   ├── api/
+    │   ├── components/
+    │   ├── lib/
+    │   └── models/{% if use_playwright %}
+    └── e2e/                # Playwright end-to-end tests{% endif %}
+
+registry/
+├── naming_registry.json    # Single source of truth for names, ports, routes, enums
+├── naming_registry.schema.json  # JSON Schema validation for the registry
+├── generate_registry.py    # Code generator (--validate, --diff, --check modes)
+├── README.md               # Registry documentation
+└── tests/                  # Co-located registry tests
+    ├── conftest.py                         # Registry-specific fixtures
+    ├── test_generate_registry.py           # Unit tests for generator functions
+    └── test_generate_registry_property.py  # Hypothesis property-based tests
+```
+
+
+Backend end-to-end tests that drive a real HTTP server are intentionally omitted.
+Integration tests in `tests/integration/` use `httpx.AsyncClient` with the FastAPI
+`TestClient` transport — this covers the full request path (routes → services → DB)
+without the flakiness and cost of managing a live server process. If full HTTP e2e
+coverage is needed later, add it at the CI/infrastructure level (e.g., via Playwright
+API testing or a dedicated contract-test suite), not inside the backend test tree.
+
+---
+
+
+The **naming registry** (`registry/naming_registry.json`) is the single source of truth
+for shared identifiers: service names, ports, route paths, enum values, and field mappings.
+
+`generate_registry.py` reads this file and generates:
+
+- **Python constants** → `backend/src/{{ project_slug }}/core/registry_constants.py`
+- **TypeScript constants** → `frontend/src/registryConstants.ts`
+- **Env ports** → `.env.ports`
+
+
+- Never hand-edit generated files — edit `naming_registry.json` then run `task registry:generate`
+- The `--check` flag is a CI gate: it fails if generated files are stale
+- Co-located registry tests live in `registry/tests/` (unit + property)
+- Registry property tests also exist in `backend/tests/property/test_generate_registry.py`
+- Generated constant tests live in `backend/tests/unit/core/test_registry_constants.py`
+- Run `task registry:test` to execute registry-specific tests
+
+---
+
+
+
+| Layer            | Location                    | Runner   | Purpose                                       |
+| ---------------- | --------------------------- | -------- | --------------------------------------------- |
+| Unit             | `backend/tests/unit/`       | pytest   | Pure logic, no I/O, fast                      |
+| Integration      | `backend/tests/integration/`| pytest   | Real DB / cache / external services            |
+| Property         | `backend/tests/property/`   | pytest   | Hypothesis-based invariant testing             |
+| Performance      | `backend/tests/performance/`| pytest   | Benchmarks and regression tests                |
+| Registry check   | `registry/`                 | script   | Verify generated files match registry source   |
+| Registry tests   | `registry/tests/`           | pytest   | Unit + property tests for the generator        |
+| Frontend unit    | `frontend/tests/unit/`      | vitest   | Component + utility tests (happy-dom)          |{% if use_playwright %}
+| Frontend e2e     | `frontend/tests/e2e/`       | playwright | Browser-based end-to-end tests              |{% endif %}
+
+
+- Tests mirror source structure: `backend/tests/unit/core/`, `backend/tests/unit/application/`, etc.
+- Markers: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.slow`, `@pytest.mark.property`, `@pytest.mark.performance`
+- Factories: `tests/factories/` using `factory_boy`
+- Property-based: `tests/property/` using `Hypothesis`
+- Coverage threshold: ≥ 80% on `core` + `application` layers
+
+---
+
+
+```bash
+task dev              # Start development servers
+task docker:up        # Start containers
+
+task test             # Run ALL tests (registry check + registry tests + backend + frontend)
+task test:unit        # Backend unit tests only
+task test:integration # Integration tests
+task test:property    # Property-based tests
+task test:performance # Performance / benchmark tests
+task test:coverage    # Tests with coverage report
+task frontend:test:unit    # Frontend unit tests{% if use_playwright %}
+task frontend:test:e2e     # Playwright end-to-end tests{% endif %}
+
+task registry:generate     # Regenerate all files from naming_registry.json
+task registry:validate     # Validate registry JSON structure
+task registry:check        # CI gate — fail if generated files are stale
+task registry:test         # Run registry unit + property tests
+task registry:diff         # Dry-run diff of what generation would change
+
+task lint             # All linters
+task format           # Format all code
+task typecheck        # Type checking
+
+task db:migrate       # Run Alembic migrations
+```
+
+---
+
+## Multi-Agent System
+
+This project ships with a **coordinator / worker** multi-agent architecture for both
+**GitHub Copilot** (VS Code) and **OpenCode**. Agents are specialized by concern, use
+scoped tool permissions, and support handoffs for human-approved stage transitions.
+
+### Architecture Overview
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Human Developer                              │
+│           (invokes coordinator or standalone orchestrator)            │
+└────────────────────────────────┬─────────────────────────────────────┘
+                                 │
+                    ┌────────────▼────────────┐
+                    │      Coordinator        │  ← Central orchestrator
+                    │  tools: agent, read,    │    Delegates to workers
+                    │  search, edit, execute  │    Synthesizes results
+                    └────┬───┬───┬───┬───┬────┘
+                         │   │   │   │   │
+          ┌──────────────┤   │   │   │   ├──────────────┐
+          ▼              ▼   ▼   ▼   ▼   ▼              ▼
+     ┌─────────┐  ┌─────────┐  ┌──────┐  ┌──────────┐  ┌──────────┐
+     │ Planner │  │Architect│  │Impl. │  │ Reviewer │  │  Tester  │
+     │(R/O)    │  │(R/O)    │  │(R/W) │  │(R/O)     │  │(R/W)     │
+     └─────────┘  └─────────┘  └──────┘  └──────────┘  └──────────┘
+          │              │         │           │              │
+          └──────────────┴────┬────┴───────────┴──────────────┘
+                              │
+                    ┌─────────▼──────────┐
+                    │   Security Auditor │  (R/O)
+                    │   Doc Writer       │  (R/W docs only)
+                    └────────────────────┘
+```
+
+### GitHub Copilot Agents
+
+Located in `.github/agents/`. Invoked via `@AgentName` in Copilot Chat (agent mode).
+
+| Agent | File | Invocable | Tools | Purpose |
+|-------|------|-----------|-------|---------|
+| **Coordinator** | `coordinator.agent.md` | ✅ User | agent, read, search, edit, execute, web | Central orchestrator — routes tasks to workers |
+| **Planner** | `planner.agent.md` | ❌ Sub | read, search | Generates structured implementation plans |
+| **Architect** | `architect.agent.md` | ❌ Sub | read, search | Validates hexagonal architecture boundaries |
+| **Implementer** | `implementer.agent.md` | ❌ Sub | read, search, edit, execute | Writes code following project conventions |
+| **Reviewer** | `reviewer.agent.md` | ❌ Sub | read, search | Multi-dimension code quality review |
+| **Tester** | `tester.agent.md` | ❌ Sub | read, search, edit, execute | Generates unit/integration/property/E2E tests |
+| **Security Auditor** | `security-auditor.agent.md` | ❌ Sub | read, search | OWASP/CWE vulnerability scanning |
+| **Doc Writer** | `doc-writer.agent.md` | ❌ Sub | read, search, edit | Documentation: docstrings, ADRs, guides |
+| **TDD** | `tdd.agent.md` | ✅ User | agent, read, search, edit, execute | Red→Green→Refactor TDD orchestrator |
+| **Red** | `red.agent.md` | ❌ Sub | read, search, edit, execute | TDD Red phase — write failing tests |
+| **Green** | `green.agent.md` | ❌ Sub | read, search, edit, execute | TDD Green phase — minimal passing implementation |
+| **Refactor TDD** | `refactor-tdd.agent.md` | ❌ Sub | read, search, edit, execute | TDD Refactor phase — improve code quality |
+| **Thorough Reviewer** | `thorough-reviewer.agent.md` | ✅ User | agent, read, search | Multi-perspective parallel code review |
+| **Deep Thinking** | `deep-thinking.agents.md` | ✅ User | read, search, execute | Complex problem-solving with extended reasoning |
+| **Debug** | `debug.agents.md` | ✅ User | read, search, edit, execute | Systematic 4-phase debugging |
+
+#### Copilot Handoff Workflow
+
+The coordinator supports **handoffs** — structured transition points where the human
+can approve, redirect, or abort before the next phase begins:
+
+1. **Discovery** → handoff → **Planning** (Planner + Architect)
+2. **Planning** → handoff → **Implementation** (Implementer)
+3. **Implementation** → handoff → **Review** (Reviewer + Security Auditor)
+4. **Review** → handoff → **Testing** (Tester)
+5. **Testing** → handoff → **Documentation** (Doc Writer)
+
+#### Usage Examples (Copilot)
+
+```
+@Coordinator Implement a new user preferences feature with API endpoint and frontend form
+@TDD Add a discount calculation service using test-driven development
+@Thorough Reviewer Review the changes in the current branch
+```
+{% if with_opencode %}
+### OpenCode Agents
+
+Located in `.opencode/agents/`. Configured in `opencode.json`. Invoked via `@agent` in conversations.
+
+| Agent | File | Mode | Model | Purpose |
+|-------|------|------|-------|---------|
+| **coordinator** | `agents/coordinator.md` | primary | claude-opus-4-6 | Central orchestrator (default) |
+| **planner** | `agents/planner.md` | subagent | claude-opus-4-6 | Structured planning (read-only) |
+| **architect** | `agents/architect.md` | subagent | claude-opus-4-6 | Architecture validation (read-only) |
+| **implementer** | `agents/implementer.md` | subagent | claude-sonnet-4 | Code writing (full access) |
+| **reviewer** | `agents/reviewer.md` | subagent | claude-opus-4-6 | Code review (read-only) |
+| **tester** | `agents/tester.md` | subagent | claude-sonnet-4 | Test generation (write access) |
+| **security-auditor** | `agents/security-auditor.md` | subagent | claude-opus-4-6 | Security audit (read-only) |
+| **doc-writer** | `agents/doc-writer.md` | subagent | claude-sonnet-4 | Documentation (write, no bash) |
+
+### OpenCode Commands
+
+Located in `.opencode/commands/`. Invoked via `/command` in conversations.
+
+| Command | Agent | Subtask | Purpose |
+|---------|-------|---------|---------|
+| `/plan-feature` | coordinator | ❌ | Plan a new feature (delegates to planner + architect) |
+| `/implement` | coordinator | ❌ | Full implementation workflow (plan → code → test → review) |
+| `/review` | — | ✅ | Parallel multi-agent code review |
+| `/generate-tests` | tester | ✅ | Generate comprehensive test suites |
+| `/security-audit` | security-auditor | ✅ | Run security vulnerability scan |
+
+### OpenCode Skills
+
+Located in `.opencode/skills/`. Auto-discovered by agents when relevant.
+
+| Skill | Purpose |
+|-------|---------|
+| `hexagonal-architecture` | Enforces architecture boundaries and layer rules |
+| `naming-registry` | Guides registry workflow for code generation |
+
+#### Usage Examples (OpenCode)
+
+```
+@coordinator implement a new user preferences feature
+/plan-feature add export-to-CSV capability for reports
+/review
+/generate-tests backend/src/{{ project_slug }}/application/services/
+/security-audit
+```
+{% endif %}
+### Agent Design Principles
+
+1. **Least privilege**: Workers get only the tools they need (read-only agents cannot edit)
+2. **Single responsibility**: Each agent has one clear concern
+3. **Structured output**: Agents produce consistent, parseable formats
+4. **Handoff gates**: Human stays in the loop at critical transitions
+5. **Model selection**: Reasoning-heavy tasks use Opus; code generation uses Sonnet
+6. **Temperature tuning**: Read-only analysis at 0.1; code generation at 0.2–0.3
+7. **Convention enforcement**: All agents reference this file and project conventions

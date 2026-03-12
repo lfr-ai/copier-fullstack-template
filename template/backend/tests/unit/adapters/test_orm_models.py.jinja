@@ -1,0 +1,47 @@
+"""Unit tests for ORM model definitions."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.adapters.persistence.orm.base import AuditMixin, IdentityMixin, ORMBase
+from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
+
+
+class TestORMBase:
+    """Test suite for the ORM declarative base."""
+
+    def test_orm_base_is_declarative(self) -> None:
+        """Verify ORMBase inherits from DeclarativeBase."""
+        from sqlalchemy.orm import DeclarativeBase
+
+        assert issubclass(ORMBase, DeclarativeBase)
+
+
+class TestUserModel:
+    """Test suite for the UserModel ORM class."""
+
+    def test_tablename(self) -> None:
+        """Verify UserModel maps to 'users' table."""
+        assert UserModel.__tablename__ == "users"
+
+    def test_inherits_identity_mixin(self) -> None:
+        """Verify UserModel includes IdentityMixin."""
+        assert issubclass(UserModel, IdentityMixin)
+
+    def test_inherits_audit_mixin(self) -> None:
+        """Verify UserModel includes AuditMixin."""
+        assert issubclass(UserModel, AuditMixin)
+
+    def test_email_column_exists(self) -> None:
+        """Verify UserModel has an email column."""
+        columns = {c.name for c in UserModel.__table__.columns}
+        assert "email" in columns
+
+    def test_display_name_column_exists(self) -> None:
+        """Verify UserModel has a display_name column."""
+        columns = {c.name for c in UserModel.__table__.columns}
+        assert "display_name" in columns
+
+    def test_is_active_column_exists(self) -> None:
+        """Verify UserModel has an is_active column."""
+        columns = {c.name for c in UserModel.__table__.columns}
+        assert "is_active" in columns

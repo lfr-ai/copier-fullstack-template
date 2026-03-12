@@ -1,0 +1,109 @@
+"""Unit tests for CQRS CommandHandler base class."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import pytest
+
+from {{ project_slug }}.application.commands.base import CommandHandler
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+pytestmark = pytest.mark.asyncio
+
+
+
+
+class _FakeUnitOfWork:
+    """Minimal UoW stub satisfying the UnitOfWork protocol."""
+
+    committed: bool = False
+    rolled_back: bool = False
+
+    async def __aenter__(self) -> _FakeUnitOfWork:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
+        if exc_type is not None:
+            await self.rollback()
+
+    async def commit(self) -> None:
+        self.committed = True
+
+    async def rollback(self) -> None:
+        self.rolled_back = True
+
+
+@dataclass(frozen=True, slots=True)
+class _CreateItem:
+    """Sample command payload."""
+
+    name: str
+
+
+class _CreateItemHandler(CommandHandler[_CreateItem, str]):
+    """Concrete handler returning the created item name."""
+
+    async def handle(self, command: _CreateItem) -> str:
+        async with self._uow:
+            await self._uow.commit()
+        return f"created:{command.name}"
+
+
+class _FailingHandler(CommandHandler[_CreateItem, str]):
+    """Handler that raises during execution."""
+
+    async def handle(self, command: _CreateItem) -> str:
+        msg = "boom"
+        raise RuntimeError(msg)
+
+
+
+
+class TestCommandHandler:
+    """Test suite for abstract CommandHandler."""
+
+    async def test_concrete_handler_returns_result(self) -> None:
+        """Verify concrete subclass handles command and returns result."""
+        uow = _FakeUnitOfWork()
+        handler = _CreateItemHandler(uow)
+        result = await handler.handle(_CreateItem(name="widget"))
+        assert result == "created:widget"
+
+    async def test_handler_receives_uow(self) -> None:
+        """Verify handler has access to injected UoW."""
+        uow = _FakeUnitOfWork()
+        handler = _CreateItemHandler(uow)
+        assert handler._uow is uow  # noqa: SLF001
+
+    async def test_handler_commits_within_uow(self) -> None:
+        """Verify UoW committed during handler execution."""
+        uow = _FakeUnitOfWork()
+        handler = _CreateItemHandler(uow)
+        await handler.handle(_CreateItem(name="test"))
+        assert uow.committed is True
+
+    async def test_handler_rollback_on_failure(self) -> None:
+        """Verify UoW rolled back when handler raises inside context."""
+        uow = _FakeUnitOfWork()
+
+        class _RollbackHandler(CommandHandler[_CreateItem, str]):
+            async def handle(self, command: _CreateItem) -> str:
+                async with self._uow:
+                    msg = "fail"
+                    raise ValueError(msg)
+
+        handler = _RollbackHandler(uow)
+        with pytest.raises(ValueError, match="fail"):
+            await handler.handle(_CreateItem(name="x"))
+        assert uow.rolled_back is True
+
+    def test_cannot_instantiate_abstract(self) -> None:
+        """Verify CommandHandler cannot be instantiated directly."""
+        with pytest.raises(TypeError):
+            CommandHandler(_FakeUnitOfWork())  # type: ignore[abstract]

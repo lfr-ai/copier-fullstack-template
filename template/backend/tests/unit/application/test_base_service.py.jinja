@@ -1,0 +1,68 @@
+"""Unit tests for BaseService abstract base class."""
+
+from __future__ import annotations
+
+import logging
+
+import pytest
+
+from {{ project_slug }}.application.services.base import BaseService
+
+
+class _FakeUnitOfWork:
+    """Minimal UoW stub."""
+
+    committed: bool = False
+
+    async def __aenter__(self) -> _FakeUnitOfWork:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
+        pass
+
+    async def commit(self) -> None:
+        self.committed = True
+
+    async def rollback(self) -> None:
+        pass
+
+class _ConcreteService(BaseService[str]):
+    """Concrete service for testing base class features."""
+
+    async def do_work(self) -> str:  # noqa: PLR6301
+        return "done"
+
+
+class TestBaseService:
+    """Test suite for BaseService."""
+
+    def test_receives_unit_of_work(self) -> None:
+        """Verify UoW is stored as protected attribute."""
+        uow = _FakeUnitOfWork()
+        service = _ConcreteService(uow)
+        assert service._uow is uow  # noqa: SLF001
+
+    def test_logger_is_named_after_class(self) -> None:
+        """Verify logger name includes concrete class name."""
+        uow = _FakeUnitOfWork()
+        service = _ConcreteService(uow)
+        assert "_ConcreteService" in service._logger.name  # noqa: SLF001
+
+    def test_logger_is_logging_instance(self) -> None:
+        """Verify logger is a standard logging.Logger."""
+        uow = _FakeUnitOfWork()
+        service = _ConcreteService(uow)
+        assert isinstance(service._logger, logging.Logger)  # noqa: SLF001
+
+    @pytest.mark.asyncio
+    async def test_concrete_method_executes(self) -> None:
+        """Verify concrete subclass methods work."""
+        uow = _FakeUnitOfWork()
+        service = _ConcreteService(uow)
+        result = await service.do_work()
+        assert result == "done"

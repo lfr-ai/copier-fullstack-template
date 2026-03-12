@@ -3,92 +3,114 @@ version: "3"
 tasks:
   dev:
     desc: "Start FastAPI development server"
+    dir: backend
     cmds:
       - uv run uvicorn {{ project_slug }}.ports.api.app:create_api_app --factory --reload --port 8000
 
   build:
     desc: "Build Python package"
+    dir: backend
     cmds:
       - uv build
 
   install:
     desc: "Install backend dependencies"
+    dir: backend
     cmds:
       - uv sync --all-extras
 
   shell:
     desc: "Start Python REPL"
+    dir: backend
     cmds:
       - uv run python
 
-  #  Testing (delegated to tox) 
 
   test:
     desc: "Run backend tests via tox"
+    dir: backend
     cmds:
       - uv run tox -e py{{ python_version | replace('.', '') }} -- {% raw %}{{.CLI_ARGS}}{% endraw %}
 
   test:unit:
     desc: "Run unit tests only"
+    dir: backend
     cmds:
       - uv run tox -e py{{ python_version | replace('.', '') }} -- tests/unit
 
   test:integration:
     desc: "Run integration tests via tox"
+    dir: backend
     cmds:
       - uv run tox -e integration
 
+  test:property:
+    desc: "Run property-based tests via tox"
+    dir: backend
+    cmds:
+      - uv run tox -e property -- {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  test:performance:
+    desc: "Run performance tests via tox"
+    dir: backend
+    cmds:
+      - uv run tox -e performance -- {% raw %}{{.CLI_ARGS}}{% endraw %}
+
   test:coverage:
     desc: "Run tests with coverage"
+    dir: backend
     cmds:
       - uv run tox -e coverage
 
-  #  Linting, formatting & type checking 
 
   lint:
     desc: "Lint Python code"
+    dir: backend
     cmds:
       - uv run ruff check src/ tests/
 
   lint:fix:
     desc: "Lint and auto-fix issues"
+    dir: backend
     cmds:
       - uv run ruff check src/ tests/ --fix
 
   format:
     desc: "Format Python code"
+    dir: backend
     cmds:
       - uv run ruff format src/ tests/
 
   format:check:
     desc: "Check formatting"
+    dir: backend
     cmds:
       - uv run ruff format src/ tests/ --check
 
   typecheck:
     desc: "Type check Python code"
+    dir: backend
     cmds:
       - uv run ty check src/
 
   security:
     desc: "Security scan"
+    dir: backend
     cmds:
       - uv run ruff check --select S src/
 {% if use_celery %}
   worker:
     desc: "Start Celery worker"
+    dir: backend
     cmds:
       - uv run celery -A {{ project_slug }}.config.celery:celery_app worker --loglevel=info
-
-  beat:
-    desc: "Start Celery beat scheduler"
-    cmds:
-      - uv run celery -A {{ project_slug }}.config.celery:celery_app beat --loglevel=info
 {% endif %}
   clean:
-    desc: "Clean Python build artifacts"
+    desc: "Clean backend build artifacts"
+    dir: backend
     cmds:
-      - cmd: find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-      - cmd: find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-      - cmd: find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
-      - cmd: rm -rf htmlcov/ .coverage coverage.xml results.xml dist/ build/
+      - rm -rf dist/ build/ htmlcov/ .coverage coverage.xml
+      - find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+      - find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
+      - find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
+      - find . -type d -name '*.egg-info' -exec rm -rf {} + 2>/dev/null || true

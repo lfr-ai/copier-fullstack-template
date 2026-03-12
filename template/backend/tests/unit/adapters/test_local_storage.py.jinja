@@ -1,0 +1,95 @@
+"""Unit tests for local filesystem storage adapter."""
+
+from __future__ import annotations
+
+import io
+from pathlib import Path
+
+import pytest
+
+from {{ project_slug }}.adapters.storage.local_storage_adapter import LocalStorageAdapter
+
+
+@pytest.fixture
+def storage(tmp_path: Path) -> LocalStorageAdapter:
+    """Create adapter backed by a temporary directory."""
+    return LocalStorageAdapter(tmp_path / "storage")
+
+
+class TestLocalStorageUpload:
+    """Test suite for upload operation."""
+
+    @pytest.mark.asyncio
+    async def test_upload_creates_file(self, storage: LocalStorageAdapter) -> None:
+        """Verify upload writes data and returns path."""
+        data = io.BytesIO(b"hello world")
+        path = await storage.upload(key="docs/readme.txt", data=data)
+        assert Path(path).exists()
+        assert Path(path).read_bytes() == b"hello world"
+
+    @pytest.mark.asyncio
+    async def test_upload_creates_nested_directories(
+        self,
+        storage: LocalStorageAdapter,
+    ) -> None:
+        """Verify upload creates intermediate directories."""
+        data = io.BytesIO(b"nested")
+        path = await storage.upload(key="a/b/c/file.bin", data=data)
+        assert Path(path).exists()
+
+
+class TestLocalStorageDownload:
+    """Test suite for download operation."""
+
+    @pytest.mark.asyncio
+    async def test_download_returns_bytes(self, storage: LocalStorageAdapter) -> None:
+        """Verify download returns previously uploaded content."""
+        await storage.upload(key="test.txt", data=io.BytesIO(b"content"))
+        result = await storage.download("test.txt")
+        assert result == b"content"
+
+    @pytest.mark.asyncio
+    async def test_download_missing_raises(self, storage: LocalStorageAdapter) -> None:
+        """Verify download raises for non-existent key."""
+        with pytest.raises(FileNotFoundError):
+            await storage.download("missing.txt")
+
+
+class TestLocalStorageDelete:
+    """Test suite for delete operation."""
+
+    @pytest.mark.asyncio
+    async def test_delete_removes_file(self, storage: LocalStorageAdapter) -> None:
+        """Verify delete removes the stored file."""
+        await storage.upload(key="rm-me.txt", data=io.BytesIO(b"data"))
+        await storage.delete("rm-me.txt")
+        assert not await storage.exists("rm-me.txt")
+
+    @pytest.mark.asyncio
+    async def test_delete_missing_does_not_raise(
+        self,
+        storage: LocalStorageAdapter,
+    ) -> None:
+        """Verify delete of non-existent key is a no-op."""
+        await storage.delete("nonexistent.txt")  # should not raise
+
+
+class TestLocalStorageExists:
+    """Test suite for exists operation."""
+
+    @pytest.mark.asyncio
+    async def test_exists_returns_true_for_stored_file(
+        self,
+        storage: LocalStorageAdapter,
+    ) -> None:
+        """Verify exists returns True after upload."""
+        await storage.upload(key="present.txt", data=io.BytesIO(b"yes"))
+        assert await storage.exists("present.txt") is True
+
+    @pytest.mark.asyncio
+    async def test_exists_returns_false_for_missing(
+        self,
+        storage: LocalStorageAdapter,
+    ) -> None:
+        """Verify exists returns False when file absent."""
+        assert await storage.exists("absent.txt") is False

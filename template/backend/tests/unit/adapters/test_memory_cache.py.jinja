@@ -1,0 +1,101 @@
+"""Exhaustive unit tests for MemoryCacheAdapter."""
+
+from __future__ import annotations
+
+import time
+from unittest.mock import patch
+
+import pytest
+
+from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
+
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture
+def cache() -> MemoryCacheAdapter:
+    """Create fresh in-memory cache."""
+    return MemoryCacheAdapter()
+
+
+class TestMemoryCacheGet:
+    """Test suite for MemoryCacheAdapter.get."""
+
+    async def test_get_returns_none_for_missing_key(self, cache: MemoryCacheAdapter) -> None:
+        """Verify get returns None when key does not exist."""
+        assert await cache.get("nonexistent") is None
+
+    async def test_get_returns_stored_value(self, cache: MemoryCacheAdapter) -> None:
+        """Verify get returns value after set."""
+        await cache.set(key="key1", value="value1")
+        assert await cache.get("key1") == "value1"
+
+    async def test_get_returns_none_for_expired_key(self, cache: MemoryCacheAdapter) -> None:
+        """Verify get returns None after TTL expires and evicts entry."""
+        await cache.set(key="expiring", value="data", ttl_seconds=1)
+        with patch("{{ project_slug }}.adapters.cache.memory_cache.time") as mock_time:
+            mock_time.monotonic.return_value = time.monotonic() + 2
+            result = await cache.get("expiring")
+        assert result is None
+
+
+class TestMemoryCacheSet:
+    """Test suite for MemoryCacheAdapter.set."""
+
+    async def test_set_stores_value(self, cache: MemoryCacheAdapter) -> None:
+        """Verify set stores a value retrievable via get."""
+        await cache.set(key="k", value="v")
+        assert await cache.get("k") == "v"
+
+    async def test_set_overwrites_existing(self, cache: MemoryCacheAdapter) -> None:
+        """Verify set overwrites previous value for same key."""
+        await cache.set(key="k", value="v1")
+        await cache.set(key="k", value="v2")
+        assert await cache.get("k") == "v2"
+
+    async def test_set_uses_default_ttl(self, cache: MemoryCacheAdapter) -> None:
+        """Verify set uses default TTL when none specified."""
+        await cache.set(key="k", value="v")
+        entry = cache._store["k"]  # noqa: SLF001
+        assert entry.expires_at > time.monotonic()
+
+    async def test_set_respects_custom_ttl(self, cache: MemoryCacheAdapter) -> None:
+        """Verify set applies custom TTL."""
+        before = time.monotonic()
+        await cache.set(key="k", value="v", ttl_seconds=10)
+        entry = cache._store["k"]  # noqa: SLF001
+        assert entry.expires_at <= before + 10 + 1  # 1s tolerance
+
+
+class TestMemoryCacheDelete:
+    """Test suite for MemoryCacheAdapter.delete."""
+
+    async def test_delete_existing_key(self, cache: MemoryCacheAdapter) -> None:
+        """Verify delete returns True and removes key."""
+        await cache.set(key="k", value="v")
+        assert await cache.delete("k") is True
+        assert await cache.get("k") is None
+
+    async def test_delete_missing_key(self, cache: MemoryCacheAdapter) -> None:
+        """Verify delete returns False for nonexistent key."""
+        assert await cache.delete("missing") is False
+
+
+class TestMemoryCacheExists:
+    """Test suite for MemoryCacheAdapter.exists."""
+
+    async def test_exists_returns_true_for_present_key(self, cache: MemoryCacheAdapter) -> None:
+        """Verify exists returns True for stored key."""
+        await cache.set(key="k", value="v")
+        assert await cache.exists("k") is True
+
+    async def test_exists_returns_false_for_missing_key(self, cache: MemoryCacheAdapter) -> None:
+        """Verify exists returns False for nonexistent key."""
+        assert await cache.exists("missing") is False
+
+    async def test_exists_returns_false_for_expired_key(self, cache: MemoryCacheAdapter) -> None:
+        """Verify exists returns False after key expires."""
+        await cache.set(key="expiring", value="data", ttl_seconds=1)
+        with patch("{{ project_slug }}.adapters.cache.memory_cache.time") as mock_time:
+            mock_time.monotonic.return_value = time.monotonic() + 2
+            assert await cache.exists("expiring") is False

@@ -1,26 +1,22 @@
-# syntax=docker/dockerfile:1
-# hadolint global ignore=DL3013
 
-# Stage 1: Build
 FROM python:{{ python_version }}-slim AS builder
 
 WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-editable
 
-COPY src/ src/
+COPY backend/src/ src/
 
-# Stage 2: Runtime
-FROM python:{{ python_version }}-slim AS runtime
+FROM python:{{ python_version }}-slim AS app-base
 
 WORKDIR /app
 
-# hadolint ignore=DL3008
 RUN groupadd --gid 1000 appuser && \
-    useradd --uid 1000 --gid 1000 --shell /bin/bash appuser
+    useradd --uid 1000 --gid 1000 --shell /bin/bash appuser && \
+    mkdir -p /app/logs && chown appuser:appuser /app/logs
 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
@@ -28,6 +24,26 @@ COPY --from=builder /app/src /app/src
 ENV PATH="/app/.venv/bin:${PATH}"
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+
+FROM app-base AS dev
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-editable
+
+USER appuser
+
+EXPOSE 8000
+
+CMD ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+FROM app-base AS prod
+
+LABEL org.opencontainers.image.title="{{ project_slug }}" \
+      org.opencontainers.image.description="{{ project_description }}" \
+      org.opencontainers.image.authors="{{ author_name }} <{{ author_email }}>" \
+      org.opencontainers.image.source="https://github.com/{{ github_username }}/{{ project_slug }}" \
+      org.opencontainers.image.licenses="{{ license }}"
 
 USER appuser
 

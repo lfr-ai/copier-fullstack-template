@@ -1,0 +1,148 @@
+"""Unit tests for settings factory and settings classes."""
+
+from __future__ import annotations
+
+import os
+from unittest.mock import patch
+
+import pytest
+
+from {{ project_slug }}.config.settings import get_settings
+from {{ project_slug }}.config.settings.base import BaseAppSettings
+from {{ project_slug }}.config.settings.local import LocalSettings
+from {{ project_slug }}.config.settings.production import ProductionSettings
+from {{ project_slug }}.config.settings.test import TestSettings
+from {{ project_slug }}.core.enums.environment import Environment
+
+class TestGetSettings:
+    """Test suite for settings factory function."""
+
+    def test_default_returns_local_settings(self) -> None:
+        """Verify default environment returns LocalSettings."""
+        with patch.dict(os.environ, {}, clear=True):
+            settings = get_settings()
+        assert isinstance(settings, LocalSettings)
+
+    def test_local_env_returns_local_settings(self) -> None:
+        """Verify LOCAL env returns LocalSettings."""
+        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "LOCAL"}):
+            settings = get_settings()
+        assert isinstance(settings, LocalSettings)
+        assert settings.environment == Environment.LOCAL
+
+    def test_dev_env_returns_local_settings(self) -> None:
+        """Verify DEV env returns LocalSettings."""
+        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "DEV"}):
+            settings = get_settings()
+        assert isinstance(settings, LocalSettings)
+
+    def test_test_env_returns_test_settings(self) -> None:
+        """Verify TEST env returns TestSettings."""
+        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "TEST"}):
+            settings = get_settings()
+        assert isinstance(settings, TestSettings)
+        assert settings.environment == Environment.TEST
+
+    def test_staging_env_returns_production_settings(self) -> None:
+        """Verify STAGING env returns ProductionSettings."""
+        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "STAGING"}):
+            settings = get_settings()
+        assert isinstance(settings, ProductionSettings)
+
+    def test_production_env_returns_production_settings(self) -> None:
+        """Verify PRODUCTION env returns ProductionSettings."""
+        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "PRODUCTION"}):
+            settings = get_settings()
+        assert isinstance(settings, ProductionSettings)
+        assert settings.environment == Environment.PRODUCTION
+
+    def test_case_insensitive(self) -> None:
+        """Verify environment variable is case insensitive."""
+        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "test"}):
+            settings = get_settings()
+        assert isinstance(settings, TestSettings)
+
+class TestLocalSettings:
+    """Test suite for LocalSettings defaults."""
+
+    def test_debug_enabled(self) -> None:
+        """Verify debug is True by default in local."""
+        settings = LocalSettings()
+        assert settings.debug is True
+
+    def test_log_level_debug(self) -> None:
+        """Verify log level is DEBUG in local."""
+        settings = LocalSettings()
+        assert settings.log_level == "DEBUG"
+
+    def test_database_echo_enabled(self) -> None:
+        """Verify SQL echo is enabled in local."""
+        settings = LocalSettings()
+        assert settings.database_echo is True
+
+class TestTestSettings:
+    """Test suite for TestSettings defaults."""
+
+    def test_uses_test_database(self) -> None:
+        """Verify test settings uses a dedicated test database."""
+        settings = TestSettings()
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+        assert "test" in settings.database_url
+{%- else %}
+        assert settings.database_url == ""
+{%- endif %}
+
+    def test_debug_enabled(self) -> None:
+        """Verify debug is True in test environment."""
+        settings = TestSettings()
+        assert settings.debug is True
+
+    def test_database_echo_disabled(self) -> None:
+        """Verify SQL echo is disabled in test."""
+        settings = TestSettings()
+        assert settings.database_echo is False
+
+class TestProductionSettings:
+    """Test suite for ProductionSettings defaults."""
+
+    def test_debug_disabled(self) -> None:
+        """Verify debug is False in production."""
+        settings = ProductionSettings()
+        assert settings.debug is False
+
+    def test_log_level_warning(self) -> None:
+        """Verify log level is WARNING in production."""
+        settings = ProductionSettings()
+        assert settings.log_level == "WARNING"
+
+    def test_database_echo_disabled(self) -> None:
+        """Verify SQL echo is disabled in production."""
+        settings = ProductionSettings()
+        assert settings.database_echo is False
+
+class TestBaseAppSettings:
+    """Test suite for BaseAppSettings field defaults."""
+
+    def test_default_environment(self) -> None:
+        """Verify default environment is LOCAL."""
+        settings = BaseAppSettings()
+        assert settings.environment == Environment.LOCAL
+
+    def test_default_log_level(self) -> None:
+        """Verify default log level is INFO."""
+        settings = BaseAppSettings()
+        assert settings.log_level == "INFO"
+
+    def test_default_port_range(self) -> None:
+        """Verify default port is within valid range."""
+        settings = BaseAppSettings()
+        assert 0 < settings.port <= 65535
+
+    def test_default_database_url(self) -> None:
+        """Verify default database URL."""
+        settings = BaseAppSettings()
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+        assert "postgresql" in settings.database_url
+{%- else %}
+        assert settings.database_url == ""
+{%- endif %}

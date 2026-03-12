@@ -1,0 +1,41 @@
+"""Unit tests for BaseViewModel."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.ports.web.view_models.base import BaseViewModel
+
+class TestBaseViewModel:
+    """Test suite for BaseViewModel."""
+
+    def test_defaults(self) -> None:
+        """Verify BaseViewModel default values."""
+        vm = BaseViewModel()
+        assert vm.title == ""
+        assert vm.messages == []
+        assert vm.is_authenticated is False
+
+    def test_custom_values(self) -> None:
+        """Verify BaseViewModel accepts custom values."""
+        vm = BaseViewModel(
+            title="Dashboard",
+            messages=["Welcome"],
+            is_authenticated=True,
+        )
+        assert vm.title == "Dashboard"
+        assert vm.messages == ["Welcome"]
+        assert vm.is_authenticated is True
+
+    def test_strips_whitespace(self) -> None:
+        """Verify whitespace stripped from title."""
+        vm = BaseViewModel(title="  Hello  ")
+        assert vm.title == "Hello"
+
+    def test_serialization(self) -> None:
+        """Verify model_dump includes all fields."""
+        vm = BaseViewModel(title="Test", is_authenticated=True)
+        data = vm.model_dump()
+        assert "title" in data
+        assert "messages" in data
+        assert "is_authenticated" in data

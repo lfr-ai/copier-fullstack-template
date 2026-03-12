@@ -1,0 +1,46 @@
+"""User ORM model for database persistence."""
+
+from __future__ import annotations
+
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import Mapped, mapped_column
+
+from {{ project_slug }}.adapters.persistence.orm.base import AuditMixin, IdentityMixin, ORMBase
+from {{ project_slug }}.core.constants import (
+    DISPLAY_NAME_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+    PASSWORD_HASH_MAX_LENGTH,
+)
+
+__all__ = ["UserModel"]
+
+
+class UserModel(ORMBase, IdentityMixin, AuditMixin):
+    """SQLAlchemy ORM model for users table."""
+
+    __tablename__ = "users"
+
+    email: Mapped[str] = mapped_column(
+        "email",
+        String(EMAIL_MAX_LENGTH),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    display_name: Mapped[str] = mapped_column(
+        "display_name",
+        String(DISPLAY_NAME_MAX_LENGTH),
+        nullable=False,
+    )
+    password_hash: Mapped[str | None] = mapped_column(
+        "password_hash",
+        String(PASSWORD_HASH_MAX_LENGTH),
+        nullable=True,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        "is_active",
+        Boolean,
+        nullable=False,
+        default=True,
+        index=True,
+    )

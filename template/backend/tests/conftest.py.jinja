@@ -1,0 +1,83 @@
+"""Root test configuration and shared fixtures."""
+
+from __future__ import annotations
+
+import asyncio
+import sys
+from collections.abc import AsyncIterator
+
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+
+from {{ project_slug }}.adapters.persistence.orm.base import ORMBase
+from {{ project_slug }}.ports.api.app import create_api_app
+
+pytest_plugins = [
+    "tests.fixtures.cache",
+    "tests.fixtures.database",
+]
+
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+TEST_DATABASE_URL = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+{%- else %}
+TEST_DATABASE_URL = ""
+{%- endif %}
+
+
+@pytest.fixture(scope="session")
+def event_loop_policy() -> asyncio.AbstractEventLoopPolicy:
+    """Provide event loop policy for test session.
+
+    Returns:
+        asyncio.AbstractEventLoopPolicy: Event loop policy for current platform.
+    """
+    if sys.platform == "win32":
+        return asyncio.WindowsSelectorEventLoopPolicy()
+    return asyncio.get_event_loop_policy()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def engine() -> AsyncIterator[AsyncEngine]:
+    """Create async test database engine.
+
+    Yields:
+        AsyncIterator[AsyncEngine]: Configured async engine with tables created.
+    """
+    eng = create_async_engine(TEST_DATABASE_URL, echo=False)
+    async with eng.begin() as conn:
+        await conn.run_sync(ORMBase.metadata.create_all)
+    yield eng
+    async with eng.begin() as conn:
+        await conn.run_sync(ORMBase.metadata.drop_all)
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture
+async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
+    """Create async test database session with rollback.
+
+    Args:
+        engine (AsyncEngine): Test database engine.
+
+    Yields:
+        AsyncIterator[AsyncSession]: Async session rolled back after each test.
+    """
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with factory() as sess:
+        yield sess
+        await sess.rollback()
+
+
+@pytest_asyncio.fixture
+async def client() -> AsyncIterator[AsyncClient]:
+    """Create async HTTP test client.
+
+    Yields:
+        AsyncIterator[AsyncClient]: Configured async HTTP client for API testing.
+    """
+    app = create_api_app(debug=True)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac

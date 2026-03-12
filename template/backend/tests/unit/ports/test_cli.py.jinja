@@ -1,0 +1,126 @@
+"""Unit tests for CLI application commands."""
+
+from __future__ import annotations
+
+from unittest.mock import patch, MagicMock
+
+import pytest
+from click.testing import CliRunner
+
+from {{ project_slug }}.ports.cli.app import cli
+
+@pytest.fixture
+def runner() -> CliRunner:
+    """Create Click test runner."""
+    return CliRunner()
+
+class TestCLI:
+    """Test suite for CLI commands."""
+
+    def test_cli_group_exists(self, runner: CliRunner) -> None:
+        """Verify CLI group runs without error."""
+        result = runner.invoke(cli, ["--help"])
+        assert result.exit_code == 0
+        assert "{{ project_name }}" in result.output or "CLI" in result.output
+
+    def test_version_flag(self, runner: CliRunner) -> None:
+        """Verify --version flag works."""
+        result = runner.invoke(cli, ["--version"])
+        assert result.exit_code == 0
+
+class TestDBUpgradeCommand:
+    """Test suite for db-upgrade CLI command."""
+
+    @patch("{{ project_slug }}.ports.cli.app.alembic_main")
+    def test_db_upgrade_runs_alembic(
+        self,
+        mock_alembic: MagicMock,
+        runner: CliRunner,
+    ) -> None:
+        """Verify db-upgrade calls alembic upgrade head."""
+        result = runner.invoke(cli, ["db-upgrade"])
+        assert result.exit_code == 0
+        mock_alembic.assert_called_once_with(argv=["upgrade", "head"])
+        assert "complete" in result.output.lower()
+
+    @patch("{{ project_slug }}.ports.cli.app.alembic_main", side_effect=SystemExit(1))
+    def test_db_upgrade_handles_failure(
+        self,
+        mock_alembic: MagicMock,
+        runner: CliRunner,
+    ) -> None:
+        """Verify db-upgrade reports error when alembic fails."""
+        result = runner.invoke(cli, ["db-upgrade"])
+        assert result.exit_code != 0
+
+class TestDBSeedCommand:
+    """Test suite for db-seed CLI command."""
+
+    @patch("{{ project_slug }}.ports.cli.app._SEED_PATH")
+    def test_db_seed_missing_file(
+        self,
+        mock_path: MagicMock,
+        runner: CliRunner,
+    ) -> None:
+        """Verify db-seed fails when seed file missing."""
+        mock_path.exists.return_value = False
+        result = runner.invoke(cli, ["db-seed"])
+        assert result.exit_code != 0
+
+    @patch("builtins.open")
+    @patch("{{ project_slug }}.ports.cli.app._SEED_PATH")
+    def test_db_seed_loads_data(
+        self,
+        mock_path: MagicMock,
+        mock_open: MagicMock,
+        runner: CliRunner,
+    ) -> None:
+        """Verify db-seed loads and reports seed data."""
+        import json
+
+        mock_path.exists.return_value = True
+        mock_path.open.return_value.__enter__ = lambda s: s
+        mock_path.open.return_value.__exit__ = MagicMock(return_value=False)
+        mock_path.open.return_value.read = MagicMock(
+            return_value=json.dumps({"users": [{"email": "a@b.com"}]}),
+        )
+        with patch("json.load", return_value={"users": [{"email": "a@b.com"}]}):
+            result = runner.invoke(cli, ["db-seed"])
+        assert result.exit_code == 0
+
+class TestServeCommand:
+    """Test suite for serve CLI command."""
+
+    @patch("{{ project_slug }}.ports.cli.app.uvicorn")
+    def test_serve_calls_uvicorn(
+        self,
+        mock_uvicorn: MagicMock,
+        runner: CliRunner,
+    ) -> None:
+        """Verify serve command starts uvicorn with correct args."""
+        result = runner.invoke(cli, ["serve", "--host", "0.0.0.0", "--port", "9000"])
+        assert result.exit_code == 0
+        mock_uvicorn.run.assert_called_once_with(
+            "{{ project_slug }}.ports.api.app:create_api_app",
+            host="0.0.0.0",
+            port=9000,
+            factory=True,
+            reload=True,
+        )
+
+    @patch("{{ project_slug }}.ports.cli.app.uvicorn")
+    def test_serve_default_host_port(
+        self,
+        mock_uvicorn: MagicMock,
+        runner: CliRunner,
+    ) -> None:
+        """Verify serve command uses default host and port."""
+        result = runner.invoke(cli, ["serve"])
+        assert result.exit_code == 0
+        mock_uvicorn.run.assert_called_once_with(
+            "{{ project_slug }}.ports.api.app:create_api_app",
+            host="127.0.0.1",
+            port=8000,
+            factory=True,
+            reload=True,
+        )

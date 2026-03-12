@@ -22,6 +22,12 @@
       "group": "test"
     },
     {
+      "label": "Backend: Type Check",
+      "type": "shell",
+      "command": "task backend:typecheck",
+      "group": "test"
+    },
+    {
       "label": "Frontend: Dev",
       "type": "shell",
       "command": "task frontend:dev",
@@ -29,9 +35,45 @@
       "presentation": { "reveal": "always", "panel": "new" }
     },
     {
+      "label": "Frontend: Test",
+      "type": "shell",
+      "command": "task frontend:test:unit",
+      "group": "test"
+    },
+    {
       "label": "Docker: Up",
       "type": "shell",
       "command": "task docker:up",
+      "group": "build"
+    },
+    {
+      "label": "Docker: Down",
+      "type": "shell",
+      "command": "task docker:down",
+      "group": "build"
+    },
+    {
+      "label": "Lint: All",
+      "type": "shell",
+      "command": "task lint",
+      "group": "test"
+    },
+    {
+      "label": "Format: All",
+      "type": "shell",
+      "command": "task format",
+      "group": "build"
+    },
+    {
+      "label": "DB: Migrate",
+      "type": "shell",
+      "command": "task db:migrate",
+      "group": "build"
+    },
+    {
+      "label": "Setup: Full",
+      "type": "shell",
+      "command": "task setup",
       "group": "build"
     }
   ]

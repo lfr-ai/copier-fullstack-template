@@ -1,0 +1,27 @@
+"""Sorting helper schemas for API endpoints."""
+
+from __future__ import annotations
+
+from typing import Annotated
+
+from pydantic import Field
+
+from {{ project_slug }}.core.enums import SortOrder
+from {{ project_slug }}.ports.api.schemas.base import BaseSchema
+
+__all__ = ["SortParams"]
+
+
+class SortParams(BaseSchema):
+    """Query parameters for result sorting."""
+
+    sort_by: Annotated[str | None, Field(
+        default=None,
+        description="Column or field name to sort by",
+        examples=["created_at", "email"],
+    )]
+    sort_order: Annotated[SortOrder, Field(
+        default=SortOrder.ASC,
+        description="Sort direction",
+        examples=[SortOrder.ASC, SortOrder.DESC],
+    )]

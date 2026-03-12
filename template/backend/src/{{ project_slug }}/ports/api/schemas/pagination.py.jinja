@@ -1,0 +1,61 @@
+"""Pagination schemas for API endpoints."""
+
+from __future__ import annotations
+
+from typing import Annotated, Generic, TypeVar
+
+from pydantic import Field
+
+from .base import BaseSchema
+from {{ project_slug }}.config.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
+
+__all__ = ["PaginatedResponse", "PaginationParams"]
+
+T = TypeVar("T")
+
+
+class PaginationParams(BaseSchema):
+    """Query parameters for paginated list endpoints."""
+
+    page: Annotated[int, Field(
+        default=1,
+        ge=1,
+        description="Page number (1-indexed)",
+        examples=[1, 5],
+    )]
+    page_size: Annotated[int, Field(
+        default=DEFAULT_PAGE_SIZE,
+        ge=1,
+        le=MAX_PAGE_SIZE,
+        description="Items per page",
+        examples=[20, 50],
+    )]
+
+
+class PaginatedResponse(BaseSchema, Generic[T]):
+    """Wrapper for paginated list responses."""
+
+    items: Annotated[list[T], Field(
+        description="Page of result items",
+        examples=[[]],
+    )]
+    total: Annotated[int, Field(
+        ge=0,
+        description="Total number of items",
+        examples=[42, 100],
+    )]
+    page: Annotated[int, Field(
+        ge=1,
+        description="Current page number",
+        examples=[1, 3],
+    )]
+    page_size: Annotated[int, Field(
+        ge=1,
+        description="Items per page",
+        examples=[20, 50],
+    )]
+    pages: Annotated[int, Field(
+        ge=0,
+        description="Total number of pages",
+        examples=[5, 10],
+    )]

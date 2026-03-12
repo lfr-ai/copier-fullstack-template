@@ -1,0 +1,94 @@
+"""Database session and engine factory configuration.
+
+Provides ``create_engine`` and ``create_session_factory`` for the
+dependency-injection container, and an ``async_session_factory`` /
+``get_async_session`` pair for FastAPI dependency injection.
+"""
+
+from __future__ import annotations
+
+__all__ = [
+    "create_engine",
+    "create_session_factory",
+    "get_async_session",
+    "setup_session",
+]
+
+from collections.abc import AsyncIterator
+
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine as _create_async_engine,
+)
+
+
+def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
+    """Create an async SQLAlchemy engine.
+
+    Args:
+        database_url (str): Database connection URL.
+        echo (bool): Enable SQL statement logging.
+
+    Returns:
+        AsyncEngine: Configured async engine instance.
+    """
+    return _create_async_engine(
+        database_url,
+        echo=echo,
+        pool_pre_ping=True,
+    )
+
+
+def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    """Create an async session factory bound to *engine*.
+
+    Args:
+        engine (AsyncEngine): Async SQLAlchemy engine.
+
+    Returns:
+        async_sessionmaker[AsyncSession]: Configured session factory.
+    """
+    return async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+_session_factory: async_sessionmaker[AsyncSession] | None = None
+
+
+def setup_session(*, database_url: str, echo: bool = False) -> async_sessionmaker[AsyncSession]:
+    """Bootstrap the module-level session factory.
+
+    Call once during application startup (e.g. in the ports/DI layer)
+    with the resolved database settings.
+
+    Args:
+        database_url (str): Database connection URL.
+        echo (bool): Enable SQL statement logging.
+
+    Returns:
+        async_sessionmaker[AsyncSession]: The configured session factory.
+    """
+    global _session_factory  # noqa: PLW0603
+    engine = create_engine(database_url, echo=echo)
+    _session_factory = create_session_factory(engine)
+    return _session_factory
+
+
+async def get_async_session() -> AsyncIterator[AsyncSession]:
+    """Yield an async database session.
+
+    Intended for use as a FastAPI dependency.
+
+    Raises:
+        RuntimeError: If ``setup_session`` has not been called.
+    """
+    if _session_factory is None:
+        msg = "Session not initialised — call setup_session() during app startup"
+        raise RuntimeError(msg)
+    async with _session_factory() as session:
+        yield session

@@ -1,0 +1,27 @@
+[default]
+locale = "en-us"
+
+[default.extend-words]
+{{ project_slug }} = "{{ project_slug }}"
+
+cfg = "cfg"
+ctx = "ctx"
+env = "env"
+impl = "impl"
+init = "init"
+msg = "msg"
+fmt = "fmt"
+src = "src"
+
+nd = "nd"
+
+hel = "hel"
+
+[files]
+extend-exclude = [
+    "pnpm-lock.yaml",
+    "*.lock",
+    "*.egg-info/**",
+    "*.baseline",
+    "backend/alembic/versions/**",
+]

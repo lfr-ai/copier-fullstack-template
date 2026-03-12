@@ -1,0 +1,22 @@
+{%- if use_redis %}
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT NO_UNSET
+
+
+CONTAINER_RUNTIME="{{ container_runtime }}"
+REDIS_PORT=6379
+CONTAINER_NAME="{{ project_slug }}-redis"
+
+print "Starting Redis container..."
+
+if "${CONTAINER_RUNTIME}" ps -a --format '{{ '{{.Names}}' }}' | grep -q "^${CONTAINER_NAME}$"; then
+"${CONTAINER_RUNTIME}" start "${CONTAINER_NAME}"
+else
+"${CONTAINER_RUNTIME}" run -d \
+--name "${CONTAINER_NAME}" \
+-p "${REDIS_PORT}:6379" \
+redis:7-alpine
+fi
+
+print "Redis running on port ${REDIS_PORT}"
+{%- endif %}

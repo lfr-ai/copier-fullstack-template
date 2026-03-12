@@ -1,0 +1,39 @@
+"""Tests for file_utils module."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from {{ project_slug }}.utils.file_utils import ensure_directory, safe_filename
+
+
+class TestEnsureDirectory:
+    """Test suite for ensure_directory function."""
+
+    def test_creates_directory(self, tmp_path: Path) -> None:
+        """Verify nested directories are created."""
+        target = tmp_path / "a" / "b" / "c"
+        result = ensure_directory(target)
+        assert result.is_dir()
+
+    def test_idempotent(self, tmp_path: Path) -> None:
+        """Verify existing directory is not modified."""
+        target = tmp_path / "existing"
+        target.mkdir()
+        result = ensure_directory(target)
+        assert result.is_dir()
+
+
+class TestSafeFilename:
+    """Test suite for safe_filename function."""
+
+    def test_keeps_alphanumeric(self) -> None:
+        """Verify alphanumeric filenames pass through unchanged."""
+        assert safe_filename("hello123") == "hello123"
+
+    def test_replaces_special_chars(self) -> None:
+        """Verify special characters are replaced."""
+        result = safe_filename("file<>name.txt")
+        assert "<" not in result
+        assert ">" not in result
+        assert result.endswith(".txt")

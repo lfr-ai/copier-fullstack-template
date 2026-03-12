@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "sourceMap": true,
+{%- if frontend_framework == "react" %}
+    "jsx": "react-jsx",
+{%- endif %}
+{%- if frontend_framework == "lit" %}
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+{%- endif %}
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+{%- if frontend_framework == "react" %}
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+{%- else %}
+  "include": ["src/**/*.ts"],
+{%- endif %}
+  "exclude": ["node_modules", "dist"]
+}
