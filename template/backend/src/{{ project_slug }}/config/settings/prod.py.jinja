@@ -1,20 +1,20 @@
-"""Production settings with strict defaults."""
+"""Prod settings with strict defaults."""
 
 from __future__ import annotations
 
 from {{ project_slug }}.config.settings.base import BaseAppSettings
 from {{ project_slug }}.core.enums.environment import Environment
 
-__all__ = ["ProductionSettings"]
+__all__ = ["ProdSettings"]
 
 
-class ProductionSettings(BaseAppSettings):
-    """Settings for production environment.
+class ProdSettings(BaseAppSettings):
+    """Settings for prod environment.
 
     Enforces strict security and performance defaults.
     """
 
-    environment: Environment = Environment.PRODUCTION
+    environment: Environment = Environment.PROD
     debug: bool = False
     log_level: str = "WARNING"
     host: str = "0.0.0.0"  # noqa: S104  – intentional: container networking

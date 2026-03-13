@@ -11,5 +11,5 @@ __all__ = ["setup_logging"]
 def setup_logging() -> None:
     """Initialize logging based on application settings."""
     settings = get_settings()
-    json_output = settings.environment.value in ("staging", "production")
+    json_output = settings.environment.value in ("staging", "prod")
     configure_logging(log_level=settings.log_level, json_output=json_output)

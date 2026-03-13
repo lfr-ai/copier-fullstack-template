@@ -9,7 +9,7 @@ services:
     read_only: true
     tmpfs: ["/tmp", "/app/logs"]
     environment:
-      {{ project_slug | upper }}_ENVIRONMENT: production
+      {{ project_slug | upper }}_ENVIRONMENT: prod
       {{ project_slug | upper }}_LOG_LEVEL: WARNING
     deploy:
       resources:
@@ -27,7 +27,7 @@ services:
     read_only: true
     tmpfs: ["/tmp", "/app/logs"]
     environment:
-      {{ project_slug | upper }}_ENVIRONMENT: production
+      {{ project_slug | upper }}_ENVIRONMENT: prod
       {{ project_slug | upper }}_LOG_LEVEL: WARNING
     deploy:
       resources:
