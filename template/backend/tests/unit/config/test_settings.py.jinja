@@ -10,7 +10,7 @@ import pytest
 from {{ project_slug }}.config.settings import get_settings
 from {{ project_slug }}.config.settings.base import BaseAppSettings
 from {{ project_slug }}.config.settings.local import LocalSettings
-from {{ project_slug }}.config.settings.production import ProductionSettings
+from {{ project_slug }}.config.settings.prod import ProdSettings
 from {{ project_slug }}.config.settings.test import TestSettings
 from {{ project_slug }}.core.enums.environment import Environment
 
@@ -43,18 +43,18 @@ class TestGetSettings:
         assert isinstance(settings, TestSettings)
         assert settings.environment == Environment.TEST
 
-    def test_staging_env_returns_production_settings(self) -> None:
-        """Verify STAGING env returns ProductionSettings."""
+    def test_staging_env_returns_prod_settings(self) -> None:
+        """Verify STAGING env returns ProdSettings."""
         with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "STAGING"}):
             settings = get_settings()
-        assert isinstance(settings, ProductionSettings)
+        assert isinstance(settings, ProdSettings)
 
-    def test_production_env_returns_production_settings(self) -> None:
-        """Verify PRODUCTION env returns ProductionSettings."""
-        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "PRODUCTION"}):
+    def test_prod_env_returns_prod_settings(self) -> None:
+        """Verify PROD env returns ProdSettings."""
+        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "PROD"}):
             settings = get_settings()
-        assert isinstance(settings, ProductionSettings)
-        assert settings.environment == Environment.PRODUCTION
+        assert isinstance(settings, ProdSettings)
+        assert settings.environment == Environment.PROD
 
     def test_case_insensitive(self) -> None:
         """Verify environment variable is case insensitive."""
@@ -102,22 +102,22 @@ class TestTestSettings:
         settings = TestSettings()
         assert settings.database_echo is False
 
-class TestProductionSettings:
-    """Test suite for ProductionSettings defaults."""
+class TestProdSettings:
+    """Test suite for ProdSettings defaults."""
 
     def test_debug_disabled(self) -> None:
-        """Verify debug is False in production."""
-        settings = ProductionSettings()
+        """Verify debug is False in prod."""
+        settings = ProdSettings()
         assert settings.debug is False
 
     def test_log_level_warning(self) -> None:
-        """Verify log level is WARNING in production."""
-        settings = ProductionSettings()
+        """Verify log level is WARNING in prod."""
+        settings = ProdSettings()
         assert settings.log_level == "WARNING"
 
     def test_database_echo_disabled(self) -> None:
-        """Verify SQL echo is disabled in production."""
-        settings = ProductionSettings()
+        """Verify SQL echo is disabled in prod."""
+        settings = ProdSettings()
         assert settings.database_echo is False
 
 class TestBaseAppSettings:

@@ -17,4 +17,4 @@ class Environment(ParseableEnum):
     DEV = auto()
     TEST = auto()
     STAGING = auto()
-    PRODUCTION = auto()
+    PROD = auto()

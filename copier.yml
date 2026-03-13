@@ -15,8 +15,7 @@ _exclude:
 _skip_if_exists:
   - ".env"
   - ".env.dev"
-  - ".env.development"
-  - ".env.production"
+  - ".env.prod"
   - ".env.staging"
   - ".env.test"
   - "CHANGELOG.md"

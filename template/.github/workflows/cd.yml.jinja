@@ -69,11 +69,11 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production
+    environment: prod
     if: "!contains(github.ref, '-rc') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha')"
     steps:
       - uses: actions/checkout@v6
       - name: Deploy to production
         run: echo "Deploy step - configure for your infrastructure"
-        # Example: docker compose -f compose.yml -f compose.prod.yml --env-file .env.production up -d
+        # Example: docker compose -f compose.yml -f compose.prod.yml --env-file .env.prod up -d
 {% endraw %}

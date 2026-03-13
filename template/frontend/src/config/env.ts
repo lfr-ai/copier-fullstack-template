@@ -9,7 +9,7 @@
  */
 
 /** Supported deployment environments. */
-export type AppEnvironment = 'local' | 'dev' | 'test' | 'staging' | 'production';
+export type AppEnvironment = 'local' | 'dev' | 'test' | 'staging' | 'prod';
 
 /** Typed environment configuration object. */
 export interface AppConfig {
@@ -32,7 +32,7 @@ function resolveEnvironment(): AppEnvironment {
     'dev',
     'test',
     'staging',
-    'production',
+    'prod',
   ]);
   if (allowed.has(raw as AppEnvironment)) {
     return raw as AppEnvironment;

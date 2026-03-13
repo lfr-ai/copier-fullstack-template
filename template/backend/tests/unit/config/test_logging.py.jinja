@@ -28,15 +28,15 @@ class TestSetupLogging:
 
     @patch("{{ project_slug }}.config.logging.configure_logging")
     @patch("{{ project_slug }}.config.logging.get_settings")
-    def test_production_environment_uses_json_output(
+    def test_prod_environment_uses_json_output(
         self,
         mock_settings: MagicMock,
         mock_configure: MagicMock,
     ) -> None:
-        """Verify production env uses JSON output."""
+        """Verify prod env uses JSON output."""
         from {{ project_slug }}.config.logging import setup_logging
 
-        mock_settings.return_value.environment = Environment.PRODUCTION
+        mock_settings.return_value.environment = Environment.PROD
         mock_settings.return_value.log_level = "WARNING"
         setup_logging()
         mock_configure.assert_called_once_with(log_level="WARNING", json_output=True)

@@ -54,7 +54,7 @@ tasks:
   prod:
     desc: "Start services with production overrides"
     cmds:
-      - {{ container_runtime }} compose -f compose.yml -f compose.prod.yml --env-file .env.production up -d --build
+      - {{ container_runtime }} compose -f compose.yml -f compose.prod.yml --env-file .env.prod up -d --build
 
   staging:
     desc: "Start services with staging overrides"

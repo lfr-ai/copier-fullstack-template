@@ -7,7 +7,7 @@ Accepted
 
 
 We need a configuration system that supports environment variables, `.env` files, type validation,
-and environment-specific overrides (local, test, production).
+and environment-specific overrides (local, test, prod).
 
 
 Use `pydantic-settings` for application configuration:
@@ -21,5 +21,5 @@ Use `pydantic-settings` for application configuration:
 
 - **Positive**: Fail-fast on misconfiguration at startup
 - **Positive**: Full IDE autocompletion on settings
-- **Positive**: Environment-specific settings classes (LocalSettings, ProductionSettings)
+- **Positive**: Environment-specific settings classes (LocalSettings, ProdSettings)
 - **Negative**: Slight startup overhead for validation

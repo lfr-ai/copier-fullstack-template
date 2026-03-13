@@ -39,7 +39,7 @@ class BaseAppSettings(BaseSettings):
     environment: Environment = Field(
         default=Environment.LOCAL,
         description="Deployment environment.",
-        examples=["local", "dev", "staging", "production"],
+        examples=["local", "dev", "test", "staging", "prod"],
     )
     debug: bool = Field(
         default=False,
