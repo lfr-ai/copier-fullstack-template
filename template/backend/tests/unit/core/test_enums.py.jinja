@@ -14,7 +14,7 @@ class TestEnvironmentEnum:
 
     def test_all_environments_defined(self) -> None:
         """Verify all expected environments exist."""
-        expected = {"LOCAL", "DEV", "TEST", "STAGING", "PRODUCTION"}
+        expected = {"LOCAL", "DEV", "TEST", "STAGING", "PROD"}
         actual = {e.name for e in Environment}
         assert actual == expected
 
@@ -26,17 +26,17 @@ class TestEnvironmentEnum:
     def test_environment_auto_generates_lowercase(self) -> None:
         """Verify auto() generates lowercase string values."""
         assert Environment.LOCAL.value == "local"
-        assert Environment.PRODUCTION.value == "production"
+        assert Environment.PROD.value == "prod"
 
     def test_environment_from_value(self) -> None:
         """Verify construction from string value."""
         assert Environment("local") is Environment.LOCAL
-        assert Environment("production") is Environment.PRODUCTION
+        assert Environment("prod") is Environment.PROD
 
     def test_environment_from_str(self) -> None:
         """Verify from_str classmethod handles case-insensitive lookup."""
         assert Environment.from_str("LOCAL") is Environment.LOCAL
-        assert Environment.from_str("production") is Environment.PRODUCTION
+        assert Environment.from_str("prod") is Environment.PROD
 
     def test_environment_from_str_invalid_raises(self) -> None:
         """Verify from_str raises ValueError for unknown values."""

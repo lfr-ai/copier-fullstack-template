@@ -31,8 +31,8 @@ _exclude:
 
 _skip_if_exists:
   - ".env"
-  - ".env.development"
-  - ".env.production"
+  - ".env.dev"
+  - ".env.prod"
   - ".env.test"
   - "CHANGELOG.md"
   - "backend/seeds/initial_data.json"
@@ -177,7 +177,7 @@ The backend **MUST** follow hexagonal architecture (ports and adapters) with str
 | **Factory Method**   | `ports/api/app.py`, `config/celery.py`                                   | `create_api_app()`, `create_celery_app()`                                                   |
 | **DTO**              | `application/dtos/`                                                      | Pydantic-free DTOs (frozen dataclasses) for inter-layer communication                       |
 | **Mapper**           | `application/mappers/`                                                   | Entity ↔ DTO mapping                                                                        |
-| **Strategy**         | `config/settings/`                                                       | Environment-specific settings: `LocalSettings`, `ProductionSettings`, `TestSettings`        |
+| **Strategy**         | `config/settings/`                                                       | Environment-specific settings: `LocalSettings`, `ProdSettings`, `TestSettings`              |
 | **Retry/Resilience** | `utils/retry_policies.py`                                                | Tenacity decorators with exponential backoff                                                |
 
 ### 2.4. Known Issues to Fix
@@ -240,7 +240,7 @@ backend/
 │   │       ├── __init__.py.jinja  # `get_settings()` factory dispatching on environment enum
 │   │       ├── base.py.jinja      # BaseSettings (pydantic-settings) with all env vars
 │   │       ├── local.py.jinja     # LocalSettings overrides (DEBUG=True, etc.)
-│   │       ├── production.py.jinja
+│   │       ├── prod.py.jinja
 │   │       └── test.py.jinja
 │   ├── core/
 │   │   ├── __init__.py
@@ -254,7 +254,7 @@ backend/
 │   │   ├── enums/
 │   │   │   ├── __init__.py        # Barrel export
 │   │   │   ├── base.py            # ParseableEnum(StrEnum) with from_str()
-│   │   │   ├── environment.py     # Environment enum (local, test, staging, production)
+│   │   │   ├── environment.py     # Environment enum (local, test, staging, prod)
 │   │   │   ├── service_status.py  # ServiceStatus (healthy, degraded, unhealthy)
 │   │   │   ├── sort_order.py      # SortOrder (asc, desc)
 │   │   │   └── status.py          # Status (active, inactive, suspended, deleted)
@@ -639,7 +639,7 @@ Both share: Vite build, Vitest unit tests, ESLint 9 + typescript-eslint strict, 
   "packageManager": "pnpm@10.x",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --mode prod",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -1297,7 +1297,7 @@ Test helpers: `factories/` (factory-boy), `fixtures/` (database, cache), `mocks/
 ### When `secret_backend == "env"` (default)
 
 - All secrets via environment variables with `{{ project_slug | upper }}_` prefix
-- `.env` files per environment (`.env`, `.env.development`, `.env.production`, `.env.test`)
+- `.env` files per environment (`.env`, `.env.dev`, `.env.prod`, `.env.test`)
 - `pydantic-settings` loads `.env` files automatically
 
 ### When `secret_backend == "azure_kv"` (requires `cloud_provider == "azure"`)

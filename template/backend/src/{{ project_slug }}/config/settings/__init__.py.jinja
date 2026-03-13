@@ -11,7 +11,7 @@ from typing import Final
 from {{ project_slug }}.config.settings.base import BaseAppSettings
 from {{ project_slug }}.config.settings.dev import DevSettings
 from {{ project_slug }}.config.settings.local import LocalSettings
-from {{ project_slug }}.config.settings.production import ProductionSettings
+from {{ project_slug }}.config.settings.prod import ProdSettings
 from {{ project_slug }}.config.settings.staging import StagingSettings
 from {{ project_slug }}.config.settings.test import TestSettings
 from {{ project_slug }}.core.enums.environment import Environment
@@ -21,7 +21,7 @@ _SETTINGS_MAP: Final[dict[Environment, type[BaseAppSettings]]] = {
     Environment.DEV: DevSettings,
     Environment.TEST: TestSettings,
     Environment.STAGING: StagingSettings,
-    Environment.PRODUCTION: ProductionSettings,
+    Environment.PROD: ProdSettings,
 }
 
 

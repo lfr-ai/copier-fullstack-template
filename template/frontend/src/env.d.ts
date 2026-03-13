@@ -8,7 +8,7 @@
  */
 interface ImportMetaEnv {
   /** Current deployment environment. */
-  readonly VITE_ENVIRONMENT: 'local' | 'dev' | 'test' | 'staging' | 'production';
+  readonly VITE_ENVIRONMENT: 'local' | 'dev' | 'test' | 'staging' | 'prod';
   /** Base URL for backend API requests. */
   readonly VITE_API_BASE_URL: string;
   /** Application version injected at build time. */
