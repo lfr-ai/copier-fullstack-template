@@ -27,11 +27,13 @@ INFRA_DIR="${SCRIPT_DIR:h}"
 bicepparams="${INFRA_DIR}/parameters/${env}/deploy.${env}.bicepparam"
 sed -i "1s|^using '../../deploy\.bicep'|using '../../main.bicep'|" "$bicepparams"
 
+{
 az deployment group create \
 --resource-group "$rg" \
 --template-file "${INFRA_DIR}/main.bicep" \
 --parameters "$bicepparams" \
 --parameters projectName="$project" env="$env" \
 --only-show-errors
-
+} always {
 sed -i "1s|^using '../../main\.bicep'|using '../../deploy.bicep'|" "$bicepparams"
+}

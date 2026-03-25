@@ -1,0 +1,129 @@
+"""RAG retrieval pipeline — queries the knowledge base and generates responses.
+
+Handles: query embedding → vector search → context assembly → LLM generation.
+"""
+
+from __future__ import annotations
+
+import structlog
+from dataclasses import dataclass, field
+
+from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT, DEFAULT_SIMILARITY_TOP_K
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStorePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_DEFAULT_GRAPH_ENRICHMENT_DEPTH: int = 1
+
+
+@dataclass(frozen=True, slots=True)
+class RetrievalResult:
+    """Result of a RAG retrieval-and-generation cycle."""
+
+    query: str
+    answer: str
+    sources: list[VectorSearchResult] = field(default_factory=list)
+    graph_context: list[dict[str, object]] = field(default_factory=list)
+
+
+class RetrievalPipeline:
+    """Orchestrates retrieval-augmented generation.
+
+    Pipeline stages:
+        1. Embed user query
+        2. Search vector store for relevant chunks
+        3. Optionally enrich with knowledge graph context
+        4. Assemble context and generate answer via LLM
+    """
+
+    __slots__ = ("_embedding", "_knowledge_graph", "_llm", "_vector_store")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+        knowledge_graph: KnowledgeGraphPort | None = None,
+    ) -> None:
+        self._llm = llm
+        self._embedding = embedding
+        self._vector_store = vector_store
+        self._knowledge_graph = knowledge_graph
+
+    async def query(
+        self,
+        question: str,
+        *,
+        top_k: int = DEFAULT_SIMILARITY_TOP_K,
+        system_prompt: str | None = None,
+        use_graph: bool = False,
+    ) -> RetrievalResult:
+        """Execute a full RAG query.
+
+        Args:
+            question (str): User's natural language question.
+            top_k (int): Number of source chunks to retrieve.
+            system_prompt (str | None): Optional system prompt for the LLM.
+            use_graph (bool): Whether to enrich context with knowledge graph data.
+
+        Returns:
+            RetrievalResult: Result with answer, sources, and optional graph context.
+        """
+        query_vector = await self._embedding.embed_text(question)
+
+        sources = await self._vector_store.search(
+            query_vector=query_vector,
+            top_k=top_k,
+        )
+
+        context_parts: list[str] = []
+        for src in sources:
+            content = src.metadata.get("content", "") if src.metadata else ""
+            if content:
+                context_parts.append(str(content))
+
+        graph_context: list[dict[str, object]] = []
+        if use_graph and self._knowledge_graph:
+            graph_context = await self._knowledge_graph.query_neighbors(
+                question,
+                depth=_DEFAULT_GRAPH_ENRICHMENT_DEPTH,
+                limit=DEFAULT_GRAPH_NEIGHBOR_LIMIT,
+            )
+            for item in graph_context:
+                entity_name = item.get("entity", "")
+                if entity_name:
+                    context_parts.append(f"Related entity: {entity_name}")
+
+        context = "\n\n".join(context_parts)
+
+        prompt = self._build_prompt(question, context)
+        answer = await self._llm.complete(
+            prompt=prompt,
+            system_prompt=system_prompt or "You are a helpful assistant. Answer based on the provided context.",
+        )
+
+        logger.info(
+            "RAG query completed: %d sources, %d graph entities",
+            len(sources),
+            len(graph_context),
+        )
+
+        return RetrievalResult(
+            query=question,
+            answer=answer,
+            sources=sources,
+            graph_context=graph_context,
+        )
+
+    @staticmethod
+    def _build_prompt(question: str, context: str) -> str:
+        if context:
+            return (
+                f"Context:\n{context}\n\n"
+                f"Question: {question}\n\n"
+                f"Answer based on the context above:"
+            )
+        return f"Question: {question}\n\nAnswer:"

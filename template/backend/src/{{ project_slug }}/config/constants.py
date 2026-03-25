@@ -1,38 +1,27 @@
 """Infrastructure constants — networking, API prefixes, pagination, security.
 
 Domain validation constants (email lengths, password rules, etc.) live in
-``core.constants``.  Import them from there directly.
+'core.constants'.  Import them from there directly.
 """
 
 from __future__ import annotations
 
-from typing import Final
+API_V1_PREFIX = "/api/v1"
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
 
-__all__ = [
-    "API_V1_PREFIX",
-    "DEFAULT_FROM_ADDRESS",
-    "DEFAULT_PAGE_SIZE",
-    "DEFAULT_PORT",
-    "DEFAULT_SMTP_PORT",
-    "DEFAULT_TRUNCATE_LENGTH",
-    "MAX_PAGE_SIZE",
-    "MAX_PORT",
-    "MS_PER_SECOND",
-    "REFRESH_TOKEN_EXPIRY_DAYS",
-    "TOKEN_EXPIRY_MINUTES",
-]
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8000
+MAX_PORT = 65_535
+DEFAULT_SMTP_PORT = 587
+DEFAULT_FROM_ADDRESS = "noreply@example.com"
+MS_PER_SECOND = 1_000
 
-API_V1_PREFIX: Final[str] = "/api/v1"
-DEFAULT_PAGE_SIZE: Final[int] = 20
-MAX_PAGE_SIZE: Final[int] = 100
+TOKEN_EXPIRY_MINUTES = 30
+REFRESH_TOKEN_EXPIRY_DAYS = 7  # FIXME: unused — wire into auth adapter or remove
 
-DEFAULT_PORT: Final[int] = 8000
-MAX_PORT: Final[int] = 65_535
-DEFAULT_SMTP_PORT: Final[int] = 587
-DEFAULT_FROM_ADDRESS: Final[str] = "noreply@example.com"
-MS_PER_SECOND: Final[int] = 1_000
+DEFAULT_TRUNCATE_LENGTH = 100
 
-TOKEN_EXPIRY_MINUTES: Final[int] = 30
-REFRESH_TOKEN_EXPIRY_DAYS: Final[int] = 7
+PROFILING_INTERVAL = 0.001  # Pyinstrument sampling interval (seconds)
 
-DEFAULT_TRUNCATE_LENGTH: Final[int] = 100
+DEFAULT_CACHE_TTL_SECONDS = 3600  # 1 hour

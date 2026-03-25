@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging  # noqa: LOG001 — stdlib logger required by tenacity before_sleep_log
-from typing import Final
 
 from tenacity import (
     before_sleep_log,
@@ -15,28 +14,15 @@ from tenacity import (
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-__all__ = [
-    "API_BACKOFF_MAX",
-    "API_BACKOFF_MIN",
-    "API_BACKOFF_MULTIPLIER",
-    "API_RETRY_ATTEMPTS",
-    "HTTP_BACKOFF_MAX",
-    "HTTP_BACKOFF_MIN",
-    "HTTP_BACKOFF_MULTIPLIER",
-    "HTTP_RETRY_ATTEMPTS",
-    "api_retry",
-    "http_retry",
-]
+HTTP_RETRY_ATTEMPTS = 3
+HTTP_BACKOFF_MULTIPLIER = 1.5
+HTTP_BACKOFF_MIN = 2.0
+HTTP_BACKOFF_MAX = 15.0
 
-HTTP_RETRY_ATTEMPTS: Final[int] = 3
-HTTP_BACKOFF_MULTIPLIER: Final[float] = 1.5
-HTTP_BACKOFF_MIN: Final[float] = 2.0
-HTTP_BACKOFF_MAX: Final[float] = 15.0
-
-API_RETRY_ATTEMPTS: Final[int] = 5
-API_BACKOFF_MULTIPLIER: Final[float] = 2.0
-API_BACKOFF_MIN: Final[float] = 3.0
-API_BACKOFF_MAX: Final[float] = 30.0
+API_RETRY_ATTEMPTS = 5
+API_BACKOFF_MULTIPLIER = 2.0
+API_BACKOFF_MIN = 3.0
+API_BACKOFF_MAX = 30.0
 
 http_retry = retry(
     stop=stop_after_attempt(HTTP_RETRY_ATTEMPTS),
@@ -60,6 +46,8 @@ api_retry = retry(
     ),
     reraise=True,
     before_sleep=before_sleep_log(logger, logging.WARNING),
-    retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+    retry=retry_if_exception_type(
+        (ConnectionError, TimeoutError, ConnectionResetError, BrokenPipeError)
+    ),
 )
 """Retry decorator for API calls with longer timeouts and broader error matching."""

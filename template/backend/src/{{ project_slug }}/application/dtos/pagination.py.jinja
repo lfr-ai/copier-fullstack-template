@@ -7,16 +7,16 @@ from typing import Annotated
 from pydantic import Field
 
 from {{ project_slug }}.application.dtos.base import BaseDTO
-from {{ project_slug }}.config.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 
-__all__ = ["DEFAULT_PAGE_SIZE", "MAX_PAGE_SIZE", "PaginationParams"]
+_DEFAULT_PAGE_SIZE: int = 20
+_MAX_PAGE_SIZE: int = 100
 
 
 class PaginationParams(BaseDTO):
     """Query parameters for paginated endpoints.
 
     Uses page/page_size convention aligned with the API pagination
-    schema at ``ports/api/schemas/pagination.py``.
+    schema at 'ports/api/schemas/pagination.py'.
     """
 
     page: Annotated[
@@ -26,9 +26,9 @@ class PaginationParams(BaseDTO):
     page_size: Annotated[
         int,
         Field(
-            default=DEFAULT_PAGE_SIZE,
+            default=_DEFAULT_PAGE_SIZE,
             gt=0,
-            le=MAX_PAGE_SIZE,
+            le=_MAX_PAGE_SIZE,
             description="Items per page",
             examples=[20, 50],
         ),
@@ -36,18 +36,10 @@ class PaginationParams(BaseDTO):
 
     @property
     def offset(self) -> int:
-        """Compute SQL offset from page parameters.
-
-        Returns:
-            int: Zero-based offset for SQL queries.
-        """
+        """Compute zero-based SQL offset from page parameters."""
         return (self.page - 1) * self.page_size
 
     @property
     def limit(self) -> int:
-        """Alias for page_size — convenience for SQL LIMIT.
-
-        Returns:
-            int: Maximum records per query.
-        """
+        """Alias for page_size — convenience for SQL LIMIT."""
         return self.page_size

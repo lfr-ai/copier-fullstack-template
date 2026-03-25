@@ -2,7 +2,7 @@
 """Example Celery background tasks.
 
 All tasks must be idempotent and handle retries gracefully.
-Use ``autoretry_for`` with exponential backoff for transient failures.
+Use 'autoretry_for' with exponential backoff for transient failures.
 
 .. note::
 
@@ -14,27 +14,19 @@ would add indirection with no practical benefit.
 
 from __future__ import annotations
 
-from typing import Final
-
 import structlog
 
 from celery import shared_task
 
-__all__ = ["cleanup_expired_sessions", "send_welcome_email"]
-
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-_WELCOME_BACKOFF_MAX: Final[int] = 600
-"""Maximum backoff (seconds) between welcome-email retries."""
+_WELCOME_BACKOFF_MAX = 600 # Max backoff (seconds) between welcome-email retries
 
-_WELCOME_MAX_RETRIES: Final[int] = 3
-"""Maximum retry attempts for welcome-email delivery."""
+_WELCOME_MAX_RETRIES = 3
 
-_CLEANUP_BACKOFF_MAX: Final[int] = 300
-"""Maximum backoff (seconds) between session-cleanup retries."""
+_CLEANUP_BACKOFF_MAX = 300 # Max backoff (seconds) between session-cleanup retries
 
-_CLEANUP_MAX_RETRIES: Final[int] = 5
-"""Maximum retry attempts for session cleanup."""
+_CLEANUP_MAX_RETRIES = 5
 
 
 @shared_task(
@@ -46,16 +38,7 @@ retry_kwargs={"max_retries": _WELCOME_MAX_RETRIES},
 acks_late=True,
 )
 def send_welcome_email(self: object, *, user_id: str, email: str) -> dict[str, str]:
-"""Send welcome email to newly registered user.
-
-Args:
-self: Celery task instance (bound).
-user_id: Unique identifier of the user.
-email: Recipient email address.
-
-Returns:
-Status dict with user_id and delivery result.
-"""
+"""Send welcome email to newly registered user."""
 logger.info("Sending welcome email to %s (user_id=%s)", email, user_id)
 return {"user_id": user_id, "status": "sent"}
 
@@ -73,11 +56,6 @@ def cleanup_expired_sessions(self: object) -> dict[str, int]:
 
 Schedule via Celery Beat in compose.yml.
 
-Args:
-self: Celery task instance (bound).
-
-Returns:
-Count of removed sessions.
 """
 logger.info("Cleaning up expired sessions")
 removed = 0

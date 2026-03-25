@@ -1,0 +1,24 @@
+"""MCP-related DTOs."""
+
+from __future__ import annotations
+
+from pydantic import Field
+
+from {{ project_slug }}.application.dtos.base import BaseDTO
+
+
+class MCPToolCallDTO(BaseDTO):
+    """Input for an MCP tool invocation."""
+
+    server: str = ""
+    tool: str = ""
+    arguments: dict[str, object] = Field(default_factory=dict)
+
+
+class MCPToolResultDTO(BaseDTO):
+    """Output from an MCP tool invocation."""
+
+    tool: str = ""
+    content: str = ""
+    is_error: bool = False
+    metadata: dict[str, object] = Field(default_factory=dict)

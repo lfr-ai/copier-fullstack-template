@@ -1,0 +1,736 @@
+<#
+.SYNOPSIS
+    {{ project_name }} — SSH / SFTP Setup (Windows)
+
+.DESCRIPTION
+    Idempotent, security-conscious setup for SSH key generation,
+    OpenSSH server configuration, SFTP enablement, and VS Code
+    SFTP scaffold on Windows 10/11.
+
+    Handles both administrator and standard user contexts correctly,
+    including the Windows OpenSSH authorized_keys split:
+      - Admins  → %ProgramData%\ssh\administrators_authorized_keys
+      - Users   → %USERPROFILE%\.ssh\authorized_keys
+
+.PARAMETER Mode
+    Setup mode: Client, Server, or Both. Default: Client.
+
+.PARAMETER KeyType
+    Key algorithm: Ed25519 or RSA. Default: Ed25519.
+
+.PARAMETER KeyName
+    Key filename (without path). Default: id_ed25519.
+
+.PARAMETER NoPassphrase
+    Generate key without passphrase. NOT recommended for production.
+
+.PARAMETER RemoteHost
+    Remote host for client configuration and SFTP scaffold.
+
+.PARAMETER RemoteUser
+    Remote user for SSH/SFTP. Default: current user.
+
+.PARAMETER RemotePort
+    Remote SSH port. Default: 22.
+
+.PARAMETER SftpRemotePath
+    Remote path for VS Code SFTP extension.
+
+.PARAMETER Harden
+    Apply server hardening defaults (disable password auth, root login, etc.).
+
+.PARAMETER InstallServer
+    Install/enable Windows OpenSSH Server if missing.
+
+.PARAMETER DryRun
+    Show what would be done without making changes.
+
+.PARAMETER Verbose
+    Enable verbose output.
+
+.PARAMETER NonInteractive
+    Skip all interactive prompts.
+
+.EXAMPLE
+    .\setup-ssh.ps1 -Mode Client -RemoteHost myserver.example.com
+    .\setup-ssh.ps1 -Mode Server -Harden -InstallServer
+    .\setup-ssh.ps1 -Mode Both -KeyType Ed25519 -DryRun
+#>
+[CmdletBinding()]
+param(
+    [ValidateSet("Client", "Server", "Both")]
+    [string]$Mode = "Client",
+
+    [ValidateSet("Ed25519", "RSA")]
+    [string]$KeyType = "Ed25519",
+
+    [string]$KeyName = "",
+
+    [switch]$NoPassphrase,
+
+    [string]$RemoteHost = "",
+
+    [string]$RemoteUser = $env:USERNAME,
+
+    [int]$RemotePort = 22,
+
+    [string]$SftpRemotePath = "/home/$env:USERNAME/{{ project_slug }}",
+
+    [switch]$Harden,
+
+    [switch]$InstallServer,
+
+    [switch]$DryRun,
+
+    [switch]$NonInteractive
+)
+
+$ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
+
+# ── Constants ───────────────────────────────────────────────
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
+
+# ── Logging helpers ─────────────────────────────────────────
+function Log-Info    { param([string]$Msg) Write-Host "[INFO]   $Msg" -ForegroundColor Cyan }
+function Log-Ok      { param([string]$Msg) Write-Host "[OK]     $Msg" -ForegroundColor Green }
+function Log-Warn    { param([string]$Msg) Write-Host "[WARN]   $Msg" -ForegroundColor Yellow }
+function Log-Error   { param([string]$Msg) Write-Host "[ERROR]  $Msg" -ForegroundColor Red }
+function Log-Debug   { param([string]$Msg) if ($VerbosePreference -eq 'Continue') { Write-Host "[DEBUG]  $Msg" } }
+function Log-DryRun  { param([string]$Msg) Write-Host "[DRY-RUN] $Msg" -ForegroundColor Yellow }
+
+# ── Platform detection ──────────────────────────────────────
+function Test-Administrator {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+$IsAdmin = Test-Administrator
+Log-Debug "Running as administrator: $IsAdmin"
+
+# ── Defaults ────────────────────────────────────────────────
+if ([string]::IsNullOrEmpty($KeyName)) {
+    $KeyName = "id_$($KeyType.ToLower())"
+}
+
+$SshDir = Join-Path $env:USERPROFILE ".ssh"
+
+# ── SSH directory ───────────────────────────────────────────
+function Ensure-SshDir {
+    if (Test-Path $SshDir) {
+        Log-Debug "SSH directory exists: $SshDir"
+    }
+    else {
+        if ($DryRun) {
+            Log-DryRun "Would create: $SshDir"
+        }
+        else {
+            New-Item -ItemType Directory -Path $SshDir -Force | Out-Null
+            Log-Ok "Created: $SshDir"
+        }
+    }
+
+    if (-not $DryRun) {
+        # Set restrictive ACL: current user = FullControl, SYSTEM = FullControl, remove inheritance
+        $acl = Get-Acl $SshDir
+        $acl.SetAccessRuleProtection($true, $false) # disable inheritance, remove inherited rules
+        $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) } | Out-Null
+
+        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+        $userRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            $currentUser, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+        )
+        $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+        )
+        $acl.SetAccessRule($userRule)
+        $acl.SetAccessRule($systemRule)
+        Set-Acl -Path $SshDir -AclObject $acl
+        Log-Debug "ACLs set on $SshDir"
+    }
+}
+
+# ── Key generation ──────────────────────────────────────────
+function Generate-SshKey {
+    $keyPath = Join-Path $SshDir $KeyName
+
+    if (Test-Path $keyPath) {
+        Log-Warn "Key already exists: $keyPath"
+        if ($NonInteractive) {
+            Log-Info "Reusing existing key (non-interactive mode)"
+            return
+        }
+        $answer = Read-Host "Overwrite existing key? [y/N]"
+        if ($answer -notmatch "^[yY]") {
+            Log-Info "Keeping existing key"
+            return
+        }
+    }
+
+    $keygenArgs = @("-t", $KeyType.ToLower())
+
+    if ($KeyType -eq "Ed25519") {
+        $keygenArgs += @("-a", "100")
+    }
+    elseif ($KeyType -eq "RSA") {
+        $keygenArgs += @("-b", "4096")
+    }
+
+    $keygenArgs += @("-f", $keyPath)
+    $keygenArgs += @("-C", "$env:USERNAME@$env:COMPUTERNAME-$(Get-Date -Format 'yyyyMMdd')")
+
+    if ($NoPassphrase) {
+        Log-Warn "Generating key WITHOUT passphrase (not recommended for production)"
+        $keygenArgs += @("-N", '""')
+    }
+
+    if ($DryRun) {
+        Log-DryRun "Would run: ssh-keygen $($keygenArgs -join ' ')"
+        return
+    }
+
+    if (-not (Get-Command ssh-keygen -ErrorAction SilentlyContinue)) {
+        throw "ssh-keygen not found. Install Windows OpenSSH Client first."
+    }
+
+    if ($NoPassphrase -or $NonInteractive) {
+        # Non-interactive: pipe empty passphrase
+        "" | ssh-keygen @keygenArgs 2>&1 | Out-Null
+    }
+    else {
+        & ssh-keygen @keygenArgs
+    }
+
+    # Set key file ACLs
+    Set-SshFileAcl -Path $keyPath
+    Log-Ok "Key generated: $keyPath"
+    $fingerprint = ssh-keygen -lf "$keyPath.pub" 2>$null
+    Log-Info "Fingerprint: $fingerprint"
+}
+
+# ── ACL helper ──────────────────────────────────────────────
+function Set-SshFileAcl {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) { return }
+
+    $acl = Get-Acl $Path
+    $acl.SetAccessRuleProtection($true, $false)
+    $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) } | Out-Null
+
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    $userRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $currentUser, "FullControl", "None", "None", "Allow"
+    )
+    $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "SYSTEM", "FullControl", "None", "None", "Allow"
+    )
+    $acl.SetAccessRule($userRule)
+    $acl.SetAccessRule($systemRule)
+    Set-Acl -Path $Path -AclObject $acl
+}
+
+# ── Install public key (local server) ──────────────────────
+function Install-PublicKeyLocal {
+    $pubKeyPath = Join-Path $SshDir "$KeyName.pub"
+
+    if (-not (Test-Path $pubKeyPath)) {
+        throw "Public key not found: $pubKeyPath"
+    }
+
+    $pubKey = Get-Content $pubKeyPath -Raw
+    $pubKey = $pubKey.Trim()
+
+    # Windows OpenSSH: admin keys go to administrators_authorized_keys
+    if ($IsAdmin) {
+        $authKeysPath = Join-Path $env:ProgramData "ssh\administrators_authorized_keys"
+        $authKeysDir = Split-Path $authKeysPath
+        if (-not (Test-Path $authKeysDir)) {
+            if ($DryRun) {
+                Log-DryRun "Would create: $authKeysDir"
+            }
+            else {
+                New-Item -ItemType Directory -Path $authKeysDir -Force | Out-Null
+            }
+        }
+    }
+    else {
+        $authKeysPath = Join-Path $SshDir "authorized_keys"
+    }
+
+    # Check for duplicates
+    if (Test-Path $authKeysPath) {
+        $existing = Get-Content $authKeysPath -Raw -ErrorAction SilentlyContinue
+        if ($existing -and $existing.Contains($pubKey)) {
+            Log-Info "Public key already in $authKeysPath (skipping duplicate)"
+            return
+        }
+    }
+
+    if ($DryRun) {
+        Log-DryRun "Would install public key to: $authKeysPath"
+        if ($IsAdmin) {
+            Log-DryRun "(Admin account → administrators_authorized_keys)"
+        }
+        return
+    }
+
+    Add-Content -Path $authKeysPath -Value $pubKey
+
+    # Set correct ACLs
+    if ($IsAdmin) {
+        # administrators_authorized_keys must be owned by Administrators and SYSTEM only
+        $acl = Get-Acl $authKeysPath
+        $acl.SetAccessRuleProtection($true, $false)
+        $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) } | Out-Null
+
+        $adminsRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "BUILTIN\Administrators", "FullControl", "None", "None", "Allow"
+        )
+        $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "SYSTEM", "FullControl", "None", "None", "Allow"
+        )
+        $acl.SetAccessRule($adminsRule)
+        $acl.SetAccessRule($systemRule)
+        Set-Acl -Path $authKeysPath -AclObject $acl
+        Log-Ok "Public key installed to: $authKeysPath (admin mode)"
+    }
+    else {
+        Set-SshFileAcl -Path $authKeysPath
+        Log-Ok "Public key installed to: $authKeysPath (standard user)"
+    }
+}
+
+# ── Remote key installation ─────────────────────────────────
+function Install-PublicKeyRemote {
+    if ([string]::IsNullOrEmpty($RemoteHost)) {
+        Log-Debug "No remote host; skipping remote key installation"
+        return
+    }
+
+    $pubKeyPath = Join-Path $SshDir "$KeyName.pub"
+    if (-not (Test-Path $pubKeyPath)) {
+        throw "Public key not found: $pubKeyPath"
+    }
+
+    $pubKey = Get-Content $pubKeyPath -Raw
+    $pubKey = $pubKey.Trim()
+
+    if ($DryRun) {
+        Log-DryRun "Would install public key on ${RemoteUser}@${RemoteHost}:${RemotePort}"
+        return
+    }
+
+    Log-Info "Installing public key on ${RemoteUser}@${RemoteHost}:${RemotePort} ..."
+
+    # Use ssh to append the key (ssh-copy-id may not be available on Windows)
+    $escapedKey = $pubKey -replace '"', '\"'
+    $cmd = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo `"$escapedKey`" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+    ssh -p $RemotePort "${RemoteUser}@${RemoteHost}" $cmd
+
+    Log-Ok "Public key installed on remote host"
+}
+
+# ── OpenSSH Server installation ─────────────────────────────
+function Install-SshServer {
+    $serverCapability = Get-WindowsCapability -Online | Where-Object Name -like "OpenSSH.Server*"
+
+    if ($serverCapability.State -eq "Installed") {
+        Log-Info "OpenSSH Server already installed"
+    }
+    elseif ($InstallServer) {
+        if (-not $IsAdmin) {
+            throw "Installing OpenSSH Server requires administrator privileges."
+        }
+
+        if ($DryRun) {
+            Log-DryRun "Would install OpenSSH Server capability"
+        }
+        else {
+            Log-Info "Installing OpenSSH Server..."
+            Add-WindowsCapability -Online -Name $serverCapability.Name | Out-Null
+            Log-Ok "OpenSSH Server installed"
+        }
+    }
+    else {
+        Log-Warn "OpenSSH Server not installed. Pass -InstallServer to install."
+        return
+    }
+
+    # Ensure client is also installed
+    $clientCapability = Get-WindowsCapability -Online | Where-Object Name -like "OpenSSH.Client*"
+    if ($clientCapability.State -ne "Installed") {
+        if ($DryRun) {
+            Log-DryRun "Would install OpenSSH Client capability"
+        }
+        else {
+            Add-WindowsCapability -Online -Name $clientCapability.Name | Out-Null
+            Log-Ok "OpenSSH Client installed"
+        }
+    }
+
+    # Configure and start service
+    if (-not $DryRun) {
+        Set-Service -Name sshd -StartupType Automatic
+        Start-Service sshd -ErrorAction SilentlyContinue
+        Log-Ok "sshd service enabled and started"
+
+        # Ensure firewall rule exists
+        $fwRule = Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue
+        if (-not $fwRule) {
+            New-NetFirewallRule -Name "OpenSSH-Server-In-TCP" `
+                -DisplayName "OpenSSH Server (sshd)" `
+                -Enabled True -Direction Inbound -Protocol TCP `
+                -Action Allow -LocalPort 22 | Out-Null
+            Log-Ok "Firewall rule created for SSH"
+        }
+    }
+}
+
+# ── Server configuration ────────────────────────────────────
+function Configure-Sshd {
+    if (-not $IsAdmin) {
+        throw "Configuring sshd requires administrator privileges."
+    }
+
+    $sshdConfigDir = Join-Path $env:ProgramData "ssh"
+    $sshdConfig = Join-Path $sshdConfigDir "sshd_config"
+
+    if (-not (Test-Path $sshdConfig)) {
+        Log-Warn "sshd_config not found: $sshdConfig"
+        return
+    }
+
+    # Build config lines
+    $configLines = @(
+        "# {{ project_name }} SSH server configuration",
+        "# Generated by setup-ssh.ps1 — $(Get-Date -Format 'o')",
+        "",
+        "PubkeyAuthentication yes",
+        "Subsystem sftp sftp-server.exe"
+    )
+
+    if ($Harden) {
+        $configLines += @(
+            "",
+            "# Hardening",
+            "PasswordAuthentication no",
+            "PermitEmptyPasswords no",
+            "MaxAuthTries 3",
+            "LoginGraceTime 30"
+        )
+    }
+
+    $marker = "# BEGIN {{ project_slug }} SSH config"
+    $endMarker = "# END {{ project_slug }} SSH config"
+
+    if ($DryRun) {
+        Log-DryRun "Would update sshd_config with project settings"
+        $configLines | ForEach-Object { Log-DryRun "  $_" }
+        return
+    }
+
+    # Read current config and remove old block if present
+    $currentConfig = Get-Content $sshdConfig -Raw
+    if ($currentConfig -match [regex]::Escape($marker)) {
+        $pattern = "(?s)" + [regex]::Escape($marker) + ".*?" + [regex]::Escape($endMarker) + "\r?\n?"
+        $currentConfig = [regex]::Replace($currentConfig, $pattern, "")
+    }
+
+    # Append new block
+    $block = @($marker) + $configLines + @($endMarker)
+    $newConfig = $currentConfig.TrimEnd() + "`r`n`r`n" + ($block -join "`r`n") + "`r`n"
+
+    # Backup and write
+    Copy-Item $sshdConfig "$sshdConfig.bak" -Force
+    Set-Content -Path $sshdConfig -Value $newConfig -Encoding UTF8
+
+    # Validate (Windows sshd has limited -t support, but we try)
+    try {
+        $result = & sshd -t 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Log-Error "sshd config validation failed, restoring backup"
+            Copy-Item "$sshdConfig.bak" $sshdConfig -Force
+            throw "sshd config invalid: $result"
+        }
+        Log-Ok "sshd configuration valid"
+    }
+    catch {
+        # sshd -t may not be available; accept the config
+        Log-Debug "sshd -t not available; configuration written without validation"
+    }
+
+    # Restart service
+    Restart-Service sshd -Force
+    Log-Ok "sshd service restarted"
+}
+
+# ── VS Code SFTP config ────────────────────────────────────
+function Generate-SftpJson {
+    $sftpDir = Join-Path $ProjectRoot ".vscode"
+    $sftpJson = Join-Path $sftpDir "sftp.json"
+
+    $targetHost = if ([string]::IsNullOrEmpty($RemoteHost)) { "localhost" } else { $RemoteHost }
+    $keyPath = Join-Path $SshDir $KeyName
+
+    if ($DryRun) {
+        Log-DryRun "Would generate: $sftpJson"
+        return
+    }
+
+    if (-not (Test-Path $sftpDir)) {
+        New-Item -ItemType Directory -Path $sftpDir -Force | Out-Null
+    }
+
+    $config = @{
+        name           = "{{ project_name }}"
+        host           = $targetHost
+        protocol       = "sftp"
+        port           = $RemotePort
+        username       = $RemoteUser
+        remotePath     = $SftpRemotePath
+        privateKeyPath = ($keyPath -replace '\\', '/')
+        uploadOnSave   = $false
+        useTempFile    = $true
+        openSsh        = $true
+        ignore         = @(
+            ".vscode", ".git", ".DS_Store", "node_modules",
+            "__pycache__", ".venv", "*.pyc", ".env", ".env.*",
+            "logs", "dist", "build", "htmlcov", ".coverage",
+            ".mypy_cache", ".ruff_cache", ".pytest_cache"
+        )
+        watcher        = @{
+            files      = "**/*"
+            autoUpload = $false
+            autoDelete = $false
+        }
+        syncOption     = @{
+            skipCreate = $false
+            delete     = $false
+        }
+    } | ConvertTo-Json -Depth 4
+
+    Set-Content -Path $sftpJson -Value $config -Encoding UTF8
+    Log-Ok "VS Code SFTP config generated: $sftpJson"
+    Log-Warn "This file is git-ignored. Do not commit private key paths."
+}
+
+# ── SSH client config entry ─────────────────────────────────
+function Generate-SshConfigEntry {
+    if ([string]::IsNullOrEmpty($RemoteHost)) {
+        Log-Debug "No remote host; skipping SSH config entry"
+        return
+    }
+
+    $sshConfig = Join-Path $SshDir "config"
+    $hostAlias = "{{ project_slug }}-$RemoteHost"
+    $keyPath = Join-Path $SshDir $KeyName
+
+    if ((Test-Path $sshConfig) -and (Select-String -Path $sshConfig -Pattern "Host $hostAlias" -SimpleMatch -Quiet)) {
+        Log-Info "SSH config entry '$hostAlias' already exists"
+        return
+    }
+
+    $entry = @"
+
+# {{ project_name }} — $RemoteHost
+Host $hostAlias
+    HostName $RemoteHost
+    User $RemoteUser
+    Port $RemotePort
+    IdentityFile $($keyPath -replace '\\', '/')
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    StrictHostKeyChecking ask
+"@
+
+    if ($DryRun) {
+        Log-DryRun "Would append to ${sshConfig}:"
+        Write-Host $entry
+        return
+    }
+
+    Add-Content -Path $sshConfig -Value $entry
+    Set-SshFileAcl -Path $sshConfig
+    Log-Ok "SSH config entry added: $hostAlias -> $RemoteHost"
+}
+
+# ── Validation ──────────────────────────────────────────────
+function Validate-Setup {
+    $exitCode = 0
+    $keyPath = Join-Path $SshDir $KeyName
+
+    Write-Host ""
+    Write-Host "=== Validation ===" -ForegroundColor White
+
+    # Key pair
+    if (Test-Path $keyPath) {
+        Log-Ok "Private key exists: $keyPath"
+    }
+    else {
+        Log-Warn "Private key not found: $keyPath"
+        $exitCode = 1
+    }
+
+    if (Test-Path "$keyPath.pub") {
+        Log-Ok "Public key exists: $keyPath.pub"
+    }
+    else {
+        Log-Warn "Public key not found: $keyPath.pub"
+        $exitCode = 1
+    }
+
+    # Server checks
+    if ($Mode -in "Server", "Both") {
+        $sshdService = Get-Service sshd -ErrorAction SilentlyContinue
+        if ($sshdService) {
+            if ($sshdService.Status -eq "Running") {
+                Log-Ok "sshd service is running"
+            }
+            else {
+                Log-Warn "sshd service status: $($sshdService.Status)"
+                $exitCode = 1
+            }
+        }
+        else {
+            Log-Warn "sshd service not found"
+            $exitCode = 1
+        }
+
+        # Check authorized_keys location
+        if ($IsAdmin) {
+            $akPath = Join-Path $env:ProgramData "ssh\administrators_authorized_keys"
+        }
+        else {
+            $akPath = Join-Path $SshDir "authorized_keys"
+        }
+        if (Test-Path $akPath) {
+            Log-Ok "authorized_keys exists: $akPath"
+        }
+        else {
+            Log-Warn "authorized_keys not found: $akPath"
+            $exitCode = 1
+        }
+    }
+
+    # Remote connectivity
+    if (-not [string]::IsNullOrEmpty($RemoteHost)) {
+        Log-Info "Testing SSH connectivity to ${RemoteUser}@${RemoteHost}:${RemotePort} ..."
+        try {
+            $result = ssh -o BatchMode=yes -o ConnectTimeout=5 -p $RemotePort `
+                -i $keyPath "${RemoteUser}@${RemoteHost}" "echo SSH_OK" 2>&1
+            if ($result -match "SSH_OK") {
+                Log-Ok "SSH connection successful"
+            }
+            else {
+                Log-Warn "SSH connection returned unexpected output"
+                $exitCode = 1
+            }
+        }
+        catch {
+            Log-Warn "SSH connection failed: $_"
+            $exitCode = 1
+        }
+    }
+
+    # SFTP config
+    $sftpJson = Join-Path $ProjectRoot ".vscode\sftp.json"
+    if (Test-Path $sftpJson) {
+        Log-Ok "VS Code sftp.json exists: $sftpJson"
+    }
+    else {
+        Log-Info "VS Code sftp.json not generated (use -RemoteHost to enable)"
+    }
+
+    Write-Host ""
+    if ($exitCode -eq 0) {
+        Write-Host "All validations passed." -ForegroundColor Green
+    }
+    else {
+        Write-Host "Some validations had warnings. Review above output." -ForegroundColor Yellow
+    }
+
+    return $exitCode
+}
+
+# ── Summary ─────────────────────────────────────────────────
+function Show-Summary {
+    $keyPath = Join-Path $SshDir $KeyName
+
+    Write-Host ""
+    Write-Host "=== Setup Summary ===" -ForegroundColor White
+    Write-Host "  Mode:         $Mode"
+    Write-Host "  Platform:     Windows ($( if ($IsAdmin) { 'Administrator' } else { 'Standard User' }))"
+    Write-Host "  Key type:     $KeyType"
+    Write-Host "  Key file:     $keyPath"
+    if (Test-Path "$keyPath.pub") {
+        $fp = ssh-keygen -lf "$keyPath.pub" 2>$null
+        if ($fp) { Write-Host "  Fingerprint:  $fp" }
+    }
+    if (-not [string]::IsNullOrEmpty($RemoteHost)) {
+        Write-Host "  Remote:       ${RemoteUser}@${RemoteHost}:${RemotePort}"
+    }
+    if ($IsAdmin) {
+        Write-Host "  Auth keys:    $env:ProgramData\ssh\administrators_authorized_keys"
+    }
+    else {
+        Write-Host "  Auth keys:    $SshDir\authorized_keys"
+    }
+    if ($Harden) {
+        Write-Host "  Hardening:    applied"
+    }
+
+    Write-Host ""
+    Write-Host "Next steps:" -ForegroundColor White
+    Write-Host "  1. Start ssh-agent:  Get-Service ssh-agent | Set-Service -StartupType Automatic; Start-Service ssh-agent"
+    Write-Host "  2. Add key to agent: ssh-add $keyPath"
+    if (-not [string]::IsNullOrEmpty($RemoteHost)) {
+        Write-Host "  3. Test connection:  ssh ${RemoteUser}@${RemoteHost} -p ${RemotePort}"
+        Write-Host "  4. Test SFTP:        sftp -P ${RemotePort} ${RemoteUser}@${RemoteHost}"
+    }
+}
+
+# ── Main ────────────────────────────────────────────────────
+function Main {
+    Write-Host "=========================================" -ForegroundColor White
+    Write-Host " {{ project_name }} — SSH/SFTP Setup" -ForegroundColor White
+    Write-Host "=========================================" -ForegroundColor White
+    Write-Host "  Mode:     $Mode"
+    Write-Host "  Platform: Windows ($( if ($IsAdmin) { 'Administrator' } else { 'Standard User' }))"
+    Write-Host "  Key type: $KeyType"
+    if ($DryRun) { Write-Host "  DRY-RUN MODE" -ForegroundColor Yellow }
+    Write-Host ""
+
+    # ── Client setup ──────────────────────────────────
+    if ($Mode -in "Client", "Both") {
+        Log-Info "Setting up SSH client..."
+        Ensure-SshDir
+        Generate-SshKey
+        Generate-SshConfigEntry
+        Generate-SftpJson
+        Install-PublicKeyRemote
+    }
+
+    # ── Server setup ──────────────────────────────────
+    if ($Mode -in "Server", "Both") {
+        Log-Info "Setting up SSH server..."
+        Install-SshServer
+        Ensure-SshDir
+        if ($Mode -eq "Both") {
+            Install-PublicKeyLocal
+        }
+        Configure-Sshd
+    }
+
+    # ── Validation ────────────────────────────────────
+    if (-not $DryRun) {
+        Validate-Setup | Out-Null
+    }
+
+    Show-Summary
+}
+
+Main

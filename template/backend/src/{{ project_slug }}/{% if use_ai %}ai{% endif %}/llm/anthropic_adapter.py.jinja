@@ -1,0 +1,43 @@
+"""Anthropic Claude LLM adapter — convenience facade over LiteLLMAdapter.
+
+Normalise the 'anthropic/' model prefix and expose Anthropic-specific
+constructor arguments.  LiteLLM routes Anthropic requests transparently
+and supports tool use, extended thinking, and streaming out of the box.
+"""
+
+from __future__ import annotations
+
+from {{ project_slug }}.ai.config import DEFAULT_ANTHROPIC_MODEL
+
+from .litellm_adapter import LiteLLMAdapter
+
+_DEFAULT_MAX_RETRIES: int = 3
+
+
+class AnthropicAdapter(LiteLLMAdapter):
+    """Anthropic Claude adapter — delegates to :class:`LiteLLMAdapter`.
+
+    Preserves the original constructor signature for drop-in
+    replacement. Internally maps to the LiteLLM 'anthropic/' prefix.
+    """
+
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str = DEFAULT_ANTHROPIC_MODEL,
+        max_retries: int = _DEFAULT_MAX_RETRIES,
+        timeout: float | None = None,
+        default_headers: dict[str, str] | None = None,
+    ) -> None:
+        litellm_model = model if model.startswith("anthropic/") else f"anthropic/{model}"
+        extra: dict[str, object] = {}
+        if default_headers:
+            extra["default_headers"] = default_headers
+        super().__init__(
+            model=litellm_model,
+            api_key=api_key,
+            timeout=timeout,
+            num_retries=max_retries,
+            **extra,
+        )

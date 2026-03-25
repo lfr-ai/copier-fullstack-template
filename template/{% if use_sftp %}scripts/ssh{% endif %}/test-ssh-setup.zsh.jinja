@@ -1,0 +1,126 @@
+#!/usr/bin/env zsh
+# ─────────────────────────────────────────────────────────────
+#  {{ project_name }} — SSH Setup Tests
+#
+#  Smoke tests for the SSH setup scripts. Run in a safe, isolated
+#  environment. Tests use --dry-run to avoid system modifications.
+#
+#  Usage:
+#    zsh scripts/ssh/test-ssh-setup.zsh
+# ─────────────────────────────────────────────────────────────
+emulate -L zsh
+setopt PIPE_FAIL NO_UNSET
+
+readonly SCRIPT_DIR="${0:A:h}"
+readonly GREEN=$'\033[0;32m'
+readonly RED=$'\033[0;31m'
+readonly BOLD=$'\033[1m'
+readonly RESET=$'\033[0m'
+
+PASS=0
+FAIL=0
+
+assert_ok() {
+  local desc="$1"; shift
+  if "$@" >/dev/null 2>&1; then
+    ((PASS++))
+    print "${GREEN}[PASS]${RESET} ${desc}"
+  else
+    ((FAIL++))
+    print "${RED}[FAIL]${RESET} ${desc}"
+  fi
+}
+
+assert_fail() {
+  local desc="$1"; shift
+  if ! "$@" >/dev/null 2>&1; then
+    ((PASS++))
+    print "${GREEN}[PASS]${RESET} ${desc}"
+  else
+    ((FAIL++))
+    print "${RED}[FAIL]${RESET} ${desc}"
+  fi
+}
+
+assert_contains() {
+  local desc="$1"
+  local output="$2"
+  local pattern="$3"
+  if [[ "${output}" == *"${pattern}"* ]]; then
+    ((PASS++))
+    print "${GREEN}[PASS]${RESET} ${desc}"
+  else
+    ((FAIL++))
+    print "${RED}[FAIL]${RESET} ${desc} (expected '${pattern}' in output)"
+  fi
+}
+
+print "${BOLD}=== SSH Setup Script Tests ===${RESET}"
+print ""
+
+# ── Test 1: setup-ssh.zsh --help exits 0 ───────────────────
+assert_ok "setup-ssh.zsh --help exits 0" \
+  zsh "${SCRIPT_DIR}/setup-ssh.zsh" --help
+
+# ── Test 2: setup-ssh.zsh --dry-run client ──────────────────
+output=$(zsh "${SCRIPT_DIR}/setup-ssh.zsh" --mode client --dry-run --non-interactive 2>&1)
+assert_ok "setup-ssh.zsh --dry-run client exits 0" \
+  test $? -eq 0
+
+assert_contains "dry-run mentions DRY-RUN" "${output}" "DRY-RUN"
+
+# ── Test 3: setup-ssh.zsh --dry-run both ────────────────────
+# Server mode requires root; dry-run should still parse args
+output=$(zsh "${SCRIPT_DIR}/setup-ssh.zsh" --mode client --dry-run --non-interactive --key-type rsa 2>&1)
+assert_contains "rsa key type accepted" "${output}" "rsa"
+
+# ── Test 4: invalid mode produces error ─────────────────────
+assert_fail "invalid mode rejected" \
+  zsh "${SCRIPT_DIR}/setup-ssh.zsh" --mode invalid --dry-run --non-interactive
+
+# ── Test 5: invalid key type produces error ─────────────────
+assert_fail "invalid key type rejected" \
+  zsh "${SCRIPT_DIR}/setup-ssh.zsh" --key-type dsa --dry-run --non-interactive
+
+# ── Test 6: validate-ssh.zsh --help exits 0 ────────────────
+assert_ok "validate-ssh.zsh --help exits 0" \
+  zsh "${SCRIPT_DIR}/validate-ssh.zsh" --help
+
+# ── Test 7: validate-ssh.zsh runs without error ─────────────
+output=$(zsh "${SCRIPT_DIR}/validate-ssh.zsh" 2>&1 || true)
+assert_contains "validation produces results" "${output}" "Results"
+
+# ── Test 8: rollback-ssh.zsh --help exits 0 ────────────────
+assert_ok "rollback-ssh.zsh --help exits 0" \
+  zsh "${SCRIPT_DIR}/rollback-ssh.zsh" --help
+
+# ── Test 9: rollback-ssh.zsh --dry-run ──────────────────────
+output=$(zsh "${SCRIPT_DIR}/rollback-ssh.zsh" --remove-sftp-json --dry-run --non-interactive 2>&1)
+assert_ok "rollback-ssh.zsh --dry-run exits 0" \
+  test $? -eq 0
+
+# ── Test 10: sftp.json.example is valid JSON ────────────────
+if command -v python3 &>/dev/null; then
+  assert_ok "sftp.json.example is valid JSON" \
+    python3 -c "import json; json.load(open('${SCRIPT_DIR}/sftp.json.example'))"
+elif command -v node &>/dev/null; then
+  assert_ok "sftp.json.example is valid JSON" \
+    node -e "require('${SCRIPT_DIR}/sftp.json.example')"
+else
+  print "[SKIP] No JSON parser available for sftp.json.example validation"
+fi
+
+# ── Summary ─────────────────────────────────────────────────
+print ""
+print "${BOLD}=== Test Results ===${RESET}"
+print "  Passed: ${PASS}"
+print "  Failed: ${FAIL}"
+print ""
+
+if (( FAIL > 0 )); then
+  print "${RED}${BOLD}${FAIL} test(s) failed.${RESET}"
+  exit 1
+else
+  print "${GREEN}${BOLD}All tests passed.${RESET}"
+  exit 0
+fi

@@ -1,0 +1,81 @@
+"""Production Strawberry GraphQL router — structured logging, error masking, orjson support."""
+
+from __future__ import annotations
+
+import json
+import structlog
+from starlette.requests import Request
+from strawberry.fastapi import GraphQLRouter
+from strawberry.http import GraphQLHTTPResponse
+from strawberry.types import ExecutionResult
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class ProductionGraphQLRouter(GraphQLRouter):
+    """GraphQL router extended with production-grade error handling."""
+
+    def __init__(self, *args: object, debug: bool = False, **kwargs: object) -> None:
+        self._debug = debug
+        super().__init__(*args, **kwargs)
+
+    async def process_result(
+        self,
+        request: Request,
+        result: ExecutionResult,
+    ) -> GraphQLHTTPResponse:
+        """Process execution result with structured logging and error masking."""
+        data: GraphQLHTTPResponse = {"data": result.data}
+
+        if result.errors:
+            for err in result.errors:
+                logger.error(
+                    "graphql_error",
+                    message=str(err.message),
+                    path=err.path,
+                    locations=[
+                        {"line": loc.line, "column": loc.column}
+                        for loc in (err.locations or [])
+                    ],
+                )
+
+            if self._debug:
+                data["errors"] = [err.formatted for err in result.errors]
+            else:
+                data["errors"] = [
+                    {"message": "Internal server error. Check logs for details."}
+                    if _is_internal_error(err)
+                    else err.formatted
+                    for err in result.errors
+                ]
+
+        if result.extensions:
+            data["extensions"] = result.extensions
+
+        return data
+
+    def decode_json(self, data: str | bytes) -> object:
+        """Decode JSON, preferring orjson if available."""
+        try:
+            import orjson
+
+            return orjson.loads(data)
+        except ImportError:
+            return json.loads(data)
+
+    def encode_json(self, data: object) -> str | bytes:
+        """Encode JSON, preferring orjson if available."""
+        try:
+            import orjson
+
+            return orjson.dumps(data)
+        except ImportError:
+            return json.dumps(data, default=str)
+
+
+def _is_internal_error(error: object) -> bool:
+    """Determine if an error is internal (should be masked in production)."""
+    original = getattr(error, "original_error", None)
+    if original is None:
+        return False
+    return not isinstance(original, (ValueError, PermissionError))

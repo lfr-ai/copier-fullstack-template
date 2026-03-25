@@ -1,0 +1,134 @@
+"""Azure AI Search vector store adapter — implements 'VectorStorePort'.
+
+Uses Azure AI Search with vector search capabilities for dense
+vector storage and hybrid (vector + keyword) similarity search.
+
+Add 'azure-search-documents' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import structlog
+
+from {{ project_slug }}.ai.config import DEFAULT_EMBEDDING_DIMENSION
+from {{ project_slug }}.core.interfaces.vector_store import DEFAULT_SEARCH_TOP_K, VectorSearchResult, VectorStorePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class AzureAISearchVectorStore(VectorStorePort):
+    """Azure AI Search backed vector store.
+
+    Stores vectors in an Azure AI Search index with HNSW vector
+    search and optional semantic ranking.
+    """
+
+    __slots__ = ("_client", "_dimension", "_index_name")
+
+    def __init__(
+        self,
+        *,
+        endpoint: str,
+        api_key: str,
+        index_name: str,
+        dimension: int = DEFAULT_EMBEDDING_DIMENSION,
+    ) -> None:
+        try:
+            from azure.core.credentials import AzureKeyCredential
+            from azure.search.documents import SearchClient
+        except ImportError as exc:
+            msg = "azure-search-documents is required — pip install azure-search-documents"
+            raise ImportError(msg) from exc
+
+        self._dimension = dimension
+        self._index_name = index_name
+        self._client = SearchClient(
+            endpoint=endpoint,
+            index_name=index_name,
+            credential=AzureKeyCredential(api_key),
+        )
+        logger.info(
+            "AzureAISearchVectorStore initialized: index=%s, dim=%d",
+            index_name,
+            dimension,
+        )
+
+    async def add_vectors(
+        self,
+        *,
+        vectors: list[list[float]],
+        ids: list[str],
+        metadata: list[dict[str, object]] | None = None,
+    ) -> None:
+        """Upload vectors as documents to the Azure AI Search index."""
+        import asyncio
+
+        documents = []
+        for i, (vid, vec) in enumerate(zip(ids, vectors, strict=True)):
+            doc: dict[str, object] = {
+                "id": vid,
+                "embedding": vec,
+            }
+            if metadata and i < len(metadata):
+                doc["metadata"] = metadata[i]
+            documents.append(doc)
+
+        await asyncio.to_thread(self._client.upload_documents, documents=documents)
+        logger.info("Added %d vectors to Azure AI Search index '%s'", len(ids), self._index_name)
+
+    async def search(
+        self,
+        *,
+        query_vector: list[float],
+        top_k: int = DEFAULT_SEARCH_TOP_K,
+        filters: dict[str, object] | None = None,
+    ) -> list[VectorSearchResult]:
+        """Search using vector similarity in Azure AI Search."""
+        import asyncio
+
+        from azure.search.documents.models import VectorizedQuery
+
+        vector_query = VectorizedQuery(
+            vector=query_vector,
+            k_nearest_neighbors=top_k,
+            fields="embedding",
+        )
+
+        filter_expr = None
+        if filters:
+            parts = []
+            for k, v in filters.items():
+                # Escape single quotes in OData filter values to prevent injection
+                safe_k = str(k).replace("'", "''")
+                safe_v = str(v).replace("'", "''")
+                parts.append(f"metadata/{safe_k} eq '{safe_v}'")
+            filter_expr = " and ".join(parts)
+
+        results = await asyncio.to_thread(
+            self._client.search,
+            search_text=None,
+            vector_queries=[vector_query],
+            filter=filter_expr,
+            top=top_k,
+        )
+
+        return [
+            VectorSearchResult(
+                id=str(result["id"]),
+                score=float(result.get("@search.score", 0.0)),
+                metadata=result.get("metadata", {}),
+            )
+            for result in results
+        ]
+
+    async def delete_vectors(self, ids: list[str]) -> None:
+        """Delete documents from the Azure AI Search index by ID."""
+        import asyncio
+
+        documents = [{"id": vid} for vid in ids]
+        await asyncio.to_thread(self._client.delete_documents, documents=documents)
+        logger.info("Deleted %d vectors from Azure AI Search index '%s'", len(ids), self._index_name)
+
+    async def count(self) -> int:
+        """Return total number of documents in the index."""
+        import asyncio
+
+        return await asyncio.to_thread(self._client.get_document_count)

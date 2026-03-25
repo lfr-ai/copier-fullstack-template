@@ -1,0 +1,135 @@
+"""ReAct agent — implements reasoning + acting loop with LLM.
+
+Uses a simple ReAct (Reason-Act) pattern where the LLM alternates
+between thinking about the next step and executing tool calls.
+"""
+
+from __future__ import annotations
+
+import json
+import structlog
+from collections.abc import Callable, Coroutine
+from typing import override
+
+from {{ project_slug }}.ai.agents.base_agent import AgentResult, BaseAgent
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+ToolExecutor = Callable[..., Coroutine[object, object, object]]
+
+_STEP_MAX_TOKENS: int = 1024
+_STEP_TEMPERATURE: float = 0.3
+
+_REACT_SYSTEM_PROMPT: str = """You are a helpful AI agent. You have access to tools to help accomplish tasks.
+
+Available tools:
+{tools}
+
+To use a tool, respond with exactly:
+TOOL: tool_name
+INPUT: {{"param": "value"}}
+
+To give the final answer, respond with:
+ANSWER: your final answer
+
+Think step by step. Use tools when needed."""
+
+
+class ReActAgent(BaseAgent):
+    """ReAct agent using iterative reason-act loops."""
+
+    __slots__ = ("_executors", "_llm")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        executors: dict[str, ToolExecutor] | None = None,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._llm = llm
+        self._executors: dict[str, ToolExecutor] = executors or {}
+
+    def register_executor(self, name: str, executor: ToolExecutor) -> None:
+        """Register a callable executor for a named tool."""
+        self._executors[name] = executor
+
+    @override
+    async def run(self, goal: str) -> AgentResult:
+        """Execute the ReAct reasoning-acting loop.
+
+        Args:
+            goal (str): Natural-language objective for the agent.
+
+        Returns:
+            AgentResult: Final answer, execution steps, and tool-call count.
+        """
+        tools_desc = "\n".join(
+            f"- {t.name}: {t.description}" for t in self._tools
+        )
+        system_prompt = _REACT_SYSTEM_PROMPT.format(tools=tools_desc)
+
+        steps: list[dict[str, object]] = []
+        context = f"Goal: {goal}\n\n"
+        tool_calls = 0
+
+        for step_num in range(1, self._max_steps + 1):
+            response = await self._llm.complete(
+                prompt=context,
+                system_prompt=system_prompt,
+                max_tokens=_STEP_MAX_TOKENS,
+                temperature=_STEP_TEMPERATURE,
+            )
+
+            steps.append({"step": step_num, "response": response})
+
+            if "ANSWER:" in response:
+                answer = response.split("ANSWER:", 1)[1].strip()
+                logger.info("Agent completed in %d steps", step_num)
+                return AgentResult(
+                    goal=goal,
+                    answer=answer,
+                    steps=steps,
+                    tool_calls=tool_calls,
+                )
+
+            if "TOOL:" in response and "INPUT:" in response:
+                tool_calls += 1
+                tool_name = response.split("TOOL:", 1)[1].split("\n")[0].strip()
+                input_str = response.split("INPUT:", 1)[1].strip()
+
+                try:
+                    tool_input = json.loads(input_str)
+                except json.JSONDecodeError:
+                    tool_input = {"raw": input_str}
+
+                # Dispatch to registered executor, or return a stub message
+                executor = self._executors.get(tool_name)
+                if executor is not None:
+                    try:
+                        tool_result = str(await executor(**tool_input))
+                    except Exception as exc:  # noqa: BLE001 — top-level error boundary
+                        tool_result = f"[Tool '{tool_name}' error: {exc}]"
+                        logger.warning("Tool %s failed: %s", tool_name, exc)
+                else:
+                    tool_result = f"[Tool '{tool_name}' has no registered executor]"
+                    logger.warning("No executor registered for tool: %s", tool_name)
+                steps.append({
+                    "step": step_num,
+                    "tool": tool_name,
+                    "input": tool_input,
+                    "result": tool_result,
+                })
+                context += f"\nStep {step_num}:\n{response}\nResult: {tool_result}\n"
+            else:
+                context += f"\nStep {step_num}:\n{response}\n"
+
+        logger.warning("Agent reached max steps (%d) without answer", self._max_steps)
+        return AgentResult(
+            goal=goal,
+            answer="Maximum steps reached without a definitive answer.",
+            steps=steps,
+            tool_calls=tool_calls,
+            success=False,
+        )

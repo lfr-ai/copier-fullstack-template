@@ -1,0 +1,35 @@
+{%- if with_opencode %}
+# Workflow Patterns
+
+## Development Workflow
+1. Plan before implementing — use `/plan-feature` or `@planner`
+2. Validate architecture — use `@architect` before coding
+3. Implement with tests — follow TDD Red→Green→Refactor
+4. Review before merging — use `/review` for multi-perspective feedback
+5. Document changes — update CHANGELOG, docstrings, ADRs
+
+## Git Strategy
+- Feature branches from `main`
+- Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`
+- Squash merge to main
+{%- if with_gsd %}
+- GSD-2 uses worktree isolation (branch-per-milestone)
+{%- endif %}
+
+## Task Runner Commands
+```bash
+task dev              # Start development servers
+task test             # Run all tests
+task test:unit        # Unit tests only
+task lint             # All linters
+task format           # Auto-format all code
+task registry:generate # Regenerate constants from registry
+task db:migrate       # Run Alembic migrations
+```
+
+## Registry Workflow
+1. Edit `registry/naming_registry.json`
+2. Run `task registry:validate`
+3. Run `task registry:generate`
+4. Commit both the registry and generated files
+{%- endif %}

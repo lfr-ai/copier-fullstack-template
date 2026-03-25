@@ -4,7 +4,7 @@ agent: security-auditor
 subtask: true
 ---
 
-Perform a comprehensive security audit on:
+Perform a security audit on:
 
 $ARGUMENTS
 

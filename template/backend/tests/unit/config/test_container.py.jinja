@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from unittest.mock import patch, MagicMock
-
-import pytest
 
 from {{ project_slug }}.ports.container import Container, get_container
 
@@ -16,7 +15,7 @@ _CONTAINER_PATCHES = (
     "{{ project_slug }}.ports.container.create_engine",
 )
 
-def _apply_container_patches(func):
+def _apply_container_patches(func: Callable[..., None]) -> Callable[..., None]:
     """Stack the three standard container patches onto *func*."""
     for target in reversed(_CONTAINER_PATCHES):
         func = patch(target)(func)
@@ -94,18 +93,18 @@ class TestContainer:
         assert isinstance(bus, MemoryEventBus)
 
     @_apply_container_patches
-    def test_cache_returns_new_instance_each_call(
+    def test_cache_returns_singleton_instance(
         self,
         mock_engine: MagicMock,
         mock_factory: MagicMock,
         mock_settings: MagicMock,
     ) -> None:
-        """Verify cache() creates new instance per call."""
+        """Verify cache() returns the same singleton instance."""
         _configure_mock_settings(mock_settings)
         container = Container()
         c1 = container.cache()
         c2 = container.cache()
-        assert c1 is not c2
+        assert c1 is c2
 
 class TestGetContainer:
     """Test suite for get_container singleton."""

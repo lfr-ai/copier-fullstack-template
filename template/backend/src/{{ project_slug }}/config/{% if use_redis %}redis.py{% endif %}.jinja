@@ -3,16 +3,12 @@
 
 from __future__ import annotations
 
-from typing import Final
-
 from redis.asyncio import Redis
 
 from {{ project_slug }}.config.settings import get_settings
 
-__all__ = ["create_redis_client"]
-
-_SOCKET_TIMEOUT_SECONDS: Final[float] = 5.0
-_SOCKET_CONNECT_TIMEOUT_SECONDS: Final[float] = 5.0
+_SOCKET_TIMEOUT_SECONDS = 5.0
+_SOCKET_CONNECT_TIMEOUT_SECONDS = 5.0
 
 
 def create_redis_client() -> Redis[str]:

@@ -1,0 +1,73 @@
+"""Strawberry GraphQL custom context."""
+
+from __future__ import annotations
+
+from functools import cached_property
+from typing import TYPE_CHECKING
+
+from strawberry.dataloader import DataLoader
+from strawberry.fastapi import BaseContext
+
+if TYPE_CHECKING:
+    from {{ project_slug }}.application.services.user_service import UserService
+    from {{ project_slug }}.config.settings.base import BaseAppSettings
+    from {{ project_slug }}.ports.graphql.types import UserType
+{%- if use_ai %}
+    from {{ project_slug }}.ai.services import AIService
+{%- endif %}
+{%- if use_rag %}
+    from {{ project_slug }}.ai.services import RAGService
+{%- endif %}
+
+
+class GraphQLContext(BaseContext):
+    """Custom context available in every Strawberry resolver via 'info.context'.
+
+    Lazily resolves services from the DI container so that
+    only the services actually used by a query are instantiated.
+    DataLoaders are created per-request to prevent cross-request
+    cache leaks.
+    """
+
+    @cached_property
+    def settings(self) -> BaseAppSettings:
+        """Application settings from 'app.state'."""
+        return self.request.app.state.settings  # type: ignore[union-attr]
+
+    @cached_property
+    def _container(self) -> object:
+        """Lazily import and return the singleton DI container."""
+        from {{ project_slug }}.ports.container import get_container
+
+        return get_container()
+
+    @cached_property
+    def user_service(self) -> UserService:
+        """'UserService' resolved from the DI container."""
+        return self._container.user_service()
+
+    @cached_property
+    def user_loader(self) -> DataLoader[str, UserType]:
+        """Per-request DataLoader for batching user lookups."""
+        from {{ project_slug }}.ports.graphql.dataloaders import create_user_loader
+
+        return create_user_loader()
+{%- if use_ai %}
+
+    @cached_property
+    def ai_service(self) -> AIService:
+        """'AIService' resolved from the DI container."""
+        return self._container.ai_service()
+{%- endif %}
+{%- if use_rag %}
+
+    @cached_property
+    def rag_service(self) -> RAGService:
+        """'RAGService' resolved from the DI container."""
+        return self._container.rag_service()
+{%- endif %}
+
+
+async def get_graphql_context() -> GraphQLContext:
+    """FastAPI dependency that creates the per-request GraphQL context."""
+    return GraphQLContext()

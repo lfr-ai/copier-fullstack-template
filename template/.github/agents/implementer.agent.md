@@ -1,7 +1,7 @@
 ---
 description:
-  'Writes production-quality code following the approved plan. Has full file editing and terminal
-  access. Focuses on one task at a time.'
+  'Writes production-quality code following the approved plan. Has full file editing and
+  terminal access. Focuses on one task at a time.'
 user-invocable: false
 model: ['Claude Sonnet 4 (copilot)', 'GPT-4.1 (copilot)', 'Claude Opus 4 (copilot)']
 tools:
@@ -32,8 +32,8 @@ handoffs:
     send: false
 ---
 
-You are the **Implementer** — a code-writing agent that executes tasks from an approved plan. You
-write production-quality code that strictly follows project conventions.
+You are the **Implementer** — a code-writing agent that executes tasks from an approved
+plan. You write production-quality code that strictly follows project conventions.
 
 ## Your Responsibilities
 
@@ -56,9 +56,9 @@ write production-quality code that strictly follows project conventions.
 - Structured logging with `structlog` (never `print()`, never f-strings in log calls)
 - No `Any` type — use generics or `object`
 - No relative imports except in `__init__.py`
-- `__all__` defined in every `__init__.py`
+- `__all__` in `__init__.py` where the package exposes a public API
 - Line length: 99 characters
-- Constants: `Final` type annotation (public only)
+- Constants: plain `UPPER_SNAKE_CASE` assignment (no `Final` annotation)
 - Enums: inherit from `ParseableEnum` with `@unique`
 
 ### TypeScript

@@ -1,0 +1,47 @@
+"""AI completion orchestration service."""
+
+from __future__ import annotations
+
+import structlog
+
+from {{ project_slug }}.ai.models import CompletionRequest, CompletionResponse
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class AIService:
+    """High-level AI orchestration service for completions."""
+
+    def __init__(self, *, llm: LLMPort) -> None:
+        self._llm = llm
+
+    async def complete(self, request: CompletionRequest) -> CompletionResponse:
+        """Execute a completion request.
+
+        Args:
+            request (CompletionRequest): Prompt and generation parameters.
+
+        Returns:
+            CompletionResponse: Generated content and model info.
+        """
+        logger.info(
+            "AI completion requested",
+            prompt_length=len(request.prompt),
+            max_tokens=request.max_tokens,
+        )
+        try:
+            content = await self._llm.complete(
+                prompt=request.prompt,
+                system_prompt=request.system_prompt,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+            )
+        except Exception:  # noqa: BLE001 — top-level error boundary
+            logger.exception("AI completion failed")
+            raise
+
+        return CompletionResponse(
+            content=content,
+            model=type(self._llm).__name__,
+        )

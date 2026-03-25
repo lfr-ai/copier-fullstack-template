@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Final, Generic, TypeVar
+from typing import Annotated, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
-
-__all__ = ["BaseDTO", "ErrorDTO", "PaginatedResponse"]
-
-_MAX_RESPONSE_LIMIT: Final[int] = 1_000
-"""Upper bound for the ``limit`` field in paginated responses."""
+_MAX_RESPONSE_LIMIT: int = 1_000
+"""Upper bound for the 'limit' field in paginated responses."""
 
 DataT = TypeVar("DataT")
 
@@ -46,7 +43,6 @@ class PaginatedResponse(BaseDTO, Generic[DataT]):
 
     @property
     def has_more(self) -> bool:
-        """Check if more pages are available."""
         return (self.offset + self.limit) < self.total
 
 

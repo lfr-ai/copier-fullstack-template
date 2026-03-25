@@ -5,10 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from {{ project_slug }}.core.entities.base import DomainEvent
-
-__all__ = ["UserCreated", "UserDeactivated"]
-
-
 @dataclass(frozen=True, slots=True)
 class UserCreated(DomainEvent):
     """Raised when a new user is created."""

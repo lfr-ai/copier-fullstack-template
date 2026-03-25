@@ -1,0 +1,185 @@
+"""NetworkX knowledge graph adapter — implements 'KnowledgeGraphPort'.
+
+Uses an in-memory NetworkX directed graph for relationship storage
+and traversal. Suitable for moderate-scale graphs; for production
+at scale, use the Neo4j adapter.
+"""
+
+from __future__ import annotations
+
+import json
+import structlog
+from pathlib import Path
+from typing import override
+
+from {{ project_slug }}.core.interfaces.knowledge_graph import (
+    DEFAULT_NEIGHBOR_DEPTH,
+    DEFAULT_NEIGHBOR_LIMIT,
+    KnowledgeGraphPort,
+)
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class NetworkXKnowledgeGraph(KnowledgeGraphPort):
+    """In-memory knowledge graph backed by NetworkX."""
+
+    __slots__ = ("_graph",)
+
+    def __init__(self, *, persist_path: str | None = None) -> None:
+        try:
+            import networkx as nx  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "networkx is required — pip install networkx"
+            raise ImportError(msg) from exc
+
+        self._graph: nx.DiGraph = nx.DiGraph()
+
+        if persist_path:
+            self._load_if_exists(persist_path)
+
+    @override
+    async def add_triplet(
+        self,
+        *,
+        subject: str,
+        predicate: str,
+        obj: str,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
+        """Add a single triplet to the graph.
+
+        Args:
+            subject (str): Source entity name.
+            predicate (str): Relationship label.
+            obj (str): Target entity name.
+            metadata (dict[str, object] | None): Optional edge attributes.
+        """
+        self._graph.add_edge(subject, obj, predicate=predicate, **(metadata or {}))
+        logger.debug("Added triplet: %s -[%s]-> %s", subject, predicate, obj)
+
+    @override
+    async def add_triplets(self, triplets: list[tuple[str, str, str]]) -> None:
+        """Bulk-add triplets to the graph.
+
+        Args:
+            triplets (list[tuple[str, str, str]]): '(subject, predicate, object)' tuples.
+        """
+        for subj, pred, obj in triplets:
+            self._graph.add_edge(subj, obj, predicate=pred)
+        logger.info("Added %d triplets to knowledge graph", len(triplets))
+
+    @override
+    async def query_neighbors(
+        self,
+        entity: str,
+        *,
+        depth: int = DEFAULT_NEIGHBOR_DEPTH,
+        limit: int = DEFAULT_NEIGHBOR_LIMIT,
+    ) -> list[dict[str, object]]:
+        """Return neighboring entities within 'depth' hops.
+
+        Args:
+            entity (str): Starting entity name.
+            depth (int): Maximum traversal depth.
+            limit (int): Maximum number of neighbors to return.
+
+        Returns:
+            list[dict[str, object]]: Dicts with 'entity', 'outgoing', and 'incoming' keys.
+        """
+        import networkx as nx  # type: ignore[import-untyped]
+
+        if entity not in self._graph:
+            return []
+
+        results: list[dict[str, object]] = []
+        visited: set[str] = set()
+
+        ego = nx.ego_graph(self._graph, entity, radius=depth, undirected=True)
+        for node in ego.nodes:
+            if node == entity or node in visited:
+                continue
+            visited.add(node)
+            if len(results) >= limit:
+                break
+
+            edges_to = self._graph.get_edge_data(entity, node) or {}
+            edges_from = self._graph.get_edge_data(node, entity) or {}
+            results.append({
+                "entity": node,
+                "outgoing": dict(edges_to),
+                "incoming": dict(edges_from),
+            })
+        return results
+
+    @override
+    async def query_triplets(
+        self,
+        *,
+        subject: str | None = None,
+        predicate: str | None = None,
+        obj: str | None = None,
+    ) -> list[tuple[str, str, str]]:
+        """Query triplets matching optional subject/predicate/object filters.
+
+        Args:
+            subject (str | None): Filter by source entity (exact match).
+            predicate (str | None): Filter by relationship label (exact match).
+            obj (str | None): Filter by target entity (exact match).
+
+        Returns:
+            list[tuple[str, str, str]]: Matching '(subject, predicate, object)' tuples.
+        """
+        results: list[tuple[str, str, str]] = []
+        for u, v, data in self._graph.edges(data=True):
+            edge_pred = data.get("predicate", "")
+            if subject and u != subject:
+                continue
+            if obj and v != obj:
+                continue
+            if predicate and edge_pred != predicate:
+                continue
+            results.append((u, edge_pred, v))
+        return results
+
+    @override
+    async def delete_entity(self, entity: str) -> None:
+        """Remove an entity and all its edges from the graph.
+
+        Args:
+            entity (str): Name of the entity to remove.
+        """
+        if entity in self._graph:
+            self._graph.remove_node(entity)
+            logger.info("Removed entity '%s' from knowledge graph", entity)
+
+    @override
+    async def get_entity_count(self) -> int:
+        """Return the total number of entities (nodes) in the graph."""
+        return self._graph.number_of_nodes()
+
+    @override
+    async def get_triplet_count(self) -> int:
+        """Return the total number of triplets (edges) in the graph."""
+        return self._graph.number_of_edges()
+
+    def save(self, path: str) -> None:
+        """Persist graph to JSON adjacency format.
+
+        Args:
+            path (str): File path for the saved graph JSON.
+        """
+        import networkx as nx  # type: ignore[import-untyped]
+
+        data = nx.node_link_data(self._graph)
+        Path(path).write_text(json.dumps(data, default=str), encoding="utf-8")
+        logger.info("Knowledge graph saved to %s", path)
+
+    def _load_if_exists(self, path: str) -> None:
+        import networkx as nx  # type: ignore[import-untyped]
+
+        p = Path(path)
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8"))
+            self._graph = nx.node_link_graph(data, directed=True)
+            logger.info("Knowledge graph loaded from %s (%d nodes)", path, self._graph.number_of_nodes())

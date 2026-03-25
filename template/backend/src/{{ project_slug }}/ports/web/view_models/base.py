@@ -5,10 +5,6 @@ from __future__ import annotations
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
-
-__all__ = ["BaseViewModel"]
-
-
 class BaseViewModel(BaseModel):
     """Base view model providing shared template context."""
 

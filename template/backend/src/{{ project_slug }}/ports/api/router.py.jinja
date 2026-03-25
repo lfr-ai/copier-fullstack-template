@@ -2,16 +2,50 @@
 
 from __future__ import annotations
 
-from typing import Final
 
 from fastapi import APIRouter
 
 from {{ project_slug }}.ports.api.routes import health, users
-
-__all__ = ["api_router"]
-
-api_router: Final[APIRouter] = APIRouter()
+api_router = APIRouter()
 
 api_router.include_router(health.router, tags=["health"])
 
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+{%- if use_ai %}
+
+from {{ project_slug }}.ports.api.routes import ai as ai_routes  # noqa: E402
+
+api_router.include_router(ai_routes.router, prefix="/ai", tags=["ai"])
+{%- if use_rag %}
+
+from {{ project_slug }}.ports.api.routes import documents as doc_routes  # noqa: E402
+
+api_router.include_router(doc_routes.router, prefix="/documents", tags=["documents"])
+{%- endif %}
+{%- if use_knowledge_graph %}
+
+from {{ project_slug }}.ports.api.routes import knowledge_graph as kg_routes  # noqa: E402
+
+api_router.include_router(kg_routes.router, prefix="/knowledge-graph", tags=["knowledge-graph"])
+{%- endif %}
+
+from {{ project_slug }}.ports.api.routes import conversations as conv_routes  # noqa: E402
+
+api_router.include_router(conv_routes.router, prefix="/conversations", tags=["conversations"])
+{%- if use_agents %}
+
+from {{ project_slug }}.ports.api.routes import agents as agent_routes  # noqa: E402
+
+api_router.include_router(agent_routes.router, prefix="/agents", tags=["agents"])
+
+from {{ project_slug }}.ports.api.routes import workflows as workflow_routes  # noqa: E402
+
+api_router.include_router(workflow_routes.router, prefix="/workflows", tags=["workflows"])
+{%- endif %}
+{%- if use_crewai %}
+
+from {{ project_slug }}.ports.api.routes import crewai as crewai_routes  # noqa: E402
+
+api_router.include_router(crewai_routes.router, prefix="/crewai", tags=["crewai"])
+{%- endif %}
+{%- endif %}

@@ -1,0 +1,39 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// docker-bake.override.hcl — Local development overrides
+//
+// Auto-loaded alongside docker-bake.hcl when running:
+//   docker buildx bake [target]
+//
+// CI pipelines skip this by specifying only docker-bake.hcl:
+//   docker buildx bake -f docker-bake.hcl [target]
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Local filesystem cache for faster rebuilds between invocations.
+// The .bake-cache/ directory is git-ignored and created on first build.
+
+target "app-dev" {
+  cache-from = [{ type = "local", src = ".bake-cache/app" }]
+  cache-to   = [{ type = "local", dest = ".bake-cache/app", mode = "max" }]
+}
+
+target "app-prod" {
+  cache-from = [{ type = "local", src = ".bake-cache/app" }]
+  cache-to   = [{ type = "local", dest = ".bake-cache/app", mode = "max" }]
+}
+
+target "frontend-dev" {
+  cache-from = [{ type = "local", src = ".bake-cache/frontend" }]
+  cache-to   = [{ type = "local", dest = ".bake-cache/frontend", mode = "max" }]
+}
+
+target "frontend-prod" {
+  cache-from = [{ type = "local", src = ".bake-cache/frontend" }]
+  cache-to   = [{ type = "local", dest = ".bake-cache/frontend", mode = "max" }]
+}
+{%- if use_caddy %}
+
+target "caddy" {
+  cache-from = [{ type = "local", src = ".bake-cache/caddy" }]
+  cache-to   = [{ type = "local", dest = ".bake-cache/caddy", mode = "max" }]
+}
+{%- endif %}

@@ -1,12 +1,10 @@
 """Structured logging factory using structlog.
 
-Provide a single ``configure_logging`` entry-point that all layers
+Provide a single 'configure_logging' entry-point that all layers
 can import without depending on any first-party project module.
 """
 
 from __future__ import annotations
-
-__all__ = ["configure_logging"]
 
 import logging
 import sys
@@ -28,6 +26,7 @@ def configure_logging(*, json_output: bool = False, log_level: str = "INFO") -> 
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
     ]
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT
 
@@ -132,15 +133,35 @@ run_installer "Caddy" "${SCRIPT_DIR}/install-caddy.zsh"
 {% if use_redis %}
 run_installer "Redis" "${SCRIPT_DIR}/install-redis.zsh"
 {% endif %}
+{% if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
+run_installer "Neo4j" "${SCRIPT_DIR}/install-neo4j.zsh"
+{% endif %}
 {% if cloud_provider != "none" %}
 run_installer "Cloud CLI" "${SCRIPT_DIR}/install-cloud-cli.zsh"
 {% endif %}
 {% if with_opencode %}
 run_installer "OpenCode" "${SCRIPT_DIR}/install-opencode.zsh"
+{% if with_gsd %}
+run_installer "OpenCode Ecosystem (GSD)" "${SCRIPT_DIR}/install-opencode-ecosystem.zsh" --gsd --plugins
+{% else %}
+run_installer "OpenCode Plugins" "${SCRIPT_DIR}/install-opencode-ecosystem.zsh" --plugins
+{% endif %}
 {% endif %}
 
 print_summary
 save_log
+
+local failed=0
+for entry in "${RESULTS[@]}"; do
+if [[ "${entry##*:}" == "FAILED" ]]; then
+(( failed++ ))
+fi
+done
+
+if (( failed > 0 )); then
+print "WARNING: ${failed} installation(s) failed — review the summary above"
+exit 1
+fi
 
 print "All installations complete"
 print ""

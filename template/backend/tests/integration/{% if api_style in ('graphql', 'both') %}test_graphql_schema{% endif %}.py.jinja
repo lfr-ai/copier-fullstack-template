@@ -1,0 +1,63 @@
+"""Integration tests for the GraphQL endpoint's schema construction."""
+
+from __future__ import annotations
+
+
+class TestGraphQLSchemaIntegrity:
+    """Validate that the Strawberry schema assembles without errors."""
+
+    def test_schema_is_importable(self) -> None:
+        """Verify the schema module imports cleanly."""
+        from {{ project_slug }}.ports.graphql.schema import schema
+
+        assert schema is not None
+
+    def test_schema_has_query_type(self) -> None:
+        """Verify the schema has a root query type."""
+        from {{ project_slug }}.ports.graphql.schema import schema
+
+        introspection = schema.as_str()
+        assert "type Query" in introspection
+
+    def test_schema_has_mutation_type(self) -> None:
+        """Verify the schema has a root mutation type."""
+        from {{ project_slug }}.ports.graphql.schema import schema
+
+        introspection = schema.as_str()
+        assert "type Mutation" in introspection
+
+    def test_schema_sdl_contains_user_type(self) -> None:
+        """Verify UserType is defined in the schema SDL."""
+        from {{ project_slug }}.ports.graphql.schema import schema
+
+        sdl = schema.as_str()
+        assert "type UserType" in sdl
+
+    def test_schema_sdl_contains_create_user_input(self) -> None:
+        """Verify CreateUserInput is defined in the schema SDL."""
+        from {{ project_slug }}.ports.graphql.schema import schema
+
+        sdl = schema.as_str()
+        assert "input CreateUserInput" in sdl
+
+    def test_schema_sdl_contains_health_type(self) -> None:
+        """Verify HealthType is defined in the schema SDL."""
+        from {{ project_slug }}.ports.graphql.schema import schema
+
+        sdl = schema.as_str()
+        assert "type HealthType" in sdl
+
+    def test_schema_sdl_contains_user_connection(self) -> None:
+        """Verify UserConnection is defined in the schema SDL."""
+        from {{ project_slug }}.ports.graphql.schema import schema
+
+        sdl = schema.as_str()
+        assert "type UserConnection" in sdl
+
+    def test_create_schema_factory_accepts_max_depth(self) -> None:
+        """Verify the schema factory accepts a custom max_depth."""
+        from {{ project_slug }}.ports.graphql.schema import create_schema
+
+        custom = create_schema(max_depth=25)
+        assert custom is not None
+        assert "type Query" in custom.as_str()

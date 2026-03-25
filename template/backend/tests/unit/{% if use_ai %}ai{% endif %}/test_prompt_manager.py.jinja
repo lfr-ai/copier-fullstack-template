@@ -1,0 +1,56 @@
+"""Unit tests for the prompt manager."""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.ai.prompts.manager import PromptManager
+
+
+class TestPromptManager:
+    """Tests for PromptManager."""
+
+    def test_default_templates_loaded(self) -> None:
+        """Built-in templates should be available on init."""
+        pm = PromptManager()
+        templates = pm.list_templates()
+        assert "rag_query" in templates
+        assert "summarize" in templates
+
+    def test_get_existing_template(self) -> None:
+        """Getting a known template should return its raw string."""
+        pm = PromptManager()
+        raw = pm.get("rag_query")
+        assert "{{ question }}" in raw  # Jinja2 placeholder
+
+    def test_get_missing_template_raises(self) -> None:
+        """Getting unknown template should raise KeyError."""
+        pm = PromptManager()
+        with pytest.raises(KeyError, match="not found"):
+            pm.get("nonexistent_template")
+
+    def test_register_and_retrieve(self) -> None:
+        """Registered templates should be retrievable."""
+        pm = PromptManager()
+        pm.register("custom", "Hello {{ name }}!")
+        assert pm.get("custom") == "Hello {{ name }}!"
+
+    def test_render_template(self) -> None:
+        """Rendering should substitute variables."""
+        pm = PromptManager()
+        pm.register("greet", "Hello {{ name }}!")
+        result = pm.render("greet", name="World")
+        assert result == "Hello World!"
+
+    def test_render_rag_query(self) -> None:
+        """Built-in rag_query template should render with variables."""
+        pm = PromptManager()
+        result = pm.render("rag_query", context="Some context", question="What?")
+        assert "Some context" in result
+        assert "What?" in result
+
+    def test_list_templates_sorted(self) -> None:
+        """Template names should be returned sorted."""
+        pm = PromptManager()
+        names = pm.list_templates()
+        assert names == sorted(names)

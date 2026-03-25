@@ -1,0 +1,25 @@
+"""Conversation domain entities — messages and sessions."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+
+from {{ project_slug }}.core.entities.base import generate_id
+@dataclass(frozen=True, slots=True)
+class Message:
+    """Single conversation message."""
+
+    role: str = ""
+    content: str = ""
+    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+
+
+@dataclass(slots=True)
+class ConversationSession:
+    """Conversation session containing ordered messages."""
+
+    id: str = field(default_factory=generate_id)
+    messages: list[Message] = field(default_factory=list)
+    metadata: dict[str, object] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))

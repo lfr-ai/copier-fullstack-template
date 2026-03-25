@@ -1,0 +1,37 @@
+"""Ingestion-related DTOs for document processing pipelines."""
+
+from __future__ import annotations
+
+from typing import Annotated
+
+from pydantic import Field
+
+from {{ project_slug }}.application.dtos.base import BaseDTO
+
+_MIN_CHUNK_SIZE: int = 64
+_MAX_CHUNK_SIZE: int = 8192
+_MAX_CHUNK_OVERLAP: int = 1024
+_DEFAULT_CHUNK_SIZE: int = 512
+_DEFAULT_CHUNK_OVERLAP: int = 64
+
+
+class IngestionRequestDTO(BaseDTO):
+    """Input for a document ingestion operation."""
+
+    source: Annotated[str, Field(min_length=1, description="Document source path or URL")]
+    content_type: str = "auto"
+    chunking_strategy: str = "recursive"
+    chunk_size: Annotated[int, Field(ge=_MIN_CHUNK_SIZE, le=_MAX_CHUNK_SIZE)] = _DEFAULT_CHUNK_SIZE
+    chunk_overlap: Annotated[int, Field(ge=0, le=_MAX_CHUNK_OVERLAP)] = _DEFAULT_CHUNK_OVERLAP
+    build_knowledge_graph: bool = False
+
+
+class IngestionResultDTO(BaseDTO):
+    """Output from a document ingestion operation."""
+
+    source: str = ""
+    document_id: str = ""
+    document_count: int = 1
+    chunk_count: int = 0
+    embedding_dimensions: int = 0
+    success: bool = True

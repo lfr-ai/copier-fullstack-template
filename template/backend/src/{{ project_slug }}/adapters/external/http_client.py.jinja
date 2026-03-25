@@ -2,18 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Final
 
 import httpx
-import structlog
 
 from {{ project_slug }}.utils.retry_policies import http_retry
 
-__all__ = ["HTTPClientAdapter"]
-
-logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
-DEFAULT_TIMEOUT_SECONDS: Final[float] = 30.0
+DEFAULT_TIMEOUT_SECONDS = 30.0
 
 
 class HTTPClientAdapter:
@@ -30,9 +24,7 @@ class HTTPClientAdapter:
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         headers: dict[str, str] | None = None,
     ) -> None:
-        """Initialize HTTP client adapter.
-
-        Args:
+        """Args:
             base_url (str): Base URL for all requests.
             timeout (float): Request timeout in seconds.
             headers (dict[str, str] | None): Default request headers.
@@ -53,7 +45,7 @@ class HTTPClientAdapter:
 
         Args:
             url (str): Request URL (appended to base_url).
-            **kwargs: Additional httpx request arguments.
+            **kwargs (object): Additional httpx request arguments.
 
         Returns:
             httpx.Response: HTTP response.
@@ -68,7 +60,7 @@ class HTTPClientAdapter:
 
         Args:
             url (str): Request URL (appended to base_url).
-            **kwargs: Additional httpx request arguments.
+            **kwargs (object): Additional httpx request arguments.
 
         Returns:
             httpx.Response: HTTP response.

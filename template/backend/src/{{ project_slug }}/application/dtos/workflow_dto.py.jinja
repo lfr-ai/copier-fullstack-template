@@ -1,0 +1,84 @@
+"""Workflow-related DTOs for multi-agent graph execution."""
+
+from __future__ import annotations
+
+from pydantic import Field
+
+from {{ project_slug }}.application.dtos.base import BaseDTO
+from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
+
+_MAX_ITERATIONS_LIMIT: int = 100
+_WORKFLOW_NAME_MAX_LENGTH: int = 256
+_WORKFLOW_GOAL_MAX_LENGTH: int = 8192
+
+
+class WorkflowNodeDTO(BaseDTO):
+    """Node definition within a workflow."""
+
+    name: str = ""
+    agent_type: str = "default"
+    system_prompt: str = ""
+    description: str = ""
+    tools: list[str] = Field(default_factory=list)
+
+
+class WorkflowEdgeDTO(BaseDTO):
+    """Edge definition within a workflow."""
+
+    source: str = ""
+    target: str = ""
+    condition: str = ""
+
+
+class CreateWorkflowDTO(BaseDTO):
+    """Input for creating a workflow definition."""
+
+    name: str = Field(min_length=1, max_length=_WORKFLOW_NAME_MAX_LENGTH)
+    description: str = ""
+    nodes: list[WorkflowNodeDTO] = Field(default_factory=list)
+    edges: list[WorkflowEdgeDTO] = Field(default_factory=list)
+    entrypoint: str = ""
+    max_iterations: int = Field(default=DEFAULT_MAX_ITERATIONS, ge=1, le=_MAX_ITERATIONS_LIMIT)
+
+
+class ExecuteWorkflowDTO(BaseDTO):
+    """Input for executing a workflow."""
+
+    workflow_id: str = ""
+    goal: str = Field(min_length=1, max_length=_WORKFLOW_GOAL_MAX_LENGTH)
+    initial_state: dict[str, object] = Field(default_factory=dict)
+    max_iterations: int = Field(default=DEFAULT_MAX_ITERATIONS, ge=1, le=_MAX_ITERATIONS_LIMIT)
+    thread_id: str = ""
+    interrupt_before: list[str] = Field(default_factory=list)
+    stream: bool = False
+
+
+class ResumeWorkflowDTO(BaseDTO):
+    """Input for resuming a paused workflow (human-in-the-loop)."""
+
+    checkpoint_id: str = Field(min_length=1)
+    input_data: dict[str, object] = Field(default_factory=dict)
+
+
+class WorkflowStepDTO(BaseDTO):
+    """Output representing a single workflow execution step."""
+
+    step_type: str = ""
+    agent_name: str = ""
+    input_data: dict[str, object] = Field(default_factory=dict)
+    output_data: dict[str, object] = Field(default_factory=dict)
+    duration_ms: float = 0.0
+    token_usage: dict[str, int] = Field(default_factory=dict)
+
+
+class WorkflowResultDTO(BaseDTO):
+    """Output from a workflow execution."""
+
+    workflow_id: str = ""
+    goal: str = ""
+    answer: str = ""
+    steps: list[WorkflowStepDTO] = Field(default_factory=list)
+    total_steps: int = 0
+    total_tokens: dict[str, int] = Field(default_factory=dict)
+    success: bool = True
+    error: str = ""

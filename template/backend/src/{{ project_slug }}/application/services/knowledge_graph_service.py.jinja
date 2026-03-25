@@ -1,0 +1,135 @@
+"""Knowledge graph application service."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from pydantic import Field
+
+from {{ project_slug }}.application.dtos.base import BaseDTO
+from {{ project_slug }}.application.services.base import BaseService
+from {{ project_slug }}.core.interfaces.knowledge_graph import (
+    DEFAULT_NEIGHBOR_DEPTH,
+    DEFAULT_NEIGHBOR_LIMIT,
+    KnowledgeGraphPort,
+)
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+_EXTRACTION_MAX_TOKENS: int = 1024
+_EXTRACTION_TEMPERATURE: float = 0.1
+_TRIPLET_PART_COUNT: int = 3
+
+
+class TripletDTO(BaseDTO):
+    """Knowledge graph triplet."""
+
+    subject: str = ""
+    predicate: str = ""
+    object: str = ""
+
+
+class GraphQueryDTO(BaseDTO):
+    """Input for a knowledge graph query."""
+
+    entity: str = ""
+    depth: int = DEFAULT_NEIGHBOR_DEPTH
+    limit: int = DEFAULT_NEIGHBOR_LIMIT
+
+
+class GraphQueryResultDTO(BaseDTO):
+    """Output from a knowledge graph query."""
+
+    entity: str = ""
+    neighbors: list[dict[str, object]] = Field(default_factory=list)
+    triplets: list[TripletDTO] = Field(default_factory=list)
+    entity_count: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class AddTripletsCommand:
+    """Command to bulk-add triplets to the knowledge graph."""
+
+    triplets: list[tuple[str, str, str]] = field(default_factory=list)
+
+
+class KnowledgeGraphService(BaseService):
+    """Application-level knowledge graph orchestration."""
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+        knowledge_graph: KnowledgeGraphPort,
+        llm: LLMPort | None = None,
+    ) -> None:
+        super().__init__(uow=uow)
+        self._kg = knowledge_graph
+        self._llm = llm
+
+    async def query_neighbors(self, dto: GraphQueryDTO) -> GraphQueryResultDTO:
+        """Query the neighborhood of an entity."""
+        self._logger.info("kg_query", entity=dto.entity, depth=dto.depth)
+
+        neighbors = await self._kg.query_neighbors(
+            dto.entity, depth=dto.depth, limit=dto.limit,
+        )
+        triplets_raw = await self._kg.query_triplets(subject=dto.entity)
+        entity_count = await self._kg.get_entity_count()
+
+        triplets = [
+            TripletDTO(subject=s, predicate=p, object=o) for s, p, o in triplets_raw
+        ]
+
+        self._logger.info("kg_query_complete", neighbor_count=len(neighbors))
+        return GraphQueryResultDTO(
+            entity=dto.entity,
+            neighbors=neighbors,
+            triplets=triplets,
+            entity_count=entity_count,
+        )
+
+    async def add_triplets(self, command: AddTripletsCommand) -> int:
+        """Bulk-add triplets to the knowledge graph."""
+        self._logger.info("kg_add_triplets", count=len(command.triplets))
+        await self._kg.add_triplets(command.triplets)
+        return len(command.triplets)
+
+    async def extract_and_store(self, text: str) -> int:
+        """Extract triplets from text using LLM and store in graph.
+
+        Returns the number of triplets extracted and stored.
+
+        Raises:
+            RuntimeError: If no LLM is configured for extraction.
+        """
+        if self._llm is None:
+            msg = "LLM required for triplet extraction"
+            raise RuntimeError(msg)
+
+        self._logger.info("kg_extract", text_length=len(text))
+
+        prompt = (
+            "Extract knowledge graph triplets from the following text. "
+            "Return each triplet on a new line in the format: subject | predicate | object\n\n"
+            f"Text: {text}\n\nTriplets:"
+        )
+
+        response = await self._llm.complete(
+            prompt=prompt,
+            system_prompt="Extract entity-relation-entity triplets. One per line, pipe-separated.",
+            max_tokens=_EXTRACTION_MAX_TOKENS,
+            temperature=_EXTRACTION_TEMPERATURE,
+        )
+
+        triplets: list[tuple[str, str, str]] = []
+        for line in response.strip().splitlines():
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) == _TRIPLET_PART_COUNT and all(parts):
+                triplets.append((parts[0], parts[1], parts[2]))
+
+        if triplets:
+            await self._kg.add_triplets(triplets)
+
+        self._logger.info("kg_extract_complete", triplet_count=len(triplets))
+        return len(triplets)

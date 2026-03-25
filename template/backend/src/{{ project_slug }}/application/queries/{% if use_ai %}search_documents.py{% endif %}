@@ -1,0 +1,62 @@
+"""Search documents query — CQRS read operation for vector search."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Final, override
+
+import structlog
+
+from {{ project_slug }}.application.dtos.rag_dto import SourceDTO
+from {{ project_slug }}.application.queries.base import QueryHandler
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+logger = structlog.get_logger(__name__)
+
+_DEFAULT_TOP_K: Final[int] = 10
+
+
+@dataclass(frozen=True, slots=True)
+class SearchDocumentsQuery:
+    """Query for vector similarity search."""
+
+    query: str
+    top_k: int = _DEFAULT_TOP_K
+    filters: dict[str, object] | None = None
+
+
+class SearchDocumentsHandler(QueryHandler[SearchDocumentsQuery, list[SourceDTO]]):
+    """Handles document search using vector similarity."""
+
+    def __init__(self, *, embedding: EmbeddingPort, vector_store: VectorStorePort) -> None:
+        self._embedding = embedding
+        self._vector_store = vector_store
+
+    @override
+    async def handle(self, query: SearchDocumentsQuery) -> list[SourceDTO]:
+        """Execute vector similarity search.
+
+        Args:
+            query (SearchDocumentsQuery): Search parameters.
+
+        Returns:
+            list[SourceDTO]: Matching documents ranked by similarity.
+        """
+        logger.info("Document search", query_length=len(query.query), top_k=query.top_k)
+
+        query_vector = await self._embedding.embed_text(query.query)
+        results = await self._vector_store.search(
+            query_vector=query_vector,
+            top_k=query.top_k,
+            filters=query.filters,
+        )
+
+        return [
+            SourceDTO(
+                id=r.id,
+                score=r.score,
+                content=str(r.metadata.get("content", "")) if r.metadata else "",
+            )
+            for r in results
+        ]

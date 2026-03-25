@@ -18,6 +18,6 @@ async def user_repository(session: AsyncSession) -> AsyncIterator[UserRepository
         session (AsyncSession): Test database session.
 
     Yields:
-        AsyncIterator[UserRepository]: Configured user repository.
+        Configured user repository.
     """
     yield UserRepository(session)

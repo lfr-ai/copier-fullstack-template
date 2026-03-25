@@ -1,0 +1,72 @@
+"""Unit tests for LangGraphWorkflowEngine."""
+{%- if use_agents %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+from {{ project_slug }}.core.interfaces.workflow_engine import WorkflowConfig
+
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture
+def mock_llm() -> AsyncMock:
+    mock = AsyncMock()
+    mock.complete.return_value = "FINAL ANSWER: Test result"
+    return mock
+
+
+@pytest.fixture
+def engine(mock_llm: AsyncMock) -> None:
+    """Create LangGraphWorkflowEngine with mock LLM."""
+    with patch.dict("sys.modules", {
+        "langgraph": __import__("types").ModuleType("langgraph"),
+        "langgraph.graph": __import__("types").ModuleType("langgraph.graph"),
+    }):
+        from {{ project_slug }}.ai.workflows.langgraph_engine import LangGraphWorkflowEngine
+
+        return LangGraphWorkflowEngine(
+            llm=mock_llm,
+            nodes={
+                "planner": {"system_prompt": "You plan tasks."},
+                "executor": {"system_prompt": "You execute tasks."},
+            },
+            max_iterations=5,
+        )
+
+
+class TestLangGraphWorkflowEngineInit:
+    """Tests for engine initialization."""
+
+    def test_engine_stores_nodes(self, engine) -> None:
+        assert "planner" in engine._nodes
+        assert "executor" in engine._nodes
+
+    def test_engine_max_iterations(self, engine) -> None:
+        assert engine._max_iterations == 5
+
+
+class TestWorkflowConfig:
+    """Tests for WorkflowConfig value object."""
+
+    def test_default_config(self) -> None:
+        config = WorkflowConfig()
+        assert config.max_iterations == 25
+        assert config.recursion_limit == 50
+        assert config.timeout_seconds == 300.0
+
+    def test_custom_config(self) -> None:
+        config = WorkflowConfig(
+            max_iterations=10,
+            thread_id="test-thread",
+            interrupt_before=["reviewer"],
+        )
+        assert config.max_iterations == 10
+        assert config.thread_id == "test-thread"
+        assert config.interrupt_before == ["reviewer"]
+{%- else %}
+# LangGraph engine tests are only generated when use_agents is enabled.
+{%- endif %}

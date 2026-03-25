@@ -1,0 +1,294 @@
+"""CrewAI application service orchestrates CrewAI operations at the application layer.
+
+Provides high-level operations for the CrewAI multi-agent subsystem:
+* Crew creation and execution (sequential, hierarchical)
+* Flow orchestration for complex multi-step workflows
+* Pre-built template crew access (research, analysis, content, planning)
+* HMAS goal decomposition and cross-framework delegation
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from {{ project_slug }}.application.services.base import BaseService
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+if TYPE_CHECKING:
+from {{ project_slug }}.ai.crewai.flows import FlowRegistry
+from {{ project_slug }}.ai.crewai.hmas import CrewAIHMASSupervisor
+
+_LOG_TASK_TRUNCATE_LEN = 200
+
+
+class CrewAIService(BaseService):
+"""Application-layer CrewAI service.
+
+Coordinates crew assembly, execution, flow orchestration,
+and HMAS hierarchical delegation through the CrewAI framework.
+
+.. note:: FIXME: Methods use local imports from 'ai.crewai.*'
+(concrete implementations). Extract a CrewAI port/protocol into
+'core.interfaces' to decouple the application layer from the
+AI adapter layer.
+"""
+
+def __init__(
+self,
+*,
+uow: UnitOfWork,
+supervisor: CrewAIHMASSupervisor | None = None,
+flow_registry: FlowRegistry | None = None,
+embedder: dict[str, object] | None = None,
+default_llm: str = "gpt-4o",
+verbose: bool = False,
+) -> None:
+super().__init__(uow=uow)
+self._supervisor = supervisor
+self._flow_registry = flow_registry
+self._embedder = embedder
+self._default_llm = default_llm
+self._verbose = verbose
+
+# ------------------------------------------------------------------
+# Crew Execution
+# ------------------------------------------------------------------
+
+async def execute_crew(
+self,
+crew_type: str,
+task: str,
+*,
+verbose: bool | None = None,
+) -> dict[str, object]:
+"""Execute a pre-built crew template.
+
+Args:
+crew_type (str): Template name 'research', 'analysis',
+'content', or 'planning'.
+task (str): Task description to pass to the crew.
+verbose (bool | None): Override default verbose setting.
+
+Returns:
+dict[str, object]: Dict with 'crew_type', 'task', and 'result'.
+
+Raises:
+ValueError: If 'crew_type' is not recognized.
+"""
+from {{ project_slug }}.ai.crewai.templates import (
+create_analysis_crew,
+create_content_crew,
+create_planning_crew,
+create_research_crew,
+)
+
+factories = {
+"research": create_research_crew,
+"analysis": create_analysis_crew,
+"content": create_content_crew,
+"planning": create_planning_crew,
+}
+
+factory = factories.get(crew_type)
+if factory is None:
+msg = f"Unknown crew type '{crew_type}'. Available: {sorted(factories)}"
+raise ValueError(msg)
+
+crew_verbose = verbose if verbose is not None else self._verbose
+crew = factory(
+llm=self._default_llm,
+verbose=crew_verbose,
+embedder=self._embedder,
+)
+
+self._logger.info(
+"crewai_crew_execute_start",
+crew_type=crew_type,
+task=task[:_LOG_TASK_TRUNCATE_LEN],
+)
+
+result = crew.kickoff(inputs={"task": task})
+
+self._logger.info(
+"crewai_crew_execute_complete",
+crew_type=crew_type,
+)
+
+return {
+"crew_type": crew_type,
+"task": task,
+"result": str(result),
+}
+
+async def execute_custom_crew(
+self,
+agents_config: list[dict[str, object]],
+tasks_config: list[dict[str, object]],
+*,
+process: str = "sequential",
+verbose: bool | None = None,
+) -> dict[str, object]:
+"""Build and execute a custom crew from configuration dicts.
+
+Args:
+agents_config (list[dict[str, object]]): List of agent specifications.
+tasks_config (list[dict[str, object]]): List of task specifications.
+process (str): 'sequential' or 'hierarchical'.
+verbose (bool | None): Override default verbose.
+
+Returns:
+dict[str, object]: Dict with 'process', 'agent_count', 'task_count',
+and 'result'.
+"""
+from {{ project_slug }}.ai.crewai.agents import AgentSpec, build_agent
+from {{ project_slug }}.ai.crewai.crews import CrewProcessType, CrewSpec, build_crew
+from {{ project_slug }}.ai.crewai.tasks import TaskSpec, build_task
+
+crew_verbose = verbose if verbose is not None else self._verbose
+
+agents = [
+build_agent(AgentSpec(
+role=cfg["role"],
+goal=cfg["goal"],
+backstory=cfg.get("backstory", ""),
+llm=cfg.get("llm", self._default_llm),
+verbose=crew_verbose,
+))
+for cfg in agents_config
+]
+
+tasks = [
+build_task(TaskSpec(
+description=cfg["description"],
+expected_output=cfg.get("expected_output", ""),
+agent=agents[cfg.get("agent_index", idx % len(agents))],
+))
+for idx, cfg in enumerate(tasks_config)
+]
+
+spec = CrewSpec(
+agents=agents,
+tasks=tasks,
+process=(
+CrewProcessType.HIERARCHICAL
+if process == "hierarchical"
+else CrewProcessType.SEQUENTIAL
+),
+verbose=crew_verbose,
+manager_llm=self._default_llm,
+)
+
+self._logger.info(
+"crewai_custom_crew_start",
+agent_count=len(agents),
+task_count=len(tasks),
+process=process,
+)
+
+crew = build_crew(spec)
+result = crew.kickoff()
+
+return {
+"process": process,
+"agent_count": len(agents),
+"task_count": len(tasks),
+"result": str(result),
+}
+
+# ------------------------------------------------------------------
+# Flow Orchestration
+# ------------------------------------------------------------------
+
+async def execute_flow(
+self,
+flow_name: str,
+inputs: dict[str, object] | None = None,
+) -> dict[str, object]:
+"""Execute a registered CrewAI Flow.
+
+Args:
+flow_name (str): Identifier for the flow to execute.
+inputs (dict[str, object] | None): Initial data for the flow.
+
+Returns:
+dict[str, object]: Dict with 'flow_name' and 'result'.
+
+Raises:
+RuntimeError: If no flow registry is configured.
+ValueError: If flow name is not recognized.
+"""
+self._logger.info("crewai_flow_start", flow_name=flow_name)
+
+if self._flow_registry is None:
+msg = "Flow registry not configured for CrewAI service."
+raise RuntimeError(msg)
+
+result = await self._flow_registry.run(flow_name, inputs=inputs)
+
+if result.error is not None:
+self._logger.error(
+"crewai_flow_failed",
+flow_name=flow_name,
+error=result.error,
+)
+return {"flow_name": flow_name, "error": result.error}
+
+return {"flow_name": flow_name, "result": result.result}
+
+# ------------------------------------------------------------------
+# HMAS Orchestration
+# ------------------------------------------------------------------
+
+async def orchestrate(self, goal: str) -> dict[str, object]:
+"""Run HMAS hierarchical multi-agent orchestration.
+
+Uses the CrewAI HMAS supervisor to decompose the goal,
+delegate sub-goals to crews, and aggregate.
+
+Args:
+goal (str): High-level goal description.
+
+Returns:
+dict[str, object]: Dict with 'goal' and 'result'.
+
+Raises:
+RuntimeError: If no HMAS supervisor is configured.
+"""
+if self._supervisor is None:
+msg = "HMAS supervisor not configured for CrewAI service."
+raise RuntimeError(msg)
+
+self._logger.info("crewai_hmas_orchestrate_start", goal=goal[:_LOG_TASK_TRUNCATE_LEN])
+result = await self._supervisor.orchestrate(goal)
+self._logger.info("crewai_hmas_orchestrate_complete")
+
+return {"goal": goal, "result": result}
+
+# ------------------------------------------------------------------
+# Info
+# ------------------------------------------------------------------
+
+async def list_crew_templates(self) -> list[dict[str, str]]:
+"""List available pre-built crew templates.
+
+Returns:
+list[dict[str, str]]: List of dicts with 'name' and 'description'.
+"""
+return [
+{
+"name": "research",
+"description": "Research and analysis crew (researcher + analyst)",
+},
+{
+"name": "analysis",
+"description": "Data analysis crew with hierarchical management",
+},
+{
+"name": "content",
+"description": "Content creation pipeline (writer + editor + QA)",
+},
+{
+"name": "planning",
+"description": "Strategic planning crew with plan validation",
+},
+]

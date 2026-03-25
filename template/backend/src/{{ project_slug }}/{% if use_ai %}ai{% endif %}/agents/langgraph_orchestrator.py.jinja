@@ -1,0 +1,247 @@
+"""LangGraph multi-agent orchestrator — implements 'AgentOrchestratorPort'.
+
+Uses LangGraph's 'StateGraph' for stateful, durable multi-agent
+workflows with human-in-the-loop support. Supports dynamic tool
+binding, conditional routing, and checkpointing.
+
+Add 'langgraph' and 'langchain-core' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import structlog
+from collections.abc import AsyncIterator
+from typing import override
+
+from {{ project_slug }}.core.interfaces.agent_orchestrator import (
+    AgentOrchestratorPort,
+    AgentState,
+    OrchestratorResult,
+)
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+from {{ project_slug }}.ai.config import DEFAULT_HISTORY_WINDOW, RECURSION_LIMIT_MULTIPLIER
+from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_AGENT_MAX_TOKENS: int = 2048
+_AGENT_TEMPERATURE: float = 0.3
+
+
+class LangGraphOrchestrator(AgentOrchestratorPort):
+    """Multi-agent orchestrator backed by LangGraph StateGraph.
+
+    Builds a graph of specialized agent nodes that collaborate
+    via shared state. Supports:
+    - Conditional routing between agents
+    - Tool-calling via bound functions
+    - Human-in-the-loop interrupts
+    - Checkpointed durable execution
+    """
+
+    __slots__ = ("_agents", "_graph", "_llm", "_max_iterations", "_tools")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        agents: dict[str, dict[str, object]] | None = None,
+        tools: list[object] | None = None,
+        max_iterations: int = DEFAULT_MAX_ITERATIONS,
+    ) -> None:
+        """Initialize the LangGraph orchestrator.
+
+        'agents' maps agent names to their config dicts
+        (expected keys: 'system_prompt', 'description').
+        """
+        self._llm = llm
+        self._agents = agents or {}
+        self._tools = tools or []
+        self._max_iterations = max_iterations
+        self._graph = None
+
+    def _build_graph(self) -> object:
+        """Lazily build the LangGraph StateGraph."""
+        if self._graph is not None:
+            return self._graph
+
+        try:
+            from langgraph.graph import END, START, StateGraph  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "langgraph is required — pip install langgraph"
+            raise ImportError(msg) from exc
+
+        from typing import Annotated, TypedDict
+
+        class WorkflowState(TypedDict):
+            messages: Annotated[list[dict[str, str]], "append"]
+            context: dict[str, object]
+            current_agent: str
+            iteration: int
+            final_answer: str
+
+        graph = StateGraph(WorkflowState)
+
+        # Router node: decides which agent to invoke next
+        async def router(state: WorkflowState) -> WorkflowState:
+            if state["iteration"] >= self._max_iterations:
+                return {**state, "current_agent": "__end__"}
+
+            messages = state.get("messages", [])
+            if not messages:
+                first_agent = next(iter(self._agents), "planner")
+                return {**state, "current_agent": first_agent}
+
+            last_msg = messages[-1].get("content", "")
+            if "FINAL ANSWER:" in last_msg:
+                answer = last_msg.split("FINAL ANSWER:", 1)[1].strip()
+                return {**state, "final_answer": answer, "current_agent": "__end__"}
+
+            # Round-robin by default; override with custom routing
+            agent_names = list(self._agents.keys())
+            current = state.get("current_agent", "")
+            if current in agent_names:
+                idx = agent_names.index(current)
+                next_agent = agent_names[(idx + 1) % len(agent_names)]
+            else:
+                next_agent = agent_names[0] if agent_names else "__end__"
+
+            return {**state, "current_agent": next_agent, "iteration": state["iteration"] + 1}
+
+        graph.add_node("router", router)
+
+        # Add agent nodes dynamically
+        for agent_name, agent_config in self._agents.items():
+            system_prompt = agent_config.get("system_prompt", f"You are the {agent_name} agent.")
+
+            # Create a closure-safe agent node
+            async def _make_agent_node(
+                state: WorkflowState,
+                _name: str = agent_name,
+                _prompt: str = system_prompt,
+            ) -> WorkflowState:
+                context_str = "\n".join(
+                    f"{m['role']}: {m['content']}" for m in state.get("messages", [])[-DEFAULT_HISTORY_WINDOW:]
+                )
+                full_prompt = f"{context_str}\n\nRespond as {_name}."
+                response = await self._llm.complete(
+                    prompt=full_prompt,
+                    system_prompt=_prompt,
+                    max_tokens=_AGENT_MAX_TOKENS,
+                    temperature=_AGENT_TEMPERATURE,
+                )
+                new_message = {"role": "assistant", "content": f"[{_name}] {response}"}
+                return {
+                    **state,
+                    "messages": state.get("messages", []) + [new_message],
+                }
+
+            graph.add_node(agent_name, _make_agent_node)
+
+        # Define edges
+        graph.add_edge(START, "router")
+
+        def route_to_agent(state: WorkflowState) -> str:
+            target = state.get("current_agent", "__end__")
+            if target == "__end__" or target not in self._agents:
+                return END
+            return target
+
+        graph.add_conditional_edges("router", route_to_agent)
+
+        # Each agent routes back to the router
+        for agent_name in self._agents:
+            graph.add_edge(agent_name, "router")
+
+        self._graph = graph.compile()
+        return self._graph
+
+    @override
+    async def run(
+        self,
+        *,
+        goal: str,
+        state: AgentState | None = None,
+        config: dict[str, object] | None = None,
+    ) -> OrchestratorResult:
+        compiled = self._build_graph()
+
+        initial_state = {
+            "messages": [{"role": "user", "content": goal}],
+            "context": state.context if state else {},
+            "current_agent": "",
+            "iteration": 0,
+            "final_answer": "",
+        }
+
+        if state and state.messages:
+            initial_state["messages"] = state.messages + initial_state["messages"]
+
+        run_config = {"recursion_limit": self._max_iterations * RECURSION_LIMIT_MULTIPLIER}
+        if config:
+            run_config.update(config)
+
+        try:
+            result = await compiled.ainvoke(initial_state, config=run_config)
+        except Exception:  # noqa: BLE001 — returns error result, logged
+            logger.exception("LangGraph orchestration failed")
+            return OrchestratorResult(
+                answer="Orchestration failed due to an error.",
+                final_state=state or AgentState(),
+                success=False,
+            )
+
+        final_state = AgentState(
+            messages=result.get("messages", []),
+            context=result.get("context", {}),
+            current_agent=result.get("current_agent", ""),
+            iteration=result.get("iteration", 0),
+        )
+
+        answer = result.get("final_answer", "")
+        if not answer and result.get("messages"):
+            answer = result["messages"][-1].get("content", "No answer generated.")
+
+        logger.info(
+            "LangGraph orchestration completed: %d iterations, %d messages",
+            final_state.iteration,
+            len(final_state.messages),
+        )
+
+        return OrchestratorResult(
+            answer=answer,
+            final_state=final_state,
+            agent_trace=[
+                {"agent": m.get("role", ""), "content": m.get("content", "")}
+                for m in result.get("messages", [])
+            ],
+            total_steps=final_state.iteration,
+        )
+
+    @override
+    async def stream(
+        self,
+        *,
+        goal: str,
+        state: AgentState | None = None,
+        config: dict[str, object] | None = None,
+    ) -> AsyncIterator[dict[str, object]]:
+        compiled = self._build_graph()
+
+        initial_state = {
+            "messages": [{"role": "user", "content": goal}],
+            "context": state.context if state else {},
+            "current_agent": "",
+            "iteration": 0,
+            "final_answer": "",
+        }
+
+        run_config = {"recursion_limit": self._max_iterations * RECURSION_LIMIT_MULTIPLIER}
+        if config:
+            run_config.update(config)
+
+        async for event in compiled.astream(initial_state, config=run_config):
+            yield {
+                "type": "step",
+                "data": event,
+            }

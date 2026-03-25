@@ -1,0 +1,110 @@
+"""LangChain RAG chain adapter."""
+
+from __future__ import annotations
+
+import structlog
+
+from {{ project_slug }}.ai.config import DEFAULT_CHAT_MODEL
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_RETRIEVAL_TOP_K: int = 5
+
+
+class LangChainRAGChain:
+    """LangChain-based RAG chain using LCEL composition.
+
+    Wraps core ports into LangChain-compatible components for
+    advanced chain composition, streaming, and tool integration.
+    """
+
+    __slots__ = ("_chain", "_embedding", "_llm", "_vector_store")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+    ) -> None:
+        self._llm = llm
+        self._embedding = embedding
+        self._vector_store = vector_store
+        self._chain: object | None = None
+
+    def _build_chain(self) -> object:
+        """Lazily build LangChain LCEL chain."""
+        if self._chain is not None:
+            return self._chain
+
+        try:
+            from langchain_core.output_parsers import StrOutputParser  # type: ignore[import-untyped]
+            from langchain_core.prompts import ChatPromptTemplate  # type: ignore[import-untyped]
+            from langchain_core.runnables import RunnablePassthrough  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "langchain-core is required — pip install langchain-core"
+            raise ImportError(msg) from exc
+
+        prompt = ChatPromptTemplate.from_template(
+            "Answer the question based on the context below.\n\n"
+            "Context:\n{context}\n\n"
+            "Question: {question}\n\n"
+            "Answer:"
+        )
+
+        from langchain_core.runnables import RunnableLambda  # type: ignore[import-untyped]
+
+        # Build the chain: context retrieval | prompt | LLM | output parser
+        self._chain = (
+            {"context": RunnableLambda(self._retrieve_context), "question": RunnablePassthrough()}
+            | prompt
+            | self._get_langchain_llm()
+            | StrOutputParser()
+        )
+        return self._chain
+
+    def _get_langchain_llm(self) -> object:
+        """Wrap the injected LLM port into a LangChain-compatible Runnable."""
+        from langchain_core.runnables import RunnableLambda  # type: ignore[import-untyped]
+
+        llm = self._llm
+
+        async def _invoke(prompt_value: object) -> str:
+            text = str(prompt_value)
+            return await llm.complete(prompt=text)
+
+        return RunnableLambda(_invoke)
+
+    async def _retrieve_context(self, question: str) -> str:
+        """Retrieve context from vector store for a question."""
+        query_vector = await self._embedding.embed_text(question)
+        results = await self._vector_store.search(
+            query_vector=query_vector, top_k=_RETRIEVAL_TOP_K
+        )
+        parts = []
+        for r in results:
+            content = r.metadata.get("content", "") if r.metadata else ""
+            if content:
+                parts.append(str(content))
+        return "\n\n".join(parts)
+
+    async def invoke(self, question: str) -> str:
+        """Execute the RAG chain for a question.
+
+        Args:
+            question (str): Natural language question.
+
+        Returns:
+            str: Generated answer string.
+        """
+        chain = self._build_chain()
+        try:
+            result = await chain.ainvoke(question)
+            return str(result)
+        except Exception:  # noqa: BLE001 — graceful fallback to direct LLM
+            logger.exception("LangChain RAG chain failed, falling back to direct LLM")
+            context = await self._retrieve_context(question)
+            prompt = f"Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"
+            return await self._llm.complete(prompt=prompt)

@@ -1,0 +1,19 @@
+{%- if with_gsd %}
+{
+  "$schema": "https://gsd-build.github.io/GSD-2/schemas/mcp.json",
+  "mcpServers": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true,
+      "timeout": 15000
+    },
+    "gh_grep": {
+      "type": "remote",
+      "url": "https://mcp.grep.app",
+      "enabled": true,
+      "timeout": 15000
+    }
+  }
+}
+{%- endif %}

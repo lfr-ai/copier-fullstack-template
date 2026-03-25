@@ -5,8 +5,6 @@ from __future__ import annotations
 from {{ project_slug }}.application.dtos.user_dto import UserDTO
 from {{ project_slug }}.core.entities.user import User
 
-__all__ = ["UserMapper"]
-
 
 class UserMapper:
     """Map between User domain entities and UserDTO data transfer objects.
@@ -17,29 +15,29 @@ class UserMapper:
 
     @staticmethod
     def to_dto(entity: User) -> UserDTO:
-        """Convert User domain entity to UserDTO.
+        """Convert a User domain entity to UserDTO.
 
         Args:
             entity (User): Domain entity to convert.
 
         Returns:
-            UserDTO: Data transfer object suitable for the application layer.
+            UserDTO: Data transfer object.
         """
         return UserDTO(
-            id=str(entity.id),
-            email=str(entity.email),
+            id=entity.id,
+            email=entity.email,
             display_name=entity.display_name,
             is_active=entity.is_active,
         )
 
     @staticmethod
     def to_dto_list(entities: list[User]) -> list[UserDTO]:
-        """Convert list of User entities to DTOs.
+        """Convert a list of User entities to DTOs.
 
         Args:
             entities (list[User]): Domain entities to convert.
 
         Returns:
-            list[UserDTO]: List of data transfer objects.
+            list[UserDTO]: Data transfer objects.
         """
         return [UserMapper.to_dto(entity) for entity in entities]

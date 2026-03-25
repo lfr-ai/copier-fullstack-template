@@ -1,0 +1,179 @@
+"""Neo4j knowledge graph adapter — implements 'KnowledgeGraphPort'.
+
+Production-grade graph store backed by Neo4j for relationship storage,
+traversal, and Cypher-based queries. Suitable for large-scale knowledge
+graphs with millions of nodes/edges.
+
+Add 'neo4j' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.core.interfaces.knowledge_graph import (
+    DEFAULT_NEIGHBOR_LIMIT,
+    KnowledgeGraphPort,
+)
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_MAX_QUERY_RESULTS: int = 1000
+
+
+class Neo4jKnowledgeGraph(KnowledgeGraphPort):
+    """Neo4j-backed knowledge graph with Cypher query support."""
+
+    __slots__ = ("_database", "_driver")
+
+    def __init__(
+        self,
+        *,
+        uri: str = "bolt://localhost:7687",
+        username: str = "neo4j",
+        password: str = "",
+        database: str = "neo4j",
+    ) -> None:
+        """Initialize Neo4j connection.
+
+        'uri' is a Neo4j Bolt URI (e.g. 'bolt://localhost:7687').
+        """
+        try:
+            from neo4j import AsyncGraphDatabase  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "neo4j is required — pip install neo4j"
+            raise ImportError(msg) from exc
+
+        self._driver = AsyncGraphDatabase.driver(uri, auth=(username, password))
+        self._database = database
+        logger.info("Neo4j knowledge graph connected to %s", uri)
+
+    async def close(self) -> None:
+        """Close the Neo4j driver connection."""
+        await self._driver.close()
+
+    @override
+    async def add_triplet(
+        self,
+        *,
+        subject: str,
+        predicate: str,
+        obj: str,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
+        query = """
+        MERGE (s:Entity {name: $subject})
+        MERGE (o:Entity {name: $object})
+        MERGE (s)-[r:RELATION {type: $predicate}]->(o)
+        SET r += $metadata
+        """
+        async with self._driver.session(database=self._database) as session:
+            await session.run(
+                query,
+                subject=subject,
+                predicate=predicate,
+                object=obj,
+                metadata=metadata or {},
+            )
+        logger.debug("Added triplet: %s -[%s]-> %s", subject, predicate, obj)
+
+    @override
+    async def add_triplets(self, triplets: list[tuple[str, str, str]]) -> None:
+        query = """
+        UNWIND $triplets AS t
+        MERGE (s:Entity {name: t[0]})
+        MERGE (o:Entity {name: t[2]})
+        MERGE (s)-[:RELATION {type: t[1]}]->(o)
+        """
+        async with self._driver.session(database=self._database) as session:
+            await session.run(query, triplets=[list(t) for t in triplets])
+        logger.info("Added %d triplets to Neo4j", len(triplets))
+
+    @override
+    async def query_neighbors(
+        self,
+        entity: str,
+        *,
+        depth: int = 1,
+        limit: int = DEFAULT_NEIGHBOR_LIMIT,
+    ) -> list[dict[str, object]]:
+        depth = int(depth)  # ensure safe integer for Cypher interpolation
+        query = f"""
+        MATCH (s:Entity {{name: $entity}})-[r*1..{depth}]-(neighbor:Entity)
+        RETURN DISTINCT neighbor.name AS entity,
+               [rel IN r | type(rel) + ': ' + rel.type] AS relationships
+        LIMIT $limit
+        """  # noqa: S608 - depth is a runtime-validated int
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query, entity=entity, limit=limit)
+            records = [record.data() async for record in result]
+
+        return [
+            {
+                "entity": rec["entity"],
+                "relationships": rec.get("relationships", []),
+            }
+            for rec in records
+        ]
+
+    @override
+    async def query_triplets(
+        self,
+        *,
+        subject: str | None = None,
+        predicate: str | None = None,
+        obj: str | None = None,
+    ) -> list[tuple[str, str, str]]:
+        conditions = []
+        params: dict[str, str] = {}
+
+        if subject:
+            conditions.append("s.name = $subject")
+            params["subject"] = subject
+        if obj:
+            conditions.append("o.name = $object")
+            params["object"] = obj
+        if predicate:
+            conditions.append("r.type = $predicate")
+            params["predicate"] = predicate
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"""
+        MATCH (s:Entity)-[r:RELATION]->(o:Entity)
+        {where_clause}
+        RETURN s.name AS subject, r.type AS predicate, o.name AS object
+        LIMIT $limit
+        """
+
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query, limit=_MAX_QUERY_RESULTS, **params)
+            return [
+                (rec["subject"], rec["predicate"], rec["object"])
+                async for rec in result
+            ]
+
+    @override
+    async def delete_entity(self, entity: str) -> None:
+        query = """
+        MATCH (e:Entity {name: $entity})
+        DETACH DELETE e
+        """
+        async with self._driver.session(database=self._database) as session:
+            await session.run(query, entity=entity)
+        logger.info("Removed entity '%s' from Neo4j", entity)
+
+    @override
+    async def get_entity_count(self) -> int:
+        query = "MATCH (e:Entity) RETURN count(e) AS cnt"
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query)
+            record = await result.single()
+            return record["cnt"] if record else 0
+
+    @override
+    async def get_triplet_count(self) -> int:
+        query = "MATCH ()-[r:RELATION]->() RETURN count(r) AS cnt"
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query)
+            record = await result.single()
+            return record["cnt"] if record else 0

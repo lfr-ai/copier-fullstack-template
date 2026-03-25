@@ -1,6 +1,0 @@
-emulate -L zsh
-setopt PIPE_FAIL ERR_EXIT NO_UNSET
-
-# Thin wrapper — delegates to the full bootstrap script
-SCRIPT_DIR="${0:A:h}"
-exec zsh "${SCRIPT_DIR}/bootstrap.zsh" "$@"

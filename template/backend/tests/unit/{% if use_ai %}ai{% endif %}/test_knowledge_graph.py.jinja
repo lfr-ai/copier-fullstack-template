@@ -1,0 +1,221 @@
+"""Unit tests for knowledge graph adapters — NetworkX, RDFLib, external connectors."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+
+@pytest.fixture
+def _mock_networkx() -> None:
+    """Ensure networkx is importable (may already be installed)."""
+    try:
+        import networkx  # noqa: F401
+    except ImportError:
+        pytest.skip("networkx not installed")
+
+
+@pytest.fixture
+def _mock_rdflib() -> None:
+    """Ensure rdflib is importable."""
+    try:
+        import rdflib  # noqa: F401
+    except ImportError:
+        pytest.skip("rdflib not installed")
+
+
+@pytest.mark.usefixtures("_mock_networkx")
+class TestNetworkXKnowledgeGraph:
+    """Tests for NetworkXKnowledgeGraph."""
+
+    def _make_graph(self) -> object:
+        from {{ project_slug }}.ai.knowledge_graph import NetworkXKnowledgeGraph
+
+        return NetworkXKnowledgeGraph()
+
+    @pytest.mark.asyncio
+    async def test_add_and_query_triplet(self) -> None:
+        """Adding a triplet should make it queryable."""
+        kg = self._make_graph()
+        await kg.add_triplet(subject="Alice", predicate="knows", obj="Bob")
+
+        results = await kg.query_triplets(subject="Alice")
+        assert len(results) == 1
+        assert results[0] == ("Alice", "knows", "Bob")
+
+    @pytest.mark.asyncio
+    async def test_add_triplets_bulk(self) -> None:
+        """Bulk add should insert all triplets."""
+        kg = self._make_graph()
+        await kg.add_triplets([
+            ("A", "r1", "B"),
+            ("B", "r2", "C"),
+        ])
+
+        results = await kg.query_triplets()
+        assert len(results) == 2
+
+    @pytest.mark.asyncio
+    async def test_query_neighbors(self) -> None:
+        """Querying neighbors should return connected entities."""
+        kg = self._make_graph()
+        await kg.add_triplet(subject="Alice", predicate="knows", obj="Bob")
+        await kg.add_triplet(subject="Alice", predicate="likes", obj="Carol")
+
+        neighbors = await kg.query_neighbors("Alice", depth=1)
+        entity_names = {n["entity"] for n in neighbors}
+        assert "Bob" in entity_names
+        assert "Carol" in entity_names
+
+    @pytest.mark.asyncio
+    async def test_query_neighbors_unknown_entity(self) -> None:
+        """Querying unknown entity should return empty list."""
+        kg = self._make_graph()
+        neighbors = await kg.query_neighbors("Unknown")
+        assert neighbors == []
+
+    @pytest.mark.asyncio
+    async def test_delete_entity(self) -> None:
+        """Deleting entity should remove it and its edges."""
+        kg = self._make_graph()
+        await kg.add_triplet(subject="A", predicate="r", obj="B")
+        await kg.delete_entity("A")
+
+        results = await kg.query_triplets(subject="A")
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_query_triplets_with_predicate_filter(self) -> None:
+        """Filtering by predicate should return matching triplets only."""
+        kg = self._make_graph()
+        await kg.add_triplets([
+            ("A", "knows", "B"),
+            ("A", "likes", "C"),
+        ])
+        results = await kg.query_triplets(predicate="knows")
+        assert len(results) == 1
+        assert results[0][1] == "knows"
+
+    @pytest.mark.asyncio
+    async def test_entity_count(self) -> None:
+        """Entity count should reflect unique nodes."""
+        kg = self._make_graph()
+        await kg.add_triplets([("A", "r1", "B"), ("B", "r2", "C")])
+        count = await kg.get_entity_count()
+        assert count == 3
+
+    @pytest.mark.asyncio
+    async def test_triplet_count(self) -> None:
+        """Triplet count should reflect number of edges."""
+        kg = self._make_graph()
+        await kg.add_triplets([("A", "r1", "B"), ("B", "r2", "C")])
+        count = await kg.get_triplet_count()
+        assert count == 2
+
+
+@pytest.mark.usefixtures("_mock_rdflib")
+class TestRDFLibKnowledgeGraph:
+    """Tests for RDFLibKnowledgeGraph."""
+
+    def _make_graph(self) -> object:
+        from {{ project_slug }}.ai.knowledge_graph.rdflib_adapter import RDFLibKnowledgeGraph
+
+        return RDFLibKnowledgeGraph()
+
+    @pytest.mark.asyncio
+    async def test_add_and_query_triplet(self) -> None:
+        """Adding an RDF triplet should make it queryable."""
+        kg = self._make_graph()
+        await kg.add_triplet(subject="Python", predicate="is_a", obj="Language")
+
+        results = await kg.query_triplets(subject="Python")
+        assert len(results) >= 1
+        assert any(t[0] == "Python" for t in results)
+
+    @pytest.mark.asyncio
+    async def test_bulk_add(self) -> None:
+        """Bulk add should insert all triplets."""
+        kg = self._make_graph()
+        await kg.add_triplets([
+            ("Alice", "knows", "Bob"),
+            ("Bob", "works_at", "Acme"),
+        ])
+        count = await kg.get_triplet_count()
+        assert count == 2
+
+    @pytest.mark.asyncio
+    async def test_sparql_query(self) -> None:
+        """SPARQL SELECT should return bindings."""
+        kg = self._make_graph()
+        await kg.add_triplet(subject="Alice", predicate="knows", obj="Bob")
+
+        results = await kg.sparql_query(
+            "SELECT ?s ?p ?o WHERE { ?s ?p ?o }"
+        )
+        assert len(results) >= 1
+
+    @pytest.mark.asyncio
+    async def test_sparql_rejects_write_operations(self) -> None:
+        """Write SPARQL operations should be rejected."""
+        kg = self._make_graph()
+        with pytest.raises(PermissionError, match="Write SPARQL"):
+            await kg.sparql_query("INSERT DATA { <s> <p> <o> }")
+
+    @pytest.mark.asyncio
+    async def test_delete_entity(self) -> None:
+        """Deleting should remove entity from both subject and object positions."""
+        kg = self._make_graph()
+        await kg.add_triplet(subject="A", predicate="r", obj="B")
+        await kg.delete_entity("A")
+
+        results = await kg.query_triplets(subject="A")
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_entity_and_triplet_counts(self) -> None:
+        """Counts should reflect graph contents."""
+        kg = self._make_graph()
+        await kg.add_triplets([
+            ("Alice", "knows", "Bob"),
+            ("Bob", "works_at", "Acme"),
+        ])
+        assert await kg.get_triplet_count() == 2
+        assert await kg.get_entity_count() >= 3
+
+
+class TestExternalConnectors:
+    """Tests for external knowledge graph connectors with mocked HTTP."""
+
+    @pytest.mark.asyncio
+    async def test_conceptnet_lookup_entity(self) -> None:
+        """ConceptNet lookup should parse API response."""
+        from {{ project_slug }}.ai.knowledge_graph.external_connectors import ConceptNetKnowledgeGraph
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "edges": [
+                {
+                    "@id": "/a/test",
+                    "surfaceText": "A dog is an animal",
+                    "rel": {"label": "IsA"},
+                    "start": {"label": "dog"},
+                    "end": {"label": "animal"},
+                    "weight": 4.0,
+                }
+            ]
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            cg = ConceptNetKnowledgeGraph()
+            results = await cg.lookup_entity("dog")
+
+        assert len(results) == 1
+        assert results[0]["source"] == "conceptnet"

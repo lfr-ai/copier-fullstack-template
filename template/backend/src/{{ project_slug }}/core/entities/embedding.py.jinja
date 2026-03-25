@@ -1,0 +1,23 @@
+"""Embedding domain entities — vector representations of text."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from {{ project_slug }}.core.entities.base import generate_id
+@dataclass(slots=True)
+class EmbeddingVector:
+    """Single embedding vector produced from text.
+
+    Represents the dense vector representation of a text
+    chunk used for similarity search in vector stores.
+    """
+
+    id: str = field(default_factory=generate_id)
+    document_id: str = ""
+    chunk_index: int = 0
+    vector: list[float] = field(default_factory=list)
+    text: str = ""
+    model: str = ""
+    dimensions: int = 0
+    metadata: dict[str, object] = field(default_factory=dict)

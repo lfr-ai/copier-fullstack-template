@@ -7,10 +7,6 @@ from dataclasses import dataclass
 from {{ project_slug }}.core.entities.base import ValueObject
 from {{ project_slug }}.core.exceptions.validation import ValidationError
 from {{ project_slug }}.core.validators import EMAIL_PATTERN
-
-__all__ = ["Email"]
-
-
 @dataclass(frozen=True, slots=True)
 class Email(ValueObject):
     """Immutable email value object with format validation.
@@ -40,5 +36,4 @@ class Email(ValueObject):
             )
 
     def __str__(self) -> str:
-        """Return the normalized email address."""
         return self.value

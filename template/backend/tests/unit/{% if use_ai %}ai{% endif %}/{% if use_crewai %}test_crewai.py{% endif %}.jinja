@@ -1,0 +1,514 @@
+"""Unit tests for CrewAI multi-agent components."""
+{%- if use_crewai %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+
+class TestCrewAIConfig:
+"""Tests for CrewAI configuration constants."""
+
+def test_config_constants_exist(self) -> None:
+"""Config module should export expected constants."""
+from {{ project_slug }}.ai.crewai.config import (
+DEFAULT_CREW_MAX_RPM,
+DEFAULT_CREW_VERBOSE,
+DEFAULT_MANAGER_MODEL,
+HMAS_MAX_DEPTH,
+)
+
+assert isinstance(DEFAULT_CREW_VERBOSE, bool)
+assert isinstance(DEFAULT_CREW_MAX_RPM, int)
+assert DEFAULT_CREW_MAX_RPM > 0
+assert isinstance(DEFAULT_MANAGER_MODEL, str)
+assert HMAS_MAX_DEPTH > 0
+
+
+class TestCrewSpec:
+"""Tests for CrewSpec dataclass and crew building."""
+
+def test_crew_spec_defaults(self) -> None:
+"""CrewSpec should have sensible defaults."""
+from {{ project_slug }}.ai.crewai.crews import CrewProcessType, CrewSpec
+
+spec = CrewSpec()
+assert spec.agents == []
+assert spec.tasks == []
+assert spec.process == CrewProcessType.SEQUENTIAL
+assert spec.memory is True
+assert spec.cache is True
+
+def test_crew_process_type_values(self) -> None:
+"""CrewProcessType should have sequential and hierarchical."""
+from {{ project_slug }}.ai.crewai.crews import CrewProcessType
+
+assert CrewProcessType.SEQUENTIAL.value == "sequential"
+assert CrewProcessType.HIERARCHICAL.value == "hierarchical"
+
+@patch("crewai.Crew")
+@patch("crewai.Process")
+def test_build_crew_sequential(self, mock_process: MagicMock, mock_crew_cls: MagicMock) -> None:
+"""build_crew should create a sequential crew."""
+from {{ project_slug }}.ai.crewai.crews import CrewProcessType, CrewSpec, build_crew
+
+mock_process.sequential = "sequential"
+mock_process.hierarchical = "hierarchical"
+
+spec = CrewSpec(
+agents=[MagicMock()],
+tasks=[MagicMock()],
+process=CrewProcessType.SEQUENTIAL,
+)
+
+build_crew(spec)
+mock_crew_cls.assert_called_once()
+call_kwargs = mock_crew_cls.call_args[1]
+assert call_kwargs["process"] == "sequential"
+
+@patch("crewai.Crew")
+@patch("crewai.Process")
+def test_build_crew_hierarchical(self, mock_process: MagicMock, mock_crew_cls: MagicMock) -> None:
+"""build_crew should create a hierarchical crew with manager_llm."""
+from {{ project_slug }}.ai.crewai.crews import CrewProcessType, CrewSpec, build_crew
+
+mock_process.sequential = "sequential"
+mock_process.hierarchical = "hierarchical"
+
+spec = CrewSpec(
+agents=[MagicMock()],
+tasks=[MagicMock()],
+process=CrewProcessType.HIERARCHICAL,
+manager_llm="gpt-4o",
+)
+
+build_crew(spec)
+mock_crew_cls.assert_called_once()
+call_kwargs = mock_crew_cls.call_args[1]
+assert call_kwargs["process"] == "hierarchical"
+assert call_kwargs["manager_llm"] == "gpt-4o"
+
+
+class TestCrewTemplates:
+"""Tests for pre-built crew template factories."""
+
+@patch("crewai.Crew")
+@patch("crewai.Task")
+@patch("crewai.Agent")
+@patch("crewai.Process")
+def test_create_research_crew(
+self,
+mock_process: MagicMock,
+mock_agent: MagicMock,
+mock_task: MagicMock,
+mock_crew: MagicMock,
+) -> None:
+"""Research crew factory should create a crew with 2 agents."""
+mock_process.sequential = "sequential"
+from {{ project_slug }}.ai.crewai.templates import create_research_crew
+
+create_research_crew(llm="gpt-4o")
+assert mock_agent.call_count == 2 # researcher + analyst
+assert mock_task.call_count == 2
+mock_crew.assert_called_once()
+
+@patch("crewai.Crew")
+@patch("crewai.Task")
+@patch("crewai.Agent")
+@patch("crewai.Process")
+def test_create_analysis_crew(
+self,
+mock_process: MagicMock,
+mock_agent: MagicMock,
+mock_task: MagicMock,
+mock_crew: MagicMock,
+) -> None:
+"""Analysis crew should use hierarchical process."""
+mock_process.sequential = "sequential"
+mock_process.hierarchical = "hierarchical"
+from {{ project_slug }}.ai.crewai.templates import create_analysis_crew
+
+create_analysis_crew(llm="gpt-4o")
+call_kwargs = mock_crew.call_args[1]
+assert call_kwargs["process"] == "hierarchical"
+
+@patch("crewai.Crew")
+@patch("crewai.Task")
+@patch("crewai.Agent")
+@patch("crewai.Process")
+def test_create_content_crew(
+self,
+mock_process: MagicMock,
+mock_agent: MagicMock,
+mock_task: MagicMock,
+mock_crew: MagicMock,
+) -> None:
+"""Content crew should create writer + editor + QA (3 agents)."""
+mock_process.sequential = "sequential"
+from {{ project_slug }}.ai.crewai.templates import create_content_crew
+
+create_content_crew(llm="gpt-4o")
+assert mock_agent.call_count == 3
+assert mock_task.call_count == 3
+
+@patch("crewai.Crew")
+@patch("crewai.Task")
+@patch("crewai.Agent")
+@patch("crewai.Process")
+def test_create_planning_crew(
+self,
+mock_process: MagicMock,
+mock_agent: MagicMock,
+mock_task: MagicMock,
+mock_crew: MagicMock,
+) -> None:
+"""Planning crew should enable planning mode."""
+mock_process.sequential = "sequential"
+from {{ project_slug }}.ai.crewai.templates import create_planning_crew
+
+create_planning_crew(llm="gpt-4o")
+call_kwargs = mock_crew.call_args[1]
+assert call_kwargs.get("planning") is True
+
+
+class TestFlowRunner:
+"""Tests for the CrewAI Flow runner utility."""
+
+@pytest.mark.asyncio
+async def test_flow_runner_executes_flow(self) -> None:
+"""FlowRunner should call kickoff_async on the flow instance."""
+from {{ project_slug }}.ai.crewai.flows import FlowRunner
+
+mock_flow_instance = MagicMock()
+mock_flow_instance.kickoff_async = AsyncMock(return_value="flow-result")
+mock_flow_instance.state = {"key": "value"}
+
+mock_flow_class = MagicMock(return_value=mock_flow_instance)
+
+runner = FlowRunner(mock_flow_class)
+result = await runner.run()
+assert result.result == "flow-result"
+assert result.error is None
+assert result.state == {"key": "value"}
+mock_flow_instance.kickoff_async.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_flow_runner_captures_errors(self) -> None:
+"""FlowRunner should capture exceptions as error strings."""
+from {{ project_slug }}.ai.crewai.flows import FlowRunner
+
+mock_flow_instance = MagicMock()
+mock_flow_instance.kickoff_async = AsyncMock(side_effect=RuntimeError("boom"))
+mock_flow_class = MagicMock(return_value=mock_flow_instance)
+
+runner = FlowRunner(mock_flow_class)
+result = await runner.run()
+assert result.error == "boom"
+assert result.result is None
+
+def test_flow_runner_sync_execution(self) -> None:
+"""FlowRunner.run_sync should call kickoff on the flow."""
+from {{ project_slug }}.ai.crewai.flows import FlowRunner
+
+mock_flow_instance = MagicMock()
+mock_flow_instance.kickoff.return_value = "sync-result"
+mock_flow_instance.state = None
+mock_flow_class = MagicMock(return_value=mock_flow_instance)
+
+runner = FlowRunner(mock_flow_class)
+result = runner.run_sync()
+assert result.result == "sync-result"
+assert result.error is None
+
+
+class TestFlowRegistry:
+"""Tests for the CrewAI flow registry."""
+
+def test_register_and_list(self) -> None:
+"""Registry should track registered flow names."""
+from {{ project_slug }}.ai.crewai.flows import FlowRegistry
+
+registry = FlowRegistry()
+registry.register("alpha", MagicMock)
+registry.register("beta", MagicMock)
+assert registry.list_flows() == ["alpha", "beta"]
+
+def test_get_unregistered(self) -> None:
+"""Getting an unregistered flow should return None."""
+from {{ project_slug }}.ai.crewai.flows import FlowRegistry
+
+registry = FlowRegistry()
+assert registry.get("missing") is None
+
+@pytest.mark.asyncio
+async def test_run_unregistered_raises(self) -> None:
+"""Running an unregistered flow should raise ValueError."""
+from {{ project_slug }}.ai.crewai.flows import FlowRegistry
+
+registry = FlowRegistry()
+with pytest.raises(ValueError, match="not registered"):
+await registry.run("missing")
+
+
+class TestFlowStateHelper:
+"""Tests for dynamic flow state class creation."""
+
+def test_create_flow_state_class(self) -> None:
+"""Should create a Pydantic model with specified fields."""
+from {{ project_slug }}.ai.crewai.flows import create_flow_state_class
+
+State = create_flow_state_class("TestState", fields={
+"query": (str, ""),
+"score": (float, 0.0),
+})
+instance = State()
+assert instance.query == ""
+assert instance.score == 0.0
+
+def test_create_flow_state_with_values(self) -> None:
+"""Should accept field values at construction."""
+from {{ project_slug }}.ai.crewai.flows import create_flow_state_class
+
+State = create_flow_state_class("TestState", fields={
+"name": (str, "default"),
+})
+instance = State(name="custom")
+assert instance.name == "custom"
+
+
+class TestHMASSupervisor:
+"""Tests for CrewAI HMAS hierarchical supervisor."""
+
+def test_hmas_plan_dataclass(self) -> None:
+"""HMASPlan should store goal and sub-goals."""
+from {{ project_slug }}.ai.crewai.hmas import HMASPlan, SubGoal
+
+plan = HMASPlan(
+goal="test goal",
+sub_goals=[
+SubGoal(id="sg-1", description="sub-goal 1"),
+SubGoal(id="sg-2", description="sub-goal 2"),
+],
+)
+assert plan.goal == "test goal"
+assert len(plan.sub_goals) == 2
+
+def test_delegation_target_types(self) -> None:
+"""DelegationTarget should have all expected types."""
+from {{ project_slug }}.ai.crewai.hmas import DelegationTarget
+
+assert DelegationTarget.CREWAI_CREW
+{%- if use_agents %}
+assert DelegationTarget.LANGGRAPH_WORKFLOW
+{%- endif %}
+
+def test_sub_goal_state_lifecycle(self) -> None:
+"""SubGoalState should support the full lifecycle."""
+from {{ project_slug }}.ai.crewai.hmas import SubGoalState
+
+assert SubGoalState.PENDING
+assert SubGoalState.IN_PROGRESS
+assert SubGoalState.COMPLETED
+assert SubGoalState.FAILED
+assert SubGoalState.SKIPPED
+
+
+class TestCrewAIService:
+"""Tests for the CrewAI application service."""
+
+@pytest.mark.asyncio
+async def test_list_crew_templates(self) -> None:
+"""Service should list all available crew templates."""
+from {{ project_slug }}.application.services.crewai_service import CrewAIService
+
+uow = MagicMock()
+service = CrewAIService(uow=uow)
+templates = await service.list_crew_templates()
+assert len(templates) == 4
+names = {t["name"] for t in templates}
+assert names == {"research", "analysis", "content", "planning"}
+
+@pytest.mark.asyncio
+async def test_execute_crew_unknown_type(self) -> None:
+"""Service should raise ValueError for unknown crew types."""
+from {{ project_slug }}.application.services.crewai_service import CrewAIService
+
+uow = MagicMock()
+service = CrewAIService(uow=uow)
+with pytest.raises(ValueError, match="Unknown crew type"):
+await service.execute_crew("nonexistent", "test task")
+
+@pytest.mark.asyncio
+async def test_orchestrate_without_supervisor(self) -> None:
+"""Service should raise RuntimeError when no supervisor configured."""
+from {{ project_slug }}.application.services.crewai_service import CrewAIService
+
+uow = MagicMock()
+service = CrewAIService(uow=uow, supervisor=None)
+with pytest.raises(RuntimeError, match="HMAS supervisor not configured"):
+await service.orchestrate("test goal")
+
+@pytest.mark.asyncio
+async def test_orchestrate_delegates_to_supervisor(self) -> None:
+"""Service should delegate to HMAS supervisor."""
+from {{ project_slug }}.application.services.crewai_service import CrewAIService
+
+uow = MagicMock()
+supervisor = MagicMock()
+supervisor.orchestrate = AsyncMock(return_value="orchestrated result")
+
+service = CrewAIService(uow=uow, supervisor=supervisor)
+result = await service.orchestrate("test goal")
+assert result["goal"] == "test goal"
+assert result["result"] == "orchestrated result"
+supervisor.orchestrate.assert_awaited_once_with("test goal")
+
+@pytest.mark.asyncio
+async def test_execute_flow_without_registry(self) -> None:
+"""Service should raise RuntimeError when no flow registry configured."""
+from {{ project_slug }}.application.services.crewai_service import CrewAIService
+
+uow = MagicMock()
+service = CrewAIService(uow=uow, flow_registry=None)
+with pytest.raises(RuntimeError, match="Flow registry not configured"):
+await service.execute_flow("test_flow")
+
+
+class TestKnowledge:
+"""Tests for CrewAI knowledge module."""
+
+def test_embedder_presets_exist(self) -> None:
+"""Knowledge module should export embedder presets."""
+from {{ project_slug }}.ai.crewai.knowledge import (
+AZURE_OPENAI_EMBEDDER,
+OLLAMA_EMBEDDER,
+OPENAI_EMBEDDER,
+)
+
+assert OPENAI_EMBEDDER["provider"] == "openai"
+assert AZURE_OPENAI_EMBEDDER["provider"] == "azure"
+assert OLLAMA_EMBEDDER["provider"] == "ollama"
+
+def test_get_embedder_config_default(self) -> None:
+"""get_embedder_config should return OpenAI preset by default."""
+from {{ project_slug }}.ai.crewai.knowledge import get_embedder_config
+
+config = get_embedder_config()
+assert config["provider"] == "openai"
+assert "model" in config["config"]
+
+def test_get_embedder_config_model_override(self) -> None:
+"""get_embedder_config should allow model override."""
+from {{ project_slug }}.ai.crewai.knowledge import get_embedder_config
+
+config = get_embedder_config("openai", model="text-embedding-3-large")
+assert config["config"]["model"] == "text-embedding-3-large"
+
+def test_get_embedder_config_unknown_provider(self) -> None:
+"""Unknown providers should get a generic config."""
+from {{ project_slug }}.ai.crewai.knowledge import get_embedder_config
+
+config = get_embedder_config("custom", model="my-model")
+assert config["provider"] == "custom"
+assert config["config"]["model"] == "my-model"
+
+@patch("crewai.knowledge.source.string_knowledge_source.StringKnowledgeSource")
+def test_create_string_knowledge(self, mock_cls: MagicMock) -> None:
+"""create_string_knowledge should create a StringKnowledgeSource."""
+from {{ project_slug }}.ai.crewai.knowledge import create_string_knowledge
+
+create_string_knowledge("test content")
+mock_cls.assert_called_once_with(content="test content")
+
+def test_create_knowledge_config(self) -> None:
+"""create_knowledge_config should build KnowledgeConfig."""
+with patch("crewai.knowledge.knowledge_config.KnowledgeConfig") as mock:
+from {{ project_slug }}.ai.crewai.knowledge import create_knowledge_config
+
+create_knowledge_config(results_limit=10, score_threshold=0.5)
+mock.assert_called_once_with(results_limit=10, score_threshold=0.5)
+
+
+class TestMemory:
+"""Tests for CrewAI memory module."""
+
+def test_scoring_presets(self) -> None:
+"""Memory module should export scoring presets."""
+from {{ project_slug }}.ai.crewai.memory import (
+DEFAULT_SCORING,
+KNOWLEDGE_BASE_SCORING,
+SPRINT_SCORING,
+)
+
+assert "recency_weight" in DEFAULT_SCORING
+assert "semantic_weight" in SPRINT_SCORING
+assert KNOWLEDGE_BASE_SCORING["importance_weight"] > DEFAULT_SCORING["importance_weight"]
+
+@patch("crewai.Memory")
+def test_create_memory_default(self, mock_memory: MagicMock) -> None:
+"""create_memory should create Memory with default scoring."""
+from {{ project_slug }}.ai.crewai.memory import create_memory
+
+create_memory()
+mock_memory.assert_called_once()
+call_kwargs = mock_memory.call_args[1]
+assert "llm" in call_kwargs
+
+@patch("crewai.Memory")
+def test_create_memory_sprint_preset(self, mock_memory: MagicMock) -> None:
+"""create_memory should apply sprint scoring preset."""
+from {{ project_slug }}.ai.crewai.memory import SPRINT_SCORING, create_memory
+
+create_memory(scoring_preset="sprint")
+call_kwargs = mock_memory.call_args[1]
+assert call_kwargs["recency_weight"] == SPRINT_SCORING["recency_weight"]
+
+
+class TestTools:
+"""Tests for CrewAI tools module."""
+
+def test_wrap_callable_as_tool(self) -> None:
+"""wrap_callable_as_tool should create a tool from a plain function."""
+with patch("crewai.tools.tool") as mock_decorator:
+mock_wrapper = MagicMock()
+mock_decorator.return_value = lambda fn: mock_wrapper
+
+from {{ project_slug }}.ai.crewai.tools import wrap_callable_as_tool
+
+def my_func(x: str) -> str:
+return x
+
+result = wrap_callable_as_tool("test_tool", "A test tool", my_func)
+mock_decorator.assert_called_once_with("test_tool")
+
+@patch("crewai_tools.SerperDevTool")
+def test_create_serper_search_tool(self, mock_serper: MagicMock) -> None:
+"""create_serper_search_tool should create a SerperDevTool."""
+from {{ project_slug }}.ai.crewai.tools import create_serper_search_tool
+
+create_serper_search_tool(api_key="test-key")
+mock_serper.assert_called_once_with(api_key="test-key")
+
+
+class TestYAMLConfig:
+"""Tests for CrewAI YAML configuration loader."""
+
+def test_crew_config_loader_init(self) -> None:
+"""CrewConfigLoader should accept custom config dir."""
+from pathlib import Path
+
+from {{ project_slug }}.ai.crewai.yaml_config import CrewConfigLoader
+
+loader = CrewConfigLoader(
+config_dir=Path("/tmp/test"),
+default_llm="gpt-4o-mini",
+verbose=True,
+)
+assert loader._config_dir == Path("/tmp/test")
+assert loader._default_llm == "gpt-4o-mini"
+assert loader._verbose is True
+
+
+{%- endif %}

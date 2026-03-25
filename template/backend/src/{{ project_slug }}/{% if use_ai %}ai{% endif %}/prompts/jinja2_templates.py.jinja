@@ -1,0 +1,123 @@
+"""Jinja2 prompt template adapter."""
+
+from __future__ import annotations
+
+import structlog
+from pathlib import Path
+from typing import override
+
+from {{ project_slug }}.core.interfaces.prompt_template import PromptTemplatePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_BUILTIN_TEMPLATES: dict[str, str] = {
+    "rag_query": (
+        "Answer the following question based on the provided context.\n\n"
+        "Context:\n{{ context }}\n\n"
+        "Question: {{ question }}\n\n"
+        "Answer:"
+    ),
+    "summarize": (
+        "Provide a concise summary of the following document.\n\n"
+        "Document:\n{{ document }}\n\n"
+        "Summary:"
+    ),
+    "entity_extraction": (
+        "Extract all named entities and their relationships from the following text. "
+        "Format each relationship as: (subject, predicate, object)\n\n"
+        "Text:\n{{ text }}\n\n"
+        "Entities and relationships:"
+    ),
+    "classify": (
+        "Classify the following text into one of these categories: {{ categories }}\n\n"
+        "Text:\n{{ text }}\n\n"
+        "Category:"
+    ),
+    "agent_system": (
+        "You are {{ agent_name }}, a specialized AI agent.\n"
+        "Your role: {{ role_description }}\n\n"
+        "Available tools:\n{{ tools_description }}\n\n"
+        "Instructions: Think step by step. Use tools when needed. "
+        "When done, respond with FINAL ANSWER: <your answer>"
+    ),
+    "conversational_rag": (
+        "{% if history %}Conversation history:\n{{ history }}\n\n{% endif %}"
+        "Context:\n{{ context }}\n\n"
+        "Question: {{ question }}\n\n"
+        "Answer based on the context and conversation history:"
+    ),
+}
+
+
+class Jinja2PromptTemplate(PromptTemplatePort):
+    """Prompt template manager using Jinja2 rendering.
+
+    Supports built-in templates, programmatic registration, and
+    loading templates from a directory ('*.txt' and '*.j2' files).
+    """
+
+    __slots__ = ("_descriptions", "_templates")
+
+    def __init__(self, *, template_dir: str | None = None) -> None:
+        self._templates: dict[str, str] = dict(_BUILTIN_TEMPLATES)
+        self._descriptions: dict[str, str] = {}
+        if template_dir:
+            self.load_directory(template_dir)
+
+    def get(self, name: str) -> str:
+        """Retrieve a raw template string by name.
+
+        Raises:
+            KeyError: If template not found.
+        """
+        if name not in self._templates:
+            msg = f"Prompt template '{name}' not found. Available: {sorted(self._templates)}"
+            raise KeyError(msg)
+        return self._templates[name]
+
+    @override
+    def render(self, *, template_name: str, variables: dict[str, object]) -> str:
+        """Render a prompt template with Jinja2 variable substitution."""
+        template_str = self._templates.get(template_name)
+        if template_str is None:
+            msg = f"Unknown prompt template: {template_name}"
+            raise KeyError(msg)
+
+        try:
+            from jinja2 import BaseLoader, Environment
+        except ImportError as exc:
+            msg = "jinja2 is required — pip install jinja2"
+            raise ImportError(msg) from exc
+
+        env = Environment(loader=BaseLoader(), autoescape=False)  # noqa: S701
+        tmpl = env.from_string(template_str)
+        return tmpl.render(**variables)
+
+    @override
+    def list_templates(self) -> list[str]:
+        """Return names of all registered prompt templates."""
+        return sorted(self._templates.keys())
+
+    @override
+    def register_template(
+        self,
+        *,
+        name: str,
+        template: str,
+        description: str = "",
+    ) -> None:
+        """Register or override a prompt template."""
+        self._templates[name] = template
+        if description:
+            self._descriptions[name] = description
+        logger.info("Registered prompt template: %s", name)
+
+    def load_directory(self, directory: str) -> None:
+        """Load all '*.txt' and '*.j2' template files from *directory*."""
+        path = Path(directory)
+        if not path.is_dir():
+            logger.warning("Prompt template directory does not exist: %s", directory)
+            return
+        for ext in ("*.txt", "*.j2"):
+            for file in path.glob(ext):
+                self._templates[file.stem] = file.read_text(encoding="utf-8")
+                logger.debug("Loaded prompt template '%s' from %s", file.stem, file)

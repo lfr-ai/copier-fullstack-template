@@ -4,21 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Final
 
+import jwt
 import structlog
-from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-_DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES: Final[int] = 30
-"""Default JWT access-token lifetime."""
+_DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-ALGORITHM: Final[str] = "HS256"
-
-__all__ = ["JWTAdapter", "TokenPayload"]
+ALGORITHM = "HS256"
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,8 +27,8 @@ exp: datetime
 class JWTAdapter:
 """JWT token generation and verification adapter.
 
-Handles password hashing via passlib and token
-creation/verification via python-jose.
+Handles token creation/verification via PyJWT. Password hashing
+is delegated to the 'PasswordHasher' port.
 """
 
 def __init__(
@@ -42,48 +37,11 @@ self,
 secret_key: str,
 access_token_expire_minutes: int = _DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES,
 ) -> None:
-"""Initialize JWT adapter.
-
-Args:
-secret_key: Secret key for signing tokens.
-access_token_expire_minutes: Token expiration in minutes.
-"""
 self._secret_key = secret_key
 self._expire_minutes = access_token_expire_minutes
-self._pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def hash_password(self, plain_password: str) -> str:
-"""Hash password using bcrypt.
-
-Args:
-plain_password: Plain text password.
-
-Returns:
-Hashed password string.
-"""
-return self._pwd_context.hash(plain_password)
-
-def verify_password(self, *, plain_password: str, hashed_password: str) -> bool:
-"""Verify password against hash.
-
-Args:
-plain_password: Plain text password to verify.
-hashed_password: Stored password hash.
-
-Returns:
-True if password matches.
-"""
-return self._pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(self, subject: str) -> str:
-"""Create signed JWT access token.
-
-Args:
-subject: Token subject, typically user ID or email.
-
-Returns:
-Encoded JWT string.
-"""
+"""Create signed JWT access token."""
 expire = datetime.now(UTC) + timedelta(minutes=self._expire_minutes)
 payload = {"sub": subject, "exp": expire}
 return jwt.encode(payload, self._secret_key, algorithm=ALGORITHM)
@@ -91,11 +49,8 @@ return jwt.encode(payload, self._secret_key, algorithm=ALGORITHM)
 def decode_token(self, token: str) -> TokenPayload | None:
 """Decode and validate JWT token.
 
-Args:
-token: Encoded JWT string.
-
 Returns:
-TokenPayload if valid, None otherwise.
+TokenPayload | None: Decoded payload if valid, None otherwise.
 """
 try:
 data = jwt.decode(token, self._secret_key, algorithms=[ALGORITHM])
@@ -103,6 +58,6 @@ return TokenPayload(
 sub=data["sub"],
 exp=datetime.fromtimestamp(data["exp"], tz=UTC),
 )
-except JWTError:
+except jwt.PyJWTError:
 logger.warning("Failed to decode JWT token")
 return None

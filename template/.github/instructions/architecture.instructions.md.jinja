@@ -1,5 +1,5 @@
 ---
-description: Hexagonal architecture enforcement and dependency direction rules
+description: Clean / hexagonal architecture enforcement and Dependency Rule
 applyTo: "backend/**/*.py"
 ---
 
@@ -11,60 +11,68 @@ Strict dependency direction — always inward, never outward.
 ```
 backend/src/{{ project_slug }}/
 ├── core/                     # Domain layer (INNERMOST) — ZERO external deps
-│   ├── base.py               # Entity, ValueObject, DomainEvent base classes
-│   ├── errors.py             # DomainError hierarchy (NotFound, Conflict, Validation, Authorization)
-│   ├── ports.py              # Port protocols: Repository[T], CachePort, EventBus, UnitOfWork
+│   ├── constants.py          # Named constants (UPPER_SNAKE_CASE, no Final)
+│   ├── types.py              # Shared type aliases
+│   ├── validators.py         # Pure domain validators
 │   ├── entities/             # Domain entities (inherit Entity, dataclass(slots=True))
-│   ├── value_objects/        # Immutable VOs (frozen=True, slots=True, inherit ValueObject)
-│   ├── events/               # Domain events (frozen=True, slots=True, inherit DomainEvent)
-│   └── enums/                # Domain enums (StrEnum + @unique + auto())
+│   │   └── base.py           # Entity base class
+│   ├── value_objects/        # Immutable VOs (frozen=True, slots=True)
+│   ├── events/               # Domain events (frozen=True, slots=True)
+│   ├── enums/                # Domain enums (StrEnum + @unique + auto())
+│   ├── exceptions/           # DomainError hierarchy (NotFound, Conflict, Validation, Authorization)
+│   ├── interfaces/           # Port protocols: Repository[T], CachePort, EventBus, UnitOfWork, etc.
+│   └── specifications/       # Domain specification objects
 │
 ├── application/              # Use cases, orchestration, DTOs
-│   ├── base_service.py       # BaseService (logging, event bus injection)
-│   ├── base_dto.py           # BaseDTO (Pydantic BaseModel + ConfigDict)
-│   ├── services/             # Inherit BaseService, depend on port protocols ONLY
+│   ├── services/             # Inherit BaseService (services/base.py), depend on port protocols ONLY
 │   ├── commands/             # Write-side inputs (frozen dataclasses)
 │   ├── queries/              # Read-side inputs (frozen dataclasses)
-│   ├── dtos/                 # Inherit BaseDTO, Annotated[..., Field(...)]
+│   ├── dtos/                 # Inherit BaseDTO (dtos/base.py), Annotated[..., Field(...)]
 │   ├── mappers/              # Entity ↔ DTO mapping functions
+│   ├── validators/           # Application-level validation
 │   └── tasks/                # Async task definitions (Celery signatures)
 │
 ├── adapters/                 # Concrete port implementations
-│   ├── persistence/          # DB: ORM models, repos, UoW, session, mixins
-│   │   ├── base_repository.py
-│   │   ├── mixins.py         # IdentityMixin, AuditMixin (ALL ORM models use these)
-│   │   ├── models/           # SQLAlchemy 2.0+ (Mapped[] + mapped_column())
-│   │   ├── repositories/     # Concrete repo implementations
+│   ├── persistence/          # DB: ORM models, repos, UoW, session
+│   │   ├── orm/              # SQLAlchemy 2.0+ (Mapped[] + mapped_column())
+│   │   ├── repositories/     # Concrete repo implementations (base.py + per-entity)
 │   │   ├── unit_of_work/     # SQLAlchemy UoW
 │   │   └── session.py        # Async engine + session factory (single definition)
 │   ├── cache/                # Redis + in-memory (implement CachePort)
 │   ├── messaging/            # Event bus (implement EventBus)
 │   ├── auth/                 # JWT / auth adapters
+│   ├── email/                # SMTP + console email adapters
+│   ├── storage/              # Local + Azure Blob storage adapters
 │   └── external/             # httpx clients, third-party API adapters
 │
 ├── ports/                    # Presentation layer (OUTERMOST)
+│   ├── container.py          # DI composition root — wires protocols → adapters
 │   ├── api/                  # FastAPI REST
 │   │   ├── app.py            # create_api_app() -> FastAPI
 │   │   ├── dependencies.py   # ALL Depends() — DI wiring
-│   │   ├── error_handlers.py # DomainError → HTTP status (ONLY place for HTTP codes)
-│   │   ├── middleware/       # Rate limiting, request ID, CORS
-│   │   └── routes/           # Thin routes — ZERO business logic
+│   │   ├── middleware/       # Rate limiting, request ID, CORS, error handling
+│   │   ├── routes/           # Thin routes — ZERO business logic
+│   │   └── schemas/          # Request/response Pydantic schemas
+│   ├── graphql/              # Strawberry GraphQL (conditional)
 │   ├── web/                  # Jinja2 web UI
-│   │   ├── app.py            # create_web_app() -> FastAPI
 │   │   └── controllers/      # Call application services, never adapters
-│   └── cli/                  # Click/Typer CLI
+│   └── cli/                  # Typer CLI
 │       └── app.py            # create_cli_app() -> typer.Typer
 │
-├── config/                   # Settings, DI container, Celery
-│   ├── settings.py           # AppSettings(BaseSettings) — single source, @lru_cache
-│   ├── celery/               # Celery config (reads from AppSettings)
-│   └── infra/                # DI container wiring (protocols → concrete adapters)
+├── config/                   # Settings, logging, Celery
+│   ├── settings/             # Environment-specific settings (base, dev, prod, etc.)
+│   ├── logging.py            # Structured logging configuration
+│   └── celery.py             # Celery config (reads from AppSettings)
+│
+├── infrastructure/           # Cross-cutting infrastructure concerns
+│   ├── database/             # Database health checks
+│   ├── profiling/            # CPU, memory, SQL profiling
+│   ├── scheduling/           # Task scheduler abstraction
+│   └── security/             # Password hashing, crypto
 │
 └── utils/                    # Framework-agnostic, pure functions, stdlib ONLY
-    ├── enums.py              # Centralized enums (Environment, LogLevel, SortOrder, etc.)
-    ├── validators.py         # Pure validation (keyword-only, raise ValueError)
     ├── logger_factory.py     # Structured logging setup
-    └── ...                   # retry_policies, crypto_utils, file_utils, etc.
+    └── ...                   # crypto, file, json, string, timing, retry, pagination
 ```
 
 
@@ -101,7 +109,7 @@ utils/ ← (all layers may import; utils imports from NO project layer)
 
 ```python
 from {{ project_slug }}.core.entities.user import User
-from {{ project_slug }}.core.ports import CachePort
+from {{ project_slug }}.core.interfaces.cache import CachePort
 from {{ project_slug }}.application.services.user_service import UserService
 
 from {{ project_slug }}.adapters.persistence import UserRepository  # core → adapter
@@ -117,7 +125,7 @@ ALL entry points use factory functions — no global mutable state:
 - `create_celery_app() -> Celery` in `config/celery.py`
 
 
-- `config/infra/` wires port protocols to concrete adapters
+- `ports/container.py` wires port protocols to concrete adapters
 - Constructor injection via typed parameters
 - No service locator pattern, no global mutable state
 - Routes NEVER instantiate dependencies — use `ports/api/dependencies.py`

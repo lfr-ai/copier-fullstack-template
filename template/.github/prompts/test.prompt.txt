@@ -2,7 +2,7 @@
 description: Test generation prompt
 ---
 
-Generate comprehensive tests for the specified code:
+Generate tests for the specified code:
 1. Happy path unit tests
 2. Edge case tests (empty inputs, boundaries, invalid data)
 3. Error handling tests (exceptions, error states)

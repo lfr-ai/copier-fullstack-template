@@ -1,0 +1,139 @@
+"""CrewAI memory — unified memory configuration for crews, agents, and flows.
+
+Wraps CrewAI's unified 'Memory' system with application-aware
+defaults, hierarchical scope helpers, and embedder configuration
+aligned with the project's LiteLLM embedding adapters.
+
+Usage patterns:
+  * **With Crews** — 'Crew(memory=True)' or 'Crew(memory=create_memory(...))'
+  * **With Agents** — 'Agent(memory=scoped_memory.scope("/agent/researcher"))'
+  * **With Flows** — 'self.remember()', 'self.recall()' built-in methods
+
+The unified Memory uses LanceDB for vector storage, supports
+hierarchical scopes, composite scoring (semantic + recency + importance),
+and non-blocking background saves.
+"""
+
+from __future__ import annotations
+
+import structlog
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+# ── Scoring presets ─────────────────────────────────────────────────
+
+SPRINT_SCORING = {
+    "recency_weight": 0.5,
+    "semantic_weight": 0.3,
+    "importance_weight": 0.2,
+    "recency_half_life_days": 7,
+}
+"""Scoring tuned for fast-moving sprints — favor recent memories."""
+
+KNOWLEDGE_BASE_SCORING = {
+    "recency_weight": 0.1,
+    "semantic_weight": 0.5,
+    "importance_weight": 0.4,
+    "recency_half_life_days": 180,
+}
+"""Scoring tuned for long-lived knowledge bases — favor importance."""
+
+DEFAULT_SCORING = {
+    "recency_weight": 0.3,
+    "semantic_weight": 0.5,
+    "importance_weight": 0.2,
+    "recency_half_life_days": 30,
+}
+"""Balanced default scoring."""
+
+
+def create_memory(
+    *,
+    embedder: dict[str, object] | None = None,
+    llm: str = "gpt-4o-mini",
+    storage: str | None = None,
+    scoring_preset: str = "default",
+    **overrides: object,
+) -> object:
+    """Create a configured 'Memory' instance for CrewAI.
+
+    Args:
+        embedder (dict[str, object] | None): Embedder config dict (provider/config). Uses OpenAI default if 'None'.
+        llm (str): LLM model for memory analysis (scope/categories/importance inference).
+        storage (str | None): Storage path override (default: './.crewai/memory').
+        scoring_preset (str): One of 'default', 'sprint', or 'knowledge_base'.
+        **overrides (object): Additional 'Memory(...)' keyword arguments.
+
+    Returns:
+        A configured 'Memory' instance.
+    """
+    from crewai import Memory
+
+    presets = {
+        "default": DEFAULT_SCORING,
+        "sprint": SPRINT_SCORING,
+        "knowledge_base": KNOWLEDGE_BASE_SCORING,
+    }
+    scoring = dict(presets.get(scoring_preset, DEFAULT_SCORING))
+    scoring.update(overrides)
+
+    kwargs: dict[str, object] = {"llm": llm, **scoring}
+    if embedder is not None:
+        kwargs["embedder"] = embedder
+    if storage is not None:
+        kwargs["storage"] = storage
+
+    memory = Memory(**kwargs)  # type: ignore[arg-type]
+    logger.info(
+        "crewai_memory_created",
+        preset=scoring_preset, llm=llm,
+    )
+    return memory
+
+
+def create_agent_scoped_memory(
+    memory: object,
+    agent_name: str,
+) -> object:
+    """Create a scope-restricted memory view for a specific agent.
+
+    The agent can only see and write within '/agent/{agent_name}'.
+
+    Args:
+        memory (object): Parent 'Memory' instance.
+        agent_name (str): Agent identifier (used as scope path segment).
+
+    Returns:
+        A 'MemoryScope' restricted to '/agent/{agent_name}'.
+    """
+    scope_path = f"/agent/{agent_name}"
+    scoped = memory.scope(scope_path)  # type: ignore[union-attr]
+    logger.debug(
+        "crewai_agent_memory_scoped",
+        scope=scope_path,
+    )
+    return scoped
+
+
+def create_read_only_slice(
+    memory: object,
+    scopes: list[str],
+) -> object:
+    """Create a read-only memory slice across multiple scope branches.
+
+    Useful for agents that need to read from shared knowledge plus
+    their own scope without write access to shared areas.
+
+    Args:
+        memory (object): Parent 'Memory' instance.
+        scopes (list[str]): List of scope paths to include in the slice.
+
+    Returns:
+        A read-only 'MemorySlice'.
+    """
+    sliced = memory.slice(scopes=scopes, read_only=True)  # type: ignore[union-attr]
+    logger.debug(
+        "crewai_memory_slice_created",
+        scopes=scopes, read_only=True,
+    )
+    return sliced

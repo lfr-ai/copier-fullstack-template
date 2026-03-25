@@ -4,17 +4,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="{{ project_name }} — modern fullstack application" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{{ project_name }}</title>
     <link rel="stylesheet" href="/src/styles/tailwind.css" />
   </head>
 
   <body>
+    <!-- Skip to main content — a11y best practice -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     {%- if frontend_framework == "lit" %}
     <app-root></app-root>
+    <noscript>This application requires JavaScript to run.</noscript>
     <script type="module" src="/src/app.ts"></script>
     {%- elif frontend_framework == "react" %}
     <div id="root"></div>
+    <noscript>This application requires JavaScript to run.</noscript>
     <script type="module" src="/src/app.ts"></script>
     {%- endif %}
   </body>

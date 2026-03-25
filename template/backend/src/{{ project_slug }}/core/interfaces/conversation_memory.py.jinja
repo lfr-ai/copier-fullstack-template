@@ -1,0 +1,41 @@
+"""Conversation memory port."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from {{ project_slug }}.core.entities.conversation import Message
+
+_DEFAULT_MESSAGE_LIMIT: int = 50
+
+
+@runtime_checkable
+class ConversationMemoryPort(Protocol):
+    """Protocol for conversation history storage and retrieval."""
+
+    async def add_message(
+        self,
+        *,
+        conversation_id: str,
+        role: str,
+        content: str,
+    ) -> None:
+        """Add a message to a conversation.
+
+        'role' must be one of 'user', 'assistant', or 'system'.
+        """
+        ...
+
+    async def get_messages(
+        self,
+        conversation_id: str,
+        *,
+        limit: int = _DEFAULT_MESSAGE_LIMIT,
+    ) -> list[Message]:
+        """Retrieve messages for a conversation, most recent first."""
+        ...
+
+    async def clear(self, conversation_id: str) -> None:
+        """Clear all messages for a conversation."""
+        ...

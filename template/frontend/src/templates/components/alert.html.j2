@@ -1,7 +1,0 @@
-{# Alert component with severity levels #}
-{% macro alert(message, level="info") %}
-<div class="alert alert-{{ level }}" role="alert">
-  <span class="alert-message">{{ message }}</span>
-  <button class="alert-close" aria-label="Close">&times;</button>
-</div>
-{% endmacro %}

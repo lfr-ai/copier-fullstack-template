@@ -14,8 +14,6 @@ import {
   UserSchema,
 } from '@/models/schemas/index';
 
-// ── User ──────────────────────────────────────────────────────────
-
 describe('UserSchema', () => {
   it('accepts a valid user', () => {
     const result = UserSchema.safeParse({
@@ -57,8 +55,6 @@ describe('UserSchema', () => {
   });
 });
 
-// ── CreateUser ────────────────────────────────────────────────────
-
 describe('CreateUserSchema', () => {
   it('accepts valid creation payload', () => {
     const result = CreateUserSchema.safeParse({
@@ -87,8 +83,6 @@ describe('CreateUserSchema', () => {
     expect(result.success).toBe(false);
   });
 });
-
-// ── Pagination ────────────────────────────────────────────────────
 
 describe('PaginatedResponseSchema', () => {
   const PaginatedUsers = PaginatedResponseSchema(UserSchema);
@@ -134,8 +128,6 @@ describe('PaginatedResponseSchema', () => {
   });
 });
 
-// ── ApiError ──────────────────────────────────────────────────────
-
 describe('ApiErrorSchema', () => {
   it('accepts valid error response', () => {
     const result = ApiErrorSchema.safeParse({
@@ -152,8 +144,6 @@ describe('ApiErrorSchema', () => {
     expect(result.success).toBe(false);
   });
 });
-
-// ── Health ────────────────────────────────────────────────────────
 
 describe('HealthResponseSchema', () => {
   it('accepts valid health response', () => {

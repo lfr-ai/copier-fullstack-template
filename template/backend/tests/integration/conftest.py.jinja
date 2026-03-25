@@ -1,0 +1,11 @@
+"""Shared configuration for all integration tests.
+
+Automatically applies 'pytest.mark.integration' to every test collected
+under 'tests/integration/'.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+pytestmark = pytest.mark.integration

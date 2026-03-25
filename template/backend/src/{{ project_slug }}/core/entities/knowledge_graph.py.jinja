@@ -1,0 +1,49 @@
+"""Knowledge graph domain entities — graph nodes, triplets, edges."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from {{ project_slug }}.core.entities.base import generate_id
+@dataclass(slots=True)
+class GraphNode:
+    """Node in the knowledge graph."""
+
+    id: str = field(default_factory=generate_id)
+    label: str = ""
+    entity_type: str = ""
+    properties: dict[str, object] = field(default_factory=dict)
+    source: str = ""  # e.g. "local", "wikidata", "dbpedia", "conceptnet"
+
+
+@dataclass(frozen=True, slots=True)
+class Triplet:
+    """Subject-predicate-object triplet in the knowledge graph."""
+
+    subject: str = ""
+    predicate: str = ""
+    object: str = ""
+    metadata: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class GraphEdge:
+    """Edge connecting two nodes in the knowledge graph."""
+
+    source_id: str = ""
+    target_id: str = ""
+    relation: str = ""
+    weight: float = 1.0
+    metadata: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class ExternalEntityResult:
+    """Result from an external knowledge graph lookup."""
+
+    id: str = ""
+    label: str = ""
+    description: str = ""
+    source: str = ""  # "wikidata", "dbpedia", "conceptnet"
+    weight: float = 0.0
+    properties: dict[str, object] = field(default_factory=dict)

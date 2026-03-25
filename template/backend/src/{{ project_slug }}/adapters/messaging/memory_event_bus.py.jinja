@@ -9,8 +9,6 @@ import structlog
 
 from {{ project_slug }}.core.entities.base import DomainEvent
 
-__all__ = ["EventHandler", "MemoryEventBus"]
-
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 EventHandler = Callable[[DomainEvent], Coroutine[object, object, None]]
@@ -24,7 +22,6 @@ class MemoryEventBus:
     """
 
     def __init__(self) -> None:
-        """Initialize empty event bus."""
         self._handlers: dict[type[DomainEvent], list[EventHandler]] = defaultdict(list)
 
     async def publish(self, event: DomainEvent) -> None:

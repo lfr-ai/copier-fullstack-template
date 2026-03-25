@@ -1,0 +1,44 @@
+# {{ project_name }} — SSH Client Configuration Example
+# ─────────────────────────────────────────────────────────
+# Copy entries to ~/.ssh/config or use setup-ssh.zsh to
+# generate automatically.
+#
+# This file is a TEMPLATE. Replace placeholders before use.
+# ─────────────────────────────────────────────────────────
+
+# ── Development server ─────────────────────────────────────
+Host {{ project_slug }}-dev
+    HostName REPLACE_WITH_DEV_HOST
+    User REPLACE_WITH_USER
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    StrictHostKeyChecking ask
+
+# ── Staging server ─────────────────────────────────────────
+Host {{ project_slug }}-staging
+    HostName REPLACE_WITH_STAGING_HOST
+    User REPLACE_WITH_USER
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    StrictHostKeyChecking ask
+
+# ── Production server ──────────────────────────────────────
+Host {{ project_slug }}-prod
+    HostName REPLACE_WITH_PROD_HOST
+    User REPLACE_WITH_USER
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    StrictHostKeyChecking yes
+
+# ── Shared defaults ────────────────────────────────────────
+Host *
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    HashKnownHosts yes
+    VisualHostKey yes
