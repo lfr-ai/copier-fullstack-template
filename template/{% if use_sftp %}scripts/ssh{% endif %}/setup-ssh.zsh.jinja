@@ -1,0 +1,760 @@
+#!/usr/bin/env zsh
+# ─────────────────────────────────────────────────────────────
+#  {{ project_name }} — SSH / SFTP Setup (POSIX)
+#
+#  Idempotent, security-conscious setup for SSH key generation,
+#  server configuration, SFTP enablement, and VS Code SFTP
+#  scaffold on Linux and macOS.
+#
+#  Usage:
+#    zsh scripts/ssh/setup-ssh.zsh [OPTIONS]
+#
+#  Options:
+#    --mode <client|server|both>   Setup mode (default: client)
+#    --key-type <ed25519|rsa>      Key algorithm (default: ed25519)
+#    --key-name <name>             Key filename (default: id_ed25519)
+#    --no-passphrase               Skip passphrase (NOT recommended)
+#    --remote-host <host>          Remote host for client config
+#    --remote-user <user>          Remote user (default: current user)
+#    --remote-port <port>          Remote SSH port (default: 22)
+#    --sftp-remote-path <path>     Remote path for VS Code SFTP
+#    --sftp-only-user <user>       Create SFTP-only restricted user
+#    --harden                      Apply server hardening defaults
+#    --install-server               Install openssh-server if missing
+#    --dry-run                     Show what would be done
+#    --verbose                     Enable debug output
+#    --non-interactive             Skip all prompts
+#    --help                        Show this help
+# ─────────────────────────────────────────────────────────────
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT NO_UNSET
+
+# ── Constants ───────────────────────────────────────────────
+readonly SCRIPT_DIR="${0:A:h}"
+readonly PROJECT_ROOT="${SCRIPT_DIR:h:h}"
+readonly BOLD=$'\033[1m'
+readonly RED=$'\033[0;31m'
+readonly GREEN=$'\033[0;32m'
+readonly YELLOW=$'\033[0;33m'
+readonly CYAN=$'\033[0;36m'
+readonly RESET=$'\033[0m'
+
+# ── Defaults ────────────────────────────────────────────────
+MODE="client"
+KEY_TYPE="ed25519"
+KEY_NAME=""
+USE_PASSPHRASE=true
+REMOTE_HOST=""
+REMOTE_USER="${USER}"
+REMOTE_PORT=22
+SFTP_REMOTE_PATH="/home/${USER}/{{ project_slug }}"
+SFTP_ONLY_USER=""
+HARDEN=false
+INSTALL_SERVER=false
+DRY_RUN=false
+VERBOSE=false
+NON_INTERACTIVE=false
+
+# ── Logging helpers ─────────────────────────────────────────
+log_info()    { print "${CYAN}[INFO]${RESET}  $*" }
+log_ok()      { print "${GREEN}[OK]${RESET}    $*" }
+log_warn()    { print "${YELLOW}[WARN]${RESET}  $*" >&2 }
+log_error()   { print "${RED}[ERROR]${RESET} $*" >&2 }
+log_debug()   { [[ "${VERBOSE}" == "true" ]] && print "[DEBUG] $*" }
+log_dry()     { print "${YELLOW}[DRY-RUN]${RESET} $*" }
+
+die() { log_error "$@"; exit 1 }
+
+# ── Platform detection ──────────────────────────────────────
+detect_platform() {
+  emulate -L zsh
+  case "$(uname -s)" in
+    Linux*)  PLATFORM="linux" ;;
+    Darwin*) PLATFORM="macos" ;;
+    *)       die "Unsupported platform: $(uname -s). Use setup-ssh.ps1 on Windows." ;;
+  esac
+  log_debug "Platform: ${PLATFORM}"
+}
+
+detect_privilege() {
+  emulate -L zsh
+  if (( EUID == 0 )); then
+    IS_ROOT=true
+  else
+    IS_ROOT=false
+  fi
+  log_debug "Running as root: ${IS_ROOT}"
+}
+
+detect_package_manager() {
+  emulate -L zsh
+  if command -v apt-get &>/dev/null; then
+    PKG_MGR="apt"
+  elif command -v dnf &>/dev/null; then
+    PKG_MGR="dnf"
+  elif command -v yum &>/dev/null; then
+    PKG_MGR="yum"
+  elif command -v pacman &>/dev/null; then
+    PKG_MGR="pacman"
+  elif command -v brew &>/dev/null; then
+    PKG_MGR="brew"
+  else
+    PKG_MGR="unknown"
+  fi
+  log_debug "Package manager: ${PKG_MGR}"
+}
+
+# ── Argument parsing ────────────────────────────────────────
+parse_args() {
+  emulate -L zsh
+  while (( $# )); do
+    case "$1" in
+      --mode)           MODE="$2"; shift 2 ;;
+      --key-type)       KEY_TYPE="$2"; shift 2 ;;
+      --key-name)       KEY_NAME="$2"; shift 2 ;;
+      --no-passphrase)  USE_PASSPHRASE=false; shift ;;
+      --remote-host)    REMOTE_HOST="$2"; shift 2 ;;
+      --remote-user)    REMOTE_USER="$2"; shift 2 ;;
+      --remote-port)    REMOTE_PORT="$2"; shift 2 ;;
+      --sftp-remote-path) SFTP_REMOTE_PATH="$2"; shift 2 ;;
+      --sftp-only-user) SFTP_ONLY_USER="$2"; shift 2 ;;
+      --harden)         HARDEN=true; shift ;;
+      --install-server) INSTALL_SERVER=true; shift ;;
+      --dry-run)        DRY_RUN=true; shift ;;
+      --verbose)        VERBOSE=true; shift ;;
+      --non-interactive) NON_INTERACTIVE=true; shift ;;
+      --help)           usage; exit 0 ;;
+      *)                die "Unknown option: $1 (use --help)" ;;
+    esac
+  done
+
+  # Validate mode
+  case "${MODE}" in
+    client|server|both) ;;
+    *) die "Invalid --mode '${MODE}'. Use: client, server, or both." ;;
+  esac
+
+  # Validate key type
+  case "${KEY_TYPE}" in
+    ed25519|rsa) ;;
+    *) die "Invalid --key-type '${KEY_TYPE}'. Use: ed25519 or rsa." ;;
+  esac
+
+  # Default key name
+  if [[ -z "${KEY_NAME}" ]]; then
+    KEY_NAME="id_${KEY_TYPE}"
+  fi
+}
+
+usage() {
+  head -n 28 "$0" | tail -n +2 | sed 's/^# *//'
+}
+
+# ── SSH directory and permissions ───────────────────────────
+ensure_ssh_dir() {
+  emulate -L zsh
+  local ssh_dir="${HOME}/.ssh"
+
+  if [[ -d "${ssh_dir}" ]]; then
+    log_debug "SSH directory exists: ${ssh_dir}"
+  else
+    if [[ "${DRY_RUN}" == "true" ]]; then
+      log_dry "Would create: ${ssh_dir}"
+    else
+      mkdir -p "${ssh_dir}"
+      log_ok "Created: ${ssh_dir}"
+    fi
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would set permissions: ${ssh_dir} → 700"
+  else
+    chmod 700 "${ssh_dir}"
+    log_debug "Permissions set: ${ssh_dir} → 700"
+  fi
+}
+
+# ── Key generation ──────────────────────────────────────────
+generate_key() {
+  emulate -L zsh
+  local key_path="${HOME}/.ssh/${KEY_NAME}"
+
+  if [[ -f "${key_path}" ]]; then
+    log_warn "Key already exists: ${key_path}"
+    if [[ "${NON_INTERACTIVE}" == "true" ]]; then
+      log_info "Reusing existing key (non-interactive mode)"
+      return 0
+    fi
+    print -n "Overwrite existing key? [y/N]: "
+    read -r answer
+    case "${answer}" in
+      [yY]*) ;;
+      *)     log_info "Keeping existing key"; return 0 ;;
+    esac
+  fi
+
+  local -a keygen_args=()
+  keygen_args+=(-t "${KEY_TYPE}")
+
+  if [[ "${KEY_TYPE}" == "ed25519" ]]; then
+    keygen_args+=(-a 100)
+  elif [[ "${KEY_TYPE}" == "rsa" ]]; then
+    keygen_args+=(-b 4096)
+  fi
+
+  keygen_args+=(-f "${key_path}")
+  keygen_args+=(-C "${USER}@$(hostname)-$(date +%Y%m%d)")
+
+  if [[ "${USE_PASSPHRASE}" == "false" ]]; then
+    log_warn "Generating key WITHOUT passphrase (not recommended for production)"
+    keygen_args+=(-N "")
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would run: ssh-keygen ${keygen_args[*]}"
+    return 0
+  fi
+
+  if [[ "${USE_PASSPHRASE}" == "true" && "${NON_INTERACTIVE}" == "false" ]]; then
+    ssh-keygen "${keygen_args[@]}"
+  else
+    ssh-keygen "${keygen_args[@]}" </dev/null
+  fi
+
+  chmod 600 "${key_path}"
+  chmod 644 "${key_path}.pub"
+
+  log_ok "Key generated: ${key_path}"
+  log_info "Fingerprint: $(ssh-keygen -lf "${key_path}.pub")"
+}
+
+# ── Install public key locally ──────────────────────────────
+install_public_key_local() {
+  emulate -L zsh
+  local key_path="${HOME}/.ssh/${KEY_NAME}.pub"
+  local auth_keys="${HOME}/.ssh/authorized_keys"
+
+  if [[ ! -f "${key_path}" ]]; then
+    die "Public key not found: ${key_path}"
+  fi
+
+  local pubkey
+  pubkey="$(<"${key_path}")"
+
+  if [[ -f "${auth_keys}" ]]; then
+    if grep -qF "${pubkey}" "${auth_keys}" 2>/dev/null; then
+      log_info "Public key already in ${auth_keys} (skipping duplicate)"
+      return 0
+    fi
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would append public key to: ${auth_keys}"
+    return 0
+  fi
+
+  print "${pubkey}" >> "${auth_keys}"
+  chmod 600 "${auth_keys}"
+  log_ok "Public key installed to: ${auth_keys}"
+}
+
+# ── Copy public key to remote ───────────────────────────────
+install_public_key_remote() {
+  emulate -L zsh
+  local key_path="${HOME}/.ssh/${KEY_NAME}.pub"
+
+  if [[ -z "${REMOTE_HOST}" ]]; then
+    log_warn "No --remote-host specified; skipping remote key installation"
+    return 0
+  fi
+
+  if [[ ! -f "${key_path}" ]]; then
+    die "Public key not found: ${key_path}"
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would run: ssh-copy-id -i ${key_path} -p ${REMOTE_PORT} ${REMOTE_USER}@${REMOTE_HOST}"
+    return 0
+  fi
+
+  log_info "Installing public key on ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PORT} ..."
+  ssh-copy-id -i "${key_path}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}"
+  log_ok "Public key installed on remote host"
+}
+
+# ── Server installation ─────────────────────────────────────
+install_ssh_server() {
+  emulate -L zsh
+
+  if command -v sshd &>/dev/null || [[ -f /usr/sbin/sshd ]]; then
+    log_info "SSH server already installed"
+    return 0
+  fi
+
+  if [[ "${INSTALL_SERVER}" != "true" ]]; then
+    log_warn "SSH server not found. Pass --install-server to install it."
+    return 1
+  fi
+
+  if [[ "${IS_ROOT}" != "true" ]]; then
+    die "Installing SSH server requires root. Run with sudo."
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would install openssh-server via ${PKG_MGR}"
+    return 0
+  fi
+
+  log_info "Installing openssh-server..."
+  case "${PKG_MGR}" in
+    apt)    apt-get update -qq && apt-get install -y openssh-server ;;
+    dnf)    dnf install -y openssh-server ;;
+    yum)    yum install -y openssh-server ;;
+    pacman) pacman -Sy --noconfirm openssh ;;
+    brew)   log_warn "macOS: SSH server is built-in. Enable in System Preferences > Sharing > Remote Login." ; return 0 ;;
+    *)      die "Cannot auto-install; install openssh-server manually." ;;
+  esac
+  log_ok "openssh-server installed"
+}
+
+# ── Server configuration ────────────────────────────────────
+configure_sshd() {
+  emulate -L zsh
+  local sshd_config="/etc/ssh/sshd_config"
+  local sshd_config_dir="/etc/ssh/sshd_config.d"
+
+  if [[ "${IS_ROOT}" != "true" ]]; then
+    die "Configuring sshd requires root. Run with sudo."
+  fi
+
+  if [[ ! -f "${sshd_config}" ]]; then
+    die "sshd_config not found at ${sshd_config}"
+  fi
+
+  # ── SFTP subsystem ──────────────────────────────────
+  local drop_in="${sshd_config_dir}/90-{{ project_slug }}.conf"
+
+  local -a config_lines=(
+    "# {{ project_name }} SSH server configuration"
+    "# Generated by setup-ssh.zsh — $(date -Iseconds)"
+    ""
+    "# Prefer internal-sftp for SFTP subsystem"
+    "Subsystem sftp internal-sftp"
+    ""
+    "# Allow public key authentication"
+    "PubkeyAuthentication yes"
+  )
+
+  if [[ "${HARDEN}" == "true" ]]; then
+    config_lines+=(
+      ""
+      "# ── Hardening ──────────────────────────────────"
+      "PermitRootLogin no"
+      "PasswordAuthentication no"
+      "KbdInteractiveAuthentication no"
+      "X11Forwarding no"
+      "MaxAuthTries 3"
+      "LoginGraceTime 30"
+      "AllowTcpForwarding no"
+      "PermitEmptyPasswords no"
+    )
+  fi
+
+  if [[ -n "${SFTP_ONLY_USER}" ]]; then
+    config_lines+=(
+      ""
+      "# ── SFTP-only access for ${SFTP_ONLY_USER} ────"
+      "Match User ${SFTP_ONLY_USER}"
+      "    ForceCommand internal-sftp"
+      "    ChrootDirectory /home/${SFTP_ONLY_USER}"
+      "    AllowTcpForwarding no"
+      "    X11Forwarding no"
+      "    PermitTunnel no"
+    )
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would write drop-in config: ${drop_in}"
+    log_dry "Contents:"
+    for line in "${config_lines[@]}"; do
+      log_dry "  ${line}"
+    done
+    log_dry "Would validate sshd config and reload"
+    return 0
+  fi
+
+  # Use drop-in directory if available
+  if [[ -d "${sshd_config_dir}" ]]; then
+    printf '%s\n' "${config_lines[@]}" > "${drop_in}"
+    log_ok "Drop-in config written: ${drop_in}"
+  else
+    # Append to main config with guard
+    local marker="# BEGIN {{ project_slug }} SSH config"
+    local end_marker="# END {{ project_slug }} SSH config"
+    if grep -qF "${marker}" "${sshd_config}" 2>/dev/null; then
+      log_info "Config block already present in ${sshd_config}; replacing"
+      sed -i.bak "/${marker}/,/${end_marker}/d" "${sshd_config}"
+    fi
+    {
+      print "${marker}"
+      printf '%s\n' "${config_lines[@]}"
+      print "${end_marker}"
+    } >> "${sshd_config}"
+    log_ok "Config appended to: ${sshd_config}"
+  fi
+
+  # Validate before reload
+  log_info "Validating sshd configuration..."
+  if ! sshd -t 2>&1; then
+    die "sshd config validation failed! Reverting if backup exists."
+  fi
+  log_ok "sshd configuration is valid"
+
+  # Reload
+  if [[ "${PLATFORM}" == "macos" ]]; then
+    launchctl unload /System/Library/LaunchDaemons/ssh.plist 2>/dev/null || true
+    launchctl load -w /System/Library/LaunchDaemons/ssh.plist
+  else
+    systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || service sshd reload
+  fi
+  log_ok "SSH server reloaded"
+}
+
+# ── SFTP-only user setup ────────────────────────────────────
+setup_sftp_only_user() {
+  emulate -L zsh
+
+  if [[ -z "${SFTP_ONLY_USER}" ]]; then
+    return 0
+  fi
+
+  if [[ "${IS_ROOT}" != "true" ]]; then
+    die "Creating SFTP-only user requires root."
+  fi
+
+  if id "${SFTP_ONLY_USER}" &>/dev/null; then
+    log_info "User ${SFTP_ONLY_USER} already exists"
+  else
+    if [[ "${DRY_RUN}" == "true" ]]; then
+      log_dry "Would create user: ${SFTP_ONLY_USER}"
+    else
+      useradd -m -s /usr/sbin/nologin "${SFTP_ONLY_USER}"
+      log_ok "Created SFTP-only user: ${SFTP_ONLY_USER}"
+    fi
+  fi
+
+  # ChrootDirectory requires root ownership of the home dir
+  local user_home="/home/${SFTP_ONLY_USER}"
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would set chroot ownership: root:root ${user_home}"
+    log_dry "Would create writable upload directory: ${user_home}/upload"
+  else
+    chown root:root "${user_home}"
+    chmod 755 "${user_home}"
+    mkdir -p "${user_home}/upload"
+    chown "${SFTP_ONLY_USER}:${SFTP_ONLY_USER}" "${user_home}/upload"
+    log_ok "Chroot directory configured for ${SFTP_ONLY_USER}"
+  fi
+}
+
+# ── VS Code SFTP config ────────────────────────────────────
+generate_sftp_json() {
+  emulate -L zsh
+  local sftp_json="${PROJECT_ROOT}/.vscode/sftp.json"
+
+  local target_host="${REMOTE_HOST:-localhost}"
+  local target_user="${REMOTE_USER}"
+  local target_port="${REMOTE_PORT}"
+  local target_path="${SFTP_REMOTE_PATH}"
+  local key_path="\${env:HOME}/.ssh/${KEY_NAME}"
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would generate: ${sftp_json}"
+    return 0
+  fi
+
+  mkdir -p "${PROJECT_ROOT}/.vscode"
+
+  cat > "${sftp_json}" <<SFTP_EOF
+{
+    "name": "{{ project_name }}",
+    "host": "${target_host}",
+    "protocol": "sftp",
+    "port": ${target_port},
+    "username": "${target_user}",
+    "remotePath": "${target_path}",
+    "privateKeyPath": "${key_path}",
+    "uploadOnSave": false,
+    "useTempFile": true,
+    "openSsh": true,
+    "ignore": [
+        ".vscode",
+        ".git",
+        ".DS_Store",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "*.pyc",
+        ".env",
+        ".env.*",
+        "logs",
+        "dist",
+        "build",
+        "htmlcov",
+        ".coverage",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".pytest_cache"
+    ],
+    "watcher": {
+        "files": "**/*",
+        "autoUpload": false,
+        "autoDelete": false
+    },
+    "syncOption": {
+        "skipCreate": false,
+        "delete": false
+    }
+}
+SFTP_EOF
+
+  log_ok "VS Code SFTP config generated: ${sftp_json}"
+  log_warn "This file is git-ignored. Do not commit private key paths."
+}
+
+# ── SSH client config entry ─────────────────────────────────
+generate_ssh_config_entry() {
+  emulate -L zsh
+
+  if [[ -z "${REMOTE_HOST}" ]]; then
+    log_debug "No remote host; skipping SSH config entry"
+    return 0
+  fi
+
+  local ssh_config="${HOME}/.ssh/config"
+  local host_alias="{{ project_slug }}-${REMOTE_HOST}"
+  local key_path="${HOME}/.ssh/${KEY_NAME}"
+
+  if [[ -f "${ssh_config}" ]] && grep -qF "Host ${host_alias}" "${ssh_config}" 2>/dev/null; then
+    log_info "SSH config entry '${host_alias}' already exists"
+    return 0
+  fi
+
+  local entry="
+# {{ project_name }} — ${REMOTE_HOST}
+Host ${host_alias}
+    HostName ${REMOTE_HOST}
+    User ${REMOTE_USER}
+    Port ${REMOTE_PORT}
+    IdentityFile ${key_path}
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    StrictHostKeyChecking ask
+"
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry "Would append to ${ssh_config}:"
+    print "${entry}"
+    return 0
+  fi
+
+  print "${entry}" >> "${ssh_config}"
+  chmod 600 "${ssh_config}"
+  log_ok "SSH config entry added: ${host_alias} → ${REMOTE_HOST}"
+}
+
+# ── Validation ──────────────────────────────────────────────
+validate_setup() {
+  emulate -L zsh
+  local exit_code=0
+  local key_path="${HOME}/.ssh/${KEY_NAME}"
+
+  print ""
+  print "${BOLD}=== Validation ===${RESET}"
+
+  # Key pair check
+  if [[ -f "${key_path}" ]]; then
+    log_ok "Private key exists: ${key_path}"
+    local perms
+    perms="$(stat -c '%a' "${key_path}" 2>/dev/null || stat -f '%Lp' "${key_path}" 2>/dev/null)"
+    if [[ "${perms}" == "600" ]]; then
+      log_ok "Private key permissions: ${perms}"
+    else
+      log_warn "Private key permissions: ${perms} (expected 600)"
+      exit_code=1
+    fi
+  else
+    log_warn "Private key not found: ${key_path}"
+    exit_code=1
+  fi
+
+  if [[ -f "${key_path}.pub" ]]; then
+    log_ok "Public key exists: ${key_path}.pub"
+  else
+    log_warn "Public key not found: ${key_path}.pub"
+    exit_code=1
+  fi
+
+  # authorized_keys check (server/both mode)
+  if [[ "${MODE}" == "server" || "${MODE}" == "both" ]]; then
+    local auth_keys="${HOME}/.ssh/authorized_keys"
+    if [[ -f "${auth_keys}" ]]; then
+      log_ok "authorized_keys exists: ${auth_keys}"
+      local ak_perms
+      ak_perms="$(stat -c '%a' "${auth_keys}" 2>/dev/null || stat -f '%Lp' "${auth_keys}" 2>/dev/null)"
+      if [[ "${ak_perms}" == "600" ]]; then
+        log_ok "authorized_keys permissions: ${ak_perms}"
+      else
+        log_warn "authorized_keys permissions: ${ak_perms} (expected 600)"
+        exit_code=1
+      fi
+    fi
+  fi
+
+  # sshd validation (server/both mode)
+  if [[ "${MODE}" == "server" || "${MODE}" == "both" ]]; then
+    if command -v sshd &>/dev/null || [[ -f /usr/sbin/sshd ]]; then
+      log_ok "sshd binary found"
+      if sshd -t 2>/dev/null; then
+        log_ok "sshd config syntax valid"
+      else
+        log_warn "sshd config syntax check failed"
+        exit_code=1
+      fi
+    else
+      log_warn "sshd not found"
+      exit_code=1
+    fi
+  fi
+
+  # SSH connectivity test
+  if [[ -n "${REMOTE_HOST}" ]]; then
+    log_info "Testing SSH connectivity to ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PORT} ..."
+    if ssh -o BatchMode=yes -o ConnectTimeout=5 -p "${REMOTE_PORT}" \
+       -i "${key_path}" "${REMOTE_USER}@${REMOTE_HOST}" "echo SSH_OK" 2>/dev/null; then
+      log_ok "SSH connection successful"
+
+      # SFTP test
+      log_info "Testing SFTP connectivity..."
+      if echo "ls" | sftp -o BatchMode=yes -o ConnectTimeout=5 -P "${REMOTE_PORT}" \
+         -i "${key_path}" "${REMOTE_USER}@${REMOTE_HOST}" &>/dev/null; then
+        log_ok "SFTP connection successful"
+      else
+        log_warn "SFTP connection failed"
+        exit_code=1
+      fi
+    else
+      log_warn "SSH connection failed (key may not be installed on remote yet)"
+      exit_code=1
+    fi
+  fi
+
+  # VS Code SFTP config check
+  local sftp_json="${PROJECT_ROOT}/.vscode/sftp.json"
+  if [[ -f "${sftp_json}" ]]; then
+    log_ok "VS Code sftp.json exists: ${sftp_json}"
+  else
+    log_info "VS Code sftp.json not generated (use --remote-host to enable)"
+  fi
+
+  print ""
+  if (( exit_code == 0 )); then
+    print "${GREEN}${BOLD}All validations passed.${RESET}"
+  else
+    print "${YELLOW}${BOLD}Some validations had warnings. Review above output.${RESET}"
+  fi
+
+  return ${exit_code}
+}
+
+# ── Summary ─────────────────────────────────────────────────
+print_summary() {
+  emulate -L zsh
+  local key_path="${HOME}/.ssh/${KEY_NAME}"
+
+  print ""
+  print "${BOLD}=== Setup Summary ===${RESET}"
+  print "  Mode:         ${MODE}"
+  print "  Platform:     ${PLATFORM}"
+  print "  Key type:     ${KEY_TYPE}"
+  print "  Key file:     ${key_path}"
+  if [[ -f "${key_path}.pub" ]]; then
+    print "  Fingerprint:  $(ssh-keygen -lf "${key_path}.pub" 2>/dev/null || print 'N/A')"
+  fi
+  if [[ -n "${REMOTE_HOST}" ]]; then
+    print "  Remote:       ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PORT}"
+  fi
+  if [[ "${HARDEN}" == "true" ]]; then
+    print "  Hardening:    applied"
+  fi
+  if [[ -n "${SFTP_ONLY_USER}" ]]; then
+    print "  SFTP user:    ${SFTP_ONLY_USER} (restricted)"
+  fi
+
+  print ""
+  print "${BOLD}Next steps:${RESET}"
+  if [[ "${MODE}" == "client" || "${MODE}" == "both" ]]; then
+    print "  1. Load key into ssh-agent:  eval \$(ssh-agent) && ssh-add ${key_path}"
+    if [[ -n "${REMOTE_HOST}" ]]; then
+      print "  2. Test connection:          ssh ${REMOTE_USER}@${REMOTE_HOST} -p ${REMOTE_PORT}"
+      print "  3. Test SFTP:                sftp -P ${REMOTE_PORT} ${REMOTE_USER}@${REMOTE_HOST}"
+    fi
+  fi
+  if [[ "${MODE}" == "server" || "${MODE}" == "both" ]]; then
+    print "  • Ensure the SSH service is running and firewall allows port ${REMOTE_PORT}"
+    if [[ "${HARDEN}" != "true" ]]; then
+      print "  • Consider running with --harden for production servers"
+    fi
+  fi
+}
+
+# ── Main ────────────────────────────────────────────────────
+main() {
+  emulate -L zsh
+  setopt PIPE_FAIL ERR_EXIT
+
+  parse_args "$@"
+  detect_platform
+  detect_privilege
+  detect_package_manager
+
+  print "${BOLD}=========================================${RESET}"
+  print "${BOLD} {{ project_name }} — SSH/SFTP Setup${RESET}"
+  print "${BOLD}=========================================${RESET}"
+  print "  Mode:     ${MODE}"
+  print "  Platform: ${PLATFORM}"
+  print "  Key type: ${KEY_TYPE}"
+  [[ "${DRY_RUN}" == "true" ]] && print "  ${YELLOW}DRY-RUN MODE${RESET}"
+  print ""
+
+  # ── Client setup ──────────────────────────────────
+  if [[ "${MODE}" == "client" || "${MODE}" == "both" ]]; then
+    log_info "Setting up SSH client..."
+    ensure_ssh_dir
+    generate_key
+    generate_ssh_config_entry
+    generate_sftp_json
+    install_public_key_remote
+  fi
+
+  # ── Server setup ──────────────────────────────────
+  if [[ "${MODE}" == "server" || "${MODE}" == "both" ]]; then
+    log_info "Setting up SSH server..."
+    install_ssh_server
+    ensure_ssh_dir
+    if [[ "${MODE}" == "both" ]]; then
+      install_public_key_local
+    fi
+    setup_sftp_only_user
+    configure_sshd
+  fi
+
+  # ── Validation ────────────────────────────────────
+  if [[ "${DRY_RUN}" != "true" ]]; then
+    validate_setup || true
+  fi
+
+  print_summary
+}
+
+main "$@"

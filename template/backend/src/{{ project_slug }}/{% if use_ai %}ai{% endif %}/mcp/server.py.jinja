@@ -1,0 +1,503 @@
+"""MCP server definition — exposes AI tools, resources, and prompts.
+
+Uses the official MCP Python SDK's 'FastMCP' for registration and
+transport (streamable-http, stdio, or SSE).
+
+Supports MCP v1.26+ features:
+  - **Streamable HTTP** transport (stateless, JSON responses)
+  - **Structured output** via 'output_model' on tools
+  - **Typed lifespan context** for injected ports
+
+Add 'mcp[cli]' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import structlog
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from {{ project_slug }}.ai.config import (
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_SIMILARITY_TOP_K,
+    DEFAULT_TEMPERATURE,
+)
+from {{ project_slug }}.core.interfaces.knowledge_graph import (
+    DEFAULT_ENTITY_LOOKUP_LIMIT,
+    DEFAULT_NEIGHBOR_LIMIT,
+    DEFAULT_RELATION_LIMIT,
+)
+
+from pydantic import BaseModel, Field
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class SearchResult(BaseModel):
+    """Single document search result."""
+
+    content: str = Field(description="Document excerpt text")
+    score: float = Field(description="Relevance score", ge=0, le=1)
+    source: str = Field(default="", description="Source document identifier")
+
+
+class SearchOutput(BaseModel):
+    """Structured output for document search."""
+
+    query: str = Field(description="Original search query")
+    top_k: int = Field(description="Requested number of results")
+    results: list[SearchResult] = Field(default_factory=list)
+    message: str = Field(default="", description="Diagnostic message")
+
+
+class RAGOutput(BaseModel):
+    """Structured output for RAG queries."""
+
+    question: str = Field(description="Original question")
+    answer: str = Field(description="Generated answer")
+    sources: list[SearchResult] = Field(default_factory=list)
+
+
+class CompletionOutput(BaseModel):
+    """Structured output for text completion."""
+
+    prompt_length: int = Field(description="Length of the input prompt")
+    content: str = Field(description="Generated text")
+    message: str = Field(default="", description="Diagnostic message")
+
+
+class KGNeighborOutput(BaseModel):
+    """Structured output for knowledge graph queries."""
+
+    entity: str = Field(description="Queried entity")
+    depth: int = Field(description="Traversal depth")
+    neighbors: list[dict[str, object]] = Field(default_factory=list)
+    message: str = Field(default="", description="Diagnostic message")
+
+
+class TripletOutput(BaseModel):
+    """Structured output for triplet operations."""
+
+    status: str = Field(description="Operation status")
+    triplet: list[str] = Field(default_factory=list)
+    message: str = Field(default="", description="Diagnostic message")
+
+
+class EvalOutput(BaseModel):
+    """Structured output for LLM output evaluation."""
+
+    metric: str = Field(description="Evaluation metric name")
+    score: float = Field(description="Evaluation score", ge=0)
+    passed: bool = Field(description="Whether the output passed the evaluation")
+    reason: str = Field(default="", description="Explanation for the score")
+    message: str = Field(default="", description="Diagnostic message")
+
+
+def create_mcp_server(
+    *,
+    name: str = "{{ project_name }} MCP",
+    stateless: bool = True,
+    search_tool: object | None = None,
+    ingest_tool: object | None = None,
+    llm: object | None = None,
+    knowledge_graph: object | None = None,
+    external_knowledge_graph: object | None = None,
+    evaluator: object | None = None,
+) -> object:
+    """Create and configure a FastMCP server instance.
+
+    Args:
+        name (str): Server display name.
+        stateless (bool): If True, run in stateless HTTP mode (recommended for production).
+        search_tool (object | None): Optional 'SearchTool' instance for document search.
+        ingest_tool (object | None): Optional 'IngestTool' instance for document ingestion.
+        llm (object | None): Optional 'LLMPort' instance for completions.
+        knowledge_graph (object | None): Optional 'KnowledgeGraphPort' instance for graph queries.
+        external_knowledge_graph (object | None): Optional 'ExternalKnowledgeGraphPort' for Wikidata/DBpedia.
+        evaluator (object | None): Optional 'EvaluatorPort' instance for LLM output evaluation.
+
+    Returns:
+        object: Configured server with tools and resources registered.
+
+    Raises:
+        ImportError: If the 'mcp' package is not installed.
+    """
+    try:
+        from mcp.server.fastmcp import FastMCP  # type: ignore[import-untyped]
+    except ImportError as exc:
+        msg = "mcp[cli] is required — pip install 'mcp[cli]'"
+        raise ImportError(msg) from exc
+
+    @asynccontextmanager
+    async def app_lifespan(server: FastMCP) -> AsyncIterator[None]:
+        """Manage MCP server startup and shutdown logging."""
+        logger.info("MCP server '%s' starting up", name)
+        try:
+            yield
+        finally:
+            logger.info("MCP server '%s' shutting down", name)
+
+    mcp = FastMCP(
+        name,
+        lifespan=app_lifespan,
+        stateless_http=stateless,
+        json_response=True,
+    )
+
+    _register_tools(mcp, search_tool=search_tool, ingest_tool=ingest_tool, llm=llm, knowledge_graph=knowledge_graph, external_knowledge_graph=external_knowledge_graph, evaluator=evaluator)
+    _register_resources(mcp)
+    _register_prompts(mcp)
+
+    return mcp
+
+
+def _register_tools(
+    mcp,
+    *,
+    search_tool: object | None = None,
+    ingest_tool: object | None = None,
+    llm: object | None = None,
+    knowledge_graph: object | None = None,
+    external_knowledge_graph: object | None = None,
+    evaluator: object | None = None,
+) -> None:
+    """Register MCP tools wired to real adapters when available."""
+
+    @mcp.tool(output_model=SearchOutput)
+    async def search_documents(query: str, top_k: int = DEFAULT_SIMILARITY_TOP_K) -> SearchOutput:
+        """Search indexed documents using semantic similarity.
+
+        Args:
+            query (str): Natural language search query.
+            top_k (int): Number of results to return.
+
+        Returns:
+            SearchOutput: Search results with document excerpts and relevance scores.
+        """
+        if search_tool is not None:
+            results = await search_tool.execute(query=query, top_k=top_k)
+            return SearchOutput(
+                query=query,
+                top_k=top_k,
+                results=[
+                    SearchResult(
+                        content=str(r.get("content", "")),
+                        score=float(r.get("score", 0)),
+                        source=str(r.get("source", "")),
+                    )
+                    for r in results
+                ],
+            )
+        return SearchOutput(
+            query=query,
+            top_k=top_k,
+            message="SearchTool not configured. Pass search_tool to create_mcp_server().",
+        )
+
+    @mcp.tool()
+    async def ingest_document(source: str) -> dict[str, object]:
+        """Ingest a document into the RAG knowledge base.
+
+        Args:
+            source (str): File path or URL to ingest.
+
+        Returns:
+            dict[str, object]: Ingestion result with document ID and chunk count.
+        """
+        if ingest_tool is not None:
+            return await ingest_tool.execute(source=source)
+        return {
+            "source": source,
+            "status": "not_configured",
+            "message": "IngestTool not configured. Pass ingest_tool to create_mcp_server().",
+        }
+
+    @mcp.tool(output_model=KGNeighborOutput)
+    async def query_knowledge_graph(entity: str, depth: int = 1) -> KGNeighborOutput:
+        """Query the knowledge graph for entity relationships.
+
+        Args:
+            entity (str): Entity name to query.
+            depth (int): Traversal depth.
+
+        Returns:
+            KGNeighborOutput: Neighboring entities and relationships.
+        """
+        if knowledge_graph is not None:
+            neighbors = await knowledge_graph.query_neighbors(entity, depth=depth, limit=DEFAULT_NEIGHBOR_LIMIT)
+            return KGNeighborOutput(entity=entity, depth=depth, neighbors=neighbors)
+        return KGNeighborOutput(
+            entity=entity,
+            depth=depth,
+            message="KnowledgeGraphPort not configured. Pass knowledge_graph to create_mcp_server().",
+        )
+
+    @mcp.tool(output_model=CompletionOutput)
+    async def complete_text(
+        prompt: str,
+        system_prompt: str = "",
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+    ) -> CompletionOutput:
+        """Generate a text completion using the configured LLM.
+
+        Args:
+            prompt (str): User prompt text.
+            system_prompt (str): Optional system instructions.
+            max_tokens (int): Maximum response tokens.
+            temperature (float): Sampling temperature.
+
+        Returns:
+            CompletionOutput: Completion result with generated text.
+        """
+        if llm is not None:
+            content = await llm.complete(
+                prompt=prompt,
+                system_prompt=system_prompt or None,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            return CompletionOutput(prompt_length=len(prompt), content=content)
+        return CompletionOutput(
+            prompt_length=len(prompt),
+            content="",
+            message="LLMPort not configured. Pass llm to create_mcp_server().",
+        )
+
+    @mcp.tool(output_model=RAGOutput)
+    async def run_rag_query(question: str, top_k: int = DEFAULT_SIMILARITY_TOP_K) -> RAGOutput:
+        """Execute a full RAG query — search, assemble context, and generate answer.
+
+        Args:
+            question (str): Natural language question.
+            top_k (int): Number of source chunks to retrieve.
+
+        Returns:
+            RAGOutput: Answer with source references.
+        """
+        if search_tool is None or llm is None:
+            return RAGOutput(question=question, answer="", sources=[])
+
+        results = await search_tool.execute(query=question, top_k=top_k)
+        context = "\n\n".join(str(r.get("content", "")) for r in results if r.get("content"))
+
+        prompt = (
+            f"Context:\n{context}\n\nQuestion: {question}\n\nAnswer based on the context above:"
+            if context
+            else f"Question: {question}\n\nAnswer:"
+        )
+        answer = await llm.complete(prompt=prompt, system_prompt="You are a helpful assistant. Answer based on the provided context.")
+        return RAGOutput(
+            question=question,
+            answer=answer,
+            sources=[
+                SearchResult(
+                    content=str(r.get("content", "")),
+                    score=float(r.get("score", 0)),
+                    source=str(r.get("source", "")),
+                )
+                for r in results
+            ],
+        )
+
+    @mcp.tool()
+    async def lookup_external_entity(entity: str, language: str = "en", limit: int = DEFAULT_ENTITY_LOOKUP_LIMIT) -> dict[str, object]:
+        """Look up an entity in an external knowledge graph (Wikidata, DBpedia, ConceptNet).
+
+        Args:
+            entity (str): Entity name or search term.
+            language (str): ISO language code.
+            limit (int): Maximum results to return.
+
+        Returns:
+            dict[str, object]: Matching entities from the external knowledge base.
+        """
+        if external_knowledge_graph is not None:
+            results = await external_knowledge_graph.lookup_entity(entity, language=language, limit=limit)
+            return {"entity": entity, "results": results}
+        return {
+            "entity": entity,
+            "results": [],
+            "message": "ExternalKnowledgeGraphPort not configured.",
+        }
+
+    @mcp.tool()
+    async def get_external_entity_relations(entity_id: str, limit: int = DEFAULT_RELATION_LIMIT) -> dict[str, object]:
+        """Get relations for an entity from an external knowledge graph.
+
+        Args:
+            entity_id (str): External entity ID (e.g. Wikidata Q-ID, DBpedia URI).
+            limit (int): Maximum relations to return.
+
+        Returns:
+            dict[str, object]: Entity relations as (subject, predicate, object) triplets.
+        """
+        if external_knowledge_graph is not None:
+            relations = await external_knowledge_graph.get_entity_relations(entity_id, limit=limit)
+            return {"entity_id": entity_id, "relations": [{"subject": s, "predicate": p, "object": o} for s, p, o in relations]}
+        return {
+            "entity_id": entity_id,
+            "relations": [],
+            "message": "ExternalKnowledgeGraphPort not configured.",
+        }
+
+    @mcp.tool()
+    async def get_knowledge_graph_stats() -> dict[str, object]:
+        """Get statistics about the local knowledge graph.
+
+        Returns:
+            Entity count, triplet count, and backend info.
+        """
+        if knowledge_graph is not None:
+            entity_count = await knowledge_graph.get_entity_count()
+            triplet_count = await knowledge_graph.get_triplet_count()
+            return {
+                "entity_count": entity_count,
+                "triplet_count": triplet_count,
+                "backend": type(knowledge_graph).__name__,
+            }
+        return {"message": "KnowledgeGraphPort not configured."}
+
+    @mcp.tool(output_model=TripletOutput)
+    async def add_knowledge_graph_triplet(subject: str, predicate: str, obj: str) -> TripletOutput:
+        """Add a triplet to the local knowledge graph.
+
+        Args:
+            subject (str): Source entity name.
+            predicate (str): Relationship label.
+            obj (str): Target entity name.
+
+        Returns:
+            TripletOutput: Confirmation of the added triplet.
+        """
+        if knowledge_graph is not None:
+            await knowledge_graph.add_triplet(subject=subject, predicate=predicate, obj=obj)
+            return TripletOutput(status="added", triplet=[subject, predicate, obj])
+        return TripletOutput(status="error", message="KnowledgeGraphPort not configured.")
+
+    @mcp.tool(output_model=EvalOutput)
+    async def evaluate_output(
+        question: str,
+        answer: str,
+        context: str = "",
+        expected: str = "",
+        metric: str = "relevance",
+    ) -> EvalOutput:
+        """Evaluate the quality of an LLM-generated answer.
+
+        Args:
+            question (str): The input question or prompt.
+            answer (str): The LLM-generated answer to evaluate.
+            context (str): Retrieved context used for generation (for RAG evals).
+            expected (str): Expected/reference answer (for comparison evals).
+            metric (str): Evaluation metric name (e.g. relevance, faithfulness, coherence).
+
+        Returns:
+            EvalOutput: Evaluation result with score and reasoning.
+        """
+        if evaluator is not None:
+            result = await evaluator.evaluate(
+                question=question,
+                answer=answer,
+                context=context,
+                expected=expected,
+            )
+            return EvalOutput(
+                metric=result.metric,
+                score=result.score,
+                passed=result.passed,
+                reason=result.reason,
+            )
+        return EvalOutput(
+            metric=metric,
+            score=0.0,
+            passed=False,
+            message="EvaluatorPort not configured. Pass evaluator to create_mcp_server().",
+        )
+
+
+def _register_resources(mcp) -> None:
+    """Register MCP resources for data exposure."""
+
+    @mcp.resource("config://ai-settings")
+    def get_ai_settings() -> str:
+        """Expose current AI configuration as a resource."""
+        from {{ project_slug }}.ai.config import (
+            DEFAULT_CHUNK_OVERLAP,
+            DEFAULT_CHUNK_SIZE,
+            DEFAULT_EMBEDDING_DIMENSION,
+            DEFAULT_MAX_TOKENS,
+            DEFAULT_SIMILARITY_TOP_K,
+            DEFAULT_TEMPERATURE,
+        )
+
+        import json
+
+        return json.dumps({
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "temperature": DEFAULT_TEMPERATURE,
+            "embedding_dimension": DEFAULT_EMBEDDING_DIMENSION,
+            "similarity_top_k": DEFAULT_SIMILARITY_TOP_K,
+            "chunk_size": DEFAULT_CHUNK_SIZE,
+            "chunk_overlap": DEFAULT_CHUNK_OVERLAP,
+        })
+
+    @mcp.resource("status://health")
+    def get_health() -> str:
+        """MCP server health check resource."""
+        return '{"status": "healthy"}'
+
+
+def _register_prompts(mcp) -> None:
+    """Register MCP prompt templates."""
+
+    @mcp.prompt(title="RAG Query")
+    def rag_query(query: str, context: str = "") -> str:
+        """Generate a RAG-augmented query prompt.
+
+        Args:
+            query (str): User question.
+            context (str): Retrieved context from the knowledge base.
+
+        Returns:
+            str: Formatted prompt combining question and context.
+        """
+        if context:
+            return (
+                f"Answer the following question based on the provided context.\n\n"
+                f"Context:\n{context}\n\n"
+                f"Question: {query}\n\n"
+                f"Answer:"
+            )
+        return f"Question: {query}\n\nAnswer:"
+
+    @mcp.prompt(title="Document Summary")
+    def summarize_document(document_text: str) -> str:
+        """Generate a summarization prompt for a document.
+
+        Args:
+            document_text (str): Full document text to summarize.
+
+        Returns:
+            str: Formatted summarization prompt.
+        """
+        return (
+            f"Provide a concise summary of the following document.\n\n"
+            f"Document:\n{document_text}\n\n"
+            f"Summary:"
+        )
+
+    @mcp.prompt(title="Entity Extraction")
+    def extract_entities(text: str) -> str:
+        """Generate an entity extraction prompt for knowledge graph population.
+
+        Args:
+            text (str): Text to extract entities from.
+
+        Returns:
+            str: Formatted entity extraction prompt.
+        """
+        return (
+            f"Extract all named entities and their relationships from the following text. "
+            f"Format each relationship as: (subject, predicate, object)\n\n"
+            f"Text:\n{text}\n\n"
+            f"Entities and relationships:"
+        )

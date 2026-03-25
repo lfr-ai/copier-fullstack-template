@@ -1,0 +1,102 @@
+"""Health check API routes."""
+
+from __future__ import annotations
+
+import time
+from importlib.metadata import PackageNotFoundError, version
+
+from fastapi import APIRouter
+
+from {{ project_slug }}.config.constants import MS_PER_SECOND
+from {{ project_slug }}.core.enums import ServiceStatus
+from {{ project_slug }}.ports.api.schemas.health import DependencyHealth, HealthResponse
+
+router = APIRouter()
+
+try:
+    _APP_VERSION: str = version("{{ project_slug }}")
+except PackageNotFoundError:
+    _APP_VERSION: str = "0.0.0-dev"  # type: ignore[no-redef]
+
+
+@router.get("/health", response_model=HealthResponse)
+async def health_check() -> HealthResponse:
+    """Return application health status."""
+    return HealthResponse(
+        status=ServiceStatus.HEALTHY,
+        version=_APP_VERSION,
+        dependencies=[],
+    )
+
+
+@router.get("/health/ready", response_model=HealthResponse)
+async def readiness_check() -> HealthResponse:
+    """Return readiness status with dependency health checks."""
+    deps: list[DependencyHealth] = []
+
+    deps.append(await _check_database())
+    deps.append(await _check_cache())
+
+    overall = (
+        ServiceStatus.HEALTHY
+        if all(d.status == ServiceStatus.HEALTHY for d in deps)
+        else ServiceStatus.DEGRADED
+    )
+    return HealthResponse(
+        status=overall,
+        version=_APP_VERSION,
+        dependencies=deps,
+    )
+
+
+async def _check_database() -> DependencyHealth:
+    """Probe database connectivity."""
+    start = time.monotonic()
+    try:
+        from sqlalchemy import text
+
+        from {{ project_slug }}.ports.container import get_container
+
+        container = get_container()
+        uow = container.unit_of_work()
+        async with uow:
+            await uow.session.execute(text("SELECT 1"))
+        latency = (time.monotonic() - start) * MS_PER_SECOND
+        return DependencyHealth(
+            name="database",
+            status=ServiceStatus.HEALTHY,
+            latency_ms=round(latency, 2),
+        )
+    except Exception as exc:  # noqa: BLE001
+        latency = (time.monotonic() - start) * MS_PER_SECOND
+        return DependencyHealth(
+            name="database",
+            status=ServiceStatus.DEGRADED,
+            latency_ms=round(latency, 2),
+            message=type(exc).__name__,
+        )
+
+
+async def _check_cache() -> DependencyHealth:
+    """Probe cache connectivity via the DI container."""
+    start = time.monotonic()
+    try:
+        from {{ project_slug }}.ports.container import get_container
+
+        container = get_container()
+        cache = container.cache()
+        await cache.get("__health_probe__")
+        latency = (time.monotonic() - start) * MS_PER_SECOND
+        return DependencyHealth(
+            name="cache",
+            status=ServiceStatus.HEALTHY,
+            latency_ms=round(latency, 2),
+        )
+    except Exception as exc:  # noqa: BLE001
+        latency = (time.monotonic() - start) * MS_PER_SECOND
+        return DependencyHealth(
+            name="cache",
+            status=ServiceStatus.DEGRADED,
+            latency_ms=round(latency, 2),
+            message=type(exc).__name__,
+        )

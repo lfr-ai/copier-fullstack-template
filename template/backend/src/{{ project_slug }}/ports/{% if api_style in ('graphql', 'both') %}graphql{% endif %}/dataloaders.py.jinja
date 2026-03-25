@@ -1,0 +1,53 @@
+"""Strawberry DataLoaders for batching and caching GraphQL field resolution.
+
+DataLoaders are instantiated per-request inside the GraphQL context
+to prevent cross-request cache leaks. They batch database calls
+for N+1 prevention, following the official Strawberry pattern.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import strawberry
+from strawberry.dataloader import DataLoader
+
+if TYPE_CHECKING:
+    from {{ project_slug }}.ports.graphql.types import UserType
+
+
+async def _load_users_batch(keys: list[str]) -> list[UserType | ValueError]:
+    """Batch-load users by their IDs.
+
+    Returns a list aligned with 'keys'. Missing users are
+    represented as 'ValueError' instances so the DataLoader
+    can surface per-key errors without failing the entire batch.
+    """
+    from {{ project_slug }}.ports.container import get_container
+    from {{ project_slug }}.ports.graphql.types import UserType
+
+    container = get_container()
+    service = container.user_service()
+
+    users_by_id = await service.get_users_by_ids(list(keys))
+
+    results: list[UserType | ValueError] = []
+    for key in keys:
+        dto = users_by_id.get(key)
+        if dto is not None:
+            results.append(
+                UserType(
+                    id=strawberry.ID(dto.id),
+                    email=dto.email,
+                    display_name=dto.display_name,
+                    is_active=dto.is_active,
+                )
+            )
+        else:
+            results.append(ValueError(f"User {key} not found"))
+    return results
+
+
+def create_user_loader() -> DataLoader[str, UserType]:
+    """Factory for a per-request user DataLoader."""
+    return DataLoader(load_fn=_load_users_batch)

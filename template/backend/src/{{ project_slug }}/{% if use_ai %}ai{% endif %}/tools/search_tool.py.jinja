@@ -1,0 +1,59 @@
+"""Search tool — wraps vector store for agent and MCP usage."""
+
+from __future__ import annotations
+
+import structlog
+
+from {{ project_slug }}.ai.config import DEFAULT_SIMILARITY_TOP_K
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class SearchTool:
+    """Tool for semantic document search.
+
+    Usable by agents and MCP tool registrations.
+    """
+
+    __slots__ = ("_embedding", "_vector_store")
+
+    def __init__(
+        self,
+        *,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+    ) -> None:
+        self._embedding = embedding
+        self._vector_store = vector_store
+
+    async def execute(
+        self,
+        *,
+        query: str,
+        top_k: int = DEFAULT_SIMILARITY_TOP_K,
+        filters: dict[str, object] | None = None,
+    ) -> list[dict[str, object]]:
+        """Execute a semantic search.
+
+        Args:
+            query (str): Natural language search query.
+            top_k (int): Number of results.
+            filters (dict[str, object] | None): Optional metadata filters.
+
+        Returns:
+            list[dict[str, object]]: Result dicts with id, score, and content.
+        """
+        query_vector = await self._embedding.embed_text(query)
+        results = await self._vector_store.search(
+            query_vector=query_vector,
+            top_k=top_k,
+            filters=filters,
+        )
+        return [
+            {
+                "id": r.id,
+                "score": r.score,
+                "content": str(r.metadata.get("content", "")) if r.metadata else "",
+            }
+            for r in results
+        ]

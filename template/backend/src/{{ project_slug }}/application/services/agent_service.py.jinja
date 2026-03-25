@@ -1,0 +1,87 @@
+"""Agent application service."""
+
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+
+from {{ project_slug }}.application.dtos.agent_dto import AgentResultDTO, AgentTaskDTO
+from {{ project_slug }}.application.services.base import BaseService
+from {{ project_slug }}.core.interfaces.agent_orchestrator import AgentOrchestratorPort, AgentState
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+class AgentService(BaseService):
+    """Application-level agent execution orchestration.
+
+    Dispatches tasks to the appropriate agent backend (ReAct,
+    tool-calling, or LangGraph multi-agent orchestrator) and
+    maps results to application DTOs.
+    """
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+        orchestrator: AgentOrchestratorPort,
+    ) -> None:
+        super().__init__(uow=uow)
+        self._orchestrator = orchestrator
+
+    async def execute(self, dto: AgentTaskDTO) -> AgentResultDTO:
+        """Execute an agent task.
+
+        Args:
+            dto (AgentTaskDTO): Agent task parameters.
+
+        Returns:
+            AgentResultDTO: Execution result with answer and steps.
+        """
+        self._logger.info(
+            "agent_execute",
+            agent_type=dto.agent_type,
+            task_length=len(dto.task),
+            max_steps=dto.max_steps,
+        )
+
+        initial_state = AgentState(
+            messages=[{"role": "user", "content": dto.task}],
+            context={"agent_type": dto.agent_type, "tools": dto.tools},
+        )
+
+        result = await self._orchestrator.run(
+            goal=dto.task,
+            state=initial_state,
+            config={"max_steps": dto.max_steps},
+        )
+
+        self._logger.info(
+            "agent_execute_complete",
+            success=result.success,
+            total_steps=result.total_steps,
+        )
+
+        return AgentResultDTO(
+            task=dto.task,
+            answer=result.answer,
+            steps=result.agent_trace,
+            tool_calls=result.total_steps,
+            success=result.success,
+        )
+
+    async def execute_streaming(self, dto: AgentTaskDTO) -> AsyncIterator[dict[str, object]]:
+        """Stream agent execution steps as they happen.
+
+        Yields:
+            Dicts with step information (agent name, action, output).
+        """
+        self._logger.info("agent_stream_start", task_length=len(dto.task))
+
+        initial_state = AgentState(
+            messages=[{"role": "user", "content": dto.task}],
+            context={"agent_type": dto.agent_type, "tools": dto.tools},
+        )
+
+        async for step in self._orchestrator.stream(
+            goal=dto.task,
+            state=initial_state,
+            config={"max_steps": dto.max_steps},
+        ):
+            yield step

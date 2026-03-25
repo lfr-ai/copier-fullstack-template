@@ -7,12 +7,15 @@
 
 import { z } from 'zod';
 
-// ── User ──────────────────────────────────────────────────────────
+const _DISPLAY_NAME_MIN = 1;
+const _DISPLAY_NAME_MAX = 100;
+const _PASSWORD_MIN = 8;
+const _PASSWORD_MAX = 128;
 
 export const UserSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
-  display_name: z.string().min(1).max(100),
+  display_name: z.string().min(_DISPLAY_NAME_MIN).max(_DISPLAY_NAME_MAX),
   is_active: z.boolean(),
 });
 
@@ -20,13 +23,11 @@ export type User = z.infer<typeof UserSchema>;
 
 export const CreateUserSchema = z.object({
   email: z.string().email(),
-  display_name: z.string().min(1).max(100),
-  password: z.string().min(8).max(128),
+  display_name: z.string().min(_DISPLAY_NAME_MIN).max(_DISPLAY_NAME_MAX),
+  password: z.string().min(_PASSWORD_MIN).max(_PASSWORD_MAX),
 });
 
 export type CreateUser = z.infer<typeof CreateUserSchema>;
-
-// ── Pagination ────────────────────────────────────────────────────
 
 /**
  * Build paginated response schema for a given item schema.
@@ -43,16 +44,12 @@ export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =
     has_more: z.boolean(),
   });
 
-// ── API Error ─────────────────────────────────────────────────────
-
 export const ApiErrorSchema = z.object({
   detail: z.string(),
   status_code: z.number().int(),
 });
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;
-
-// ── Health ────────────────────────────────────────────────────────
 
 export const HealthResponseSchema = z.object({
   status: z.string(),

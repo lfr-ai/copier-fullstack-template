@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
+
 import pytest
 import httpx
 import respx
@@ -16,11 +18,11 @@ class TestHTTPClientAdapter:
     async def test_get_successful(self) -> None:
         """Verify GET request returns response on success."""
         respx.get("https://api.example.com/data").mock(
-            return_value=httpx.Response(200, json={"status": "ok"}),
+            return_value=httpx.Response(HTTPStatus.OK, json={"status": "ok"}),
         )
         adapter = HTTPClientAdapter(base_url="https://api.example.com")
         response = await adapter.get("/data")
-        assert response.status_code == 200
+        assert response.status_code == HTTPStatus.OK
         assert response.json() == {"status": "ok"}
         await adapter.close()
 
@@ -28,18 +30,18 @@ class TestHTTPClientAdapter:
     async def test_post_successful(self) -> None:
         """Verify POST request returns response on success."""
         respx.post("https://api.example.com/items").mock(
-            return_value=httpx.Response(201, json={"id": 1}),
+            return_value=httpx.Response(HTTPStatus.CREATED, json={"id": 1}),
         )
         adapter = HTTPClientAdapter(base_url="https://api.example.com")
         response = await adapter.post("/items", json={"name": "test"})
-        assert response.status_code == 201
+        assert response.status_code == HTTPStatus.CREATED
         await adapter.close()
 
     @respx.mock
     async def test_get_raises_on_error(self) -> None:
         """Verify GET raises HTTPStatusError on server error."""
         respx.get("https://api.example.com/fail").mock(
-            return_value=httpx.Response(500),
+            return_value=httpx.Response(HTTPStatus.INTERNAL_SERVER_ERROR),
         )
         adapter = HTTPClientAdapter(base_url="https://api.example.com")
         with pytest.raises(httpx.HTTPStatusError):

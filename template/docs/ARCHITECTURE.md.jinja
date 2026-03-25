@@ -1,6 +1,10 @@
 
 
 
+This project follows **clean / hexagonal architecture** (ports & adapters).
+The Dependency Rule is the fundamental invariant: source-code dependencies
+always point **inward** toward the pure domain core.
+
 ```
                   Ports (Driving)
    API/REST     Web          CLI
@@ -17,13 +21,36 @@
     Auth  External Services
 ```
 
+### Mapping to Clean Architecture Circles
 
-- **Dependency Inversion**: Core domain has no external dependencies
+| Clean Architecture Circle | Project Layer | Directory |
+|--------------------------|---------------|-----------|
+| Enterprise Business Rules | **Core** | `core/` |
+| Application Business Rules | **Application** | `application/` |
+| Interface Adapters (driving) | **Ports** | `ports/` |
+| Interface Adapters (driven) | **Adapters** | `adapters/` |
+| Frameworks & Drivers | **Infrastructure** | `infrastructure/` |
+
+### Dependency Rule
+
+```text
+adapters → ports → application → core
+              ↑
+        infrastructure
+```
+
+Application services depend on **core protocols** (e.g. `UnitOfWork`,
+`UserRepositoryPort`) — never on concrete adapter classes.  The Unit
+of Work exposes typed repository properties so services access
+persistence without importing adapter modules.
+
+
+- **Dependency Inversion**: Core domain has no external dependencies; adapters implement core protocols
 - **Port Interfaces**: Defined in core, implemented in adapters
 - **Factory Pattern**: Application and API created via factory functions
 - **CQRS-Lite**: Separate command and query handlers
-- **Repository Pattern**: Data access abstracted behind interfaces
-- **Unit of Work**: Transaction management via context managers
+- **Repository Pattern**: Data access abstracted behind core interface protocols
+- **Unit of Work with Repositories**: UoW carries typed repository properties — application services never instantiate concrete repositories
 - **Keyword-Only Arguments**: All constructors use `*` for keyword enforcement
 - **Enum from_str()**: All StrEnums provide `from_str()` classmethod for case-insensitive lookup
 - **Utils as Shared Leaf**: `utils/` imports only stdlib + third-party, never first-party code
@@ -31,25 +58,159 @@
 
 ```
 backend/src/{{ project_slug }}/
-  core/           # Domain logic, entities, enums, interfaces, value objects
+  core/           # Domain logic, entities, enums, interfaces (ports), value objects
   application/    # Use cases, services, DTOs, commands, queries, mappers
-  adapters/       # Infrastructure implementations (DB, cache, email, storage)
-  ports/          # API routes, Web controllers, CLI commands, schemas, DI container
-  config/         # Settings, constants
-  infrastructure/ # Low-level primitives (DB engines, security, scheduling)
+  adapters/       # Driven: DB repos, cache, email, storage, auth adapters
+  ports/          # Driving: API routes, Web controllers, CLI, schemas, DI container
+{%- if api_style in ('graphql', 'both') %}
+    graphql/      # Strawberry GraphQL schema, resolvers, types, dataloaders
+{%- endif %}
+  config/         # Settings, constants, logging
+  infrastructure/ # Low-level primitives (DB engines, security, scheduling, profiling)
   utils/          # Shared utilities (stdlib + third-party only)
+{%- if use_ai %}
   ai/             # LLM adapters, agents, embeddings, prompt templates
+{%- endif %}
 ```
 
 
-1. Request enters via **Port** (API route, CLI command, web controller)
-2. Port delegates to **Application Service**
-3. Service uses **Core Domain** entities and interfaces
-4. **Adapters** implement interfaces for persistence, cache, events
-5. Response flows back through the same path
+1. Request enters via **Port** (API route,{% if api_style in ('graphql', 'both') %} GraphQL resolver,{% endif %} CLI command, web controller)
+2. Port resolves dependencies via **DI Container**
+3. Container injects **Application Service** with UoW (carrying repos)
+4. Service uses **Core Domain** entities and interface protocols
+5. **Adapters** fulfil interface contracts for persistence, cache, events
+6. Response flows back through the same path — DTOs at the boundary
+{%- if api_style in ('graphql', 'both') %}
+
+## GraphQL Layer
+
+The GraphQL endpoint is powered by [Strawberry](https://strawberry.rocks/)
+and follows the same hexagonal architecture as REST routes.
+
+```
+ports/graphql/
+  context.py       # GraphQLContext — BaseContext subclass with DI access
+  dataloaders.py   # Per-request DataLoaders for N+1 prevention
+  extensions.py    # Schema extensions (QueryDepthLimiter)
+  mutations.py     # Root Mutation type
+  permissions.py   # IsAuthenticated permission class
+  queries.py       # Root Query type
+  router.py        # ProductionGraphQLRouter (error masking, structlog)
+  schema.py        # strawberry.Schema assembly
+{%- if use_graphql_subscriptions %}
+  subscriptions.py # Root Subscription type (WebSocket transport)
+{%- endif %}
+  types.py         # Strawberry object / input types
+```
+
+### GraphQL Design Principles
+
+- **Thin resolvers**: Resolvers delegate to the application service
+  layer; no domain logic lives inside GraphQL types.
+- **DataLoaders**: Batch database fetches are used to prevent N+1
+  queries. Each DataLoader is instantiated per-request in the context.
+- **Query depth limiting**: A Strawberry 'SchemaExtension' rejects
+  deeply nested queries to prevent denial-of-service abuse.
+- **Error masking**: In production mode, internal errors are replaced
+  with a generic message while full details are logged.
+- **Permission classes**: Strawberry's `BasePermission` is used for
+  field-level authorization (e.g. `IsAuthenticated`).
+{%- if api_style == 'both' %}
+- **Coexistence with REST**: Both transports share the same application
+  services, ensuring consistent business logic regardless of API style.
+{%- endif %}
+
+See [GRAPHQL.md](GRAPHQL.md) for the full GraphQL reference.
+{%- endif %}
 
 
 Settings are loaded from environment variables with pydantic-settings.
 Environment-specific settings classes override base defaults.
 
 See `config/settings/` for details.
+{%- if use_ai %}
+
+## AI Module Architecture
+
+The `ai/` directory implements a secondary **hexagonal layer** specifically for
+AI/ML functionality.  It follows the same ports & adapters pattern: core
+interfaces live in `core/interfaces/` and concrete adapters live in `ai/`.
+
+```
+ai/
+  agents/          # Agent framework (ReAct, ToolCalling, LangGraph orchestrator)
+  chains/          # LangChain LCEL / LlamaIndex / Summarization / Refinement chains
+  config.py        # AI settings and defaults
+  document_loaders/# File, web, and framework-specific loaders
+  embeddings/      # Embedding adapters via LiteLLM (OpenAI, Azure, 50+) + SentenceTransformers
+  evaluation/      # LLM output quality assessment (LLM-as-judge, batch scoring)
+  guardrails/      # Input/output safety validation (rule-based, LLM-based)
+  knowledge_graph/ # NetworkX (local) + Neo4j (production) + RDFLib (RDF/SPARQL) + LLM extraction + external KGs (Wikidata, DBpedia, ConceptNet)
+  llm/             # LLM adapters via LiteLLM (OpenAI, Azure, Anthropic, 100+) + gateway
+  mcp/             # Model Context Protocol server + client (streamable-http transport)
+  memory/          # Conversation memory (in-memory, Redis, PostgreSQL)
+  models/          # Pydantic request/response models (shared contract for routes/services)
+  observability/   # AI tracing and telemetry (structlog, OpenTelemetry)
+  prompts/         # Prompt templates (Jinja2-based) + manager/registry
+  rag/             # RAG pipelines (ingestion, vector/graph/ensemble retrievers, reranker)
+    retrievers/    # Vector, graph, ensemble, LlamaIndex retrievers
+    rerankers/     # Cross-encoder reranker (sentence-transformers)
+  services/        # AIService, RAGService
+  text_splitter.py # Recursive text splitting
+  tools/           # Agent/MCP tools (search, ingest, calculator, web_search, database_query)
+  vector_stores/   # FAISS, pgvector, Azure AI Search adapters
+  workflows/       # LangGraph StateGraph workflow engine (durable, checkpointed)
+                   #   checkpointers.py — PostgreSQL (prod) / SQLite (staging) / memory (dev)
+```
+
+### AI Core Interfaces (Ports)
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| `LLMPort` | `core/interfaces/llm.py` | Text completion and streaming |
+| `EmbeddingPort` | `core/interfaces/embedding.py` | Text → vector embedding |
+| `VectorStorePort` | `core/interfaces/vector_store.py` | Vector CRUD and similarity search |
+| `DocumentLoaderPort` | `core/interfaces/document_loader.py` | Load documents from sources |
+| `TextSplitterPort` | `core/interfaces/text_splitter.py` | Split documents into chunks |
+| `KnowledgeGraphPort` | `core/interfaces/knowledge_graph.py` | Entity/relation CRUD |
+| `SPARQLQueryPort` | `core/interfaces/knowledge_graph.py` | SPARQL query execution (RDFLib) |
+| `ExternalKnowledgeGraphPort` | `core/interfaces/knowledge_graph.py` | External KG lookup (Wikidata, DBpedia, ConceptNet) |
+| `RetrieverPort` | `core/interfaces/retriever.py` | High-level retrieval abstraction |
+| `ConversationMemoryPort` | `core/interfaces/conversation_memory.py` | Conversation history |
+| `MCPServerPort` | `core/interfaces/mcp_server.py` | MCP server lifecycle + streamable-http |
+| `MCPClientPort` | `core/interfaces/mcp_client.py` | MCP client operations (streamable-http) |
+| `AgentRegistryPort` | `core/interfaces/agent_registry.py` | HMAS agent discovery + routing |
+| `AgentOrchestratorPort` | `core/interfaces/agent_orchestrator.py` | Multi-agent plan/execute |
+| `WorkflowEnginePort` | `core/interfaces/workflow_engine.py` | Stateful agent graph execution (LangGraph) |
+| `ToolPort` | `core/interfaces/tool.py` | Agent-callable tool abstraction |
+| `ChainPort` | `core/interfaces/chain.py` | LLM chain composition (batch + streaming) |
+| `EvaluatorPort` | `core/interfaces/evaluator.py` | LLM output quality evaluation (LLM-as-judge) |
+| `RerankerPort` | `core/interfaces/reranker.py` | Search result reranking |
+| `PromptTemplatePort` | `core/interfaces/prompt_template.py` | Structured prompt management (Jinja2) |
+| `GuardrailPort` | `core/interfaces/guardrail.py` | Input/output safety validation |
+| `ObservabilityPort` | `core/interfaces/observability.py` | AI tracing and telemetry |
+
+### AI Data Flow
+
+```
+Document → Loader → Splitter → Embedder → VectorStore
+                                              ↓
+Query → Embedder → VectorStore.search → Reranker → LLM.complete → Guardrail → Response
+                   KnowledgeGraph.query ↗
+
+Goal → Orchestrator → [Agent₁, Agent₂, …] → Tool calls → Review → Answer
+
+Goal → WorkflowEngine (LangGraph StateGraph)
+         ├─ Router → Planner → Executor → Reviewer → Router (loop)
+         ├─ Checkpointing (PostgreSQL prod / SQLite staging / memory dev)
+         └─ Final Answer
+
+Evaluation: LLM Output → Evaluator (LLM-as-judge) → EvalResult (score, passed, reason)
+
+MCP Server ← FastMCP + streamable-http + structured output (outputSchema)
+  ├─ Tools: search_documents, complete_text, run_rag_query, query_knowledge_graph, evaluate_output, ...
+  ├─ Resources: config://ai-settings, status://health
+  └─ Prompts: rag_query, summarize_document, extract_entities
+```
+{%- endif %}
+

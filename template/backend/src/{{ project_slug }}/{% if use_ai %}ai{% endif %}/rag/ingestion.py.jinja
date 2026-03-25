@@ -1,0 +1,99 @@
+"""RAG ingestion pipeline."""
+
+from __future__ import annotations
+
+import structlog
+
+from {{ project_slug }}.core.entities.document import Chunk, Document
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class IngestionPipeline:
+    """Orchestrates document ingestion into the vector store.
+
+    Pipeline stages:
+        1. Load document from source
+        2. Split into chunks
+        3. Generate embeddings for each chunk
+        4. Store vectors with metadata
+    """
+
+    __slots__ = ("_embedding", "_loader", "_splitter", "_vector_store")
+
+    def __init__(
+        self,
+        *,
+        loader: DocumentLoaderPort,
+        splitter: TextSplitterPort,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+    ) -> None:
+        self._loader = loader
+        self._splitter = splitter
+        self._embedding = embedding
+        self._vector_store = vector_store
+
+    async def ingest(self, source: str) -> list[Chunk]:
+        """Ingest a single document source into the vector store.
+
+        Args:
+            source (str): Document source path or URL.
+
+        Returns:
+            list[Chunk]: Stored chunks with embeddings.
+        """
+        documents = await self._loader.load(source)
+        all_chunks: list[Chunk] = []
+
+        for document in documents:
+            chunks = self._splitter.split(document)
+            if not chunks:
+                logger.warning("No chunks generated for document %s", document.id)
+                continue
+
+            texts = [c.content for c in chunks]
+            embeddings = await self._embedding.embed_texts(texts)
+
+            for chunk, emb in zip(chunks, embeddings, strict=True):
+                chunk.embedding = emb
+
+            await self._vector_store.add_vectors(
+                vectors=embeddings,
+                ids=[c.id for c in chunks],
+                metadata=[
+                    {
+                        "document_id": c.document_id,
+                        "content": c.content,
+                        "index": c.index,
+                        **c.metadata,
+                    }
+                    for c in chunks
+                ],
+            )
+
+            all_chunks.extend(chunks)
+
+        logger.info(
+            "Ingested %d chunks from source '%s'",
+            len(all_chunks),
+            source,
+        )
+        return all_chunks
+
+    async def ingest_many(self, sources: list[str]) -> list[Chunk]:
+        """Ingest multiple document sources.
+
+        Args:
+            sources (list[str]): Document source paths or URLs.
+
+        Returns:
+            list[Chunk]: All stored chunks across all sources.
+        """
+        all_chunks: list[Chunk] = []
+        for source in sources:
+            chunks = await self.ingest(source)
+            all_chunks.extend(chunks)
+        return all_chunks

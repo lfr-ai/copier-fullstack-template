@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-__all__ = ["SecurityHeadersMiddleware"]
-
-from typing import Final, override
+from typing import override
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
-_HSTS_MAX_AGE_SECONDS: Final[int] = 63_072_000  # 2 years
+_HSTS_MAX_AGE_SECONDS: int = 63_072_000  # 2 years
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -26,15 +24,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: RequestResponseEndpoint,
     ) -> Response:
-        """Process request and add security headers to response.
-
-        Args:
-            request (Request): Incoming HTTP request.
-            call_next (RequestResponseEndpoint): Next middleware or route handler.
-
-        Returns:
-            Response: HTTP response with security headers applied.
-        """
+        """Process request and add security headers to response."""
         response = await call_next(request)
 
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -55,6 +45,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "base-uri 'self'; "
             "form-action 'self'"
         )
+
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        response.headers["Cache-Control"] = "no-store"
 
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = (

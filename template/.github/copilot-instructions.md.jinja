@@ -1,11 +1,23 @@
 ---
 description: Coding conventions and guidelines
-applyTo: "**/*.py, **/*.html.j2, **/*.js, **/*.ts, **/*.css, **/*.zsh, **/*.azcli"
+applyTo: "**/*.py, **/*.ts, **/*.js, **/*.css, **/*.zsh, **/*.azcli"
 ---
 
 
 
 This document defines coding standards, conventions, and best practices for this codebase
+
+## Skill Packs (`.github/skills/`)
+
+Use the skill files in `.github/skills/` as task-specific playbooks:
+
+- `hexagonal-architecture.md` for clean / hexagonal architecture boundary and Dependency Rule checks
+- `python-conventions.md` for Python code quality and typing standards
+- `testing-conventions.md` for test strategy, markers, and coverage gates
+- `naming-registry.md` for registry-first constant/code generation workflow
+
+When a task clearly matches one of those domains, apply that skill guidance first,
+then apply the general conventions in this file.
 
 Apply principles from PEP 20 (The Zen of Python) throughout:
 
@@ -26,12 +38,12 @@ Apply principles from PEP 20 (The Zen of Python) throughout:
 - Although never is often better than _right_ now
 - If the implementation is hard to explain, it's a bad idea
 - If the implementation is easy to explain, it may be a good idea
-- Namespaces are one honking great idea -- let's do more of those
+- Namespaces are one honking great idea — use them consistently
 
 ---
 
 
-This project follows hexagonal architecture (ports & adapters).
+This project follows clean / hexagonal architecture (ports & adapters). The Dependency Rule is the fundamental invariant.
 
 - **core/**: Domain entities, value objects, interfaces, events (no external deps)
 - **application/**: Use cases, services, DTOs, commands, queries
@@ -48,17 +60,13 @@ This project follows hexagonal architecture (ports & adapters).
 - Test files should be prefixed with `test_`: `test_my_module.py`
 
 
-- Shell scripts MUST use `.zsh` extension: `setup_redis.zsh`
+- Shell scripts MUST use `.zsh` extension: `setup-redis.zsh`
 - Azure CLI scripts MUST use `.azcli` extension: `deploy.azcli`
 - Never use `.sh` extension in this repository
 
 
-- Jinja2 templates MUST use `.html.j2` extension: `index.html.j2`
-- Never use `.html.jinja2`, `.jinja`, or `.jinja2` extensions
-
-
+- Jinja2 HTML templates MUST use `.html.j2` extension if used
 - TypeScript files use `.ts` extension: `app.ts`
-- TypeScript files use `.ts` extension: `registry_constants.ts`
 - CSS files use `.css` extension: `styles.css`
 
 ---
@@ -78,6 +86,7 @@ This project follows hexagonal architecture (ports & adapters).
 - Ensure functions have descriptive names and include type hints
 - Provide docstrings following Google conventions
 - Ensure that sentences in docstrings are complete and clear and NEVER start with articles such as "a", "an", or "the"
+- Use single quotes ('word') in docstrings to reference identifiers — NEVER double backticks
 
 
 - Account for common edge cases like empty inputs, invalid data types, and large datasets
@@ -119,7 +128,8 @@ This project follows hexagonal architecture (ports & adapters).
 
 - Prefer public, UPPER_SNAKE_CASE for constants that are part of the public API
 - Use `_UPPER_SNAKE_CASE` for constants that are internal-only to a module or class
-- Do NOT annotate internal (`_`-prefixed) constants with `Final`; reserve `Final` for public API constants only
+- Do NOT use `Final` or `Final[type]` annotations on any constants — plain `UPPER_SNAKE_CASE` assignment is sufficient
+- The `UPPER_SNAKE_CASE` naming convention already signals immutability intent
 
 
 - Clearly separate public vs. internal by imports in `__init__.py`; avoid `from module import *` and explicitly export public names via `__all__` when useful
@@ -157,9 +167,9 @@ This project follows hexagonal architecture (ports & adapters).
 - Use `Literal` from `typing` for parameters that accept only specific values
 
 
-- Use `Final` from `typing` to mark **public** constants and immutable class/module variables
-- Do NOT use `Final` for internal (`_`-prefixed) constants -- the underscore prefix already signals non-public status
-- Signals intent that a value should never be reassigned
+- Do NOT use `Final` or `Final[type]` from `typing` on any constants
+- Plain `UPPER_SNAKE_CASE` assignment is sufficient to signal immutability
+- `_UPPER_SNAKE_CASE` prefix signals internal-only scope; no `Final` needed
 
 
 - Use `@final` from `typing` to prevent inheritance or method overriding

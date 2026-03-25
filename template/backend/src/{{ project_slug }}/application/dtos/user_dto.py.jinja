@@ -12,9 +12,9 @@ from {{ project_slug }}.core.constants import (
     DISPLAY_NAME_MIN_LENGTH,
     EMAIL_MAX_LENGTH,
     EMAIL_MIN_LENGTH,
+    MIN_PASSWORD_LENGTH,
+    PASSWORD_MAX_LENGTH,
 )
-
-__all__ = ["CreateUserDTO", "UserDTO"]
 
 
 class CreateUserDTO(BaseDTO):
@@ -36,6 +36,14 @@ class CreateUserDTO(BaseDTO):
             max_length=DISPLAY_NAME_MAX_LENGTH,
             description="User display name",
             examples=["Jane Doe"],
+        ),
+    ]
+    password: Annotated[
+        str,
+        Field(
+            min_length=MIN_PASSWORD_LENGTH,
+            max_length=PASSWORD_MAX_LENGTH,
+            description="User password",
         ),
     ]
 

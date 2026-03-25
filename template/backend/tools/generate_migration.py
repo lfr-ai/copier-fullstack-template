@@ -5,9 +5,6 @@ from __future__ import annotations
 import sys
 
 from alembic.config import main as alembic_main
-
-__all__ = ["main"]
-
 _MIN_ARGC = 2
 
 

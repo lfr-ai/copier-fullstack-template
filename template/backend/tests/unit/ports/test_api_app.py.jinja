@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from {{ project_slug }}.config.constants import API_V1_PREFIX
 from {{ project_slug }}.ports.api.app import create_api_app
 
 pytestmark = pytest.mark.asyncio
@@ -30,11 +29,20 @@ class TestCreateApiApp:
         """Verify non-debug mode."""
         app = create_api_app(debug=False)
         assert app.debug is False
+{%- if api_style in ('rest', 'both') %}
 
     def test_openapi_url_configured(self) -> None:
         """Verify OpenAPI URL is set."""
         app = create_api_app()
         assert app.openapi_url == "/api/openapi.json"
+{%- endif %}
+{%- if api_style == 'graphql' %}
+
+    def test_openapi_disabled_in_graphql_only(self) -> None:
+        """Verify OpenAPI is disabled in graphql-only mode."""
+        app = create_api_app()
+        assert app.openapi_url is None
+{%- endif %}
 
     async def test_cors_headers_present(self) -> None:
         """Verify CORS middleware is active."""
@@ -42,7 +50,7 @@ class TestCreateApiApp:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             response = await ac.options(
-                f"{API_V1_PREFIX}/health",
+                "/health",
                 headers={
                     "Origin": "http://localhost:3000",
                     "Access-Control-Request-Method": "GET",
@@ -59,5 +67,5 @@ class TestErrorHandlers:
         app = create_api_app()
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            response = await ac.get(f"{API_V1_PREFIX}/does-not-exist")
+            response = await ac.get("/does-not-exist")
         assert response.status_code in (404, 405)

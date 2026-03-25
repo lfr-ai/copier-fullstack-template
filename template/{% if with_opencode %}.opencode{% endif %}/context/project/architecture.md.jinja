@@ -1,0 +1,25 @@
+{%- if with_opencode %}
+# Project Architecture Context
+
+## Structure
+```
+backend/src/{{ project_slug }}/
+├── adapters/       # External integrations (DB repos, cache, HTTP clients)
+├── application/    # Use cases, services, DTOs
+├── config/         # Settings, logging, constants
+├── core/           # Pure domain (entities, enums, interfaces, value objects)
+├── infrastructure/ # DB engines, HTTP clients, security, profiling
+├── ports/          # API routes, CLI, webhooks, DI container
+└── utils/          # Shared utilities
+```
+
+## Dependency Rule
+`adapters → ports → application → core`
+Application services access repos via UoW properties (`uow.users`), never by importing concrete adapters.
+
+## Key Files
+- `registry/naming_registry.json` — Single source of truth for shared identifiers
+- `opencode.json` — OpenCode configuration (plugins, MCP, permissions)
+- `.opencode/oh-my-opencode.jsonc` — oh-my-opencode plugin configuration
+- `Taskfile.yml` — Task runner commands (`task dev`, `task test`, `task lint`)
+{%- endif %}

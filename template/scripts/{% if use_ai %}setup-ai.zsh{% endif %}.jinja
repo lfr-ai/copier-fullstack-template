@@ -1,0 +1,171 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT NO_UNSET
+
+# ──────────────────────────────────────────────────────────────
+# AI infrastructure setup script
+# Validates AI dependencies, initialises FAISS indices,
+# vector store tables, and knowledge graph backends.
+# ──────────────────────────────────────────────────────────────
+
+SCRIPT_DIR="${0:A:h}"
+PROJECT_ROOT="${SCRIPT_DIR}/../.."
+
+print "╔══════════════════════════════════════════╗"
+print "║ AI Infrastructure Setup ║"
+print "╚══════════════════════════════════════════╝"
+print ""
+
+# ── 1. Validate Python AI dependencies ────────────────────────
+print "▸ Checking AI Python packages..."
+
+check_package() {
+local pkg="${1}"
+if python -c "import ${pkg}" 2>/dev/null; then
+print " ✓ ${pkg}"
+return 0
+else
+print " ✗ ${pkg} (not installed)"
+return 1
+fi
+}
+
+MISSING=0
+{% if use_ai %}
+check_package "openai" || MISSING=1
+check_package "tiktoken" || MISSING=1
+check_package "numpy" || MISSING=1
+{% endif %}
+{% if use_faiss %}
+check_package "faiss" || MISSING=1
+{% endif %}
+{% if use_pgvector %}
+check_package "pgvector" || MISSING=1
+{% endif %}
+{% if use_langchain %}
+check_package "langchain" || MISSING=1
+check_package "langchain_core" || MISSING=1
+{% endif %}
+{% if use_langchain and use_anthropic %}
+check_package "langchain_anthropic" || MISSING=1
+{% endif %}
+{% if use_llamaindex %}
+check_package "llama_index" || MISSING=1
+{% endif %}
+{% if use_agents %}
+check_package "langgraph" || MISSING=1
+check_package "langgraph.checkpoint" || MISSING=1
+check_package "langgraph.checkpoint.sqlite" || MISSING=1
+check_package "langgraph.checkpoint.postgres" || MISSING=1
+{% endif %}
+{% if use_knowledge_graph %}
+check_package "networkx" || MISSING=1
+check_package "rdflib" || MISSING=1
+{% if knowledge_graph_backend == 'neo4j' %}
+check_package "neo4j" || MISSING=1
+{% endif %}
+{% endif %}
+{% if use_mcp %}
+check_package "mcp" || MISSING=1
+{% endif %}
+{% if use_rag %}
+check_package "sentence_transformers" || MISSING=1
+{% endif %}
+{% if use_anthropic %}
+check_package "anthropic" || MISSING=1
+{% endif %}
+
+if (( MISSING )); then
+print ""
+print "WARNING: Some AI packages are missing. Run:"
+print " cd backend && uv sync --group ai"
+print ""
+fi
+
+{% if use_faiss %}
+# ── 2. Initialise FAISS persist directory ─────────────────────
+print ""
+print "▸ Initialising FAISS persist directory..."
+FAISS_DIR="${PROJECT_ROOT}/backend/.faiss_data"
+mkdir -p "${FAISS_DIR}"
+print " ✓ ${FAISS_DIR}"
+{% endif %}
+
+{% if use_knowledge_graph %}
+# ── 3. Initialise knowledge graph data directory ──────────────
+print ""
+print "▸ Initialising knowledge graph data directory..."
+KG_DIR="${PROJECT_ROOT}/backend/.kg_data"
+mkdir -p "${KG_DIR}"
+print " ✓ ${KG_DIR}"
+{% endif %}
+
+{% if use_rag %}
+# ── 4. Create document ingestion directory ────────────────────
+print ""
+print "▸ Creating document ingestion directory..."
+DOCS_DIR="${PROJECT_ROOT}/backend/.rag_documents"
+mkdir -p "${DOCS_DIR}"
+print " ✓ ${DOCS_DIR}"
+{% endif %}
+
+# ── 5. Validate environment variables ─────────────────────────
+print ""
+print "▸ Checking required environment variables..."
+
+check_env() {
+local var="${1}"
+local required="${2:-false}"
+if [[ -n "${(P)var:-}" ]]; then
+print " ✓ ${var} (set)"
+return 0
+elif [[ "${required}" == "true" ]]; then
+print " ✗ ${var} (REQUIRED — not set)"
+return 1
+else
+print " ○ ${var} (optional — not set)"
+return 0
+fi
+}
+
+ENV_OK=0
+{% if use_ai %}
+check_env "{{ project_slug | upper }}_OPENAI_API_KEY" "false" || ENV_OK=1
+{% endif %}
+{% if use_azure_openai %}
+check_env "{{ project_slug | upper }}_AZURE_OPENAI_ENDPOINT" "false" || ENV_OK=1
+check_env "{{ project_slug | upper }}_AZURE_OPENAI_API_KEY" "false" || ENV_OK=1
+{% endif %}
+{% if use_anthropic %}
+check_env "{{ project_slug | upper }}_ANTHROPIC_API_KEY" "false" || ENV_OK=1
+{% endif %}
+{% if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
+check_env "{{ project_slug | upper }}_NEO4J_URI" "false" || ENV_OK=1
+check_env "{{ project_slug | upper }}_NEO4J_PASSWORD" "false" || ENV_OK=1
+{% endif %}
+
+if (( ENV_OK )); then
+print ""
+print "INFO: Some optional environment variables are not set."
+print " AI features relying on those providers will be unavailable."
+fi
+
+# ── 6. Run quick validation ───────────────────────────────────
+print ""
+print "▸ Running AI configuration validation..."
+
+cd "${PROJECT_ROOT}/backend"
+if python -c "
+from {{ project_slug }}.config.settings import get_settings
+settings = get_settings()
+print(f' AI settings loaded OK')
+" 2>/dev/null; then
+print " ✓ AI configuration validated successfully"
+else
+print " [WARN] AI configuration validation failed (check settings/deps)"
+fi
+
+print ""
+print "════════════════════════════════════════════"
+print " AI setup complete"
+print "════════════════════════════════════════════"

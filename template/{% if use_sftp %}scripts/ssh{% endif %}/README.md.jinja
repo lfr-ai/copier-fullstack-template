@@ -1,0 +1,100 @@
+# SSH / SFTP Scripts
+
+Setup, validation, and rollback scripts for SSH key management, server
+configuration, SFTP access, and VS Code SFTP extension support.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `setup-ssh.zsh` | Main setup script for Linux / macOS |
+| `setup-ssh.ps1` | Main setup script for Windows |
+| `validate-ssh.zsh` | Standalone validation (no changes) |
+| `rollback-ssh.zsh` | Undo / rollback changes |
+| `sftp.json.example` | VS Code SFTP config template |
+| `ssh_config.example` | SSH client config template |
+| `sshd_hardening.conf` | Server hardening config template |
+
+## Quick Start
+
+### Client setup (connect to a remote server)
+
+```bash
+# Linux / macOS
+zsh scripts/ssh/setup-ssh.zsh --mode client --remote-host myserver.example.com
+
+# Windows (PowerShell)
+.\scripts\ssh\setup-ssh.ps1 -Mode Client -RemoteHost myserver.example.com
+```
+
+### Server setup (accept incoming SSH/SFTP connections)
+
+```bash
+# Linux / macOS (requires root for sshd config)
+sudo zsh scripts/ssh/setup-ssh.zsh --mode server --harden --install-server
+
+# Windows (requires Administrator for OpenSSH Server)
+.\scripts\ssh\setup-ssh.ps1 -Mode Server -Harden -InstallServer
+```
+
+### Both (local machine is both client and server)
+
+```bash
+zsh scripts/ssh/setup-ssh.zsh --mode both --harden --install-server
+```
+
+## Modes
+
+| Mode | What it does |
+|------|--------------|
+| `client` | Generate key pair, create SSH/SFTP config, optionally install key on remote |
+| `server` | Install/configure sshd, enable SFTP, install authorized keys, harden config |
+| `both` | All of the above |
+
+## Dry Run
+
+Preview all changes without applying them:
+
+```bash
+zsh scripts/ssh/setup-ssh.zsh --mode both --dry-run
+```
+
+## Validation
+
+Check an existing setup without making changes:
+
+```bash
+zsh scripts/ssh/validate-ssh.zsh --check-server --remote-host myserver.example.com
+```
+
+## Rollback
+
+Undo specific changes with confirmation prompts:
+
+```bash
+zsh scripts/ssh/rollback-ssh.zsh --remove-keys --remove-sftp-json --dry-run
+zsh scripts/ssh/rollback-ssh.zsh --all
+```
+
+## Windows Admin vs Standard User
+
+The scripts automatically detect privilege level and use the correct
+authorized keys location:
+
+| Account Type | Authorized Keys Path |
+|---|---|
+| Standard user | `%USERPROFILE%\.ssh\authorized_keys` |
+| Administrator | `%ProgramData%\ssh\administrators_authorized_keys` |
+
+The PowerShell script sets Windows ACLs (not Unix chmod) on all SSH files.
+
+## Security Defaults
+
+- **Ed25519** key type (override with `--key-type rsa`)
+- **Passphrase-protected** private keys (override with `--no-passphrase`)
+- **StrictHostKeyChecking ask** for new hosts
+- **IdentitiesOnly yes** to avoid agent key leakage
+- **No root login** when `--harden` is used
+- **No password auth** when `--harden` is used
+- Keys are **never** stored in the repository
+- `.vscode/sftp.json` is **git-ignored**

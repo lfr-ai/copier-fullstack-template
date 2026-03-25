@@ -119,3 +119,19 @@ uv_sync_flags =
 --link-mode=copy
 commands =
 pytest registry/tests/ -v --tb=short {posargs}
+
+[testenv:links]
+description = Check for broken links with lychee
+skip_install = true
+allowlist_externals = lychee
+changedir = {toxinidir}
+commands =
+lychee --config .lychee.toml .
+
+[testenv:duplicates]
+description = Detect copy-paste code with jscpd
+skip_install = true
+allowlist_externals = npx
+changedir = {toxinidir}
+commands =
+npx jscpd --config .jscpd.json .

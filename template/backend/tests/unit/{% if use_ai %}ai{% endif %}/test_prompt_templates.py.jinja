@@ -1,0 +1,94 @@
+"""Unit tests for Jinja2PromptTemplate."""
+{%- if use_ai %}
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.ai.prompts.jinja2_templates import Jinja2PromptTemplate
+
+
+@pytest.fixture
+def template_manager() -> Jinja2PromptTemplate:
+    """Create a Jinja2PromptTemplate and register test templates."""
+    mgr = Jinja2PromptTemplate()
+    mgr.register_template(
+        name="greeting",
+        template="Hello, {{ name }}!",
+        description="A simple greeting template",
+    )
+    mgr.register_template(
+        name="qa",
+        template="Context: {{ context }}\n\nQuestion: {{ question }}\n\nAnswer:",
+        description="Question answering template",
+    )
+    return mgr
+
+
+class TestJinja2PromptTemplateRender:
+    """Tests for render()."""
+
+    def test_render_simple(self, template_manager: Jinja2PromptTemplate) -> None:
+        result = template_manager.render(template_name="greeting", variables={"name": "Alice"})
+        assert result == "Hello, Alice!"
+
+    def test_render_qa(self, template_manager: Jinja2PromptTemplate) -> None:
+        result = template_manager.render(
+            template_name="qa",
+            variables={"context": "Python is great.", "question": "What is Python?"},
+        )
+        assert "Python is great." in result
+        assert "What is Python?" in result
+
+    def test_render_unknown_template_raises(
+        self,
+        template_manager: Jinja2PromptTemplate,
+    ) -> None:
+        with pytest.raises(KeyError):
+            template_manager.render(template_name="nonexistent", variables={})
+
+    def test_render_builtin_rag_query(self) -> None:
+        mgr = Jinja2PromptTemplate()
+        result = mgr.render(
+            template_name="rag_query",
+            variables={"context": "AI context", "question": "What?"},
+        )
+        assert "AI context" in result
+        assert "What?" in result
+
+
+class TestJinja2PromptTemplateList:
+    """Tests for list_templates()."""
+
+    def test_list_returns_registered(
+        self,
+        template_manager: Jinja2PromptTemplate,
+    ) -> None:
+        names = template_manager.list_templates()
+        assert "greeting" in names
+        assert "qa" in names
+
+    def test_list_includes_builtins(self) -> None:
+        mgr = Jinja2PromptTemplate()
+        names = mgr.list_templates()
+        assert "rag_query" in names
+        assert "summarize" in names
+        assert "entity_extraction" in names
+
+
+class TestJinja2PromptTemplateRegister:
+    """Tests for register_template()."""
+
+    def test_register_new_template(self) -> None:
+        mgr = Jinja2PromptTemplate()
+        mgr.register_template(name="custom", template="Hi {{ user }}", description="Custom")
+        result = mgr.render(template_name="custom", variables={"user": "Bob"})
+        assert result == "Hi Bob"
+
+    def test_register_overwrites_existing(self, template_manager: Jinja2PromptTemplate) -> None:
+        template_manager.register_template(name="greeting", template="Hey {{ name }}!")
+        result = template_manager.render(template_name="greeting", variables={"name": "Eve"})
+        assert result == "Hey Eve!"
+{%- else %}
+# Prompt template tests are only generated when use_ai is enabled.
+{%- endif %}

@@ -1,0 +1,213 @@
+"""Strawberry GraphQL root query type."""
+
+from __future__ import annotations
+
+from importlib.metadata import version
+
+import strawberry
+
+from {{ project_slug }}.core.enums import ServiceStatus
+from {{ project_slug }}.ports.graphql.context import GraphQLContext
+from {{ project_slug }}.ports.graphql.types import (
+    DependencyHealthType,
+    HealthType,
+    UserConnection,
+    UserType,
+{%- if use_ai %}
+    CompletionInput,
+    CompletionResult,
+{%- endif %}
+{%- if use_rag %}
+    RAGQueryInput,
+    RAGResult,
+    RetrievedChunk,
+{%- endif %}
+)
+
+_DEFAULT_PAGE_LIMIT: int = 20
+_MS_PER_SECOND: int = 1000
+_ERROR_MSG_MAX_LEN: int = 200
+{%- if use_ai %}
+_DEFAULT_MAX_TOKENS: int = 256
+_DEFAULT_TEMPERATURE: float = 0.7
+{%- endif %}
+{%- if use_rag %}
+_DEFAULT_RAG_TOP_K: int = 5
+{%- endif %}
+
+
+@strawberry.type(description="Root query type.")
+class Query:
+    """All top-level GraphQL queries."""
+
+    @strawberry.field(description="Application health check.")
+    async def health(self, info: strawberry.Info[GraphQLContext]) -> HealthType:
+        """Return application health status."""
+        app_version = version("{{ project_slug }}")
+        return HealthType(
+            status=ServiceStatus.HEALTHY.value,
+            version=app_version,
+            dependencies=[],
+        )
+
+    @strawberry.field(description="Application readiness check with dependency probes.")
+    async def health_ready(self, info: strawberry.Info[GraphQLContext]) -> HealthType:
+        """Return readiness status including dependency health."""
+        app_version = version("{{ project_slug }}")
+        deps: list[DependencyHealthType] = []
+
+        # Database probe
+        db_dep = await _probe_database()
+        deps.append(db_dep)
+
+        # Cache probe
+        cache_dep = await _probe_cache()
+        deps.append(cache_dep)
+
+        overall = (
+            ServiceStatus.HEALTHY.value
+            if all(d.status == ServiceStatus.HEALTHY.value for d in deps)
+            else ServiceStatus.DEGRADED.value
+        )
+        return HealthType(status=overall, version=app_version, dependencies=deps)
+
+    @strawberry.field(description="Retrieve a single user by ID.")
+    async def user(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        id: strawberry.ID,
+    ) -> UserType | None:
+        """Resolve a single user by identifier.
+
+        Uses the per-request DataLoader for automatic batching
+        when multiple user lookups happen in a single query.
+        Returns 'None' when the user is not found.
+        """
+        try:
+            return await info.context.user_loader.load(str(id))
+        except Exception:  # noqa: BLE001
+            return None
+
+    @strawberry.field(description="List users (paginated).")
+    async def users(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        offset: int = 0,
+        limit: int = _DEFAULT_PAGE_LIMIT,
+    ) -> UserConnection:
+        """Resolve a paginated list of users.
+
+        Stub: wire to 'UserService.list_users(offset, limit)' for real data.
+        """
+        return UserConnection(
+            items=[],
+            total=0,
+            offset=offset,
+            limit=limit,
+            has_more=False,
+        )
+{%- if use_ai %}
+
+    @strawberry.field(description="Execute an AI completion request.")
+    async def completion(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: CompletionInput,
+    ) -> CompletionResult:
+        """Run an LLM completion via the AI service."""
+        from {{ project_slug }}.ai.models import CompletionRequest
+
+        service = info.context.ai_service
+        request = CompletionRequest(
+            prompt=input.prompt,
+            max_tokens=input.max_tokens or _DEFAULT_MAX_TOKENS,
+            temperature=input.temperature or _DEFAULT_TEMPERATURE,
+        )
+        result = await service.complete(request)
+        return CompletionResult(
+            text=result.content,
+            model=result.model,
+            tokens_used=result.total_tokens,
+        )
+{%- endif %}
+{%- if use_rag %}
+
+    @strawberry.field(description="Query the RAG pipeline.")
+    async def rag_query(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: RAGQueryInput,
+    ) -> RAGResult:
+        """Execute a retrieval-augmented generation query."""
+        from {{ project_slug }}.ai.models import RAGQueryRequest
+
+        service = info.context.rag_service
+        request = RAGQueryRequest(question=input.query, top_k=input.top_k or _DEFAULT_RAG_TOP_K)
+        result = await service.query(request)
+        chunks = [
+            RetrievedChunk(
+                content=src.content,
+                score=src.score,
+                source=src.id,
+            )
+            for src in result.sources
+        ]
+        return RAGResult(answer=result.answer, chunks=chunks)
+{%- endif %}
+
+
+async def _probe_database() -> DependencyHealthType:
+    """Probe database connectivity."""
+    import time
+
+    start = time.monotonic()
+    try:
+        from sqlalchemy import text
+
+        from {{ project_slug }}.ports.container import get_container
+
+        container = get_container()
+        uow = container.unit_of_work()
+        async with uow:
+            await uow.session.execute(text("SELECT 1"))
+        latency = (time.monotonic() - start) * _MS_PER_SECOND
+        return DependencyHealthType(
+            name="database",
+            status=ServiceStatus.HEALTHY.value,
+            latency_ms=round(latency, 2),
+        )
+    except Exception as exc:  # noqa: BLE001
+        latency = (time.monotonic() - start) * _MS_PER_SECOND
+        return DependencyHealthType(
+            name="database",
+            status=ServiceStatus.DEGRADED.value,
+            latency_ms=round(latency, 2),
+            message=str(exc)[:_ERROR_MSG_MAX_LEN],
+        )
+
+
+async def _probe_cache() -> DependencyHealthType:
+    """Probe cache connectivity."""
+    import time
+
+    start = time.monotonic()
+    try:
+        from {{ project_slug }}.ports.container import get_container
+
+        container = get_container()
+        cache = container.cache()
+        await cache.get("__health_probe__")
+        latency = (time.monotonic() - start) * _MS_PER_SECOND
+        return DependencyHealthType(
+            name="cache",
+            status=ServiceStatus.HEALTHY.value,
+            latency_ms=round(latency, 2),
+        )
+    except Exception as exc:  # noqa: BLE001
+        latency = (time.monotonic() - start) * _MS_PER_SECOND
+        return DependencyHealthType(
+            name="cache",
+            status=ServiceStatus.DEGRADED.value,
+            latency_ms=round(latency, 2),
+            message=str(exc)[:_ERROR_MSG_MAX_LEN],
+        )

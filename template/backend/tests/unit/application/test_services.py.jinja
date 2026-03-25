@@ -10,11 +10,24 @@ from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
 from {{ project_slug }}.application.services.user_service import UserService
 from {{ project_slug }}.core.entities.user import User
 
+
+class _FakePasswordHasher:
+    """Deterministic password hasher for testing."""
+
+    def hash(self, password: str) -> str:
+        return f"hashed:{password}"
+
+    def verify(self, *, password: str, hashed: str) -> bool:
+        return hashed == f"hashed:{password}"
+
 class _FakeUnitOfWork:
     """Fake UoW for testing without database."""
 
     committed: bool = False
     rolled_back: bool = False
+
+    def __init__(self, *, users: object | None = None) -> None:
+        self.users = users
 
     async def __aenter__(self) -> _FakeUnitOfWork:
         return self
@@ -42,10 +55,14 @@ class TestUserService:
         """Verify create_user returns populated UserDTO."""
         repo = AsyncMock()
         repo.add = AsyncMock(side_effect=lambda u: u)
-        uow = _FakeUnitOfWork()
+        uow = _FakeUnitOfWork(users=repo)
 
-        service = UserService(user_repository=repo, uow=uow)
-        dto = CreateUserDTO(email="alice@example.com", display_name="Alice")
+        service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
+        dto = CreateUserDTO(
+            email="alice@example.com",
+            display_name="Alice",
+            password="securePassword1!",
+        )
         result = await service.create_user(dto)
 
         assert result.email == "alice@example.com"
@@ -57,10 +74,14 @@ class TestUserService:
         """Verify UoW committed after user creation."""
         repo = AsyncMock()
         repo.add = AsyncMock(side_effect=lambda u: u)
-        uow = _FakeUnitOfWork()
+        uow = _FakeUnitOfWork(users=repo)
 
-        service = UserService(user_repository=repo, uow=uow)
-        dto = CreateUserDTO(email="bob@example.com", display_name="Bob")
+        service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
+        dto = CreateUserDTO(
+            email="bob@example.com",
+            display_name="Bob",
+            password="securePassword1!",
+        )
         await service.create_user(dto)
 
         assert uow.committed is True
@@ -69,10 +90,14 @@ class TestUserService:
         """Verify repository add called with User entity."""
         repo = AsyncMock()
         repo.add = AsyncMock(side_effect=lambda u: u)
-        uow = _FakeUnitOfWork()
+        uow = _FakeUnitOfWork(users=repo)
 
-        service = UserService(user_repository=repo, uow=uow)
-        dto = CreateUserDTO(email="carol@example.com", display_name="Carol")
+        service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
+        dto = CreateUserDTO(
+            email="carol@example.com",
+            display_name="Carol",
+            password="securePassword1!",
+        )
         await service.create_user(dto)
 
         repo.add.assert_called_once()
@@ -85,9 +110,9 @@ class TestUserService:
         user = User(id="u-1", email="d@example.com", display_name="D")
         repo = AsyncMock()
         repo.get_by_id = AsyncMock(return_value=user)
-        uow = _FakeUnitOfWork()
+        uow = _FakeUnitOfWork(users=repo)
 
-        service = UserService(user_repository=repo, uow=uow)
+        service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
         result = await service.get_user("u-1")
 
         assert result.id == "u-1"
@@ -101,7 +126,7 @@ class TestUserService:
         repo.get_by_id = AsyncMock(return_value=None)
         uow = _FakeUnitOfWork()
 
-        service = UserService(user_repository=repo, uow=uow)
+        service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
 
         with pytest.raises(NotFoundError):
             await service.get_user("nonexistent")

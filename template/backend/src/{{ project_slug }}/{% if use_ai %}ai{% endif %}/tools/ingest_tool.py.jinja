@@ -1,0 +1,35 @@
+"""Ingest tool — wraps ingestion pipeline for agent and MCP usage."""
+
+from __future__ import annotations
+
+import structlog
+
+from {{ project_slug }}.ai.rag.ingestion import IngestionPipeline
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class IngestTool:
+    """Tool for document ingestion into the knowledge base.
+
+    Usable by agents and MCP tool registrations.
+    """
+
+    __slots__ = ("_pipeline",)
+
+    def __init__(self, *, pipeline: IngestionPipeline) -> None:
+        self._pipeline = pipeline
+
+    async def execute(self, *, source: str) -> dict[str, object]:
+        """Ingest a document source.
+
+        Args:
+            source (str): File path or URL to ingest.
+
+        Returns:
+            dict[str, object]: Dict with source, document_count, and chunk_count.
+        """
+        chunks = await self._pipeline.ingest(source)
+        return {
+            "source": source,
+            "document_count": 1,
+            "chunk_count": len(chunks),
+        }

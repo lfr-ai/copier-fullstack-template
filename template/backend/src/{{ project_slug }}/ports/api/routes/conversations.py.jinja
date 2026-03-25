@@ -1,0 +1,135 @@
+"""Conversation management API routes — sessions, messages, and history."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel, Field
+
+from {{ project_slug }}.ports.api.dependencies import AIServiceDep, ContainerDep
+
+router = APIRouter()
+
+_DEFAULT_HISTORY_LIMIT: int = 50
+_MAX_HISTORY_LIMIT: int = 200
+_CHAT_MAX_TOKENS: int = 1024
+_CHAT_TEMPERATURE: float = 0.7
+_DEFAULT_TOP_K: int = 5
+_MAX_TOP_K: int = 20
+
+
+class MessageResponse(BaseModel):
+    """Single conversation message."""
+
+    role: str
+    content: str
+    timestamp: datetime | None = None
+
+
+class ConversationListResponse(BaseModel):
+    """List of conversation sessions."""
+
+    sessions: list[str]
+
+
+class ConversationHistoryResponse(BaseModel):
+    """Full conversation history for a session."""
+
+    session_id: str
+    messages: list[MessageResponse]
+
+
+class SendMessageRequest(BaseModel):
+    """Request to send a message in a conversation."""
+
+    content: str
+    use_rag: bool = Field(default=True, description="Whether to use RAG for response generation")
+    top_k: int = Field(default=_DEFAULT_TOP_K, ge=1, le=_MAX_TOP_K)
+
+
+class SendMessageResponse(BaseModel):
+    """Response after sending a message."""
+
+    user_message: MessageResponse
+    assistant_message: MessageResponse
+    sources: list[dict[str, object]] = Field(default_factory=list)
+
+
+@router.get(
+    "/{session_id}/history",
+    response_model=ConversationHistoryResponse,
+    summary="Get conversation history",
+)
+async def get_conversation_history(
+    session_id: str,
+    container: ContainerDep,
+    limit: int = Query(default=_DEFAULT_HISTORY_LIMIT, ge=1, le=_MAX_HISTORY_LIMIT),
+) -> ConversationHistoryResponse:
+    """Retrieve conversation history for a session."""
+    if not hasattr(container, "postgres_memory"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Conversation memory not configured.",
+        )
+    memory = container.postgres_memory()
+
+    messages = await memory.get_messages(session_id, limit=limit)
+    return ConversationHistoryResponse(
+        session_id=session_id,
+        messages=[
+            MessageResponse(
+                role=m.role,
+                content=m.content,
+                timestamp=getattr(m, "timestamp", None),
+            )
+            for m in messages
+        ],
+    )
+
+
+@router.post(
+    "/{session_id}/messages",
+    response_model=SendMessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Send message and get AI response",
+)
+async def send_message(
+    session_id: str,
+    request: SendMessageRequest,
+    ai_service: AIServiceDep,
+) -> SendMessageResponse:
+    """Send a message and receive an AI-generated response."""
+    from {{ project_slug }}.ai.models import CompletionRequest
+
+    result = await ai_service.complete(
+        CompletionRequest(
+            prompt=request.content,
+            max_tokens=_CHAT_MAX_TOKENS,
+            temperature=_CHAT_TEMPERATURE,
+        )
+    )
+
+    now = datetime.now(tz=UTC)
+    return SendMessageResponse(
+        user_message=MessageResponse(role="user", content=request.content, timestamp=now),
+        assistant_message=MessageResponse(role="assistant", content=result.content, timestamp=now),
+        sources=[],
+    )
+
+
+@router.delete(
+    "/{session_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Clear conversation history",
+)
+async def clear_conversation(session_id: str, container: ContainerDep) -> None:
+    """Clear all messages in a conversation session."""
+    if not hasattr(container, "postgres_memory"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Conversation memory not configured.",
+        )
+    memory = container.postgres_memory()
+
+    await memory.clear(session_id)

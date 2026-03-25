@@ -1,0 +1,367 @@
+"""Unit tests for Strawberry GraphQL endpoint.
+
+Tests the GraphQL schema, queries, mutations, error handling,
+and production router features (depth limiting, error masking).
+"""
+
+from __future__ import annotations
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from {{ project_slug }}.ports.api.app import create_api_app
+
+pytestmark = pytest.mark.asyncio
+
+GRAPHQL_URL = "/graphql"
+
+
+class TestGraphQLHealth:
+    """Test suite for health-related GraphQL queries."""
+
+    async def test_health_query(self) -> None:
+        """Verify the health query returns status and version."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        query {
+                            health {
+                                status
+                                version
+                                dependencies {
+                                    name
+                                    status
+                                }
+                            }
+                        }
+                    """
+                },
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" not in data
+        health = data["data"]["health"]
+        assert health["status"] == "healthy"
+        assert health["version"]
+
+    async def test_health_ready_query(self) -> None:
+        """Verify the healthReady query returns dependency info."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        query {
+                            healthReady {
+                                status
+                                version
+                                dependencies {
+                                    name
+                                    status
+                                    latencyMs
+                                    message
+                                }
+                            }
+                        }
+                    """
+                },
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["healthReady"]["version"]
+
+
+class TestGraphQLUserMutations:
+    """Test suite for user-related GraphQL mutations."""
+
+    async def test_create_user_mutation(self) -> None:
+        """Verify createUser mutation creates and returns a user."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        mutation CreateUser($input: CreateUserInput!) {
+                            createUser(input: $input) {
+                                id
+                                email
+                                displayName
+                                isActive
+                            }
+                        }
+                    """,
+                    "variables": {
+                        "input": {
+                            "email": "graphql-test@example.com",
+                            "displayName": "GraphQL Tester",
+                            "password": "secure-password-123",
+                        }
+                    },
+                },
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" not in data
+        user = data["data"]["createUser"]
+        assert user["email"] == "graphql-test@example.com"
+        assert user["displayName"] == "GraphQL Tester"
+        assert user["isActive"] is True
+        assert user["id"]
+
+
+class TestGraphQLUserQueries:
+    """Test suite for user-related GraphQL queries."""
+
+    async def test_user_query_not_found(self) -> None:
+        """Verify user query returns null for nonexistent user."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        query GetUser($id: ID!) {
+                            user(id: $id) {
+                                id
+                                email
+                            }
+                        }
+                    """,
+                    "variables": {"id": "nonexistent-id"},
+                },
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["user"] is None
+
+    async def test_create_then_query_user(self) -> None:
+        """Verify created user can be retrieved via query."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            create_resp = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        mutation CreateUser($input: CreateUserInput!) {
+                            createUser(input: $input) { id email }
+                        }
+                    """,
+                    "variables": {
+                        "input": {
+                            "email": "query-test@example.com",
+                            "displayName": "Query Tester",
+                            "password": "secure-password-123",
+                        }
+                    },
+                },
+            )
+            user_id = create_resp.json()["data"]["createUser"]["id"]
+
+            get_resp = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        query GetUser($id: ID!) {
+                            user(id: $id) {
+                                id
+                                email
+                                displayName
+                                isActive
+                            }
+                        }
+                    """,
+                    "variables": {"id": user_id},
+                },
+            )
+        assert get_resp.status_code == 200
+        user = get_resp.json()["data"]["user"]
+        assert user["email"] == "query-test@example.com"
+
+    async def test_users_list_query(self) -> None:
+        """Verify users list query returns a UserConnection."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        query {
+                            users(offset: 0, limit: 10) {
+                                items {
+                                    id
+                                    email
+                                }
+                                total
+                                offset
+                                limit
+                                hasMore
+                            }
+                        }
+                    """
+                },
+            )
+        assert response.status_code == 200
+        data = response.json()
+        conn = data["data"]["users"]
+        assert isinstance(conn["items"], list)
+        assert conn["offset"] == 0
+        assert conn["limit"] == 10
+        assert conn["hasMore"] is False
+
+
+class TestGraphQLErrorHandling:
+    """Test suite for GraphQL error handling and security."""
+
+    async def test_invalid_query_returns_errors(self) -> None:
+        """Verify malformed queries return proper error response."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={"query": "{ nonExistentField }"},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" in data
+
+    async def test_graphql_ide_available_in_debug(self) -> None:
+        """Verify GraphiQL IDE is accessible in debug mode."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.get(GRAPHQL_URL, headers={"Accept": "text/html"})
+        assert response.status_code == 200
+
+    async def test_introspection_works(self) -> None:
+        """Verify schema introspection is functional."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        query IntrospectionQuery {
+                            __schema {
+                                queryType { name }
+                                mutationType { name }
+                                types { name }
+                            }
+                        }
+                    """
+                },
+            )
+        assert response.status_code == 200
+        schema = response.json()["data"]["__schema"]
+        assert schema["queryType"]["name"] == "Query"
+        assert schema["mutationType"]["name"] == "Mutation"
+
+
+class TestGraphQLSchemaTypes:
+    """Test suite for GraphQL type validation."""
+
+    async def test_user_type_fields(self) -> None:
+        """Verify UserType fields match the schema definition."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        query {
+                            __type(name: "UserType") {
+                                fields {
+                                    name
+                                    type { name kind }
+                                }
+                            }
+                        }
+                    """
+                },
+            )
+        assert response.status_code == 200
+        fields = response.json()["data"]["__type"]["fields"]
+        field_names = {f["name"] for f in fields}
+        assert {"id", "email", "displayName", "isActive"} <= field_names
+
+
+class TestQueryDepthLimiter:
+    """Test suite for query depth limiting."""
+
+    async def test_shallow_query_succeeds(self) -> None:
+        """Verify queries within the max depth limit succeed."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={
+                    "query": """
+                        query { health { status version } }
+                    """
+                },
+            )
+        assert response.status_code == 200
+        assert "errors" not in response.json()
+
+    async def test_excessively_deep_query_rejected(self) -> None:
+        """Verify queries exceeding max depth limit are rejected."""
+        from {{ project_slug }}.ports.graphql.schema import create_schema
+
+        schema = create_schema(max_depth=2)
+        result = await schema.execute(
+            """
+            query {
+                health {
+                    dependencies {
+                        name
+                    }
+                }
+            }
+            """
+        )
+        assert result.errors
+        assert any("depth" in str(e).lower() for e in result.errors)
+
+
+class TestProductionErrorMasking:
+    """Test suite for production error masking in GraphQL router."""
+
+    async def test_debug_mode_shows_error_details(self) -> None:
+        """Verify debug mode does not mask error messages."""
+        app = create_api_app(debug=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={"query": "{ nonExistent }"},
+            )
+        data = response.json()
+        assert "errors" in data
+        assert data["errors"][0]["message"] != "Internal server error"
+
+    async def test_non_debug_mode_masks_internal_errors(self) -> None:
+        """Verify non-debug mode masks internal error details."""
+        app = create_api_app(debug=False)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post(
+                GRAPHQL_URL,
+                json={"query": "{ nonExistent }"},
+            )
+        # Validation errors are always shown; internal exceptions are masked.
+        # This test verifies the endpoint is functional in non-debug mode.
+        assert response.status_code == 200

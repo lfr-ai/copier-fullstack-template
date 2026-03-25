@@ -1,0 +1,37 @@
+"""Strawberry GraphQL schema definition.
+
+Assembles the root 'Query', 'Mutation', and (optionally)
+'Subscription' types into a single 'strawberry.Schema'.
+This is the single source of truth for the GraphQL API.
+"""
+
+from __future__ import annotations
+
+import strawberry
+from strawberry.extensions import QueryDepthLimiter
+
+from {{ project_slug }}.ports.graphql.mutations import Mutation
+from {{ project_slug }}.ports.graphql.queries import Query
+{%- if use_graphql_subscriptions %}
+from {{ project_slug }}.ports.graphql.subscriptions import Subscription
+{%- endif %}
+
+_DEFAULT_MAX_QUERY_DEPTH: int = 10
+
+
+def create_schema(*, max_depth: int = _DEFAULT_MAX_QUERY_DEPTH) -> strawberry.Schema:
+    """Build the Strawberry schema with the given depth limit."""
+    return strawberry.Schema(
+        query=Query,
+        mutation=Mutation,
+{%- if use_graphql_subscriptions %}
+        subscription=Subscription,
+{%- endif %}
+        extensions=[
+            QueryDepthLimiter(max_depth=max_depth),
+        ],
+    )
+
+
+# Default instance for backward-compat / direct usage.
+schema = create_schema()

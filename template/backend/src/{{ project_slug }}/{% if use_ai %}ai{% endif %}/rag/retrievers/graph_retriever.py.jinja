@@ -1,0 +1,112 @@
+"""Graph retriever — knowledge graph traversal for RAG retrieval."""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_ENTITY_EXTRACTION_MAX_TOKENS: int = 128
+_ENTITY_EXTRACTION_TEMPERATURE: float = 0.0
+_DEFAULT_GRAPH_DEPTH: int = 2
+_BASE_DECAY_SCORE: float = 1.0
+_RANK_OFFSET: int = 1
+
+
+class GraphRetriever(RetrieverPort):
+    """Retriever that traverses a knowledge graph for context.
+
+    Extracts entities from the query using the LLM, then
+    traverses the graph to find relevant neighbors.
+
+    Args:
+        knowledge_graph (KnowledgeGraphPort): Knowledge graph port implementation.
+        llm (LLMPort): LLM for entity extraction from queries.
+        depth (int): Graph traversal depth.
+    """
+
+    __slots__ = ("_depth", "_kg", "_llm")
+
+    def __init__(
+        self,
+        *,
+        knowledge_graph: KnowledgeGraphPort,
+        llm: LLMPort,
+        depth: int = _DEFAULT_GRAPH_DEPTH,
+    ) -> None:
+        self._kg = knowledge_graph
+        self._llm = llm
+        self._depth = depth
+
+    @override
+    async def retrieve(
+        self,
+        *,
+        query: str,
+        top_k: int = DEFAULT_GRAPH_NEIGHBOR_LIMIT,
+        filters: dict[str, object] | None = None,
+    ) -> list[RetrievedContext]:
+        """Retrieve context by traversing the knowledge graph.
+
+        Args:
+            query (str): User query text.
+            top_k (int): Maximum number of results.
+            filters (dict[str, object] | None): Optional metadata filters (unused in graph traversal).
+
+        Returns:
+            list[RetrievedContext]: Retrieved context from graph traversal.
+        """
+        # Extract entities from query via LLM
+        extraction_prompt = (
+            f"Extract the key entities (people, concepts, organizations, etc.) "
+            f"from the following query. Return ONLY a comma-separated list.\n\n"
+            f"Query: {query}"
+        )
+        entity_text = await self._llm.complete(
+            prompt=extraction_prompt,
+            system_prompt="Extract entities only. Return comma-separated list.",
+            max_tokens=_ENTITY_EXTRACTION_MAX_TOKENS,
+            temperature=_ENTITY_EXTRACTION_TEMPERATURE,
+        )
+        entities = [e.strip() for e in entity_text.split(",") if e.strip()]
+
+        if not entities:
+            logger.debug("No entities extracted from query")
+            return []
+
+        # Traverse graph for each entity
+        results: list[RetrievedContext] = []
+        seen: set[str] = set()
+
+        for entity in entities:
+            neighbors = await self._kg.query_neighbors(
+                entity,
+                depth=self._depth,
+                limit=top_k,
+            )
+            for neighbor in neighbors:
+                node_id = str(neighbor.get("entity", ""))
+                if node_id and node_id not in seen:
+                    seen.add(node_id)
+                    results.append(RetrievedContext(
+                        id=node_id,
+                        score=_BASE_DECAY_SCORE / (_RANK_OFFSET + len(results)),
+                        content=str(neighbor),
+                        metadata={"source": "knowledge_graph", "entity": entity},
+                    ))
+                    if len(results) >= top_k:
+                        break
+            if len(results) >= top_k:
+                break
+
+        logger.info(
+            "Graph retrieval complete: entities=%d results=%d",
+            len(entities),
+            len(results),
+        )
+        return results[:top_k]

@@ -1,0 +1,92 @@
+"""Ingestion application service."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.application.dtos.ingestion_dto import IngestionRequestDTO, IngestionResultDTO
+from {{ project_slug }}.application.services.base import BaseService
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+_MIN_TRIPLET_TOKENS: int = 3
+"""Minimum whitespace-separated tokens for heuristic triplet extraction."""
+
+class IngestionService(BaseService):
+    """Application-level document ingestion orchestration.
+
+    Coordinates loading, splitting, embedding, vector storage,
+    and optional knowledge graph construction for incoming documents.
+    """
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+        loader: DocumentLoaderPort,
+        splitter: TextSplitterPort,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+        knowledge_graph: KnowledgeGraphPort | None = None,
+    ) -> None:
+        super().__init__(uow=uow)
+        self._loader = loader
+        self._splitter = splitter
+        self._embedding = embedding
+        self._vector_store = vector_store
+        self._knowledge_graph = knowledge_graph
+
+    async def ingest(self, dto: IngestionRequestDTO) -> IngestionResultDTO:
+        """Ingest a document through the full RAG pipeline."""
+        self._logger.info("ingestion_start", source=dto.source, strategy=dto.chunking_strategy)
+
+        documents = await self._loader.load(source=dto.source)
+        total_chunks = 0
+
+        for doc in documents:
+            chunks = self._splitter.split(doc)
+            if not chunks:
+                continue
+
+            texts = [c.content for c in chunks]
+            embeddings = await self._embedding.embed_texts(texts=texts)
+            ids = [c.id for c in chunks]
+            metadata = [{"content": c.content, "document_id": c.document_id, "index": c.index} for c in chunks]
+            await self._vector_store.add_vectors(vectors=embeddings, ids=ids, metadata=metadata)
+            total_chunks += len(chunks)
+
+            # Optionally build knowledge graph from chunks
+            if dto.build_knowledge_graph and self._knowledge_graph:
+                await self._extract_graph_triplets(texts)
+
+        self._logger.info(
+            "ingestion_complete",
+            source=dto.source,
+            document_count=len(documents),
+            chunk_count=total_chunks,
+        )
+        return IngestionResultDTO(
+            source=dto.source,
+            document_count=len(documents),
+            chunk_count=total_chunks,
+            success=True,
+        )
+
+    async def _extract_graph_triplets(self, texts: list[str]) -> None:
+        """Extract and store knowledge graph triplets from text chunks."""
+        if self._knowledge_graph is None:
+            return
+        for text in texts:
+            # Simple heuristic: split sentences looking for entity-relation patterns.
+            # Production systems should use an LLM or NER pipeline here.
+            parts = text.split(".")
+            for part in parts:
+                tokens = part.strip().split()
+                if len(tokens) >= _MIN_TRIPLET_TOKENS:
+                    await self._knowledge_graph.add_triplet(
+                        subject=tokens[0],
+                        predicate=tokens[1],
+                        obj=" ".join(tokens[2:]),
+                    )

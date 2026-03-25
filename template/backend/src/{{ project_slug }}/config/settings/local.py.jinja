@@ -4,10 +4,6 @@ from __future__ import annotations
 
 from {{ project_slug }}.config.settings.base import BaseAppSettings
 from {{ project_slug }}.core.enums.environment import Environment
-
-__all__ = ["LocalSettings"]
-
-
 class LocalSettings(BaseAppSettings):
     """Settings for local development environment."""
 

@@ -1,0 +1,36 @@
+"""Document entity — domain model for ingested documents and chunks."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from {{ project_slug }}.core.entities.base import Entity, generate_id
+@dataclass(slots=True)
+class Document(Entity):
+    """Domain entity representing an ingested document.
+
+    Documents are the primary input to the RAG pipeline. They are
+    split into 'Chunk' instances for embedding and retrieval.
+    """
+
+    content: str = ""
+    source: str = ""
+    content_type: str = "text/plain"
+    metadata: dict[str, object] = field(default_factory=dict)
+    chunks: list[Chunk] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class Chunk:
+    """Chunk of a document, ready for embedding.
+
+    Chunks are the unit of retrieval in the RAG pipeline. Each
+    chunk has an embedding vector after processing.
+    """
+
+    id: str = field(default_factory=generate_id)
+    document_id: str = ""
+    content: str = ""
+    index: int = 0
+    metadata: dict[str, object] = field(default_factory=dict)
+    embedding: list[float] = field(default_factory=list)

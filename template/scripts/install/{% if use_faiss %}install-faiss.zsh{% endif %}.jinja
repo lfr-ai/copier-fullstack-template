@@ -1,0 +1,92 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Install FAISS CPU library and Python bindings.
+# Supports Linux and macOS via pip; system-level deps for optimised builds.
+
+detect_platform() {
+emulate -L zsh
+local os_type
+os_type="$(uname -s)"
+case "${os_type}" in
+Linux)
+if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+print "wsl"
+else
+print "linux"
+fi
+;;
+Darwin) print "macos" ;;
+*) print "unknown" ;;
+esac
+}
+
+check_existing() {
+emulate -L zsh
+if python3 -c "import faiss; print(f'faiss-cpu {faiss.__version__}')" 2>/dev/null; then
+return 0
+fi
+return 1
+}
+
+install_faiss_linux() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "Installing FAISS system dependencies on Linux..."
+if command -v apt-get &>/dev/null; then
+sudo apt-get update -qq
+sudo apt-get install -y --no-install-recommends \
+libblas-dev liblapack-dev libopenblas-dev
+elif command -v dnf &>/dev/null; then
+sudo dnf install -y openblas-devel lapack-devel
+fi
+
+print "Installing faiss-cpu via pip..."
+pip install --upgrade "faiss-cpu>=1.13"
+}
+
+install_faiss_macos() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "Installing FAISS on macOS..."
+if command -v brew &>/dev/null; then
+brew install openblas
+fi
+pip install --upgrade "faiss-cpu>=1.13"
+}
+
+main() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "==== FAISS Installation ===="
+if check_existing; then
+print "FAISS is already installed."
+return 0
+fi
+
+local platform
+platform="$(detect_platform)"
+
+case "${platform}" in
+linux|wsl) install_faiss_linux ;;
+macos) install_faiss_macos ;;
+*)
+print "Unsupported platform: ${platform}" >&2
+return 1
+;;
+esac
+
+# Verify installation
+if check_existing; then
+print "FAISS installed successfully."
+else
+print "FAISS installation verification failed." >&2
+return 1
+fi
+}
+
+main "$@"

@@ -1,0 +1,11 @@
+"""Shared configuration for all property-based tests.
+
+Automatically applies 'pytest.mark.property' to every test collected
+under 'tests/property/'.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+pytestmark = pytest.mark.property

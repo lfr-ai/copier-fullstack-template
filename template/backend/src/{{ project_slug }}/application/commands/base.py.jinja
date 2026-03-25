@@ -5,10 +5,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
-
-__all__ = ["CommandHandler"]
-
-
 class CommandHandler[CommandT, ResultT](ABC):
     """Abstract base for command handlers.
 
@@ -17,21 +13,9 @@ class CommandHandler[CommandT, ResultT](ABC):
     """
 
     def __init__(self, *, uow: UnitOfWork) -> None:
-        """Initialize command handler.
-
-        Args:
-            uow (UnitOfWork): Unit of work for transactional boundaries.
-        """
         self._uow = uow
 
     @abstractmethod
     async def handle(self, command: CommandT) -> ResultT:
-        """Execute command and return result.
-
-        Args:
-            command (CommandT): Command payload to process.
-
-        Returns:
-            ResultT: Command execution result.
-        """
+        """Execute command and return result."""
         ...

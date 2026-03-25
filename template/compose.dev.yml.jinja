@@ -1,4 +1,6 @@
-{# Dev compose override — shared development server with debug + source mounts. -#}
+{# Dev compose override — explicit CI/remote dev environment.
+   For local development, compose.override.yml is auto-loaded instead.
+   Use: docker compose -f compose.yml -f compose.dev.yml up -#}
 services:
   app:
     build:
@@ -16,6 +18,7 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
+    command: ["pnpm", "dev", "--host"]
 {%- if use_celery %}
 
   worker:

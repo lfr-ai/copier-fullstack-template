@@ -1,6 +1,6 @@
 """FastAPI dependency-injection helpers.
 
-Centralise reusable ``Depends(...)`` callables here so that route
+Centralise reusable 'Depends(...)' callables here so that route
 modules stay thin.
 """
 
@@ -13,35 +13,70 @@ from fastapi import Depends, Request
 if TYPE_CHECKING:
     from {{ project_slug }}.application.services.user_service import UserService
     from {{ project_slug }}.config.settings.base import BaseAppSettings
+    from {{ project_slug }}.ports.container import Container
+{%- if use_ai %}
+    from {{ project_slug }}.ai.services import AIService
+{%- endif %}
+{%- if use_rag %}
+    from {{ project_slug }}.ai.services import RAGService
+{%- endif %}
 
-__all__ = ["SettingsDep", "UserServiceDep"]
+__all__ = [
+    "ContainerDep",
+    "SettingsDep",
+    "UserServiceDep",
+{%- if use_ai %}
+    "AIServiceDep",
+{%- endif %}
+{%- if use_rag %}
+    "RAGServiceDep",
+{%- endif %}
+]
+
+
+def _get_container(request: Request) -> "Container":
+    """Retrieve the singleton DI container."""
+    from {{ project_slug }}.ports.container import get_container
+
+    return get_container()
 
 
 def _get_settings(request: Request) -> "BaseAppSettings":
-    """Retrieve the settings instance stored on ``app.state``.
-
-    Args:
-        request (Request): Incoming HTTP request.
-
-    Returns:
-        BaseAppSettings: Application settings attached to ``app.state``.
-    """
+    """Retrieve the settings instance stored on 'app.state'."""
     return request.app.state.settings  # type: ignore[return-value]
 
 
 def _get_user_service(request: Request) -> "UserService":
-    """Retrieve a ``UserService`` from the DI container.
-
-    Args:
-        request (Request): Incoming HTTP request.
-
-    Returns:
-        UserService: Service instance from the DI container.
-    """
+    """Retrieve a 'UserService' from the DI container."""
     from {{ project_slug }}.ports.container import get_container
 
     return get_container().user_service()
 
 
+ContainerDep = Annotated["Container", Depends(_get_container)]
 SettingsDep = Annotated["BaseAppSettings", Depends(_get_settings)]
 UserServiceDep = Annotated["UserService", Depends(_get_user_service)]
+{%- if use_ai %}
+
+
+def _get_ai_service(request: Request) -> "AIService":
+    """Retrieve an 'AIService' from the DI container."""
+    from {{ project_slug }}.ports.container import get_container
+
+    return get_container().ai_service()
+
+
+AIServiceDep = Annotated["AIService", Depends(_get_ai_service)]
+{%- endif %}
+{%- if use_rag %}
+
+
+def _get_rag_service(request: Request) -> "RAGService":
+    """Retrieve a 'RAGService' from the DI container."""
+    from {{ project_slug }}.ports.container import get_container
+
+    return get_container().rag_service()
+
+
+RAGServiceDep = Annotated["RAGService", Depends(_get_rag_service)]
+{%- endif %}

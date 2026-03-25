@@ -1,6 +1,5 @@
 ---
-description: Run a comprehensive multi-perspective code review
-agent: build
+description: Run a multi-perspective code review
 subtask: true
 ---
 
@@ -12,7 +11,8 @@ Run these review perspectives in parallel using subagents:
 
 1. **@reviewer** — Correctness, type safety, error handling, code quality
 2. **@security-auditor** — Security vulnerabilities, injection risks, data exposure
-3. **@architect** — Hexagonal architecture compliance, dependency direction, reuse opportunities
+3. **@architect** — Clean architecture compliance, Dependency Rule, dependency
+   direction, reuse opportunities
 
 After all reviews complete, synthesize findings into a prioritized summary with:
 

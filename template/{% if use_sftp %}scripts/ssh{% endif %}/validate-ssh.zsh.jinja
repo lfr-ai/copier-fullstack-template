@@ -1,0 +1,218 @@
+#!/usr/bin/env zsh
+# ─────────────────────────────────────────────────────────────
+#  {{ project_name }} — SSH / SFTP Validation
+#
+#  Standalone validation script that checks an existing SSH/SFTP
+#  setup without making any changes. Safe to run at any time.
+#
+#  Usage:
+#    zsh scripts/ssh/validate-ssh.zsh [OPTIONS]
+#
+#  Options:
+#    --key-name <name>      Key filename (default: id_ed25519)
+#    --remote-host <host>   Test connectivity to this host
+#    --remote-user <user>   Remote user (default: current user)
+#    --remote-port <port>   Remote SSH port (default: 22)
+#    --check-server         Also validate local sshd config
+#    --verbose              Show debug output
+#    --help                 Show this help
+# ─────────────────────────────────────────────────────────────
+emulate -L zsh
+setopt PIPE_FAIL NO_UNSET
+
+readonly SCRIPT_DIR="${0:A:h}"
+readonly PROJECT_ROOT="${SCRIPT_DIR:h:h}"
+readonly GREEN=$'\033[0;32m'
+readonly YELLOW=$'\033[0;33m'
+readonly RED=$'\033[0;31m'
+readonly CYAN=$'\033[0;36m'
+readonly BOLD=$'\033[1m'
+readonly RESET=$'\033[0m'
+
+KEY_NAME="id_ed25519"
+REMOTE_HOST=""
+REMOTE_USER="${USER}"
+REMOTE_PORT=22
+CHECK_SERVER=false
+VERBOSE=false
+PASS_COUNT=0
+WARN_COUNT=0
+FAIL_COUNT=0
+
+log_pass() { ((PASS_COUNT++)); print "${GREEN}[PASS]${RESET} $*" }
+log_warn() { ((WARN_COUNT++)); print "${YELLOW}[WARN]${RESET} $*" }
+log_fail() { ((FAIL_COUNT++)); print "${RED}[FAIL]${RESET} $*" }
+log_info() { print "${CYAN}[INFO]${RESET} $*" }
+log_debug() { [[ "${VERBOSE}" == "true" ]] && print "[DEBUG] $*" }
+
+while (( $# )); do
+  case "$1" in
+    --key-name)     KEY_NAME="$2"; shift 2 ;;
+    --remote-host)  REMOTE_HOST="$2"; shift 2 ;;
+    --remote-user)  REMOTE_USER="$2"; shift 2 ;;
+    --remote-port)  REMOTE_PORT="$2"; shift 2 ;;
+    --check-server) CHECK_SERVER=true; shift ;;
+    --verbose)      VERBOSE=true; shift ;;
+    --help)         head -n 19 "$0" | tail -n +2 | sed 's/^# *//'; exit 0 ;;
+    *)              print "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+print "${BOLD}=== SSH/SFTP Validation ===${RESET}"
+print ""
+
+# ── 1. SSH directory ────────────────────────────────────────
+ssh_dir="${HOME}/.ssh"
+if [[ -d "${ssh_dir}" ]]; then
+  perms="$(stat -c '%a' "${ssh_dir}" 2>/dev/null || stat -f '%Lp' "${ssh_dir}" 2>/dev/null)"
+  if [[ "${perms}" == "700" ]]; then
+    log_pass "~/.ssh directory exists with correct permissions (${perms})"
+  else
+    log_warn "~/.ssh permissions are ${perms} (expected 700)"
+  fi
+else
+  log_fail "~/.ssh directory does not exist"
+fi
+
+# ── 2. Key pair ─────────────────────────────────────────────
+key_path="${ssh_dir}/${KEY_NAME}"
+if [[ -f "${key_path}" ]]; then
+  perms="$(stat -c '%a' "${key_path}" 2>/dev/null || stat -f '%Lp' "${key_path}" 2>/dev/null)"
+  if [[ "${perms}" == "600" ]]; then
+    log_pass "Private key ${KEY_NAME} exists with correct permissions (${perms})"
+  else
+    log_warn "Private key ${KEY_NAME} permissions are ${perms} (expected 600)"
+  fi
+  log_info "Fingerprint: $(ssh-keygen -lf "${key_path}.pub" 2>/dev/null || print 'unable to read')"
+else
+  log_fail "Private key not found: ${key_path}"
+fi
+
+if [[ -f "${key_path}.pub" ]]; then
+  perms="$(stat -c '%a' "${key_path}.pub" 2>/dev/null || stat -f '%Lp' "${key_path}.pub}" 2>/dev/null)"
+  if [[ "${perms}" == "644" ]]; then
+    log_pass "Public key ${KEY_NAME}.pub exists with correct permissions (${perms})"
+  else
+    log_warn "Public key ${KEY_NAME}.pub permissions are ${perms} (expected 644)"
+  fi
+else
+  log_fail "Public key not found: ${key_path}.pub"
+fi
+
+# ── 3. authorized_keys ─────────────────────────────────────
+auth_keys="${ssh_dir}/authorized_keys"
+if [[ -f "${auth_keys}" ]]; then
+  perms="$(stat -c '%a' "${auth_keys}" 2>/dev/null || stat -f '%Lp' "${auth_keys}" 2>/dev/null)"
+  if [[ "${perms}" == "600" ]]; then
+    log_pass "authorized_keys exists with correct permissions (${perms})"
+  else
+    log_warn "authorized_keys permissions are ${perms} (expected 600)"
+  fi
+  key_count=$(wc -l < "${auth_keys}" | tr -d ' ')
+  log_info "authorized_keys contains ${key_count} key(s)"
+else
+  log_info "authorized_keys not present (only needed for server mode)"
+fi
+
+# ── 4. SSH config ───────────────────────────────────────────
+ssh_config="${ssh_dir}/config"
+if [[ -f "${ssh_config}" ]]; then
+  perms="$(stat -c '%a' "${ssh_config}" 2>/dev/null || stat -f '%Lp' "${ssh_config}" 2>/dev/null)"
+  if [[ "${perms}" == "600" ]]; then
+    log_pass "SSH config exists with correct permissions (${perms})"
+  else
+    log_warn "SSH config permissions are ${perms} (expected 600)"
+  fi
+else
+  log_info "~/.ssh/config not present"
+fi
+
+# ── 5. ssh-agent ────────────────────────────────────────────
+if [[ -n "${SSH_AUTH_SOCK}" ]]; then
+  loaded_keys=$(ssh-add -l 2>/dev/null | wc -l | tr -d ' ')
+  log_pass "ssh-agent running (${loaded_keys} key(s) loaded)"
+else
+  log_warn "ssh-agent not running (SSH_AUTH_SOCK not set)"
+fi
+
+# ── 6. Server checks ───────────────────────────────────────
+if [[ "${CHECK_SERVER}" == "true" ]]; then
+  print ""
+  print "${BOLD}=== Server Checks ===${RESET}"
+
+  if command -v sshd &>/dev/null || [[ -f /usr/sbin/sshd ]]; then
+    log_pass "sshd binary found"
+  else
+    log_fail "sshd binary not found"
+  fi
+
+  if sshd -t 2>/dev/null; then
+    log_pass "sshd config syntax valid"
+  else
+    log_fail "sshd config syntax invalid"
+  fi
+
+  # Check if SFTP subsystem is configured
+  if grep -qE '^\s*Subsystem\s+sftp' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null; then
+    log_pass "SFTP subsystem configured"
+  else
+    log_warn "SFTP subsystem not explicitly configured"
+  fi
+fi
+
+# ── 7. Remote connectivity ─────────────────────────────────
+if [[ -n "${REMOTE_HOST}" ]]; then
+  print ""
+  print "${BOLD}=== Remote Connectivity ===${RESET}"
+
+  log_info "Testing ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PORT} ..."
+
+  if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new \
+     -p "${REMOTE_PORT}" -i "${key_path}" "${REMOTE_USER}@${REMOTE_HOST}" "echo SSH_OK" 2>/dev/null | grep -q "SSH_OK"; then
+    log_pass "SSH connection successful"
+
+    if echo "ls" | sftp -o BatchMode=yes -o ConnectTimeout=5 -P "${REMOTE_PORT}" \
+       -i "${key_path}" "${REMOTE_USER}@${REMOTE_HOST}" &>/dev/null; then
+      log_pass "SFTP connection successful"
+    else
+      log_warn "SFTP connection failed"
+    fi
+  else
+    log_fail "SSH connection failed"
+  fi
+fi
+
+# ── 8. VS Code SFTP config ─────────────────────────────────
+sftp_json="${PROJECT_ROOT}/.vscode/sftp.json"
+if [[ -f "${sftp_json}" ]]; then
+  log_pass "VS Code sftp.json exists"
+  # Check it's valid JSON
+  if command -v python3 &>/dev/null; then
+    if python3 -c "import json; json.load(open('${sftp_json}'))" 2>/dev/null; then
+      log_pass "sftp.json is valid JSON"
+    else
+      log_fail "sftp.json contains invalid JSON"
+    fi
+  fi
+else
+  log_info "VS Code sftp.json not present"
+fi
+
+# ── Summary ─────────────────────────────────────────────────
+print ""
+print "${BOLD}=== Results ===${RESET}"
+print "  Passed:   ${PASS_COUNT}"
+print "  Warnings: ${WARN_COUNT}"
+print "  Failed:   ${FAIL_COUNT}"
+print ""
+
+if (( FAIL_COUNT > 0 )); then
+  print "${RED}${BOLD}Validation failed with ${FAIL_COUNT} error(s).${RESET}"
+  exit 1
+elif (( WARN_COUNT > 0 )); then
+  print "${YELLOW}${BOLD}Validation passed with ${WARN_COUNT} warning(s).${RESET}"
+  exit 0
+else
+  print "${GREEN}${BOLD}All checks passed.${RESET}"
+  exit 0
+fi

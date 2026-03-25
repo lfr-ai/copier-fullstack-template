@@ -1,0 +1,25 @@
+"""User repository protocol for domain persistence contracts."""
+
+from __future__ import annotations
+
+from typing import Protocol, runtime_checkable
+
+from {{ project_slug }}.core.entities.user import User
+from {{ project_slug }}.core.interfaces.repository import Repository
+
+
+@runtime_checkable
+class UserRepositoryPort(Repository[User], Protocol):
+    """Port defining user persistence operations.
+
+    Extends the generic :class:`Repository` with user-specific
+    lookup methods.
+    """
+
+    async def get_by_email(self, *, email: str) -> User | None:
+        """Retrieve user by email address."""
+        ...
+
+    async def get_by_ids(self, ids: list[str]) -> list[User]:
+        """Retrieve multiple users by their IDs in a single query."""
+        ...

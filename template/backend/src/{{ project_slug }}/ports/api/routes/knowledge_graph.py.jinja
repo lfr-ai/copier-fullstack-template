@@ -1,0 +1,291 @@
+"""Knowledge graph API routes — query, traverse, and extract triplets."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
+
+from {{ project_slug }}.core.interfaces.knowledge_graph import (
+    DEFAULT_ENTITY_LOOKUP_LIMIT,
+    DEFAULT_NEIGHBOR_LIMIT,
+    DEFAULT_RELATION_LIMIT,
+)
+from {{ project_slug }}.ports.api.dependencies import ContainerDep
+
+router = APIRouter()
+
+_DEFAULT_QUERY_DEPTH: int = 2
+_MAX_QUERY_DEPTH: int = 5
+_DEFAULT_QUERY_RESULTS: int = 20
+_MAX_QUERY_RESULTS: int = 100
+_DEFAULT_MAX_TRIPLETS: int = 50
+_MAX_TRIPLETS: int = 200
+_MAX_NEIGHBOR_LIMIT: int = 200
+_MAX_EXTERNAL_LOOKUP_LIMIT: int = 20
+_MAX_EXTERNAL_RELATIONS_LIMIT: int = 200
+
+
+class TripletResponse(BaseModel):
+    """Single knowledge graph triplet."""
+
+    subject: str
+    predicate: str
+    object: str
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class GraphQueryRequest(BaseModel):
+    """Request for querying the knowledge graph."""
+
+    query: str
+    max_depth: int = Field(default=_DEFAULT_QUERY_DEPTH, ge=1, le=_MAX_QUERY_DEPTH)
+    max_results: int = Field(default=_DEFAULT_QUERY_RESULTS, ge=1, le=_MAX_QUERY_RESULTS)
+
+
+class GraphQueryResponse(BaseModel):
+    """Response from a knowledge graph query."""
+
+    triplets: list[TripletResponse]
+
+
+class ExtractTripletsRequest(BaseModel):
+    """Request to extract triplets from text."""
+
+    text: str
+    max_triplets: int = Field(default=_DEFAULT_MAX_TRIPLETS, ge=1, le=_MAX_TRIPLETS)
+
+
+class ExtractTripletsResponse(BaseModel):
+    """Response with extracted triplets."""
+
+    triplets: list[TripletResponse]
+    source_text_length: int
+
+
+@router.post(
+    "/query",
+    response_model=GraphQueryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Query the knowledge graph",
+)
+async def query_graph(request: GraphQueryRequest, container: ContainerDep) -> GraphQueryResponse:
+    """Query the knowledge graph for entities and relationships."""
+    if not hasattr(container, "knowledge_graph"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Knowledge graph not configured.",
+        )
+    kg = container.knowledge_graph()
+
+    if kg is None:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Knowledge graph not enabled.",
+        )
+
+    results = await kg.query_triplets(subject=request.query)
+    triplets = [
+        TripletResponse(subject=s, predicate=p, object=o)
+        for s, p, o in results
+    ]
+
+    return GraphQueryResponse(
+        triplets=triplets[:request.max_results],
+    )
+
+
+@router.post(
+    "/extract",
+    response_model=ExtractTripletsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Extract triplets from text",
+)
+async def extract_triplets(request: ExtractTripletsRequest, container: ContainerDep) -> ExtractTripletsResponse:
+    """Extract knowledge graph triplets from free text using LLM."""
+    if not hasattr(container, "llm_kg_extractor"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Knowledge graph extractor not configured.",
+        )
+    extractor = container.llm_kg_extractor()
+
+    raw_triplets = await extractor.extract(request.text)
+    triplets = [
+        TripletResponse(subject=s, predicate=p, object=o)
+        for s, p, o in raw_triplets[:request.max_triplets]
+    ]
+
+    return ExtractTripletsResponse(
+        triplets=triplets,
+        source_text_length=len(request.text),
+    )
+
+
+class NeighborQueryRequest(BaseModel):
+    """Request for querying knowledge graph neighbors."""
+
+    entity: str
+    depth: int = Field(default=1, ge=1, le=_MAX_QUERY_DEPTH)
+    limit: int = Field(default=DEFAULT_NEIGHBOR_LIMIT, ge=1, le=_MAX_NEIGHBOR_LIMIT)
+
+
+class NeighborQueryResponse(BaseModel):
+    """Response from a neighbor query."""
+
+    entity: str
+    depth: int
+    neighbors: list[dict[str, object]]
+
+
+class StatsResponse(BaseModel):
+    """Knowledge graph statistics."""
+
+    entity_count: int
+    triplet_count: int
+    backend: str
+
+
+class AddTripletRequest(BaseModel):
+    """Request to add a single triplet."""
+
+    subject: str
+    predicate: str
+    object: str
+
+
+@router.post(
+    "/neighbors",
+    response_model=NeighborQueryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Query entity neighbors",
+)
+async def query_neighbors(request: NeighborQueryRequest, container: ContainerDep) -> NeighborQueryResponse:
+    """Query the knowledge graph for an entity's neighbors."""
+    if not hasattr(container, "knowledge_graph"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Knowledge graph not configured.",
+        )
+    kg = container.knowledge_graph()
+
+    neighbors = await kg.query_neighbors(request.entity, depth=request.depth, limit=request.limit)
+    return NeighborQueryResponse(
+        entity=request.entity,
+        depth=request.depth,
+        neighbors=neighbors,
+    )
+
+
+@router.get(
+    "/stats",
+    response_model=StatsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get knowledge graph statistics",
+)
+async def get_stats(container: ContainerDep) -> StatsResponse:
+    """Return knowledge graph entity and triplet counts."""
+    if not hasattr(container, "knowledge_graph"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Knowledge graph not configured.",
+        )
+    kg = container.knowledge_graph()
+
+    return StatsResponse(
+        entity_count=await kg.get_entity_count(),
+        triplet_count=await kg.get_triplet_count(),
+        backend=type(kg).__name__,
+    )
+
+
+@router.post(
+    "/triplets",
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a triplet",
+)
+async def add_triplet(request: AddTripletRequest, container: ContainerDep) -> dict[str, str]:
+    """Add a single triplet to the knowledge graph."""
+    if not hasattr(container, "knowledge_graph"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Knowledge graph not configured.",
+        )
+    kg = container.knowledge_graph()
+
+    await kg.add_triplet(subject=request.subject, predicate=request.predicate, obj=request.object)
+    return {"status": "added"}
+{% if use_external_knowledge_graph is defined and use_external_knowledge_graph %}
+
+
+class ExternalLookupRequest(BaseModel):
+    """Request to look up an entity in an external knowledge graph."""
+
+    entity: str
+    source: str = Field(default="wikidata", pattern="^(wikidata|dbpedia|conceptnet)$")
+    language: str = "en"
+    limit: int = Field(default=DEFAULT_ENTITY_LOOKUP_LIMIT, ge=1, le=_MAX_EXTERNAL_LOOKUP_LIMIT)
+
+
+class ExternalRelationsRequest(BaseModel):
+    """Request to get relations for an external entity."""
+
+    entity_id: str
+    source: str = Field(default="wikidata", pattern="^(wikidata|dbpedia|conceptnet)$")
+    limit: int = Field(default=DEFAULT_RELATION_LIMIT, ge=1, le=_MAX_EXTERNAL_RELATIONS_LIMIT)
+
+
+@router.post(
+    "/external/lookup",
+    status_code=status.HTTP_200_OK,
+    summary="Look up entity in external knowledge graph",
+)
+async def external_lookup(request: ExternalLookupRequest, container: ContainerDep) -> dict[str, object]:
+    """Look up an entity in Wikidata, DBpedia, or ConceptNet."""
+    connectors = {
+        "wikidata": "wikidata_connector",
+        "dbpedia": "dbpedia_connector",
+        "conceptnet": "conceptnet_connector",
+    }
+    method_name = connectors.get(request.source)
+    if not method_name or not hasattr(container, method_name):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=f"External connector '{request.source}' not configured.",
+        )
+
+    connector = getattr(container, method_name)()
+    results = await connector.lookup_entity(
+        request.entity,
+        language=request.language,
+        limit=request.limit,
+    )
+    return {"entity": request.entity, "source": request.source, "results": results}
+
+
+@router.post(
+    "/external/relations",
+    status_code=status.HTTP_200_OK,
+    summary="Get entity relations from external knowledge graph",
+)
+async def external_relations(request: ExternalRelationsRequest, container: ContainerDep) -> dict[str, object]:
+    """Get relations for an entity from Wikidata, DBpedia, or ConceptNet."""
+    connectors = {
+        "wikidata": "wikidata_connector",
+        "dbpedia": "dbpedia_connector",
+        "conceptnet": "conceptnet_connector",
+    }
+    method_name = connectors.get(request.source)
+    if not method_name or not hasattr(container, method_name):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=f"External connector '{request.source}' not configured.",
+        )
+
+    connector = getattr(container, method_name)()
+    relations = await connector.get_entity_relations(request.entity_id, limit=request.limit)
+    return {
+        "entity_id": request.entity_id,
+        "source": request.source,
+        "relations": [{"subject": s, "predicate": p, "object": o} for s, p, o in relations],
+    }
+{% endif %}

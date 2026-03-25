@@ -55,22 +55,12 @@ github_username:
   type: str
   help: "GitHub username or organization"
   default: "{{ author_name | lower | replace(' ', '-') }}"
+  validator: "{% if not github_username | regex_search('^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$') %}Must be a valid GitHub username (alphanumeric/hyphens, 1-39 chars){% endif %}"
 
 copyright_year:
   type: str
   help: "Copyright year"
   default: "{{ '%Y' | strftime }}"
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  Backend language (Python only — extensible later)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-backend_language:
-  type: str
-  help: "Backend language (Python only for now; extensible later)"
-  default: "python"
-  choices:
-    Python: "python"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  Technical choices
@@ -83,6 +73,7 @@ python_version:
   choices:
     - "3.12"
     - "3.13"
+    - "3.14"
 
 node_version:
   type: str
@@ -91,6 +82,7 @@ node_version:
   choices:
     - "20"
     - "22"
+    - "24"
 
 frontend_framework:
   type: str
@@ -133,6 +125,21 @@ use_caddy:
   help: "Include Caddy reverse proxy (TLS, compression, security headers)"
   default: true
 
+api_style:
+  type: str
+  help: "API transport(s) to include"
+  default: "rest"
+  choices:
+    REST only: "rest"
+    GraphQL only (Strawberry): "graphql"
+    Both REST and GraphQL: "both"
+
+use_graphql_subscriptions:
+  type: bool
+  help: "Include GraphQL WebSocket subscriptions (requires graphql or both)"
+  default: false
+  when: "{{ api_style in ('graphql', 'both') }}"
+
 use_auth:
   type: bool
   help: "Include authentication (JWT + session)"
@@ -150,8 +157,14 @@ use_devcontainer:
 
 with_opencode:
   type: bool
-  help: "Include OpenCode AI coding agent install script and configuration"
+  help: "Include OpenCode AI coding agent configuration (oh-my-opencode, OAC, plugins)"
   default: false
+
+with_gsd:
+  type: bool
+  help: "Include GSD-2 (v2.28+) autonomous coding agent (`gsd-pi`) — milestone-based development with verification"
+  default: false
+  when: "{{ with_opencode }}"
 
 container_runtime:
   type: str
@@ -189,26 +202,116 @@ secret_backend:
   when: "{{ cloud_provider == 'azure' or cloud_provider == 'none' }}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  AI / RAG infrastructure (Azure only)
+#  AI / RAG / MCP infrastructure
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+use_ai:
+  type: bool
+  help: "Include AI/LLM capabilities (base requirement for all AI features)"
+  default: false
+
+use_faiss:
+  type: bool
+  help: "Include FAISS vector store for local similarity search"
+  default: false
+  when: "{{ use_ai }}"
+
+use_pgvector:
+  type: bool
+  help: "Include pgvector extension for PostgreSQL-based vector search"
+  default: false
+  when: "{{ use_ai and database_backend in ('postgresql', 'azure_postgresql') }}"
+
+use_langchain:
+  type: bool
+  help: "Include LangChain integration (LLM chains, chat models, tools)"
+  default: false
+  when: "{{ use_ai }}"
+
+use_llamaindex:
+  type: bool
+  help: "Include LlamaIndex integration (document loaders, chunking, indexing)"
+  default: false
+  when: "{{ use_ai }}"
+
+use_knowledge_graph:
+  type: bool
+  help: "Include knowledge graph support (NetworkX, Neo4j, RDFLib, external KGs)"
+  default: false
+  when: "{{ use_ai }}"
+
+knowledge_graph_backend:
+  type: str
+  help: "Primary knowledge graph backend"
+  choices:
+    - networkx
+    - neo4j
+    - rdflib
+  default: networkx
+  when: "{{ use_knowledge_graph }}"
+
+use_external_knowledge_graph:
+  type: bool
+  help: "Include connectors for external knowledge graphs (Wikidata, DBpedia, ConceptNet)"
+  default: false
+  when: "{{ use_knowledge_graph }}"
+
+use_mcp:
+  type: bool
+  help: "Include MCP (Model Context Protocol) server exposing AI tools"
+  default: false
+  when: "{{ use_ai }}"
+
+use_rag:
+  type: bool
+  help: "Include full RAG pipeline (ingestion, retrieval, generation)"
+  default: false
+  when: "{{ use_ai }}"
+
+use_agents:
+  type: bool
+  help: "Include AI agent framework (autonomous tool-calling agents)"
+  default: false
+  when: "{{ use_ai }}"
+
+use_crewai:
+  type: bool
+  help: "Include CrewAI multi-agent orchestration (Crews, Flows, hierarchical processes)"
+  default: false
+  when: "{{ use_ai }}"
+
+use_anthropic:
+  type: bool
+  help: "Include Anthropic Claude as an additional LLM provider"
+  default: false
+  when: "{{ use_ai }}"
 
 use_azure_openai:
   type: bool
   help: "Include Azure OpenAI Service (GPT models + embeddings for RAG)"
   default: false
-  when: "{{ cloud_provider == 'azure' }}"
+  when: "{{ cloud_provider == 'azure' and use_ai }}"
 
 use_ai_search:
   type: bool
   help: "Include Azure AI Search (vector/hybrid/semantic search for RAG)"
   default: false
-  when: "{{ cloud_provider == 'azure' }}"
+  when: "{{ cloud_provider == 'azure' and use_ai }}"
 
 use_document_intelligence:
   type: bool
   help: "Include Azure Document Intelligence (PDF/document ingestion for RAG)"
   default: false
-  when: "{{ cloud_provider == 'azure' }}"
+  when: "{{ cloud_provider == 'azure' and use_ai }}"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  SSH / SFTP remote access
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+use_sftp:
+  type: bool
+  help: "Include SSH/SFTP setup scripts, VS Code sftp.json template, and documentation"
+  default: false
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  License
@@ -238,7 +341,7 @@ _tasks:
 
 _message_after_copy: |
   ╔══════════════════════════════════════════════════════════════╗
-  ║  Project "{{ project_name }}" created successfully!         ║
+  ║  Project "{{ project_name }}" created.                      ║
   ╚══════════════════════════════════════════════════════════════╝
 
   This template is designed for LOCAL usage — no remote URL needed.
@@ -256,7 +359,7 @@ _message_after_copy: |
   Or if prerequisites are already installed:
 
     1. cd {{ _copier_conf.dst_path }}
-    2. zsh scripts/setup.zsh                  # Quick setup (deps + pre-commit)
+    2. zsh scripts/bootstrap.zsh              # Quick setup (deps + pre-commit)
     3. task dev
 
   On Windows (PowerShell as Admin):
@@ -273,5 +376,5 @@ _message_after_copy: |
   See README.md for full documentation.
 
 _message_after_update: |
-  Your project "{{ project_name }}" has been updated successfully!
-  Please review any conflicts and resolve them.
+  Your project "{{ project_name }}" has been updated.
+  Review any conflicts and resolve them.

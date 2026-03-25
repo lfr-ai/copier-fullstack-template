@@ -1,0 +1,29 @@
+"""Retrieval domain entities — search results and retrieval contexts."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from {{ project_slug }}.core.entities.base import generate_id
+@dataclass(slots=True)
+class SearchResult:
+    """Single vector similarity search result."""
+
+    id: str = field(default_factory=generate_id)
+    score: float = 0.0
+    content: str = ""
+    metadata: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class RetrievalResult:
+    """Composite result from a retrieval operation.
+
+    Combines potentially multiple search results with
+    the original query for downstream generation.
+    """
+
+    query: str = ""
+    answer: str = ""
+    sources: list[SearchResult] = field(default_factory=list)
+    strategy: str = "vector"

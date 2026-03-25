@@ -1,0 +1,89 @@
+"""Unit tests for AI chains — summarization, refinement, conversational RAG."""
+{%- if use_ai %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock
+
+import pytest
+
+from {{ project_slug }}.ai.chains.base_chain import ChainResult
+from {{ project_slug }}.ai.chains.refinement_chain import RefinementChain
+from {{ project_slug }}.ai.chains.summarization_chain import SummarizationChain
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+
+@pytest.fixture
+def llm() -> AsyncMock:
+    mock = AsyncMock(spec=LLMPort)
+    mock.complete.return_value = "Mock response"
+    return mock
+
+
+class TestSummarizationChain:
+    """Tests for SummarizationChain."""
+
+    async def test_single_chunk_summarization(self, llm: AsyncMock) -> None:
+        chain = SummarizationChain(llm=llm, chunk_size=10000)
+        result = await chain.run(input_text="Short text for summarization.")
+
+        assert isinstance(result, ChainResult)
+        assert result.content == "Mock response"
+        assert result.metadata["chunks"] == 1
+        llm.complete.assert_awaited_once()
+
+    async def test_multi_chunk_summarization(self, llm: AsyncMock) -> None:
+        chain = SummarizationChain(llm=llm, chunk_size=50)
+        long_text = "A" * 200
+
+        result = await chain.run(input_text=long_text)
+
+        assert isinstance(result, ChainResult)
+        assert result.metadata["chunks"] == 4
+        # Map step (4 chunks) + reduce step (1)
+        assert llm.complete.await_count == 5
+
+    async def test_max_sentences_parameter(self, llm: AsyncMock) -> None:
+        chain = SummarizationChain(llm=llm)
+        await chain.run(input_text="Some text", max_sentences=3)
+
+        call_args = llm.complete.call_args
+        assert "3" in call_args.kwargs.get("prompt", "")
+
+
+class TestRefinementChain:
+    """Tests for RefinementChain."""
+
+    async def test_single_chunk_no_refinement(self, llm: AsyncMock) -> None:
+        chain = RefinementChain(llm=llm, chunk_size=10000)
+        result = await chain.run(input_text="Short text", question="What?")
+
+        assert isinstance(result, ChainResult)
+        assert result.metadata["iterations"] == 1
+        llm.complete.assert_awaited_once()
+
+    async def test_multi_chunk_refinement(self, llm: AsyncMock) -> None:
+        chain = RefinementChain(llm=llm, chunk_size=50)
+        long_text = "B" * 200
+
+        result = await chain.run(input_text=long_text, question="What?")
+
+        assert result.metadata["iterations"] > 1
+        assert result.metadata["chunks"] == 4
+
+    async def test_empty_text(self, llm: AsyncMock) -> None:
+        chain = RefinementChain(llm=llm)
+        result = await chain.run(input_text="", question="What?")
+
+        assert result.content == "No context provided."
+        assert result.metadata["iterations"] == 0
+
+    async def test_max_iterations_limit(self, llm: AsyncMock) -> None:
+        chain = RefinementChain(llm=llm, chunk_size=10, max_iterations=2)
+        long_text = "C" * 100
+
+        result = await chain.run(input_text=long_text, question="What?")
+
+        # 1 initial + max_iterations - 1 refinements
+        assert result.metadata["iterations"] <= 2
+{%- endif %}

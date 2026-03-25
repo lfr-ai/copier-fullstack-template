@@ -1,0 +1,112 @@
+"""Conversational RAG chain — RAG with conversation memory.
+
+Extends the basic RAG chain with conversation history
+for multi-turn, context-aware question answering.
+"""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
+from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.retriever import RetrieverPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_HISTORY_LIMIT: int = 10
+_REFORMULATE_MAX_TOKENS: int = 256
+_REFORMULATE_TEMPERATURE: float = 0.0
+_RETRIEVAL_TOP_K: int = 5
+_ANSWER_MAX_TOKENS: int = 1024
+_ANSWER_TEMPERATURE: float = 0.3
+_SOURCE_PREVIEW_LENGTH: int = 200
+
+
+class ConversationalRAGChain(BaseChain):
+    """Conversational RAG chain with memory.
+
+    Maintains conversation history and reformulates
+    queries for multi-turn context-aware RAG.
+    """
+
+    __slots__ = ("_llm", "_memory", "_retriever")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        retriever: RetrieverPort,
+        memory: ConversationMemoryPort,
+    ) -> None:
+        self._llm = llm
+        self._retriever = retriever
+        self._memory = memory
+
+    @override
+    async def run(self, *, input_text: str, **kwargs: object) -> ChainResult:
+        """Execute conversational RAG pipeline.
+
+        Args:
+            input_text (str): User question or follow-up.
+            **kwargs (object): Must include 'session_id' for memory.
+
+        Returns:
+            ChainResult: Generated answer with source metadata.
+        """
+        session_id = str(kwargs.get("session_id", "default"))
+
+        history = await self._memory.get_messages(session_id, limit=_HISTORY_LIMIT)
+        history_text = "\n".join(
+            f"{m.role}: {m.content}" for m in history
+        )
+
+        # Reformulate query with history context
+        if history_text:
+            reformulated = await self._llm.complete(
+                prompt=(
+                    f"Given the conversation history:\n{history_text}\n\n"
+                    f"Reformulate this follow-up question as a standalone question:\n"
+                    f"{input_text}"
+                ),
+                system_prompt="Reformulate the question to be self-contained. Return ONLY the reformulated question.",
+                max_tokens=_REFORMULATE_MAX_TOKENS,
+                temperature=_REFORMULATE_TEMPERATURE,
+            )
+        else:
+            reformulated = input_text
+
+        # Retrieve context
+        results = await self._retriever.retrieve(query=reformulated, top_k=_RETRIEVAL_TOP_K)
+        context = "\n\n".join(r.content for r in results if r.content)
+
+        # Generate answer
+        answer = await self._llm.complete(
+            prompt=(
+                f"Context:\n{context}\n\n"
+                f"Conversation history:\n{history_text}\n\n"
+                f"Question: {input_text}\n\nAnswer:"
+            ),
+            system_prompt="Answer based on the provided context and conversation history.",
+            max_tokens=_ANSWER_MAX_TOKENS,
+            temperature=_ANSWER_TEMPERATURE,
+        )
+
+        # Store in memory
+        await self._memory.add_message(
+            conversation_id=session_id, role="user", content=input_text,
+        )
+        await self._memory.add_message(
+            conversation_id=session_id, role="assistant", content=answer,
+        )
+
+        sources = [
+            {"id": r.id, "score": r.score, "content": r.content[:_SOURCE_PREVIEW_LENGTH]}
+            for r in results
+        ]
+        return ChainResult(
+            content=answer,
+            sources=sources,
+            metadata={"session_id": session_id, "reformulated_query": reformulated},
+        )

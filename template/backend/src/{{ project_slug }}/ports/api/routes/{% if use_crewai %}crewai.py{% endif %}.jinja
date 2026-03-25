@@ -1,0 +1,159 @@
+"""CrewAI management API routes.
+
+Provides REST endpoints for the CrewAI multi-agent subsystem:
+* 'GET /crewai/templates' — list pre-built crew templates
+* 'POST /crewai/crews/execute' — execute a template crew
+* 'POST /crewai/crews/custom' — build and execute a custom crew
+* 'POST /crewai/orchestrate' — run HMAS hierarchical orchestration
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
+
+from {{ project_slug }}.ports.api.dependencies import ContainerDep
+
+router = APIRouter()
+
+
+# ------------------------------------------------------------------
+# Request / Response Models
+# ------------------------------------------------------------------
+
+
+class ExecuteCrewRequest(BaseModel):
+"""Request to execute a pre-built crew template."""
+
+crew_type: str = Field(
+description="Template name: research, analysis, content, or planning",
+)
+task: str = Field(description="Task description for the crew")
+verbose: bool | None = Field(
+default=None,
+description="Override default verbose setting",
+)
+
+
+class CustomCrewAgentSpec(BaseModel):
+"""Specification for a single agent in a custom crew."""
+
+role: str = Field(description="Agent's role title")
+goal: str = Field(description="Agent's primary goal")
+backstory: str = Field(default="", description="Agent's backstory/persona")
+llm: str | None = Field(default=None, description="LLM model override")
+
+
+class CustomCrewTaskSpec(BaseModel):
+"""Specification for a single task in a custom crew."""
+
+description: str = Field(description="Task description")
+expected_output: str = Field(default="", description="Expected output format")
+agent_index: int | None = Field(
+default=None,
+description="Index into agents list (defaults to round-robin)",
+)
+
+
+class CustomCrewRequest(BaseModel):
+"""Request to build and execute a custom crew."""
+
+agents: list[CustomCrewAgentSpec] = Field(
+min_length=1,
+description="Agent specifications",
+)
+tasks: list[CustomCrewTaskSpec] = Field(
+min_length=1,
+description="Task specifications",
+)
+process: str = Field(
+default="sequential",
+description="Execution process: sequential or hierarchical",
+)
+verbose: bool | None = Field(default=None, description="Verbose flag override")
+
+
+class OrchestrateCrewRequest(BaseModel):
+"""Request to run HMAS hierarchical orchestration."""
+
+goal: str = Field(description="High-level goal for multi-agent orchestration")
+
+
+class CrewTemplateSummary(BaseModel):
+"""Summary of a pre-built crew template."""
+
+name: str
+description: str
+
+
+# ------------------------------------------------------------------
+# Endpoints
+# ------------------------------------------------------------------
+
+
+@router.get(
+"/templates",
+response_model=list[CrewTemplateSummary],
+summary="List pre-built crew templates",
+)
+async def list_templates(container: ContainerDep) -> list[dict[str, str]]:
+"""Return available pre-built crew template types."""
+service = container.crewai_application_service()
+return await service.list_crew_templates()
+
+
+@router.post(
+"/crews/execute",
+summary="Execute a pre-built crew template",
+)
+async def execute_crew(request: ExecuteCrewRequest, container: ContainerDep) -> dict[str, object]:
+"""Execute a named crew template with the given task."""
+service = container.crewai_application_service()
+try:
+return await service.execute_crew(
+request.crew_type,
+request.task,
+verbose=request.verbose,
+)
+except ValueError as exc:
+raise HTTPException(
+status_code=status.HTTP_400_BAD_REQUEST,
+detail=str(exc),
+) from exc
+
+
+@router.post(
+"/crews/custom",
+summary="Build and execute a custom crew",
+)
+async def execute_custom_crew(request: CustomCrewRequest, container: ContainerDep) -> dict[str, object]:
+"""Build a crew from agent/task specs and execute it."""
+service = container.crewai_application_service()
+try:
+return await service.execute_custom_crew(
+agents_config=[a.model_dump() for a in request.agents],
+tasks_config=[t.model_dump() for t in request.tasks],
+process=request.process,
+verbose=request.verbose,
+)
+except ValueError as exc:
+raise HTTPException(
+status_code=status.HTTP_400_BAD_REQUEST,
+detail=str(exc),
+) from exc
+
+
+@router.post(
+"/orchestrate",
+summary="Run HMAS multi-agent orchestration",
+)
+async def orchestrate(request: OrchestrateCrewRequest, container: ContainerDep) -> dict[str, object]:
+"""Decompose a goal and delegate via CrewAI HMAS supervisor."""
+service = container.crewai_application_service()
+try:
+return await service.orchestrate(request.goal)
+except RuntimeError as exc:
+raise HTTPException(
+status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+detail=str(exc),
+) from exc

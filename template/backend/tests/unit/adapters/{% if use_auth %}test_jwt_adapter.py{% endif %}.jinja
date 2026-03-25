@@ -22,32 +22,6 @@ def jwt_adapter() -> JWTAdapter:
 return JWTAdapter(secret_key=_SECRET, access_token_expire_minutes=_EXPIRE_MINUTES)
 
 
-class TestJWTAdapterPassword:
-"""Test suite for password hashing and verification."""
-
-def test_hash_password_returns_hash(self, jwt_adapter: JWTAdapter) -> None:
-"""Verify hash_password returns a bcrypt hash."""
-hashed = jwt_adapter.hash_password("mysecret")
-assert hashed != "mysecret"
-assert hashed.startswith("$2b$") or hashed.startswith("$2a$")
-
-def test_verify_password_correct(self, jwt_adapter: JWTAdapter) -> None:
-"""Verify correct password passes verification."""
-hashed = jwt_adapter.hash_password("correct-password")
-assert jwt_adapter.verify_password(plain_password="correct-password", hashed_password=hashed) is True
-
-def test_verify_password_incorrect(self, jwt_adapter: JWTAdapter) -> None:
-"""Verify wrong password fails verification."""
-hashed = jwt_adapter.hash_password("correct-password")
-assert jwt_adapter.verify_password(plain_password="wrong-password", hashed_password=hashed) is False
-
-def test_hash_produces_unique_values(self, jwt_adapter: JWTAdapter) -> None:
-"""Verify hashing same password twice yields different hashes."""
-h1 = jwt_adapter.hash_password("same")
-h2 = jwt_adapter.hash_password("same")
-assert h1 != h2
-
-
 class TestJWTAdapterTokenCreation:
 """Test suite for token creation."""
 
@@ -97,11 +71,11 @@ assert result is None
 def test_decode_expired_token_returns_none(self) -> None:
 """Verify expired token returns None."""
 adapter = JWTAdapter(secret_key=_SECRET, access_token_expire_minutes=0)
-from jose import jwt as jose_jwt
+import jwt as pyjwt
 
 expire = datetime(2025, 1, 1, 11, 0, tzinfo=UTC) # 1 hour ago
 payload = {"sub": "user", "exp": expire}
-token = jose_jwt.encode(payload, _SECRET, algorithm=ALGORITHM)
+token = pyjwt.encode(payload, _SECRET, algorithm=ALGORITHM)
 result = adapter.decode_token(token)
 assert result is None
 

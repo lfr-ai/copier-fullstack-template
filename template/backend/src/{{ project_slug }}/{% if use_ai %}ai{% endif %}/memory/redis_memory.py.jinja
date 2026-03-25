@@ -1,0 +1,71 @@
+"""Redis-backed conversation memory adapter — implements 'ConversationMemoryPort'.
+
+Uses Redis sorted sets for efficient time-ordered message storage
+with automatic TTL-based expiration.
+
+Add 'redis' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import json
+import structlog
+import time
+
+from {{ project_slug }}.ai.config import DEFAULT_CONVERSATION_LIMIT, DEFAULT_CONVERSATION_TTL
+from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort, Message
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class RedisConversationMemory(ConversationMemoryPort):
+    """Redis-backed conversation history store with TTL support."""
+
+    __slots__ = ("_prefix", "_redis", "_ttl")
+
+    def __init__(
+        self,
+        *,
+        redis_url: str,
+        prefix: str = "conv:",
+        ttl_seconds: int = DEFAULT_CONVERSATION_TTL,
+    ) -> None:
+        try:
+            import redis.asyncio as aioredis  # type: ignore[import-untyped]
+
+            self._redis = aioredis.from_url(redis_url, decode_responses=True)
+        except ImportError as exc:
+            msg = "redis is required — pip install redis"
+            raise ImportError(msg) from exc
+        self._prefix = prefix
+        self._ttl = ttl_seconds
+
+    async def add_message(
+        self,
+        *,
+        conversation_id: str,
+        role: str,
+        content: str,
+    ) -> None:
+        key = f"{self._prefix}{conversation_id}"
+        payload = json.dumps({"role": role, "content": content})
+        score = time.time()
+        await self._redis.zadd(key, {payload: score})
+        await self._redis.expire(key, self._ttl)
+
+    async def get_messages(
+        self,
+        conversation_id: str,
+        *,
+        limit: int = DEFAULT_CONVERSATION_LIMIT,
+    ) -> list[Message]:
+        key = f"{self._prefix}{conversation_id}"
+        raw = await self._redis.zrange(key, -limit, -1)
+        messages: list[Message] = []
+        for item in raw:
+            data = json.loads(item)
+            messages.append(Message(role=data["role"], content=data["content"]))
+        return messages
+
+    async def clear(self, conversation_id: str) -> None:
+        key = f"{self._prefix}{conversation_id}"
+        await self._redis.delete(key)
+        logger.info("Cleared Redis conversation %s", conversation_id)

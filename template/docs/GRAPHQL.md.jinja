@@ -1,0 +1,193 @@
+{%- if api_style in ('graphql', 'both') -%}
+# GraphQL API
+
+{{ project_name }} exposes a **Strawberry GraphQL** endpoint alongside
+{%- if api_style == 'both' %} the REST API{% endif %}, mounted at `/graphql`.
+
+## Quick start
+
+```bash
+# Start the development server
+task dev
+
+# Open GraphiQL IDE (debug mode only)
+open http://localhost:8000/graphql
+```
+
+## Architecture
+
+The GraphQL layer follows the same **hexagonal / clean architecture**
+used by the REST routes. Resolvers are thin — they delegate to the
+**application service** layer and return Strawberry types.
+
+```
+ports/graphql/
+├── __init__.py          # Package marker
+├── context.py           # GraphQLContext (DI, auth, request)
+├── dataloaders.py       # DataLoader factories (N+1 prevention)
+├── extensions.py        # Schema extensions (depth limiter)
+├── mutations.py         # Root Mutation type
+├── permissions.py       # IsAuthenticated permission class
+├── queries.py           # Root Query type
+├── router.py            # ProductionGraphQLRouter (error masking)
+├── schema.py            # strawberry.Schema assembly
+{%- if use_graphql_subscriptions %}
+├── subscriptions.py     # Root Subscription type (WebSocket)
+{%- endif %}
+└── types.py             # Strawberry object/input types
+```
+
+## Available operations
+
+### Queries
+
+| Field | Description | Auth required |
+|-------|-------------|:---:|
+| `health` | Application health status | No |
+| `healthReady` | Readiness check with dependency probes | No |
+| `user(id: ID!)` | Retrieve a single user | No |
+| `users(offset, limit)` | Paginated user list | No |
+{%- if use_ai %}
+| `completion(input: CompletionInput!)` | AI text completion | No |
+{%- endif %}
+{%- if use_rag %}
+| `ragQuery(input: RAGQueryInput!)` | RAG pipeline query | No |
+{%- endif %}
+
+### Mutations
+
+| Field | Description | Auth required |
+|-------|-------------|:---:|
+| `createUser(input: CreateUserInput!)` | Create a new user | No |
+{%- if use_ai %}
+| `aiComplete(input: CompletionInput!)` | AI completion (mutation variant) | No |
+{%- endif %}
+{%- if use_rag %}
+| `ingestDocument(source: String!)` | Ingest document into RAG pipeline | No |
+{%- endif %}
+
+{%- if use_graphql_subscriptions %}
+
+### Subscriptions
+
+| Field | Description |
+|-------|-------------|
+| `healthHeartbeat(intervalSeconds)` | Periodic health snapshot via WebSocket |
+{%- endif %}
+
+## Example queries
+
+### Health check
+
+```graphql
+query {
+  health {
+    status
+    version
+    dependencies {
+      name
+      status
+      latencyMs
+    }
+  }
+}
+```
+
+### Create user
+
+```graphql
+mutation CreateUser($input: CreateUserInput!) {
+  createUser(input: $input) {
+    id
+    email
+    displayName
+    isActive
+  }
+}
+```
+
+Variables:
+```json
+{
+  "input": {
+    "email": "user@example.com",
+    "displayName": "Jane Doe",
+    "password": "secure-password-123"
+  }
+}
+```
+
+### Retrieve user
+
+```graphql
+query GetUser($id: ID!) {
+  user(id: $id) {
+    id
+    email
+    displayName
+    isActive
+  }
+}
+```
+
+## Security
+
+### Query depth limiting
+
+The `QueryDepthLimiter` extension rejects queries exceeding
+a configurable nesting depth (default: **10**). Configure via:
+
+```
+{{ project_slug | upper }}_GRAPHQL_MAX_DEPTH=15
+```
+
+### Error masking
+
+In **production** (non-debug) mode, internal errors are replaced with
+a generic `"Internal server error"` message. All errors are logged
+via `structlog` for observability.
+
+### Authentication
+
+Use the `IsAuthenticated` permission class on sensitive fields:
+
+```python
+@strawberry.field(
+    description="Protected field.",
+    permission_classes=[IsAuthenticated],
+)
+async def secret_data(self, info: strawberry.Info[GraphQLContext]) -> str:
+    return "only for authenticated users"
+```
+
+### Introspection & IDE
+
+The GraphQL IDE (GraphiQL) is **enabled** in debug mode and disabled in
+production. Introspection itself remains enabled by default in Strawberry,
+consistent with the GraphQL specification. To disable introspection in
+production, add a custom schema extension or configure Strawberry's
+`DisableValidation` extension as needed.
+
+## DataLoaders
+
+The `dataloaders.py` module provides per-request `DataLoader` instances
+for batching database queries. Create new loaders following the existing
+`create_user_loader()` pattern and attach them to `GraphQLContext`.
+
+## Configuration
+
+| Environment variable | Default | Description |
+|---------------------|---------|-------------|
+| `{{ project_slug | upper }}_GRAPHQL_MAX_DEPTH` | `10` | Max query nesting depth |
+| `{{ project_slug | upper }}_GRAPHQL_IDE` | `graphiql` | IDE in debug mode |
+
+## Testing
+
+```bash
+# Run GraphQL-specific tests
+pytest tests/unit/ports/test_graphql.py -v
+
+# Run schema integrity tests
+pytest tests/integration/test_graphql_schema.py -v
+```
+{%- endif %}

@@ -1,5 +1,3 @@
-version: "3"
-
 tasks:
   dev:
     desc: "Start FastAPI development server"
@@ -98,12 +96,92 @@ tasks:
     dir: backend
     cmds:
       - uv run ruff check --select S src/
+
+  profile:cpu:
+    desc: "Profile backend startup with pyinstrument"
+    dir: backend
+    cmds:
+      - mkdir -p profiles/cpu
+      - >-
+        uv run python -m pyinstrument
+        -r html
+        -o profiles/cpu/startup_$(date +%Y%m%d_%H%M%S).html
+        -m uvicorn {{ project_slug }}.ports.api.app:create_api_app
+        --factory --host 127.0.0.1 --port 8000 --timeout-keep-alive 2
+        {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  profile:memory:
+    desc: "Profile backend startup memory with tracemalloc"
+    dir: backend
+    cmds:
+      - mkdir -p profiles/memory
+      - >-
+        uv run python -X tracemalloc=25 -c "
+        import tracemalloc, datetime;
+        tracemalloc.start(25);
+        from {{ project_slug }}.ports.api.app import create_api_app;
+        app = create_api_app();
+        snap = tracemalloc.take_snapshot();
+        ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S');
+        snap.dump(f'profiles/memory/startup_{ts}.snapshot');
+        stats = snap.statistics('lineno')[:30];
+        print('Top 30 memory allocations:');
+        [print(f'  {s}') for s in stats];
+        peak = tracemalloc.get_traced_memory()[1] / 1024 / 1024;
+        print(f'Peak memory: {peak:.2f} MB');
+        "
+
+  profile:report:
+    desc: "Open the latest profiling HTML report"
+    dir: backend
+    cmds:
+      - |
+        LATEST=$(find profiles -name '*.html' -type f 2>/dev/null | sort -r | head -1)
+        if [ -z "$LATEST" ]; then
+          echo "No HTML profiling reports found in profiles/"
+          exit 1
+        fi
+        echo "Opening: $LATEST"
+        {% raw %}{{if eq OS "windows"}}{% endraw %}start "$LATEST"{% raw %}{{else if eq OS "darwin"}}{% endraw %}open "$LATEST"{% raw %}{{else}}{% endraw %}xdg-open "$LATEST"{% raw %}{{end}}{% endraw %}
+
+  profile:clean:
+    desc: "Remove all saved profiling reports"
+    dir: backend
+    cmds:
+      - rm -rf profiles/
+      - echo "Profiling reports cleaned."
+
 {% if use_celery %}
   worker:
     desc: "Start Celery worker"
     dir: backend
     cmds:
       - uv run celery -A {{ project_slug }}.config.celery:celery_app worker --loglevel=info
+{% endif %}
+{% if use_ai %}
+  ai:setup:
+    desc: "Set up AI infrastructure (FAISS index, KG, directories)"
+    cmds:
+      - zsh scripts/setup-ai.zsh
+
+  ai:validate:
+    desc: "Validate AI dependencies and wiring"
+    dir: backend
+    cmds:
+      - >-
+        uv run python -c "
+        from {{ project_slug }}.config.settings import get_settings;
+        s = get_settings();
+        print(f'AI enabled: {getattr(s, \"openai_api_key\", None) is not None}');
+        print('AI config OK');
+        "
+{% if use_mcp %}
+  mcp:dev:
+    desc: "Start MCP server in development mode (stdio transport)"
+    dir: backend
+    cmds:
+      - uv run python -m {{ project_slug }}.ai.mcp.server
+{% endif %}
 {% endif %}
   clean:
     desc: "Clean backend build artifacts"

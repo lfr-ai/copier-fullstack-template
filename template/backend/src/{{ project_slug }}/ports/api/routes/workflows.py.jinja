@@ -1,0 +1,177 @@
+"""Workflow API routes — multi-agent graph execution and management."""
+
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+
+from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
+from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
+from {{ project_slug }}.ports.api.dependencies import ContainerDep
+
+router = APIRouter()
+
+_MAX_GOAL_LENGTH: int = 8192
+_MAX_ITERATIONS_LIMIT: int = 100
+
+
+class WorkflowExecuteRequest(BaseModel):
+    """Request to execute a multi-agent workflow."""
+
+    goal: str = Field(..., min_length=1, max_length=_MAX_GOAL_LENGTH, description="The goal for the workflow")
+    workflow_id: str = ""
+    initial_state: dict[str, object] = Field(default_factory=dict)
+    max_iterations: int = Field(default=DEFAULT_MAX_ITERATIONS, ge=1, le=_MAX_ITERATIONS_LIMIT)
+    thread_id: str = ""
+    interrupt_before: list[str] = Field(default_factory=list)
+    stream: bool = False
+
+
+class WorkflowResumeRequest(BaseModel):
+    """Request to resume a paused workflow."""
+
+    checkpoint_id: str = Field(..., min_length=1)
+    input_data: dict[str, object] = Field(default_factory=dict)
+
+
+class WorkflowStepResponse(BaseModel):
+    """Single step in a workflow execution trace."""
+
+    step_type: str = ""
+    agent_name: str = ""
+    input_data: dict[str, object] = Field(default_factory=dict)
+    output_data: dict[str, object] = Field(default_factory=dict)
+    duration_ms: float = 0.0
+    token_usage: dict[str, int] = Field(default_factory=dict)
+
+
+class WorkflowExecuteResponse(BaseModel):
+    """Response from a workflow execution."""
+
+    workflow_id: str = ""
+    goal: str = ""
+    answer: str = ""
+    steps: list[WorkflowStepResponse] = Field(default_factory=list)
+    total_steps: int = 0
+    total_tokens: dict[str, int] = Field(default_factory=dict)
+    success: bool = True
+    error: str = ""
+
+
+@router.post(
+    "/execute",
+    response_model=WorkflowExecuteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Execute a multi-agent workflow",
+)
+async def execute_workflow(request: WorkflowExecuteRequest, container: ContainerDep) -> WorkflowExecuteResponse | StreamingResponse:
+    """Execute a multi-agent workflow to completion or stream events."""
+    from {{ project_slug }}.application.dtos.workflow_dto import ExecuteWorkflowDTO
+
+    if not hasattr(container, "workflow_service"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Workflow engine not configured. Enable agents and LangGraph.",
+        )
+
+    svc = container.workflow_service()
+    dto = ExecuteWorkflowDTO(
+        workflow_id=request.workflow_id,
+        goal=request.goal,
+        initial_state=request.initial_state,
+        max_iterations=request.max_iterations,
+        thread_id=request.thread_id,
+        interrupt_before=request.interrupt_before,
+        stream=request.stream,
+    )
+
+    if request.stream:
+        import json
+
+        import structlog
+
+        _logger = structlog.get_logger(__name__)
+
+        async def _stream() -> AsyncIterator[str]:
+            try:
+                async for event in svc.execute_streaming(dto):
+                    yield f"data: {json.dumps(event)}\n\n"
+            except Exception:  # noqa: BLE001 — SSE error event sent to client
+                _logger.exception("Workflow stream error")
+                yield f"data: {json.dumps({'error': 'stream_error', 'detail': 'An internal error occurred during streaming.'})}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(_stream(), media_type="text/event-stream")
+
+    result = await svc.execute(dto)
+    return WorkflowExecuteResponse(
+        workflow_id=result.workflow_id,
+        goal=result.goal,
+        answer=result.answer,
+        steps=[
+            WorkflowStepResponse(
+                step_type=s.step_type,
+                agent_name=s.agent_name,
+                input_data=s.input_data,
+                output_data=s.output_data,
+                duration_ms=s.duration_ms,
+                token_usage=s.token_usage,
+            )
+            for s in result.steps
+        ],
+        total_steps=result.total_steps,
+        total_tokens=result.total_tokens,
+        success=result.success,
+        error=result.error,
+    )
+
+
+@router.post(
+    "/resume",
+    response_model=WorkflowExecuteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Resume a paused workflow",
+)
+async def resume_workflow(request: WorkflowResumeRequest, container: ContainerDep) -> WorkflowExecuteResponse:
+    """Resume a paused workflow from a checkpoint (human-in-the-loop)."""
+    from {{ project_slug }}.application.dtos.workflow_dto import ResumeWorkflowDTO
+
+    if not hasattr(container, "workflow_service"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Workflow engine not configured.",
+        )
+
+    svc = container.workflow_service()
+    dto = ResumeWorkflowDTO(
+        checkpoint_id=request.checkpoint_id,
+        input_data=request.input_data,
+    )
+
+    result = await svc.resume(dto)
+    return WorkflowExecuteResponse(
+        answer=result.answer,
+        total_steps=result.total_steps,
+        success=result.success,
+        error=result.error,
+    )
+
+
+@router.get(
+    "/state/{thread_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get workflow thread state",
+)
+async def get_workflow_state(thread_id: str, container: ContainerDep) -> dict:
+    """Retrieve the current state of a workflow execution thread."""
+    if not hasattr(container, "workflow_engine"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Workflow engine not configured.",
+        )
+
+    engine = container.workflow_engine()
+    state = await engine.get_state(thread_id=thread_id)
+    return {"thread_id": thread_id, "state": state}

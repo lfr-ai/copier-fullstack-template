@@ -9,9 +9,7 @@ from __future__ import annotations
 import datetime
 import json
 import uuid
-from typing import Any, override
-
-__all__ = ["AppJSONEncoder", "dumps", "loads"]
+from typing import override
 
 
 class AppJSONEncoder(json.JSONEncoder):
@@ -38,12 +36,12 @@ class AppJSONEncoder(json.JSONEncoder):
         return super().default(o)  # type: ignore[return-value]
 
 
-def dumps(obj: object, **kwargs: Any) -> str:
+def dumps(obj: object, **kwargs: object) -> str:
     """Serialize *obj* to a JSON string using :class:`AppJSONEncoder`.
 
     Args:
         obj (object): Python object to serialise.
-        **kwargs: Extra arguments forwarded to ``json.dumps``.
+        **kwargs (object): Extra arguments forwarded to 'json.dumps'.
 
     Returns:
         str: JSON string.
@@ -51,13 +49,13 @@ def dumps(obj: object, **kwargs: Any) -> str:
     return json.dumps(obj, cls=AppJSONEncoder, **kwargs)
 
 
-def loads(s: str | bytes) -> Any:
+def loads(s: str | bytes) -> object:
     """Deserialize a JSON string.
 
     Args:
         s (str | bytes): JSON string or bytes to parse.
 
     Returns:
-        Any: Parsed Python object (dict, list, str, int, float, bool, or None).
+        object: Parsed Python object (dict, list, str, int, float, bool, or None).
     """
     return json.loads(s)

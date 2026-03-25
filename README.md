@@ -1,6 +1,6 @@
 # Copier Fullstack Template
 
-Production-ready project scaffolding for fullstack Python + TypeScript applications following hexagonal architecture, modern best practices, and global standards.
+Production-ready project scaffolding for fullstack Python + TypeScript applications following clean / hexagonal architecture, modern best practices, and global standards.
 
 ---
 
@@ -22,7 +22,7 @@ Production-ready project scaffolding for fullstack Python + TypeScript applicati
 | **Redis**                | Cache and message broker | Yes (conditional)    |
 | **Celery**               | Async task processing    | Yes (conditional)    |
 | **Caddy**                | Reverse proxy (HTTPS)    | Yes (conditional)    |
-| **Cloud CLI**            | az / aws / gcloud        | Yes (conditional)    |
+| **Cloud CLI**            | Azure CLI (`az`)         | Yes (conditional)    |
 | **zsh**                  | Shell                    | Yes                  |
 | **pre-commit**           | Git hooks                | Yes (via `uv`)       |
 | **hadolint**             | Containerfile linting    | Recommended          |
@@ -148,13 +148,13 @@ After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 
 ## Features
 
-- **Hexagonal/ports-and-adapters architecture** with MVC for the web layer
+- **Clean / hexagonal (ports-and-adapters) architecture** with the Dependency Rule enforced
 - **FastAPI** backend with Pydantic v2 strict validation
 - **TypeScript frontend** with Vite, Tailwind CSS, Vitest
 - **PostgreSQL** — production-grade database via repository/adapter pattern
 - **Redis + Celery** — (conditional) async task processing and caching
 - **Caddy** — (conditional) reverse proxy with auto-TLS, compression, security headers
-- **AI/LLM abstraction** — OpenAI, Anthropic, Azure OpenAI, Ollama adapters
+- **AI/LLM abstraction** — OpenAI, Anthropic, Azure OpenAI adapters
 - **Centralized naming registry** with code generation
 - **Docker Compose** with optional Caddy gateway profile
 - **Azure Bicep IaC** — infrastructure as code (conditional on cloud provider)
@@ -162,7 +162,7 @@ After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 - **GitHub Actions CI/CD** — lint, test, build, deploy
 - **Renovate** for automated dependency updates
 - **Pre-commit hooks** — ruff, ty, prettier, detect-secrets, typos, shellcheck, hadolint
-- **Comprehensive testing** — pytest (unit, integration, property), Vitest, Playwright E2E
+- **Testing** — pytest (unit, integration, property), Vitest, Playwright E2E
 - **Full documentation** — architecture, setup, development, testing, deployment, ADRs
 
 ---
@@ -171,7 +171,7 @@ After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 
 ```
 my-project/
-├── src/my_project/           # Backend (hexagonal architecture)
+├── src/my_project/           # Backend (clean / hexagonal architecture)
 │   ├── adapters/             # External integrations (DB, cache, APIs)
 │   ├── ai/                   # LLM/agent tooling
 │   ├── application/          # Use cases, services, DTOs

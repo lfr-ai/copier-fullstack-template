@@ -1,0 +1,54 @@
+{%- if with_gsd %}
+---
+version: 1
+models:
+  research: claude-sonnet-4-6
+  planning:
+    model: claude-opus-4-6
+    fallbacks:
+      - openrouter/z-ai/glm-5
+      - openrouter/minimax/minimax-m2.5
+  execution: claude-sonnet-4-6
+  completion: claude-sonnet-4-6
+skill_discovery: suggest
+auto_supervisor:
+  soft_timeout_minutes: 40
+  idle_timeout_minutes: 10
+  hard_timeout_minutes: 120
+budget_ceiling: 100.00
+unique_milestone_ids: true
+token_profile: balanced
+uat_dispatch: true
+skill_staleness_days: 60
+verification_commands:
+  - task lint
+  - task test:unit
+  - task typecheck
+verification_auto_fix: true
+verification_max_retries: 2
+auto_report: true
+git:
+  isolation: worktree
+  manage_gitignore: false
+---
+
+GSD-2 (v2.28+) preferences for {{ project_name }}.
+Managed interactively via `/gsd prefs`.
+
+Key settings:
+- `models.*` — Per-phase model selection (string or {model, fallbacks} for automatic failover)
+- `skill_discovery` — auto / suggest / off
+- `auto_supervisor.*` — Timeout thresholds for auto mode
+- `budget_ceiling` — USD ceiling; auto mode pauses when reached
+- `token_profile` — budget / balanced / quality (coordinated token optimization)
+- `unique_milestone_ids` — Unique names to avoid team clashes (e.g. M001-abc123)
+- `git.isolation` — worktree (default) or none
+- `git.manage_gitignore` — false to skip auto-managing .gitignore
+- `skill_staleness_days` — Skills unused for N days get deprioritized (0 = disabled)
+- `verification_commands` — Commands run after each task to verify correctness
+- `verification_auto_fix` — Auto-fix lint/format issues on verification failure
+- `verification_max_retries` — Max retries before escalating verification failure
+- `auto_report` — Generate HTML reports after milestones (`/gsd export --html --all`)
+
+Docs: https://github.com/gsd-build/GSD-2/blob/main/docs/configuration.md
+{%- endif %}

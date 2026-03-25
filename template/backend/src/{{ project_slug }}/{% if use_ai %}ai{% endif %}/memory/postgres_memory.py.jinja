@@ -1,0 +1,95 @@
+"""PostgreSQL-backed conversation memory adapter.
+
+Stores conversation messages in a PostgreSQL table for
+durable, queryable conversation history across sessions.
+"""
+
+from __future__ import annotations
+
+import structlog
+from datetime import UTC, datetime
+from typing import override
+
+from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort, Message
+
+from {{ project_slug }}.ai.config import DEFAULT_CONVERSATION_LIMIT, DEFAULT_POOL_MAX_SIZE, DEFAULT_POOL_MIN_SIZE
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class PostgresConversationMemory(ConversationMemoryPort):
+    """PostgreSQL-backed conversation memory.
+
+    Uses raw asyncpg queries against a 'conversation_messages'
+    table. The table must be created via Alembic migration.
+    """
+
+    __slots__ = ("_database_url", "_pool")
+
+    def __init__(self, *, database_url: str) -> None:
+        self._database_url = database_url
+        self._pool: object | None = None
+
+    async def _ensure_pool(self) -> object:
+        """Lazily create the connection pool."""
+        if self._pool is None:
+            try:
+                import asyncpg  # type: ignore[import-untyped]
+            except ImportError as exc:
+                msg = "asyncpg is required — pip install asyncpg"
+                raise ImportError(msg) from exc
+            self._pool = await asyncpg.create_pool(
+                self._database_url, min_size=DEFAULT_POOL_MIN_SIZE, max_size=DEFAULT_POOL_MAX_SIZE,
+            )
+        return self._pool
+
+    @override
+    async def add_message(
+        self,
+        *,
+        conversation_id: str,
+        role: str,
+        content: str,
+    ) -> None:
+        """Store a message in PostgreSQL."""
+        pool = await self._ensure_pool()
+        await pool.execute(
+            """
+            INSERT INTO conversation_messages (conversation_id, role, content, created_at)
+            VALUES ($1, $2, $3, $4)
+            """,
+            conversation_id,
+            role,
+            content,
+            datetime.now(tz=UTC),
+        )
+        logger.debug("Message stored: conversation=%s role=%s", conversation_id, role)
+
+    @override
+    async def get_messages(
+        self,
+        conversation_id: str,
+        *,
+        limit: int = DEFAULT_CONVERSATION_LIMIT,
+    ) -> list[Message]:
+        """Retrieve conversation history from PostgreSQL."""
+        pool = await self._ensure_pool()
+        rows = await pool.fetch(
+            """
+            SELECT role, content FROM conversation_messages
+            WHERE conversation_id = $1
+            ORDER BY created_at ASC
+            LIMIT $2
+            """,
+            conversation_id,
+            limit,
+        )
+        return [Message(role=row["role"], content=row["content"]) for row in rows]
+
+    @override
+    async def clear(self, conversation_id: str) -> None:
+        """Clear all messages for a conversation."""
+        pool = await self._ensure_pool()
+        await pool.execute(
+            "DELETE FROM conversation_messages WHERE conversation_id = $1",
+            conversation_id,
+        )
+        logger.info("Conversation cleared: %s", conversation_id)

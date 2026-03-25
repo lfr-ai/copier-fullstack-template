@@ -1,8 +1,0 @@
-emulate -L zsh
-setopt PIPE_FAIL ERR_EXIT NO_UNSET
-
-print "Running database migrations..."
-
-uv run alembic upgrade head
-
-print "Migrations complete"

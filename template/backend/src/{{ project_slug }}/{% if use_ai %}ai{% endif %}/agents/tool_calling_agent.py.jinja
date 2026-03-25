@@ -1,0 +1,144 @@
+"""Tool-calling agent — executes tools via structured function-calling.
+
+Unlike the ReAct agent which parses text-based tool invocations,
+this agent uses structured JSON tool-calling patterns compatible
+with OpenAI/Azure function-calling and LangChain tool APIs.
+"""
+
+from __future__ import annotations
+
+import json
+import structlog
+from collections.abc import Callable, Coroutine
+from typing import override
+
+from {{ project_slug }}.ai.agents.base_agent import AgentResult, AgentTool, BaseAgent
+from {{ project_slug }}.ai.config import DEFAULT_AGENT_MAX_STEPS
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_STEP_MAX_TOKENS: int = 1024
+_STEP_TEMPERATURE: float = 0.2
+
+ToolExecutor = Callable[..., Coroutine[object, object, object]]
+
+
+class ToolCallingAgent(BaseAgent):
+    """Agent with real tool dispatch via registered executors.
+
+    Each 'AgentTool' can have an associated async executor
+    function that is called with parsed arguments.
+    """
+
+    __slots__ = ("_executors", "_llm")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        tools: list[AgentTool] | None = None,
+        executors: dict[str, ToolExecutor] | None = None,
+        max_steps: int = DEFAULT_AGENT_MAX_STEPS,
+    ) -> None:
+        super().__init__(tools=tools, max_steps=max_steps)
+        self._llm = llm
+        self._executors: dict[str, ToolExecutor] = executors or {}
+
+    def register_executor(self, name: str, executor: ToolExecutor) -> None:
+        """Register a callable executor for a named tool.
+
+        Args:
+            name (str): Tool name matching a registered 'AgentTool'.
+            executor (ToolExecutor): Async callable invoked when the tool is used.
+        """
+        self._executors[name] = executor
+        logger.debug("Registered executor for tool: %s", name)
+
+    @override
+    async def run(self, goal: str) -> AgentResult:
+        """Execute the structured tool-calling loop.
+
+        Args:
+            goal (str): Natural-language objective for the agent.
+
+        Returns:
+            AgentResult: Final answer, execution steps, and tool-call count.
+        """
+        tools_json = json.dumps([
+            {"name": t.name, "description": t.description, "parameters": t.parameters}
+            for t in self._tools
+        ], indent=2)
+
+        system_prompt = (
+            "You are an AI agent with access to tools. "
+            "To call a tool, respond with valid JSON: "
+            '{"tool": "tool_name", "args": {...}}\n'
+            "To give a final answer, respond with: "
+            '{"answer": "your final answer"}\n\n'
+            f"Available tools:\n{tools_json}"
+        )
+
+        steps: list[dict[str, object]] = []
+        context = f"Goal: {goal}\n"
+        tool_calls = 0
+
+        for step_num in range(1, self._max_steps + 1):
+            response = await self._llm.complete(
+                prompt=context,
+                system_prompt=system_prompt,
+                max_tokens=_STEP_MAX_TOKENS,
+                temperature=_STEP_TEMPERATURE,
+            )
+            steps.append({"step": step_num, "response": response})
+
+            # Try to parse as JSON
+            try:
+                parsed = json.loads(response.strip())
+            except json.JSONDecodeError:
+                # Fallback: extract answer from free text
+                context += f"\nStep {step_num}: {response}\n"
+                continue
+
+            # Check for final answer
+            if "answer" in parsed:
+                return AgentResult(
+                    goal=goal,
+                    answer=str(parsed["answer"]),
+                    steps=steps,
+                    tool_calls=tool_calls,
+                )
+
+            # Execute tool
+            if "tool" in parsed:
+                tool_name = parsed["tool"]
+                tool_args = parsed.get("args", {})
+                tool_calls += 1
+
+                executor = self._executors.get(tool_name)
+                if executor:
+                    try:
+                        result = await executor(**tool_args)
+                        tool_result = json.dumps(result, default=str)
+                    except Exception as e:  # noqa: BLE001 — top-level error boundary
+                        tool_result = json.dumps({"error": str(e)})
+                        logger.warning("Tool '%s' execution failed: %s", tool_name, e)
+                else:
+                    tool_result = json.dumps({"error": f"No executor registered for '{tool_name}'"})
+
+                steps.append({
+                    "step": step_num,
+                    "tool": tool_name,
+                    "args": tool_args,
+                    "result": tool_result,
+                })
+                context += f"\nStep {step_num}: Called {tool_name} → {tool_result}\n"
+            else:
+                context += f"\nStep {step_num}: {response}\n"
+
+        return AgentResult(
+            goal=goal,
+            answer="Maximum steps reached.",
+            steps=steps,
+            tool_calls=tool_calls,
+            success=False,
+        )

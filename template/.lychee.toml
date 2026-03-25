@@ -1,0 +1,63 @@
+# Lychee link checker configuration
+# Docs: https://github.com/lycheeverse/lychee
+# Run:  lychee --config .lychee.toml .
+
+# ── Caching ─────────────────────────────────────────────────────────
+cache = true
+max_cache_age = "1d"
+
+# ── Network ─────────────────────────────────────────────────────────
+max_concurrency = 16
+timeout = 30
+max_retries = 3
+max_redirects = 10
+retry_wait_time = 5
+
+# ── Accept ──────────────────────────────────────────────────────────
+accept = [200, 204, 301, 302, 403, 429]
+
+# ── Excludes ────────────────────────────────────────────────────────
+exclude = [
+  # Localhost / loopback
+  "^https?://localhost",
+  "^https?://127\\.0\\.0\\.1",
+  "^https?://0\\.0\\.0\\.0",
+  "^https?://\\[::1\\]",
+  # Link-local GitHub auth URLs
+  "^https?://github\\.com/login",
+  # Common placeholder URLs
+  "^https?://example\\.com",
+  "^https?://example\\.org",
+  "^https?://your-domain\\.com",
+  "^https?://.*\\.example\\.com",
+  # Container registry (may not resolve outside CI)
+  "^https?://ghcr\\.io",
+  "^https?://docker\\.io",
+  "^https?://registry\\.hub\\.docker\\.com",
+  # Rate-limited / bot-unfriendly
+  "^https?://twitter\\.com",
+  "^https?://x\\.com",
+  "^https?://www\\.linkedin\\.com",
+  "^https?://web\\.archive\\.org",
+  # Jinja template placeholders
+  "\\{\\{",
+  "\\{%",
+  "\\$\\{",
+]
+
+exclude_path = [
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  ".venv",
+  "__pycache__",
+  ".tox",
+  "*.egg-info",
+  "CHANGELOG.md",
+]
+
+# ── Behaviour ───────────────────────────────────────────────────────
+skip_missing = true
+include_verbatim = true
+no_progress = true

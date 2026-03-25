@@ -15,8 +15,10 @@ export type AppEnvironment = 'local' | 'dev' | 'test' | 'staging' | 'prod';
 export interface AppConfig {
   /** Current deployment environment. */
   readonly environment: AppEnvironment;
-  /** Base URL for backend API requests (no trailing slash). */
+  /** Base URL for backend REST API requests (no trailing slash). */
   readonly apiBaseUrl: string;
+  /** URL for backend GraphQL endpoint. */
+  readonly graphqlUrl: string;
   /** Whether the app is running in a production build. */
   readonly isProd: boolean;
   /** Whether the app is running in development mode. */
@@ -53,6 +55,7 @@ function resolveEnvironment(): AppEnvironment {
 export const config: AppConfig = Object.freeze({
   environment: resolveEnvironment(),
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
+  graphqlUrl: import.meta.env.VITE_GRAPHQL_URL ?? '/graphql',
   isProd: import.meta.env.PROD,
   isDev: import.meta.env.DEV,
   appVersion: import.meta.env.VITE_APP_VERSION ?? '0.0.0-dev',

@@ -6,7 +6,6 @@ their corresponding interface protocols using runtime_checkable.
 
 from __future__ import annotations
 
-import pytest
 
 from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
 from {{ project_slug }}.adapters.messaging.memory_event_bus import MemoryEventBus
@@ -56,4 +55,60 @@ class TestRedisCachePortConformance:
         mock_client = MagicMock()
         adapter = RedisCacheAdapter(mock_client)
         assert isinstance(adapter, CachePort)
+{%- endif %}
+{%- if use_ai %}
+
+
+class TestToolPortConformance:
+    """Verify AI tool adapters satisfy ToolPort protocol."""
+
+    def test_base_tool_subclass_is_tool_port(self) -> None:
+        """Verify a BaseTool subclass satisfies ToolPort."""
+        from {{ project_slug }}.ai.tools.base_tool import BaseTool, ToolResult
+        from {{ project_slug }}.core.interfaces.tool import ToolPort
+
+        class DummyTool(BaseTool):
+            @property
+            def name(self) -> str:
+                return "test"
+
+            @property
+            def description(self) -> str:
+                return "Test tool"
+
+            async def execute(self, **kwargs: object) -> ToolResult:
+                return ToolResult(content="ok")
+
+        tool = DummyTool()
+        assert isinstance(tool, ToolPort)
+
+
+class TestChainPortConformance:
+    """Verify AI chain adapters satisfy ChainPort protocol."""
+
+    def test_base_chain_subclass_is_chain_port(self) -> None:
+        """Verify a BaseChain subclass satisfies ChainPort."""
+        from {{ project_slug }}.ai.chains.base_chain import BaseChain
+        from {{ project_slug }}.core.interfaces.chain import ChainPort
+
+        class DummyChain(BaseChain):
+            async def run(self, *, input_text: str, **kwargs: object) -> dict[str, str]:
+                return {"content": input_text}
+
+        chain = DummyChain()
+        assert isinstance(chain, ChainPort)
+
+
+class TestEvaluatorPortConformance:
+    """Verify evaluator adapters satisfy EvaluatorPort protocol."""
+
+    def test_llm_judge_is_evaluator_port(self) -> None:
+        """Verify LLMJudgeEvaluator satisfies EvaluatorPort."""
+        from unittest.mock import MagicMock
+
+        from {{ project_slug }}.ai.evaluation.llm_judge import LLMJudgeEvaluator
+        from {{ project_slug }}.core.interfaces.evaluator import EvaluatorPort
+
+        evaluator = LLMJudgeEvaluator(llm=MagicMock())
+        assert isinstance(evaluator, EvaluatorPort)
 {%- endif %}

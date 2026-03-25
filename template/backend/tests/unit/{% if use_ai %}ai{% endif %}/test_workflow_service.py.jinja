@@ -1,0 +1,133 @@
+"""Unit tests for WorkflowService — multi-agent graph execution."""
+{%- if use_agents %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock
+
+import pytest
+
+from {{ project_slug }}.application.dtos.workflow_dto import (
+    ExecuteWorkflowDTO,
+    ResumeWorkflowDTO,
+)
+from {{ project_slug }}.application.services.workflow_service import WorkflowService
+from {{ project_slug }}.core.interfaces.workflow_engine import WorkflowResult
+
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture
+def mock_uow() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
+def mock_engine() -> AsyncMock:
+    mock = AsyncMock()
+    mock.execute.return_value = WorkflowResult(
+        answer="The answer is 42.",
+        trace=[
+            {"type": "message", "agent": "planner", "output": "Plan: step 1"},
+            {"type": "message", "agent": "executor", "output": "Done: step 1"},
+        ],
+        total_steps=2,
+        success=True,
+    )
+    mock.resume.return_value = WorkflowResult(
+        answer="Resumed result.",
+        total_steps=1,
+        success=True,
+    )
+    return mock
+
+
+@pytest.fixture
+def service(mock_uow: AsyncMock, mock_engine: AsyncMock) -> WorkflowService:
+    return WorkflowService(uow=mock_uow, engine=mock_engine)
+
+
+class TestWorkflowServiceExecute:
+    """Tests for WorkflowService.execute."""
+
+    async def test_execute_returns_result(self, service: WorkflowService) -> None:
+        dto = ExecuteWorkflowDTO(goal="Find the meaning of life")
+        result = await service.execute(dto)
+
+        assert result.success is True
+        assert result.answer == "The answer is 42."
+        assert result.total_steps == 2
+
+    async def test_execute_maps_trace_to_steps(
+        self,
+        service: WorkflowService,
+        mock_engine: AsyncMock,
+    ) -> None:
+        mock_engine.execute.return_value = WorkflowResult(
+            answer="Done",
+            trace=[
+                {"type": "agent_call", "agent": "planner", "output": "plan", "duration_ms": 100},
+            ],
+            total_steps=1,
+            success=True,
+        )
+        dto = ExecuteWorkflowDTO(goal="Test")
+        result = await service.execute(dto)
+
+        assert len(result.steps) == 1
+        assert result.steps[0].agent_name == "planner"
+
+    async def test_execute_propagates_max_iterations(
+        self,
+        service: WorkflowService,
+        mock_engine: AsyncMock,
+    ) -> None:
+        dto = ExecuteWorkflowDTO(goal="Test", max_iterations=10)
+        await service.execute(dto)
+
+        call_kwargs = mock_engine.execute.call_args.kwargs
+        assert call_kwargs["config"].max_iterations == 10
+
+    async def test_execute_failure(
+        self,
+        service: WorkflowService,
+        mock_engine: AsyncMock,
+    ) -> None:
+        mock_engine.execute.return_value = WorkflowResult(
+            answer="",
+            success=False,
+            error="runtime_error",
+        )
+        dto = ExecuteWorkflowDTO(goal="Fail")
+        result = await service.execute(dto)
+
+        assert result.success is False
+        assert result.error == "runtime_error"
+
+
+class TestWorkflowServiceResume:
+    """Tests for WorkflowService.resume."""
+
+    async def test_resume_returns_result(self, service: WorkflowService) -> None:
+        dto = ResumeWorkflowDTO(checkpoint_id="cp-123")
+        result = await service.resume(dto)
+
+        assert result.success is True
+        assert result.answer == "Resumed result."
+
+    async def test_resume_passes_input_data(
+        self,
+        service: WorkflowService,
+        mock_engine: AsyncMock,
+    ) -> None:
+        dto = ResumeWorkflowDTO(
+            checkpoint_id="cp-456",
+            input_data={"user_feedback": "approved"},
+        )
+        await service.resume(dto)
+
+        call_kwargs = mock_engine.resume.call_args.kwargs
+        assert call_kwargs["input_data"] == {"user_feedback": "approved"}
+{%- else %}
+# Workflow tests are only generated when use_agents is enabled.
+{%- endif %}

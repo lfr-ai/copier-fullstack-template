@@ -1,0 +1,125 @@
+"""RAG orchestration service — ingestion, search, and query."""
+
+from __future__ import annotations
+
+import structlog
+
+from {{ project_slug }}.ai.models import (
+    DocumentIngestResponse,
+    RAGQueryRequest,
+    RAGQueryResponse,
+    SourceReference,
+    VectorSearchRequest,
+    VectorSearchResponse,
+)
+from {{ project_slug }}.ai.rag.ingestion import IngestionPipeline
+from {{ project_slug }}.ai.rag.retrieval import RetrievalPipeline
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class RAGService:
+    """RAG orchestration service — ingestion, search, and query."""
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+        loader: DocumentLoaderPort,
+        splitter: TextSplitterPort,
+        knowledge_graph: KnowledgeGraphPort | None = None,
+    ) -> None:
+        self._ingestion = IngestionPipeline(
+            loader=loader,
+            splitter=splitter,
+            embedding=embedding,
+            vector_store=vector_store,
+        )
+        self._retrieval = RetrievalPipeline(
+            llm=llm,
+            embedding=embedding,
+            vector_store=vector_store,
+            knowledge_graph=knowledge_graph,
+        )
+        self._embedding = embedding
+        self._vector_store = vector_store
+
+    async def ingest(self, source: str) -> DocumentIngestResponse:
+        """Ingest a document into the knowledge base.
+
+        Args:
+            source (str): Document source path or URL.
+
+        Returns:
+            DocumentIngestResponse: Ingestion summary with chunk count.
+        """
+        chunks = await self._ingestion.ingest(source)
+        return DocumentIngestResponse(
+            source=source,
+            document_count=1,
+            chunk_count=len(chunks),
+        )
+
+    async def query(self, request: RAGQueryRequest) -> RAGQueryResponse:
+        """Execute a RAG query.
+
+        Args:
+            request (RAGQueryRequest): Query parameters.
+
+        Returns:
+            RAGQueryResponse: Answer with source references.
+        """
+        result = await self._retrieval.query(
+            request.question,
+            top_k=request.top_k,
+            system_prompt=request.system_prompt,
+            use_graph=request.use_graph,
+        )
+        sources = [
+            SourceReference(
+                id=s.id,
+                score=s.score,
+                content=str(s.metadata.get("content", "")) if s.metadata else "",
+            )
+            for s in result.sources
+        ]
+        return RAGQueryResponse(
+            question=result.query,
+            answer=result.answer,
+            sources=sources,
+        )
+
+    async def search(self, request: VectorSearchRequest) -> VectorSearchResponse:
+        """Execute a direct vector similarity search.
+
+        Args:
+            request (VectorSearchRequest): Search query and filters.
+
+        Returns:
+            VectorSearchResponse: Ranked source references.
+        """
+        query_vector = await self._embedding.embed_text(request.query)
+        results = await self._vector_store.search(
+            query_vector=query_vector,
+            top_k=request.top_k,
+            filters=request.filters,
+        )
+        return VectorSearchResponse(
+            query=request.query,
+            results=[
+                SourceReference(
+                    id=r.id,
+                    score=r.score,
+                    content=str(r.metadata.get("content", "")) if r.metadata else "",
+                )
+                for r in results
+            ],
+        )

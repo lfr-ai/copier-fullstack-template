@@ -1,0 +1,103 @@
+"""Unit tests for AI Pydantic models."""
+
+from __future__ import annotations
+
+import pytest
+from pydantic import ValidationError
+
+from {{ project_slug }}.ai.models import (
+    CompletionRequest,
+    CompletionResponse,
+    DocumentIngestRequest,
+    DocumentIngestResponse,
+    RAGQueryRequest,
+    RAGQueryResponse,
+    SourceReference,
+    VectorSearchRequest,
+)
+
+
+class TestCompletionRequest:
+    """Tests for CompletionRequest validation."""
+
+    def test_valid_request(self) -> None:
+        req = CompletionRequest(prompt="Hello")
+        assert req.prompt == "Hello"
+        assert req.max_tokens == 1024
+        assert req.temperature == 0.7
+
+    def test_empty_prompt_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CompletionRequest(prompt="")
+
+    def test_custom_parameters(self) -> None:
+        req = CompletionRequest(
+            prompt="Hi",
+            system_prompt="Be brief",
+            max_tokens=512,
+            temperature=0.0,
+        )
+        assert req.system_prompt == "Be brief"
+        assert req.max_tokens == 512
+        assert req.temperature == 0.0
+
+    def test_temperature_out_of_range(self) -> None:
+        with pytest.raises(ValidationError):
+            CompletionRequest(prompt="Hi", temperature=3.0)
+
+
+class TestCompletionResponse:
+    """Tests for CompletionResponse."""
+
+    def test_valid_response(self) -> None:
+        resp = CompletionResponse(content="answer", model="gpt-4o")
+        assert resp.content == "answer"
+        assert resp.model == "gpt-4o"
+
+
+class TestRAGQueryRequest:
+    """Tests for RAGQueryRequest."""
+
+    def test_valid_request(self) -> None:
+        req = RAGQueryRequest(question="What is AI?")
+        assert req.question == "What is AI?"
+        assert req.top_k == 5
+        assert req.use_graph is False
+
+    def test_empty_question_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            RAGQueryRequest(question="")
+
+
+class TestSourceReference:
+    """Tests for SourceReference."""
+
+    def test_valid_reference(self) -> None:
+        ref = SourceReference(id="chunk-1", score=0.95, content="some text")
+        assert ref.id == "chunk-1"
+        assert ref.score == 0.95
+
+
+class TestDocumentIngestRequest:
+    """Tests for DocumentIngestRequest."""
+
+    def test_valid_request(self) -> None:
+        req = DocumentIngestRequest(source="/path/to/doc.pdf")
+        assert req.source == "/path/to/doc.pdf"
+
+
+class TestDocumentIngestResponse:
+    """Tests for DocumentIngestResponse."""
+
+    def test_valid_response(self) -> None:
+        resp = DocumentIngestResponse(source="test.txt", document_count=1, chunk_count=10)
+        assert resp.chunk_count == 10
+
+
+class TestVectorSearchRequest:
+    """Tests for VectorSearchRequest."""
+
+    def test_valid_request(self) -> None:
+        req = VectorSearchRequest(query="search term")
+        assert req.query == "search term"
+        assert req.top_k == 5

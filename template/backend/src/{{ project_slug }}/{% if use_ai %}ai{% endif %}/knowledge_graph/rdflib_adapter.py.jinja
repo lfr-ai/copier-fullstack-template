@@ -1,0 +1,211 @@
+"""RDFLib knowledge graph adapter — implements 'KnowledgeGraphPort' and 'SPARQLQueryPort'.
+
+Uses RDFLib for RDF graph storage with full SPARQL 1.1 query support.
+Suitable for standards-based knowledge representation using RDF triples
+and ontology-aware querying. Supports serialization to Turtle, JSON-LD,
+N-Triples, and RDF/XML formats.
+"""
+
+from __future__ import annotations
+
+import structlog
+from pathlib import Path
+from typing import override
+
+from {{ project_slug }}.core.interfaces.knowledge_graph import (
+    DEFAULT_NEIGHBOR_LIMIT,
+    DEFAULT_SPARQL_TIMEOUT_SECONDS,
+    KnowledgeGraphPort,
+    SPARQLQueryPort,
+)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_ENTITY_NS = "http://example.org/entity/"
+_REL_NS = "http://example.org/relation/"
+
+
+class RDFLibKnowledgeGraph(KnowledgeGraphPort, SPARQLQueryPort):
+    """RDF knowledge graph backed by RDFLib with SPARQL support."""
+
+    __slots__ = ("_graph", "_entity_ns", "_rel_ns")
+
+    def __init__(
+        self,
+        *,
+        persist_path: str | None = None,
+        entity_namespace: str = _ENTITY_NS,
+        relation_namespace: str = _REL_NS,
+    ) -> None:
+        try:
+            from rdflib import Graph, Namespace  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "rdflib is required — pip install rdflib"
+            raise ImportError(msg) from exc
+
+        self._graph: Graph = Graph()
+        self._entity_ns = Namespace(entity_namespace)
+        self._rel_ns = Namespace(relation_namespace)
+        self._graph.bind("entity", self._entity_ns)
+        self._graph.bind("rel", self._rel_ns)
+
+        if persist_path:
+            self._load_if_exists(persist_path)
+
+    def _uri(self, name: str, ns: str = "entity") -> object:
+        """Create a URIRef from a name."""
+        from rdflib import URIRef  # type: ignore[import-untyped]
+
+        if name.startswith("http://") or name.startswith("https://"):
+            return URIRef(name)
+        namespace = self._entity_ns if ns == "entity" else self._rel_ns
+        return namespace[name.replace(" ", "_")]
+
+    @override
+    async def add_triplet(
+        self,
+        *,
+        subject: str,
+        predicate: str,
+        obj: str,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
+        from rdflib import Literal  # type: ignore[import-untyped]
+
+        s = self._uri(subject)
+        p = self._uri(predicate, ns="relation")
+        o = self._uri(obj) if not obj.startswith('"') else Literal(obj.strip('"'))
+        self._graph.add((s, p, o))
+        logger.debug("Added RDF triplet: %s -[%s]-> %s", subject, predicate, obj)
+
+    @override
+    async def add_triplets(self, triplets: list[tuple[str, str, str]]) -> None:
+        from rdflib import Literal  # type: ignore[import-untyped]
+
+        for subj, pred, obj in triplets:
+            s = self._uri(subj)
+            p = self._uri(pred, ns="relation")
+            o = self._uri(obj) if not obj.startswith('"') else Literal(obj.strip('"'))
+            self._graph.add((s, p, o))
+        logger.info("Added %d RDF triplets to knowledge graph", len(triplets))
+
+    @override
+    async def query_neighbors(
+        self,
+        entity: str,
+        *,
+        depth: int = 1,
+        limit: int = DEFAULT_NEIGHBOR_LIMIT,
+    ) -> list[dict[str, object]]:
+        entity_uri = self._uri(entity)
+        results: list[dict[str, object]] = []
+
+        # Outgoing edges
+        for p, o in self._graph.predicate_objects(entity_uri):
+            if len(results) >= limit:
+                break
+            results.append({
+                "entity": str(o).rsplit("/", 1)[-1].replace("_", " "),
+                "predicate": str(p).rsplit("/", 1)[-1].replace("_", " "),
+                "direction": "outgoing",
+            })
+
+        # Incoming edges
+        for s, p in self._graph.subject_predicates(entity_uri):
+            if len(results) >= limit:
+                break
+            results.append({
+                "entity": str(s).rsplit("/", 1)[-1].replace("_", " "),
+                "predicate": str(p).rsplit("/", 1)[-1].replace("_", " "),
+                "direction": "incoming",
+            })
+
+        return results[:limit]
+
+    @override
+    async def query_triplets(
+        self,
+        *,
+        subject: str | None = None,
+        predicate: str | None = None,
+        obj: str | None = None,
+    ) -> list[tuple[str, str, str]]:
+        s = self._uri(subject) if subject else None
+        p = self._uri(predicate, ns="relation") if predicate else None
+        o = self._uri(obj) if obj else None
+
+        results: list[tuple[str, str, str]] = []
+        for ts, tp, to_ in self._graph.triples((s, p, o)):
+            results.append((
+                str(ts).rsplit("/", 1)[-1].replace("_", " "),
+                str(tp).rsplit("/", 1)[-1].replace("_", " "),
+                str(to_).rsplit("/", 1)[-1].replace("_", " "),
+            ))
+        return results
+
+    @override
+    async def delete_entity(self, entity: str) -> None:
+        entity_uri = self._uri(entity)
+        self._graph.remove((entity_uri, None, None))
+        self._graph.remove((None, None, entity_uri))
+        logger.info("Removed entity '%s' from RDF graph", entity)
+
+    @override
+    async def get_entity_count(self) -> int:
+        subjects = set(self._graph.subjects())
+        objects = set(self._graph.objects())
+        return len(subjects | objects)
+
+    @override
+    async def get_triplet_count(self) -> int:
+        return len(self._graph)
+
+    @override
+    async def sparql_query(
+        self,
+        query: str,
+        *,
+        timeout: int = DEFAULT_SPARQL_TIMEOUT_SECONDS,
+    ) -> list[dict[str, str]]:
+        _validate_sparql_readonly(query)
+        result = self._graph.query(query)
+        bindings: list[dict[str, str]] = []
+        for row in result:
+            bindings.append({str(var): str(val) for var, val in zip(result.vars, row)})  # type: ignore[union-attr]
+        return bindings
+
+    def save(self, path: str, fmt: str = "turtle") -> None:
+        """Persist graph to file in the specified RDF format."""
+        self._graph.serialize(destination=path, format=fmt)
+        logger.info("RDF knowledge graph saved to %s (format=%s)", path, fmt)
+
+    def _load_if_exists(self, path: str) -> None:
+        p = Path(path)
+        if p.exists():
+            fmt = _guess_format(path)
+            self._graph.parse(source=path, format=fmt)
+            logger.info("RDF graph loaded from %s (%d triples)", path, len(self._graph))
+
+
+def _guess_format(path: str) -> str:
+    """Guess RDF serialization format from file extension."""
+    ext = Path(path).suffix.lower()
+    formats = {
+        ".ttl": "turtle",
+        ".jsonld": "json-ld",
+        ".json": "json-ld",
+        ".nt": "nt",
+        ".nq": "nquads",
+        ".xml": "xml",
+        ".rdf": "xml",
+        ".trig": "trig",
+    }
+    return formats.get(ext, "turtle")
+
+
+def _validate_sparql_readonly(query: str) -> None:
+    """Reject write operations in SPARQL queries for safety."""
+    upper = query.strip().upper()
+    write_ops = ("INSERT", "DELETE", "DROP", "CLEAR", "CREATE", "LOAD", "MOVE", "COPY", "ADD")
+    for op in write_ops:
+        if upper.startswith(op) or f"\n{op}" in upper or f" {op} " in upper:
+            msg = f"Write SPARQL operations are not allowed: {op}"
+            raise PermissionError(msg)

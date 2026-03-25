@@ -5,9 +5,9 @@ Reads the central naming registry and generates:
     - TypeScript constants → frontend/src/config/registry_constants.ts
     - Environment port file → .env.ports
 
-All paths are resolved relative to ``__file__`` so the script works
+All paths are resolved relative to '__file__' so the script works
 correctly regardless of the current working directory (e.g. when
-Taskfile uses ``dir: registry``).
+Taskfile uses 'dir: registry').
 
 Usage:
     cd registry && uv run python generate_registry.py            # Generate all
@@ -24,29 +24,26 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import Final
 
-__all__ = ["generate", "main"]
+_BASE_DIR: Path = Path(__file__).resolve().parent.parent
+_REGISTRY_DIR: Path = _BASE_DIR / "registry"
 
-_BASE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
-_REGISTRY_DIR: Final[Path] = _BASE_DIR / "registry"
-
-REGISTRY_PATH: Final[Path] = _REGISTRY_DIR / "naming_registry.json"
-OUTPUT_PY: Final[Path] = (
+REGISTRY_PATH = _REGISTRY_DIR / "naming_registry.json"
+OUTPUT_PY = (
     _BASE_DIR / "backend" / "src" / "{{ project_slug }}" / "core" / "registry_constants.py"
 )
-OUTPUT_TS: Final[Path] = (
+OUTPUT_TS = (
     _BASE_DIR / "frontend" / "src" / "config" / "registry_constants.ts"
 )
-OUTPUT_ENV: Final[Path] = _BASE_DIR / ".env.ports"
+OUTPUT_ENV = _BASE_DIR / ".env.ports"
 
-_HEADER_PY: Final[str] = '"""Auto-generated registry constants — DO NOT EDIT MANUALLY."""\n'
-_HEADER_TS: Final[str] = "// Auto-generated registry constants — DO NOT EDIT MANUALLY.\n"
+_HEADER_PY: str = '"""Auto-generated registry constants — DO NOT EDIT MANUALLY."""\n'
+_HEADER_TS: str = "// Auto-generated registry constants — DO NOT EDIT MANUALLY.\n"
 
 logger = logging.getLogger(__name__)
 
-_NON_ALNUM_RE: Final[re.Pattern[str]] = re.compile(r"[^a-zA-Z0-9]")
-_ROUTE_PARAM_RE: Final[re.Pattern[str]] = re.compile(r"\{(\w+)\}")
+_NON_ALNUM_RE: re.Pattern[str] = re.compile(r"[^a-zA-Z0-9]")
+_ROUTE_PARAM_RE: re.Pattern[str] = re.compile(r"\{(\w+)\}")
 
 
 def _to_pascal_case(text: str) -> str:

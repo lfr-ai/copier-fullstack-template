@@ -4,22 +4,13 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-__all__ = ["CachePort"]
-
 
 @runtime_checkable
 class CachePort(Protocol):
     """Protocol for cache operations."""
 
     async def get(self, key: str) -> str | None:
-        """Retrieve cached value by key.
-
-        Args:
-            key (str): Cache key.
-
-        Returns:
-            str | None: Cached string value or None if not found.
-        """
+        """Retrieve cached value by key."""
         ...
 
     async def set(
@@ -29,33 +20,13 @@ class CachePort(Protocol):
         value: str,
         ttl_seconds: int | None = None,
     ) -> None:
-        """Store value in cache.
-
-        Args:
-            key (str): Cache key.
-            value (str): String value to cache.
-            ttl_seconds (int | None): Time-to-live in seconds.
-        """
+        """Store value in cache."""
         ...
 
     async def delete(self, key: str) -> bool:
-        """Remove cached value.
-
-        Args:
-            key (str): Cache key.
-
-        Returns:
-            bool: True if key was deleted.
-        """
+        """Remove cached value."""
         ...
 
     async def exists(self, key: str) -> bool:
-        """Check if key exists in cache.
-
-        Args:
-            key (str): Cache key.
-
-        Returns:
-            bool: True if key exists.
-        """
+        """Check if key exists in cache."""
         ...

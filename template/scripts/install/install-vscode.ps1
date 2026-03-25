@@ -34,7 +34,7 @@ function Install-Extensions {
         "charliermarsh.ruff",
         "ms-vscode-remote.remote-wsl",
         "ms-vscode-remote.remote-containers",
-        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-containers",
         "eamodio.gitlens",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",

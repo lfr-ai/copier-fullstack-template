@@ -13,13 +13,10 @@
 
 import { afterEach, vi } from 'vitest';
 
-// ── DOM cleanup + mock reset ───────────────────────────────────
 afterEach(() => {
   document.body.replaceChildren();
   vi.clearAllMocks();
 });
-
-// ── Browser API stubs ──────────────────────────────────────────
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -56,8 +53,6 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     disconnect = vi.fn();
   } as unknown as typeof globalThis.ResizeObserver;
 }
-
-// ── Shared test utilities ──────────────────────────────────────
 
 /** Create a mock successful fetch response. */
 export function mockApiSuccess<T>(data: T): void {

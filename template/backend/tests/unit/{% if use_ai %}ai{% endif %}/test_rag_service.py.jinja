@@ -1,0 +1,93 @@
+"""Unit tests for RAG service."""
+{%- if use_rag %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock
+
+import pytest
+
+from {{ project_slug }}.ai.models import (
+    DocumentIngestResponse,
+    RAGQueryRequest,
+    RAGQueryResponse,
+    VectorSearchRequest,
+    VectorSearchResponse,
+)
+from {{ project_slug }}.ai.services import RAGService
+from {{ project_slug }}.core.entities.document import Chunk
+
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture
+def mock_loader() -> AsyncMock:
+    """Create mock document loader."""
+    loader = AsyncMock()
+    loader.load.return_value = []
+    return loader
+
+
+@pytest.fixture
+def mock_splitter() -> AsyncMock:
+    """Create mock text splitter."""
+    splitter = AsyncMock()
+    splitter.split.return_value = [
+        Chunk(id="c1", content="test chunk", metadata={}),
+    ]
+    return splitter
+
+
+@pytest.fixture
+def rag_service(
+    mock_llm: AsyncMock,
+    mock_embedding: AsyncMock,
+    mock_vector_store: AsyncMock,
+    mock_loader: AsyncMock,
+    mock_splitter: AsyncMock,
+) -> RAGService:
+    """Create RAG service with all mock dependencies."""
+    return RAGService(
+        llm=mock_llm,
+        embedding=mock_embedding,
+        vector_store=mock_vector_store,
+        loader=mock_loader,
+        splitter=mock_splitter,
+    )
+
+
+class TestRAGServiceSearch:
+    """Test suite for RAG vector search."""
+
+    async def test_search_returns_results(
+        self,
+        rag_service: RAGService,
+        mock_embedding: AsyncMock,
+    ) -> None:
+        """Verify vector search returns structured response."""
+        request = VectorSearchRequest(query="test query", top_k=5)
+
+        result = await rag_service.search(request)
+
+        assert isinstance(result, VectorSearchResponse)
+        assert result.query == "test query"
+        assert len(result.results) >= 1
+        mock_embedding.embed_text.assert_awaited_once_with("test query")
+
+
+class TestRAGServiceIngest:
+    """Test suite for document ingestion."""
+
+    async def test_ingest_returns_chunk_count(
+        self,
+        rag_service: RAGService,
+    ) -> None:
+        """Verify ingestion returns document and chunk counts."""
+        result = await rag_service.ingest("/tmp/test.txt")
+
+        assert isinstance(result, DocumentIngestResponse)
+        assert result.source == "/tmp/test.txt"
+        assert result.document_count == 1
+{%- else %}
+# RAG tests are only generated when use_rag is enabled.
+{%- endif %}

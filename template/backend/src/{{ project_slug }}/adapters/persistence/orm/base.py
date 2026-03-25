@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Final
 
 from sqlalchemy import TIMESTAMP, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-__all__ = ["AuditMixin", "IdentityMixin", "ORMBase"]
-
-_UUID_STRING_LENGTH: Final[int] = 36
+_UUID_STRING_LENGTH: int = 36
 """Character length of a UUID4 string representation."""
 
 
@@ -55,7 +52,7 @@ class IdentityMixin:
     """Mixin providing UUID string primary key.
 
     Uses a 36-character UUID4 string to match domain
-    ``Entity.id`` and ensure database-agnostic identity.
+    'Entity.id' for database-agnostic identity.
     """
 
     id: Mapped[str] = mapped_column(

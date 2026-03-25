@@ -1,0 +1,103 @@
+"""Azure Document Intelligence loader — implements 'DocumentLoaderPort'.
+
+Uses Azure AI Document Intelligence (Form Recognizer) to extract
+text, tables, and structure from PDFs and scanned documents.
+
+Add 'azure-ai-documentintelligence' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import structlog
+
+from {{ project_slug }}.core.entities.document import Document
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class AzureDocIntelligenceLoader(DocumentLoaderPort):
+    """Document loader backed by Azure Document Intelligence.
+
+    Extracts structured text from PDFs, images, and office documents
+    using Azure's prebuilt layout model.  Uses the **async** client to
+    avoid blocking the event loop.
+    """
+
+    __slots__ = ("_client", "_model_id")
+
+    def __init__(
+        self,
+        *,
+        endpoint: str,
+        api_key: str,
+        model_id: str = "prebuilt-layout",
+    ) -> None:
+        try:
+            from azure.ai.documentintelligence.aio import DocumentIntelligenceClient
+            from azure.core.credentials import AzureKeyCredential
+        except ImportError as exc:
+            msg = "azure-ai-documentintelligence is required — pip install azure-ai-documentintelligence"
+            raise ImportError(msg) from exc
+
+        self._model_id = model_id
+        self._client = DocumentIntelligenceClient(
+            endpoint=endpoint,
+            credential=AzureKeyCredential(api_key),
+        )
+        logger.info(
+            "AzureDocIntelligenceLoader initialized: model=%s",
+            model_id,
+        )
+
+    async def load(self, source: str) -> list[Document]:
+        """Load and parse a document using Azure Document Intelligence.
+
+        'source' is a path to a local file (PDF, image, DOCX, etc).
+        """
+        from pathlib import Path
+
+        path = Path(source)
+        if not path.is_file():
+            msg = f"File not found: {source}"
+            raise FileNotFoundError(msg)
+
+        content = path.read_bytes()
+        poller = await self._client.begin_analyze_document(
+            self._model_id,
+            content,
+            content_type="application/octet-stream",
+        )
+        analyzed = await poller.result()
+
+        documents: list[Document] = []
+        if analyzed.content:
+            documents.append(
+                Document(
+                    content=analyzed.content,
+                    metadata={
+                        "source": source,
+                        "loader": "azure_document_intelligence",
+                        "model_id": self._model_id,
+                        "page_count": len(analyzed.pages) if analyzed.pages else 0,
+                    },
+                ),
+            )
+
+        logger.info(
+            "Loaded document via Azure Doc Intelligence: %s (%d chars)",
+            source,
+            len(analyzed.content) if analyzed.content else 0,
+        )
+        return documents
+
+    async def load_many(self, sources: list[str]) -> list[Document]:
+        """Load multiple documents concurrently.
+
+        Args:
+            sources (list[str]): List of file paths.
+
+        Returns:
+            list[Document]: Aggregated list of parsed Document entities.
+        """
+        results = await asyncio.gather(*(self.load(src) for src in sources))
+        return [doc for docs in results for doc in docs]

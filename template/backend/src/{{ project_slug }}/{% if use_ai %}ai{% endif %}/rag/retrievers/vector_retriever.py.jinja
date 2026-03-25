@@ -1,0 +1,64 @@
+"""Vector retriever — implements 'RetrieverPort' using embeddings + vector store.
+
+The default retrieval strategy: embed the query, search the vector store,
+and return matching context chunks.
+"""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_SIMILARITY_TOP_K
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class VectorRetriever(RetrieverPort):
+    """Retrieve context by embedding the query and searching the vector store."""
+
+    __slots__ = ("_embedding", "_vector_store")
+
+    def __init__(
+        self,
+        *,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+    ) -> None:
+        self._embedding = embedding
+        self._vector_store = vector_store
+
+    @override
+    async def retrieve(
+        self,
+        *,
+        query: str,
+        top_k: int = DEFAULT_SIMILARITY_TOP_K,
+        filters: dict[str, object] | None = None,
+    ) -> list[RetrievedContext]:
+        """Embed query and search the vector store.
+
+        Args:
+            query (str): User query text.
+            top_k (int): Maximum number of results to return.
+            filters (dict[str, object] | None): Optional metadata filters.
+
+        Returns:
+            list[RetrievedContext]: Ranked context chunks.
+        """
+        query_vector = await self._embedding.embed_text(query)
+        results = await self._vector_store.search(
+            query_vector=query_vector,
+            top_k=top_k,
+            filters=filters,
+        )
+        return [
+            RetrievedContext(
+                id=r.id,
+                content=str(r.metadata.get("content", "")) if r.metadata else "",
+                score=r.score,
+                metadata=r.metadata or {},
+            )
+            for r in results
+        ]

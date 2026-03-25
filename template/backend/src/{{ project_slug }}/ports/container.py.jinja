@@ -2,74 +2,679 @@
 
 from __future__ import annotations
 
+import structlog
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
 from {{ project_slug }}.adapters.messaging.memory_event_bus import MemoryEventBus
-from {{ project_slug }}.adapters.persistence.session import create_engine, create_session_factory
-from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import SQLAlchemyUnitOfWork
 from {{ project_slug }}.application.services.user_service import UserService
 from {{ project_slug }}.config.settings import get_settings
 
-__all__ = ["Container", "get_container"]
+if TYPE_CHECKING:
+    from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import (
+        SQLAlchemyUnitOfWork,
+    )
+{% if use_ai %}
+    from {{ project_slug }}.ai.services import AIService
+    from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+    from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+    from {{ project_slug }}.core.interfaces.evaluator import EvaluatorPort
+    from {{ project_slug }}.core.interfaces.llm import LLMPort
+    from {{ project_slug }}.core.interfaces.prompt_template import PromptTemplatePort
+    from {{ project_slug }}.core.interfaces.reranker import RerankerPort
+    from {{ project_slug }}.core.interfaces.retriever import RetrieverPort
+    from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+    from {{ project_slug }}.core.interfaces.workflow_engine import WorkflowEnginePort
+{%- if use_knowledge_graph %}
+    from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+{%- endif %}
+{%- if use_mcp %}
+    from {{ project_slug }}.core.interfaces.mcp_client import MCPClientPort
+{%- endif %}
+{%- endif %}
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class Container:
-    """Simple dependency injection container.
+    """Dependency injection container.
 
     Provides factory methods for creating configured
     service instances with their dependencies.
     """
 
     def __init__(self) -> None:
-        """Initialize container with application settings."""
         self._settings = get_settings()
-        self._engine = create_engine(
-            self._settings.database_url,
-            echo=self._settings.database_echo,
-        )
-        self._session_factory = create_session_factory(self._engine)
+        self._engine = None
+        self._session_factory = None
+        self._cache: MemoryCacheAdapter | None = None
+        self._event_bus: MemoryEventBus | None = None
+        if self._settings.database_url:
+            from {{ project_slug }}.adapters.persistence.session import (
+                create_engine,
+                create_session_factory,
+            )
+
+            self._engine = create_engine(
+                self._settings.database_url,
+                echo=self._settings.database_echo,
+            )
+            self._session_factory = create_session_factory(self._engine)
+
+    async def dispose(self) -> None:
+        """Release resources held by the container (DB engine, etc.)."""
+        if self._engine is not None:
+            try:
+                await self._engine.dispose()
+                logger.info("database_engine_disposed")
+            except Exception:  # noqa: BLE001 — teardown cleanup, best-effort
+                logger.exception("database_engine_dispose_failed")
 
     def unit_of_work(self) -> SQLAlchemyUnitOfWork:
-        """Create unit of work instance.
+        """Create unit of work instance."""
+        if self._session_factory is None:
+            msg = "Database not configured — set database_url in settings."
+            raise RuntimeError(msg)
+        from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import (
+            SQLAlchemyUnitOfWork,
+        )
 
-        Returns:
-            SQLAlchemyUnitOfWork: Configured SQLAlchemy unit of work.
-        """
         return SQLAlchemyUnitOfWork(self._session_factory)
 
     def cache(self) -> MemoryCacheAdapter:
-        """Create cache adapter instance.
-
-        Returns:
-            MemoryCacheAdapter: Memory cache adapter (swap with Redis in production).
-        """
-        return MemoryCacheAdapter()
+        """Return singleton cache adapter instance."""
+        if self._cache is None:
+            self._cache = MemoryCacheAdapter()
+        return self._cache
 
     def event_bus(self) -> MemoryEventBus:
-        """Create event bus instance.
-
-        Returns:
-            MemoryEventBus: In-memory event bus.
-        """
-        return MemoryEventBus()
+        """Return singleton event bus instance."""
+        if self._event_bus is None:
+            self._event_bus = MemoryEventBus()
+        return self._event_bus
 
     def user_service(self) -> UserService:
-        """Create user service with its dependencies.
+        """Create user service with its dependencies."""
+        from {{ project_slug }}.infrastructure.security.hashing import PBKDF2PasswordHasher
 
-        Returns:
-            UserService: Configured user service instance.
-        """
         return UserService(
             uow=self.unit_of_work(),
+            password_hasher=PBKDF2PasswordHasher(),
         )
+
+
+{% if use_ai %}
+    def _get_openai_key(self) -> str:
+        """Return OpenAI API key from settings or raise."""
+        key = getattr(self._settings, "openai_api_key", "")
+        if not key:
+            msg = "OPENAI_API_KEY not configured. Set {{ project_slug | upper }}_OPENAI_API_KEY."
+            logger.warning(msg)
+            raise AttributeError(msg)
+        return key
+
+    def _create_llm(self) -> LLMPort:
+        """Create LLM adapter based on configuration.
+
+        Uses :class:`LiteLLMAdapter` as the universal backend — the model
+        string prefix routes to the correct provider automatically.
+        """
+        from {{ project_slug }}.ai.llm.litellm_adapter import LiteLLMAdapter
+
+{%- if use_azure_openai %}
+        endpoint = getattr(self._settings, "azure_openai_endpoint", "")
+        api_key = getattr(self._settings, "azure_openai_api_key", "")
+        deployment = getattr(self._settings, "azure_openai_deployment", "")
+        if endpoint and api_key and deployment:
+            return LiteLLMAdapter(
+                model=f"azure/{deployment}",
+                api_key=api_key,
+                api_base=endpoint,
+                api_version=getattr(self._settings, "azure_openai_api_version", "2025-04-01-preview"),
+            )
+{%- endif %}
+        model = getattr(self._settings, "openai_model", "gpt-4o")
+        return LiteLLMAdapter(model=model, api_key=self._get_openai_key())
+
+    def _create_embedding(self) -> EmbeddingPort:
+        """Create embedding adapter based on configuration.
+
+        Uses :class:`LiteLLMEmbeddingAdapter` as the universal backend.
+        """
+        from {{ project_slug }}.ai.embeddings.litellm_embeddings import LiteLLMEmbeddingAdapter
+
+        dim = getattr(self._settings, "embedding_dimension", 1536)
+        model = getattr(self._settings, "embedding_model", "text-embedding-3-small")
+{%- if use_azure_openai %}
+        endpoint = getattr(self._settings, "azure_openai_endpoint", "")
+        api_key = getattr(self._settings, "azure_openai_api_key", "")
+        if endpoint and api_key:
+            return LiteLLMEmbeddingAdapter(
+                model=f"azure/{model}",
+                api_key=api_key,
+                api_base=endpoint,
+                api_version=getattr(self._settings, "azure_openai_api_version", "2025-04-01-preview"),
+                dimension=dim,
+            )
+{%- endif %}
+        return LiteLLMEmbeddingAdapter(
+            model=model,
+            api_key=self._get_openai_key(),
+            dimension=dim,
+        )
+
+    def _create_vector_store(self) -> VectorStorePort:
+        """Create vector store adapter based on configuration."""
+        dim = getattr(self._settings, "embedding_dimension", 1536)
+{%- if use_ai_search %}
+        endpoint = getattr(self._settings, "azure_ai_search_endpoint", "")
+        api_key = getattr(self._settings, "azure_ai_search_api_key", "")
+        index_name = getattr(self._settings, "azure_ai_search_index", "{{ project_slug }}-index")
+        if endpoint and api_key:
+            from {{ project_slug }}.ai.vector_stores.azure_ai_search_store import AzureAISearchVectorStore
+
+            return AzureAISearchVectorStore(
+                endpoint=endpoint,
+                api_key=api_key,
+                index_name=index_name,
+                dimension=dim,
+            )
+{%- endif %}
+{%- if use_pgvector %}
+        table = getattr(self._settings, "pgvector_table_name", "vector_embeddings")
+        from {{ project_slug }}.ai.vector_stores.pgvector_store import PgvectorStore
+
+        return PgvectorStore(
+            database_url=self._settings.database_url.replace("+psycopg", ""),
+            dimension=dim,
+            table_name=table,
+        )
+{%- elif use_faiss %}
+        persist_dir = getattr(self._settings, "faiss_persist_dir", None)
+        from {{ project_slug }}.ai.vector_stores.faiss_store import FaissVectorStore
+
+        return FaissVectorStore(dimension=dim, persist_dir=persist_dir)
+{%- else %}
+        from {{ project_slug }}.ai.vector_stores.faiss_store import FaissVectorStore
+
+        return FaissVectorStore(dimension=dim)
+{%- endif %}
+
+    def _create_loader(self) -> DocumentLoaderPort:
+        """Create document loader adapter based on configuration."""
+{%- if use_document_intelligence %}
+        endpoint = getattr(self._settings, "azure_doc_intelligence_endpoint", "")
+        api_key = getattr(self._settings, "azure_doc_intelligence_api_key", "")
+        if endpoint and api_key:
+            from {{ project_slug }}.ai.document_loaders.azure_doc_intelligence_loader import AzureDocIntelligenceLoader
+
+            return AzureDocIntelligenceLoader(endpoint=endpoint, api_key=api_key)
+{%- endif %}
+{%- if use_llamaindex %}
+        from {{ project_slug }}.ai.chains.llamaindex_adapter import LlamaIndexDocumentLoader
+
+        return LlamaIndexDocumentLoader()
+{%- else %}
+        from {{ project_slug }}.ai.document_loaders.file_loader import FileDocumentLoader
+
+        return FileDocumentLoader()
+{%- endif %}
+
+    def _create_evaluator(self, llm: LLMPort | None = None) -> EvaluatorPort | None:
+        """Create LLM evaluator if an LLM is available."""
+        if llm is None:
+            return None
+        try:
+            from {{ project_slug }}.ai.evaluation.llm_judge import LLMJudgeEvaluator
+
+            return LLMJudgeEvaluator(llm=llm)
+        except ImportError:
+            return None
+
+    def ai_service(self) -> AIService:
+        """Create AI completion service with configured LLM."""
+        from {{ project_slug }}.ai.services import AIService
+
+        return AIService(llm=self._create_llm())
+{% if use_rag %}
+    def rag_service(self) -> object:
+        """Create RAG service with all required adapters."""
+        from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
+        from {{ project_slug }}.ai.services import RAGService
+        from {{ project_slug }}.ai.text_splitter import RecursiveTextSplitter
+
+        chunk_size = getattr(self._settings, "chunk_size", DEFAULT_CHUNK_SIZE)
+        chunk_overlap = getattr(self._settings, "chunk_overlap", DEFAULT_CHUNK_OVERLAP)
+
+        return RAGService(
+            llm=self._create_llm(),
+            embedding=self._create_embedding(),
+            vector_store=self._create_vector_store(),
+            loader=self._create_loader(),
+            splitter=RecursiveTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap),
+{%- if use_knowledge_graph %}
+            knowledge_graph=self._create_knowledge_graph(),
+{%- else %}
+            knowledge_graph=None,
+{%- endif %}
+        )
+{%- endif %}
+{% if use_mcp %}
+    def mcp_server(self) -> object:
+        """Create MCP server instance wired to real adapters."""
+        from {{ project_slug }}.ai.mcp.server import create_mcp_server
+        from {{ project_slug }}.ai.tools.search_tool import SearchTool
+
+        name = getattr(self._settings, "mcp_server_name", "{{ project_name }} MCP")
+        search_tool = None
+        llm = None
+        knowledge_graph = None
+        external_knowledge_graph = None
+
+        try:
+            llm = self._create_llm()
+        except (AttributeError, ImportError):
+            logger.debug("LLM not available for MCP server")
+
+        try:
+            embedding = self._create_embedding()
+            vector_store = self._create_vector_store()
+            search_tool = SearchTool(embedding=embedding, vector_store=vector_store)
+        except (AttributeError, ImportError):
+            logger.debug("Search tool not available for MCP server")
+{% if use_knowledge_graph %}
+        try:
+            knowledge_graph = self._create_knowledge_graph()
+        except (AttributeError, ImportError):
+            logger.debug("Knowledge graph not available for MCP server")
+{%- endif %}
+{% if use_external_knowledge_graph is defined and use_external_knowledge_graph %}
+        try:
+            external_knowledge_graph = self.wikidata_connector()
+        except (AttributeError, ImportError):
+            logger.debug("External knowledge graph not available for MCP server")
+{%- endif %}
+
+        return create_mcp_server(
+            name=name,
+            search_tool=search_tool,
+            llm=llm,
+            knowledge_graph=knowledge_graph,
+            external_knowledge_graph=external_knowledge_graph,
+            evaluator=self._create_evaluator(llm),
+        )
+{%- endif %}
+{% if use_agents %}
+    def _default_agent_tools(self) -> list[object]:
+        """Return the standard tool set shared by all agents."""
+        from {{ project_slug }}.ai.agents.base_agent import AgentTool
+
+        return [
+            AgentTool(name="search", description="Search the knowledge base for relevant information"),
+            AgentTool(name="complete", description="Generate text using the LLM"),
+        ]
+
+    def react_agent(self) -> object:
+        """Create a ReAct agent with default tools."""
+        from {{ project_slug }}.ai.agents.react_agent import ReActAgent
+
+        return ReActAgent(llm=self._create_llm(), tools=self._default_agent_tools())
+
+    def tool_calling_agent(self) -> object:
+        """Create a structured tool-calling agent."""
+        from {{ project_slug }}.ai.agents.tool_calling_agent import ToolCallingAgent
+
+        return ToolCallingAgent(llm=self._create_llm(), tools=self._default_agent_tools())
+
+    def langgraph_orchestrator(self) -> object:
+        """Create a LangGraph multi-agent orchestrator."""
+        from {{ project_slug }}.ai.agents.langgraph_orchestrator import LangGraphOrchestrator
+
+        return LangGraphOrchestrator(llm=self._create_llm())
+
+    def workflow_engine(self) -> WorkflowEnginePort:
+        """Create a LangGraph workflow engine with durable execution support.
+
+        Uses PostgreSQL checkpointing when a database is configured,
+        otherwise falls back to an in-memory checkpointer.
+        """
+        from {{ project_slug }}.ai.workflows.langgraph_engine import LangGraphWorkflowEngine
+
+        checkpointer = self._create_checkpointer()
+        return LangGraphWorkflowEngine(
+            llm=self._create_llm(),
+            nodes=self._default_workflow_nodes(),
+            checkpointer=checkpointer,
+        )
+
+    def _create_checkpointer(self) -> object | None:
+        """Create a workflow checkpointer based on 'checkpointer_backend' setting.
+
+        The 'postgres' backend requires async setup and must be
+        initialized at runtime via an async setup hook — this factory
+        raises 'ValueError' if selected to signal the caller.
+        """
+        backend = self._settings.checkpointer_backend
+        try:
+            if backend == "sqlite":
+                from {{ project_slug }}.ai.workflows.checkpointers import create_sqlite_checkpointer
+
+                return create_sqlite_checkpointer()
+            if backend == "postgres":
+                msg = (
+                    "PostgreSQL checkpointer requires async initialization. "
+                    "Use create_postgres_checkpointer() in an async context."
+                )
+                raise ValueError(msg)
+            from {{ project_slug }}.ai.workflows.checkpointers import create_memory_checkpointer
+
+            return create_memory_checkpointer()
+        except ImportError:
+            return None
+
+    def _default_workflow_nodes(self) -> dict[str, dict[str, str]]:
+        """Return default agent nodes for a multi-agent workflow."""
+        return {
+            "planner": {
+                "system_prompt": "You are a planning agent. Break down the user's goal into steps.",
+                "description": "Plans and decomposes tasks",
+            },
+            "executor": {
+                "system_prompt": "You are an execution agent. Carry out the plan step by step.",
+                "description": "Executes planned steps",
+            },
+            "reviewer": {
+                "system_prompt": (
+                    "You are a review agent. Check the work and provide feedback. "
+                    "If the task is complete, respond with FINAL ANSWER: <answer>"
+                ),
+                "description": "Reviews outputs and confirms completion",
+            },
+        }
+
+    def workflow_service(self) -> object:
+        """Create application-layer workflow orchestration service."""
+        from {{ project_slug }}.application.services.workflow_service import WorkflowService
+
+        return WorkflowService(
+            uow=self.unit_of_work(),
+            engine=self.workflow_engine(),
+        )
+{%- endif %}
+{% if use_anthropic %}
+    def anthropic_llm(self) -> LLMPort:
+        """Create Anthropic Claude LLM adapter."""
+        from {{ project_slug }}.ai.llm.anthropic_adapter import AnthropicAdapter
+
+        api_key = getattr(self._settings, "anthropic_api_key", "")
+        model = getattr(self._settings, "anthropic_model", "claude-sonnet-4-6")
+        if not api_key:
+            msg = "ANTHROPIC_API_KEY not configured."
+            raise AttributeError(msg)
+        return AnthropicAdapter(api_key=api_key, model=model)
+{%- endif %}
+
+{% if use_rag %}
+    def ingestion_application_service(self) -> object:
+        """Create application-layer document ingestion service."""
+        from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
+        from {{ project_slug }}.ai.text_splitter import RecursiveTextSplitter
+        from {{ project_slug }}.application.services.ingestion_service import IngestionService
+
+        return IngestionService(
+            uow=self.unit_of_work(),
+            loader=self._create_loader(),
+            splitter=RecursiveTextSplitter(
+                chunk_size=getattr(self._settings, "chunk_size", DEFAULT_CHUNK_SIZE),
+                chunk_overlap=getattr(self._settings, "chunk_overlap", DEFAULT_CHUNK_OVERLAP),
+            ),
+            embedding=self._create_embedding(),
+            vector_store=self._create_vector_store(),
+{%- if use_knowledge_graph %}
+            knowledge_graph=self._create_knowledge_graph(),
+{%- endif %}
+        )
+{%- endif %}
+{% if use_agents %}
+    def agent_application_service(self) -> object:
+        """Create application-layer agent execution service."""
+        from {{ project_slug }}.application.services.agent_service import AgentService
+
+        return AgentService(
+            uow=self.unit_of_work(),
+            orchestrator=self.langgraph_orchestrator(),
+        )
+{%- endif %}
+{% if use_mcp %}
+    def mcp_application_service(self) -> object:
+        """Create application-layer MCP management service."""
+        from {{ project_slug }}.application.services.mcp_service import MCPService
+
+        return MCPService(
+            uow=self.unit_of_work(),
+            mcp_server=self.mcp_server(),
+        )
+{%- endif %}
+{% if use_knowledge_graph %}
+    def knowledge_graph_application_service(self) -> object:
+        """Create application-layer knowledge graph service."""
+        from {{ project_slug }}.application.services.knowledge_graph_service import KnowledgeGraphService
+
+        return KnowledgeGraphService(
+            uow=self.unit_of_work(),
+            knowledge_graph=self._create_knowledge_graph(),
+            llm=self._create_llm(),
+        )
+{%- endif %}
+
+    def ensemble_retriever(self) -> RetrieverPort:
+        """Create an ensemble retriever combining multiple retrieval strategies."""
+        from {{ project_slug }}.ai.rag.retrievers.ensemble_retriever import EnsembleRetriever
+        from {{ project_slug }}.ai.rag.retrievers.vector_retriever import VectorRetriever
+
+        vector_retriever = VectorRetriever(
+            embedding=self._create_embedding(),
+            vector_store=self._create_vector_store(),
+        )
+        return EnsembleRetriever(retrievers=[(vector_retriever, 1.0)])
+
+    def reranker(self) -> RerankerPort:
+        """Create a cross-encoder reranker for search result reranking."""
+        from {{ project_slug }}.ai.rag.rerankers.cross_encoder import CrossEncoderReranker
+
+        return CrossEncoderReranker()
+
+    def prompt_template(self) -> PromptTemplatePort:
+        """Create a Jinja2-based prompt template manager."""
+        from {{ project_slug }}.ai.prompts.jinja2_templates import Jinja2PromptTemplate
+
+        return Jinja2PromptTemplate()
+{% if use_knowledge_graph %}
+    def graph_retriever(self) -> object:
+        """Create a knowledge graph retriever."""
+        from {{ project_slug }}.ai.rag.retrievers.graph_retriever import GraphRetriever
+
+        return GraphRetriever(knowledge_graph=self.knowledge_graph(), llm=self._create_llm())
+
+    def knowledge_graph(self) -> KnowledgeGraphPort:
+        """Return a configured knowledge graph adapter."""
+        return self._create_knowledge_graph()
+
+    def llm_kg_extractor(self) -> object:
+        """Create LLM-based knowledge graph triplet extractor."""
+        from {{ project_slug }}.ai.knowledge_graph.llm_extractor import LLMEntityExtractor
+
+        return LLMEntityExtractor(llm=self._create_llm())
+
+    def _create_knowledge_graph(self) -> KnowledgeGraphPort:
+        """Create a knowledge graph based on configured backend."""
+        backend = getattr(self._settings, "knowledge_graph_backend", "networkx")
+        kg_path = getattr(self._settings, "knowledge_graph_path", None)
+
+        if backend == "neo4j":
+            from {{ project_slug }}.ai.knowledge_graph.neo4j_adapter import Neo4jKnowledgeGraph
+
+            return Neo4jKnowledgeGraph(
+                uri=self._settings.neo4j_uri,
+                username=self._settings.neo4j_user,
+                password=self._settings.neo4j_password,
+                database=self._settings.neo4j_database,
+            )
+        if backend == "rdflib":
+            from {{ project_slug }}.ai.knowledge_graph.rdflib_adapter import RDFLibKnowledgeGraph
+
+            return RDFLibKnowledgeGraph(persist_path=kg_path)
+
+        from {{ project_slug }}.ai.knowledge_graph import NetworkXKnowledgeGraph
+
+        return NetworkXKnowledgeGraph(persist_path=kg_path)
+{% if use_external_knowledge_graph is defined and use_external_knowledge_graph %}
+    def wikidata_connector(self) -> object:
+        """Create Wikidata external knowledge graph connector."""
+        from {{ project_slug }}.ai.knowledge_graph.external_connectors import WikidataKnowledgeGraph
+
+        return WikidataKnowledgeGraph()
+
+    def dbpedia_connector(self) -> object:
+        """Create DBpedia external knowledge graph connector."""
+        from {{ project_slug }}.ai.knowledge_graph.external_connectors import DBpediaKnowledgeGraph
+
+        return DBpediaKnowledgeGraph()
+
+    def conceptnet_connector(self) -> object:
+        """Create ConceptNet external knowledge graph connector."""
+        from {{ project_slug }}.ai.knowledge_graph.external_connectors import ConceptNetKnowledgeGraph
+
+        return ConceptNetKnowledgeGraph()
+{%- endif %}
+{%- endif %}
+{% if use_mcp %}
+    def mcp_client(self) -> MCPClientPort:
+        """Create MCP client for connecting to external MCP servers."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        return MCPClientAdapter()
+{%- endif %}
+
+    def postgres_memory(self) -> object:
+        """Create PostgreSQL-backed conversation memory."""
+        from {{ project_slug }}.ai.memory.postgres_memory import PostgresConversationMemory
+
+        return PostgresConversationMemory(database_url=self._settings.database_url)
+
+    def guardrail(self) -> object:
+        """Create AI guardrail adapter."""
+        from {{ project_slug }}.ai.guardrails.rule_based import RuleBasedGuardrail
+
+        return RuleBasedGuardrail()
+
+    def observability(self) -> object:
+        """Create AI observability adapter."""
+        from {{ project_slug }}.ai.observability.structlog_adapter import StructlogObservability
+
+        return StructlogObservability()
+
+    def llm_gateway(self) -> LLMPort:
+        """Create multi-provider LLM gateway with failover.
+
+        Registers all configured LLM providers so the gateway can
+        fall back to an alternative when the primary is unavailable.
+        """
+        from {{ project_slug }}.ai.llm.gateway import AIGateway
+        from {{ project_slug }}.ai.llm.litellm_adapter import LiteLLMAdapter
+
+        providers: dict[str, object] = {"default": self._create_llm()}
+{%- if use_anthropic %}
+
+        try:
+            anthropic_key = getattr(self._settings, "anthropic_api_key", "")
+            if anthropic_key:
+                anthropic_model = getattr(self._settings, "anthropic_model", "claude-sonnet-4-6")
+                providers["anthropic"] = LiteLLMAdapter(
+                    model=f"anthropic/{anthropic_model}" if not anthropic_model.startswith("anthropic/") else anthropic_model,
+                    api_key=anthropic_key,
+                )
+        except (AttributeError, ImportError):
+            logger.debug("Anthropic provider not available for gateway")
+{%- endif %}
+
+        return AIGateway(providers=providers)
+{%- endif %}
+{% if use_crewai %}
+    def crewai_embedder_config(self) -> dict[str, object]:
+        """Build the CrewAI embedder configuration from settings."""
+        from {{ project_slug }}.ai.crewai.knowledge import get_embedder_config
+
+        provider = getattr(self._settings, "crewai_embedder_provider", "openai")
+        model = getattr(self._settings, "crewai_embedder_model", None)
+        return get_embedder_config(provider, model=model)
+
+    def crewai_memory(self) -> object:
+        """Create a shared CrewAI Memory instance."""
+        from {{ project_slug }}.ai.crewai.memory import create_memory
+
+        embedder = self.crewai_embedder_config()
+        scoring = getattr(self._settings, "crewai_memory_scoring", "default")
+        return create_memory(embedder=embedder, scoring_preset=scoring)
+
+    def crewai_flow_registry(self) -> object:
+        """Create the CrewAI flow registry."""
+        from {{ project_slug }}.ai.crewai.flows import FlowRegistry
+
+        return FlowRegistry()
+
+    def crewai_hmas_supervisor(self) -> object:
+        """Create the CrewAI HMAS supervisor for hierarchical orchestration."""
+        from {{ project_slug }}.ai.crewai.hmas import CrewAIHMASSupervisor
+
+        llm = None
+        try:
+            llm = self._create_llm()
+        except (AttributeError, ImportError):
+            logger.debug("LLM not available for CrewAI HMAS supervisor")
+
+        kwargs: dict[str, object] = {"llm": llm}
+
+        return CrewAIHMASSupervisor(**kwargs)
+
+    def crewai_application_service(self) -> object:
+        """Create the CrewAI application-layer service."""
+        from {{ project_slug }}.application.services.crewai_service import CrewAIService
+
+        supervisor = None
+        try:
+            supervisor = self.crewai_hmas_supervisor()
+        except (AttributeError, ImportError):
+            logger.debug("CrewAI HMAS supervisor not available")
+
+        flow_registry = None
+        try:
+            flow_registry = self.crewai_flow_registry()
+        except (AttributeError, ImportError):
+            logger.debug("CrewAI flow registry not available")
+
+        embedder = None
+        try:
+            embedder = self.crewai_embedder_config()
+        except (AttributeError, ImportError):
+            logger.debug("CrewAI embedder config not available")
+
+        default_llm = getattr(self._settings, "crewai_default_model", "gpt-4o")
+        verbose = getattr(self._settings, "crewai_verbose", False)
+
+        return CrewAIService(
+            uow=self.unit_of_work(),
+            supervisor=supervisor,
+            flow_registry=flow_registry,
+            embedder=embedder,
+            default_llm=default_llm,
+            verbose=verbose,
+        )
+{%- endif %}
 
 
 @lru_cache(maxsize=1)
 def get_container() -> Container:
-    """Get singleton container instance.
-
-    Returns:
-        Container: Application dependency container.
-    """
+    """Get singleton container instance."""
     return Container()

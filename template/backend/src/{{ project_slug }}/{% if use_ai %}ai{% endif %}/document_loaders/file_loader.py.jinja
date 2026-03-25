@@ -1,0 +1,89 @@
+"""File-based document loader — implements 'DocumentLoaderPort'.
+
+Handles plain text, Markdown, PDF (via PyMuPDF), and DOCX files
+using a zero-dependency dispatcher with optional library support.
+"""
+
+from __future__ import annotations
+
+import structlog
+from pathlib import Path
+from typing import override
+
+from {{ project_slug }}.core.entities.document import Document
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_TEXT_EXTENSIONS: frozenset[str] = frozenset({
+    ".txt", ".md", ".markdown", ".rst", ".csv", ".json", ".yaml", ".yml",
+    ".toml", ".ini", ".cfg", ".conf", ".log", ".xml", ".html", ".htm",
+})
+
+
+class FileDocumentLoader(DocumentLoaderPort):
+    """Document loader for local files with format detection."""
+
+    @override
+    async def load(self, source: str) -> list[Document]:
+        path = Path(source)
+        if not path.exists():
+            msg = f"File not found: {source}"
+            raise FileNotFoundError(msg)
+
+        suffix = path.suffix.lower()
+
+        if suffix == ".pdf":
+            content = self._load_pdf(path)
+            content_type = "application/pdf"
+        elif suffix == ".docx":
+            content = self._load_docx(path)
+            content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif suffix in _TEXT_EXTENSIONS:
+            content = path.read_text(encoding="utf-8")
+            content_type = "text/plain"
+        else:
+            content = path.read_text(encoding="utf-8", errors="replace")
+            content_type = "text/plain"
+
+        doc = Document(
+            content=content,
+            source=source,
+            content_type=content_type,
+            metadata={"filename": path.name, "size_bytes": path.stat().st_size},
+        )
+        logger.info("Loaded document '%s' (%d chars)", path.name, len(content))
+        return [doc]
+
+    @override
+    async def load_many(self, sources: list[str]) -> list[Document]:
+        all_docs: list[Document] = []
+        for source in sources:
+            docs = await self.load(source)
+            all_docs.extend(docs)
+        return all_docs
+
+    @staticmethod
+    def _load_pdf(path: Path) -> str:
+        try:
+            import pymupdf  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "pymupdf is required for PDF loading — pip install pymupdf"
+            raise ImportError(msg) from exc
+
+        doc = pymupdf.open(str(path))
+        pages: list[str] = []
+        for page in doc:
+            pages.append(page.get_text())
+        doc.close()
+        return "\n\n".join(pages)
+
+    @staticmethod
+    def _load_docx(path: Path) -> str:
+        try:
+            import docx  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "python-docx is required for DOCX loading — pip install python-docx"
+            raise ImportError(msg) from exc
+
+        document = docx.Document(str(path))
+        return "\n\n".join(para.text for para in document.paragraphs if para.text.strip())

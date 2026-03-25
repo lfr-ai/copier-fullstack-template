@@ -8,9 +8,6 @@ from pydantic import Field
 
 from .base import BaseSchema
 from {{ project_slug }}.config.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
-
-__all__ = ["PaginatedResponse", "PaginationParams"]
-
 T = TypeVar("T")
 
 

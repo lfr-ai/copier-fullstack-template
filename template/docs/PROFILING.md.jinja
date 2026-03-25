@@ -1,0 +1,252 @@
+# Profiling Guide
+
+> CPU, memory, and SQL profiling for **{{ project_name }}**.
+
+---
+
+## Overview
+
+The profiling subsystem provides three core profilers plus on-demand
+request-level middleware. All profilers are disabled by default and add no
+measurable overhead when off.
+
+| Tool | Scope | Platform |
+|------|-------|----------|
+| [pyinstrument v5.1+](https://github.com/joerick/pyinstrument) | CPU profiling (statistical, async-aware) | All |
+| [tracemalloc](https://docs.python.org/3/library/tracemalloc.html) (stdlib) | Memory allocation tracking | All |
+| SQLAlchemy event hooks | Query timing, N+1 detection, slow query logging | All |
+| [web-vitals v4+](https://github.com/GoogleChrome/web-vitals) | Core Web Vitals (CLS, FCP, INP, LCP, TTFB) | Browser |
+
+### File Layout
+
+```
+infrastructure/profiling/
+├── __init__.py        ← Barrel exports (cpu_profile, memory_snapshot, sql_profile)
+├── cpu.py             ← pyinstrument wrapper
+├── memory.py          ← tracemalloc wrapper
+└── sql.py             ← SQLAlchemy event hooks
+
+ports/api/middleware/
+├── profiling.py       ← On-demand per-request profiling (?profile=cpu|memory)
+└── timing.py          ← Server-Timing header + slow-request warnings
+
+frontend/src/lib/profiling/
+├── index.ts           ← Barrel exports
+└── web-vitals.ts      ← Core Web Vitals reporting
+```
+
+---
+
+## CPU Profiling (pyinstrument)
+
+[pyinstrument](https://github.com/joerick/pyinstrument) is a statistical CPU
+profiler with async support and HTML output.
+
+### Context Manager
+
+```python
+from {{ project_slug }}.infrastructure.profiling import cpu_profile
+
+async with cpu_profile(label="my_operation") as result:
+    await some_expensive_operation()
+
+print(f"Duration: {result.duration_s:.3f}s")
+print(f"Report: {result.html_path}")
+```
+
+### Decorator
+
+```python
+from {{ project_slug }}.infrastructure.profiling.cpu import profile_function
+
+@profile_function(label="process_batch")
+async def process_batch(items: list[Item]) -> list[Result]:
+    ...
+```
+
+### Task Runner
+
+```bash
+task backend:profile:cpu  # Profile app startup with pyinstrument → HTML report
+```
+
+---
+
+## Memory Profiling (tracemalloc)
+
+Python's built-in `tracemalloc` tracks memory allocations with line-level
+granularity. Cross-platform.
+
+### Snapshot
+
+```python
+from {{ project_slug }}.infrastructure.profiling import memory_snapshot
+
+async with memory_snapshot(label="endpoint_handler") as result:
+    await handle_request()
+
+print(f"Peak: {result.peak_mb:.2f} MB")
+```
+
+### Before/After Comparison
+
+```python
+from {{ project_slug }}.infrastructure.profiling.memory import take_snapshot, memory_compare
+
+before = take_snapshot()
+await run_migration()
+after = take_snapshot()
+
+diff = memory_compare(before, after, label="migration")
+print(f"Memory increase: {diff.added_mb:.2f} MB")
+```
+
+### Task Runner
+
+```bash
+task backend:profile:memory  # Snapshot app startup memory → top 30 allocations
+```
+
+---
+
+## SQL Query Profiling
+
+SQLAlchemy event-based profiling captures query timing with N+1 detection.
+
+### Context Manager
+
+```python
+from {{ project_slug }}.infrastructure.profiling import sql_profile
+
+async with sql_profile(engine, label="user_list") as result:
+    users = await user_repo.list_all()
+
+print(f"Queries: {result.total_queries}, Total: {result.total_ms:.1f} ms")
+for q in result.slow_queries:
+    print(f"  SLOW ({q.duration_ms:.1f}ms): {q.statement[:80]}")
+```
+
+### Permanent Attachment
+
+```python
+from {{ project_slug }}.infrastructure.profiling.sql import attach_sql_profiling
+
+attach_sql_profiling(engine, slow_threshold_ms=100)
+# All queries > 100ms are logged as warnings.
+```
+
+### Enabling in Development
+
+Call `attach_sql_profiling(engine)` in your dev bootstrap or test setup to log
+slow queries as warnings.
+
+---
+
+## Middleware (On-Demand Request Profiling)
+
+The `ProfilingMiddleware` enables per-request profiling via query parameters.
+
+| Query Parameter | Effect |
+|----------------|--------|
+| `?profile=1` or `?profile=cpu` | CPU profiling via pyinstrument |
+
+### Security
+
+Protected by two guards:
+
+1. **`{{ project_slug | upper }}_PROFILING_ENABLED=true`** (default: `false`)
+2. **`X-Profile-Secret` header** must match `{{ project_slug | upper }}_PROFILING_SECRET`
+
+```bash
+curl -H "X-Profile-Secret: my-secret" \
+     "http://localhost:8000/api/v1/users?profile=cpu"
+```
+
+### Response Headers
+
+| Header | Description |
+|--------|-------------|
+| `Server-Timing: profile;dur=<ms>` | Profiled request duration |
+| `X-Profile-Path` | Path to saved HTML report |
+
+The `TimingMiddleware` adds `Server-Timing: total;dur=<ms>` to every response
+and logs the duration via structured logging.
+
+---
+
+## Frontend — Core Web Vitals
+
+The `web-vitals` library tracks the six standard performance metrics.
+
+```typescript
+import { reportWebVitals } from '@/lib/profiling';
+
+// Log to console in development
+reportWebVitals(console.log);
+
+// Send to analytics endpoint
+reportWebVitals((metric) => {
+  navigator.sendBeacon('/api/v1/analytics/vitals', JSON.stringify(metric));
+});
+```
+
+---
+
+## Task Runner Commands
+
+```bash
+task backend:profile:cpu        # CPU profile with pyinstrument
+task backend:profile:memory     # Memory snapshot with tracemalloc
+task backend:profile:report     # Open latest HTML report
+task backend:profile:clean      # Remove all profiling artifacts
+```
+
+## Tox Environments
+
+```bash
+uv run tox -e performance  # All performance + profiling tests
+```
+
+---
+
+## Configuration
+
+| Environment Variable | Type | Default | Description |
+|---------------------|------|---------|-------------|
+| `{{ project_slug | upper }}_PROFILING_ENABLED` | `bool` | `false` | Enable profiling middleware |
+| `{{ project_slug | upper }}_PROFILING_SECRET` | `str` | `""` | Secret for `X-Profile-Secret` header |
+| `{{ project_slug | upper }}_PROFILING_DIR` | `str` | `profiles` | Directory for saved reports |
+
+Example `.env` for local development:
+
+```dotenv
+{{ project_slug | upper }}_PROFILING_ENABLED=true
+{{ project_slug | upper }}_PROFILING_SECRET=dev-profiling-secret-change-this-value-now
+{{ project_slug | upper }}_PROFILING_DIR=profiles
+```
+
+---
+
+## Security
+
+- **Never enable profiling in production** unless actively investigating
+  a performance issue.
+- The `X-Profile-Secret` header prevents unauthorized access.
+- Profiling reports may contain sensitive data (SQL queries, memory
+  allocations) — add `profiles/` to `.gitignore`.
+- The profiling subsystem catches all internal errors so it never breaks
+  request handling.
+
+---
+
+## Best Practices
+
+1. **Start with pyinstrument** for CPU issues — it's low-overhead and
+   async-aware.
+2. **Use tracemalloc** for memory leaks — compare snapshots before/after
+   the suspected code path.
+3. **Attach SQL profiling** in development to catch N+1 queries and slow
+   queries early.
+4. **Use the middleware** (`?profile=cpu`) for investigating specific
+   endpoints without code changes.
+5. **Check Core Web Vitals** to monitor frontend performance regressions.

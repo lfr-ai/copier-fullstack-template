@@ -1,0 +1,91 @@
+"""Hybrid retriever — combines vector similarity with keyword search.
+
+Merges results from the vector store with keyword-based matches
+via reciprocal rank fusion (RRF) for improved recall.
+"""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_SIMILARITY_TOP_K
+from {{ project_slug }}.ai.rag.retrievers._rrf import reciprocal_rank_fusion
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_OVERSAMPLE_FACTOR: int = 2
+"""Fetch this many times top_k results before fusing."""
+
+
+class HybridRetriever(RetrieverPort):
+    """Hybrid retrieval combining vector search with keyword matching.
+
+    Uses reciprocal rank fusion to merge ranked lists.
+    """
+
+    __slots__ = ("_embedding", "_vector_store")
+
+    def __init__(
+        self,
+        *,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+    ) -> None:
+        self._embedding = embedding
+        self._vector_store = vector_store
+
+    @override
+    async def retrieve(
+        self,
+        *,
+        query: str,
+        top_k: int = DEFAULT_SIMILARITY_TOP_K,
+        filters: dict[str, object] | None = None,
+    ) -> list[RetrievedContext]:
+        """Retrieve context via combined vector and keyword search.
+
+        Args:
+            query (str): User query text.
+            top_k (int): Maximum number of results after fusion.
+            filters (dict[str, object] | None): Optional metadata filters.
+
+        Returns:
+            list[RetrievedContext]: Fused and re-ranked results.
+        """
+        query_vector = await self._embedding.embed_text(query)
+        vector_results = await self._vector_store.search(
+            query_vector=query_vector,
+            top_k=top_k * _OVERSAMPLE_FACTOR,
+            filters=filters,
+        )
+
+        # Convert vector results to RetrievedContext (already ranked by similarity)
+        vector_contexts = [
+            RetrievedContext(
+                id=r.id,
+                content=str(r.metadata.get("content", "")) if r.metadata else "",
+                score=r.score,
+                metadata=r.metadata or {},
+            )
+            for r in vector_results
+        ]
+
+        # Build keyword-ranked list
+        query_terms = set(query.lower().split())
+        keyword_scored: list[tuple[RetrievedContext, float]] = []
+        for ctx in vector_contexts:
+            content_lower = ctx.content.lower()
+            matches = sum(1 for term in query_terms if term in content_lower)
+            if matches > 0:
+                keyword_scored.append((ctx, matches / max(len(query_terms), 1)))
+
+        keyword_scored.sort(key=lambda x: -x[1])
+        keyword_contexts = [ctx for ctx, _ in keyword_scored]
+
+        return reciprocal_rank_fusion(
+            [(vector_contexts, 1.0), (keyword_contexts, 1.0)],
+            top_k=top_k,
+        )

@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import shutil
 from pathlib import Path
 from typing import BinaryIO
 
 import structlog
-
-__all__ = ["LocalStorageAdapter"]
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -17,18 +16,37 @@ class LocalStorageAdapter:
     """Store and retrieve files on the local filesystem.
 
     Implements the storage service interface defined in core.
+    All file I/O is offloaded to a thread to avoid blocking the
+    async event loop.
     """
 
     __slots__ = ("_base_path",)
 
     def __init__(self, base_path: str | Path) -> None:
-        """Initialize with base directory for file storage.
-
-        Args:
-            base_path (str | Path): Root directory for stored files.
+        """Args:
+        base_path (str | Path): Root directory for stored files.
         """
         self._base_path = Path(base_path)
         self._base_path.mkdir(parents=True, exist_ok=True)
+
+    def _safe_path(self, key: str) -> Path:
+        """Resolve a key to a path safely within the base directory.
+
+        Raises:
+            ValueError: If the key escapes the base directory.
+        """
+        resolved = (self._base_path / key).resolve()
+        if not resolved.is_relative_to(self._base_path.resolve()):
+            msg = f"Path traversal denied: {key!r}"
+            raise ValueError(msg)
+        return resolved
+
+    def _sync_upload(self, key: str, data: BinaryIO) -> str:
+        dest = self._safe_path(key)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with dest.open("wb") as f:
+            shutil.copyfileobj(data, f)
+        return str(dest)
 
     async def upload(self, *, key: str, data: BinaryIO) -> str:
         """Write data to a local file and return the path.
@@ -40,12 +58,9 @@ class LocalStorageAdapter:
         Returns:
             str: Absolute path of the stored file.
         """
-        dest = self._base_path / key
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        with dest.open("wb") as f:
-            shutil.copyfileobj(data, f)
-        logger.info("Stored file locally: %s", dest)
-        return str(dest)
+        result = await asyncio.to_thread(self._sync_upload, key, data)
+        logger.info("Stored file locally: %s", result)
+        return result
 
     async def download(self, key: str) -> bytes:
         """Read a file from the local filesystem.
@@ -56,8 +71,8 @@ class LocalStorageAdapter:
         Returns:
             bytes: Raw bytes of the file contents.
         """
-        path = self._base_path / key
-        return path.read_bytes()
+        path = self._safe_path(key)
+        return await asyncio.to_thread(path.read_bytes)
 
     async def delete(self, key: str) -> None:
         """Remove a file from the local filesystem.
@@ -65,8 +80,8 @@ class LocalStorageAdapter:
         Args:
             key (str): Relative file path within the base directory.
         """
-        path = self._base_path / key
-        path.unlink(missing_ok=True)
+        path = self._safe_path(key)
+        await asyncio.to_thread(path.unlink, True)  # missing_ok=True
         logger.info("Deleted local file: %s", key)
 
     async def exists(self, key: str) -> bool:
@@ -76,6 +91,7 @@ class LocalStorageAdapter:
             key (str): Relative file path within the base directory.
 
         Returns:
-            bool: True if the file exists.
+            bool: 'True' if the file exists.
         """
-        return (self._base_path / key).exists()
+        path = self._safe_path(key)
+        return await asyncio.to_thread(path.exists)

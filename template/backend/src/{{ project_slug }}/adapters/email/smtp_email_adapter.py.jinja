@@ -9,20 +9,18 @@ import structlog
 
 from {{ project_slug }}.config.constants import DEFAULT_FROM_ADDRESS, DEFAULT_SMTP_PORT
 
-__all__ = ["SmtpEmailAdapter"]
-
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class SmtpEmailAdapter:
     """Send email via SMTP.
 
-    This adapter implements the ``EmailPort`` protocol defined in
-    ``core/interfaces/email.py`` and delegates to an SMTP server
+    This adapter implements the 'EmailPort' protocol defined in
+    'core/interfaces/email.py' and delegates to an SMTP server
     for actual delivery.
 
-    The blocking ``smtplib`` calls are offloaded to a thread via
-    ``asyncio.to_thread()`` so the event loop is never blocked.
+    The blocking 'smtplib' calls are offloaded to a thread via
+    'asyncio.to_thread()' so the event loop is never blocked.
     """
 
     __slots__ = ("_host", "_password", "_port", "_username")
@@ -35,9 +33,7 @@ class SmtpEmailAdapter:
         username: str = "",
         password: str = "",
     ) -> None:
-        """Initialize SMTP adapter.
-
-        Args:
+        """Args:
             host (str): SMTP server hostname.
             port (int): SMTP server port.
             username (str): SMTP authentication username.
@@ -73,7 +69,7 @@ class SmtpEmailAdapter:
         """Send a single email message.
 
         The blocking SMTP operations are offloaded to a thread
-        via ``asyncio.to_thread()`` to avoid blocking the event loop.
+        via 'asyncio.to_thread()' to avoid blocking the event loop.
 
         Args:
             to (str): Recipient email address.

@@ -3,16 +3,12 @@
 
 from __future__ import annotations
 
-import io
 from typing import TYPE_CHECKING, BinaryIO
 
 import structlog
-from azure.storage.blob.aio import BlobServiceClient
 
 if TYPE_CHECKING:
-pass
-
-__all__ = ["AzureBlobStorageAdapter"]
+from azure.storage.blob.aio import BlobServiceClient
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -20,11 +16,11 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class AzureBlobStorageAdapter:
 """Upload, download, and manage files in Azure Blob Storage.
 
-Implements the ``StoragePort`` protocol defined in
-``core/interfaces/storage.py``.
+Implements the 'StoragePort' protocol defined in
+'core/interfaces/storage.py'.
 
-Requires ``azure-storage-blob`` — already declared as a conditional
-dependency in ``pyproject.toml`` when ``cloud_provider == 'azure'``.
+Requires 'azure-storage-blob' — already declared as a conditional
+dependency in 'pyproject.toml' when 'cloud_provider == azure'.
 """
 
 __slots__ = ("_client", "_container")
@@ -38,27 +34,31 @@ container_name: str,
 """Initialize Azure Blob Storage adapter.
 
 Args:
-connection_string: Azure Storage account connection string or
-``DefaultAzureCredential``-compatible endpoint URL.
-container_name: Name of the blob container to operate on.
+connection_string (str): Azure Storage account connection string or
+'DefaultAzureCredential'-compatible endpoint URL.
+container_name (str): Name of the blob container to operate on.
 """
-self._client = BlobServiceClient.from_connection_string(connection_string)
+from azure.storage.blob.aio import BlobServiceClient as _BlobServiceClient
+
+self._client: BlobServiceClient = _BlobServiceClient.from_connection_string(
+connection_string,
+)
 self._container = container_name
 
 async def upload(self, *, key: str, data: BinaryIO) -> str:
 """Upload binary data to Azure Blob Storage.
 
 Args:
-key: Blob name (path) inside the container.
-data: Binary stream to upload.
+key (str): Blob name (path) inside the container.
+data (BinaryIO): Binary stream to upload.
 
 Returns:
-Full blob URL of the uploaded object.
+str: Full blob URL of the uploaded object.
 """
 container_client = self._client.get_container_client(self._container)
 blob_client = container_client.get_blob_client(key)
 await blob_client.upload_blob(data, overwrite=True)
-url = blob_client.url
+url: str = blob_client.url
 logger.info("Uploaded blob %s/%s", self._container, key)
 return url
 
@@ -66,10 +66,10 @@ async def download(self, key: str) -> bytes:
 """Download a blob and return its raw bytes.
 
 Args:
-key: Blob name (path) inside the container.
+key (str): Blob name (path) inside the container.
 
 Returns:
-Raw bytes of the downloaded blob.
+bytes: Raw bytes of the downloaded blob.
 """
 container_client = self._client.get_container_client(self._container)
 blob_client = container_client.get_blob_client(key)
@@ -80,7 +80,7 @@ async def delete(self, key: str) -> None:
 """Delete a blob from the container.
 
 Args:
-key: Blob name (path) inside the container.
+key (str): Blob name (path) inside the container.
 """
 container_client = self._client.get_container_client(self._container)
 blob_client = container_client.get_blob_client(key)
@@ -91,10 +91,10 @@ async def exists(self, key: str) -> bool:
 """Check whether a blob exists in the container.
 
 Args:
-key: Blob name (path) inside the container.
+key (str): Blob name (path) inside the container.
 
 Returns:
-True if the blob exists.
+bool: True if the blob exists.
 """
 container_client = self._client.get_container_client(self._container)
 blob_client = container_client.get_blob_client(key)

@@ -1,0 +1,111 @@
+"""LlamaIndex integration adapter — bridges LlamaIndex to core ports.
+
+Add 'llama-index' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
+from {{ project_slug }}.core.entities.document import Chunk, Document
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class LlamaIndexDocumentLoader(DocumentLoaderPort):
+    """Document loader backed by LlamaIndex's 'SimpleDirectoryReader'.
+
+    Implements 'DocumentLoaderPort' for file-based ingestion.
+    """
+
+    @override
+    async def load(self, source: str) -> list[Document]:
+        """Load documents from a file source via LlamaIndex.
+
+        Args:
+            source (str): File path to load.
+
+        Returns:
+            list[Document]: Parsed documents.
+        """
+        try:
+            from llama_index.core import SimpleDirectoryReader  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "llama-index-core is required — pip install llama-index-core"
+            raise ImportError(msg) from exc
+
+        reader = SimpleDirectoryReader(input_files=[source])
+        li_docs = reader.load_data()
+
+        documents: list[Document] = []
+        for li_doc in li_docs:
+            doc = Document(
+                content=li_doc.text,
+                source=source,
+                metadata=li_doc.metadata or {},
+            )
+            documents.append(doc)
+
+        logger.info("Loaded %d documents from %s via LlamaIndex", len(documents), source)
+        return documents
+
+    @override
+    async def load_many(self, sources: list[str]) -> list[Document]:
+        """Load documents from multiple file sources.
+
+        Args:
+            sources (list[str]): File paths to load.
+
+        Returns:
+            list[Document]: All documents across all sources.
+        """
+        all_docs: list[Document] = []
+        for source in sources:
+            docs = await self.load(source)
+            all_docs.extend(docs)
+        return all_docs
+
+
+class LlamaIndexChunker:
+    """Chunker backed by LlamaIndex's 'SentenceSplitter'.
+
+    Implements text splitting using LlamaIndex's sentence-aware splitter.
+    """
+
+    def __init__(self, *, chunk_size: int = DEFAULT_CHUNK_SIZE, chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> None:
+        try:
+            from llama_index.core.node_parser import SentenceSplitter  # type: ignore[import-untyped]
+
+            self._splitter = SentenceSplitter(
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+            )
+        except ImportError as exc:
+            msg = "llama-index-core is required — pip install llama-index-core"
+            raise ImportError(msg) from exc
+
+    def split(self, document: Document) -> list[Chunk]:
+        """Split a document into chunks using LlamaIndex sentence splitter.
+
+        Args:
+            document (Document): Source document to split.
+
+        Returns:
+            list[Chunk]: Ordered chunks with provenance metadata.
+        """
+        from llama_index.core import Document as LIDoc  # type: ignore[import-untyped]
+
+        li_doc = LIDoc(text=document.content, metadata=document.metadata)
+        nodes = self._splitter.get_nodes_from_documents([li_doc])
+
+        chunks: list[Chunk] = []
+        for i, node in enumerate(nodes):
+            chunk = Chunk(
+                document_id=document.id,
+                content=node.text,
+                index=i,
+                metadata=node.metadata or {},
+            )
+            chunks.append(chunk)
+        return chunks

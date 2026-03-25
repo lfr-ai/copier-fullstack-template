@@ -1,0 +1,41 @@
+"""Strawberry GraphQL subscription type (WebSocket transport)."""
+
+from __future__ import annotations
+
+import asyncio
+from typing import AsyncGenerator
+
+import strawberry
+
+from {{ project_slug }}.ports.graphql.context import GraphQLContext
+from {{ project_slug }}.ports.graphql.types import HealthType
+
+_DEFAULT_HEARTBEAT_INTERVAL: int = 10
+_MIN_INTERVAL: int = 1
+_MAX_INTERVAL: int = 60
+
+
+@strawberry.type(description="Root subscription type.")
+class Subscription:
+    """WebSocket-based GraphQL subscriptions."""
+
+    @strawberry.subscription(description="Periodic health heartbeat (every N seconds).")
+    async def health_heartbeat(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        interval_seconds: int = _DEFAULT_HEARTBEAT_INTERVAL,
+    ) -> AsyncGenerator[HealthType, None]:
+        """Yield a health snapshot at a regular interval."""
+        from importlib.metadata import version
+
+        from {{ project_slug }}.core.enums import ServiceStatus
+
+        interval = max(_MIN_INTERVAL, min(interval_seconds, _MAX_INTERVAL))
+        app_version = version("{{ project_slug }}")
+        while True:
+            yield HealthType(
+                status=ServiceStatus.HEALTHY.value,
+                version=app_version,
+                dependencies=[],
+            )
+            await asyncio.sleep(interval)

@@ -12,8 +12,6 @@ from {{ project_slug }}.core.constants import (
     PASSWORD_HASH_MAX_LENGTH,
 )
 
-__all__ = ["UserModel"]
-
 
 class UserModel(ORMBase, IdentityMixin, AuditMixin):
     """SQLAlchemy ORM model for users table."""

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from pydantic import model_validator
+
 from {{ project_slug }}.config.settings.base import BaseAppSettings
 from {{ project_slug }}.core.enums.environment import Environment
 
-__all__ = ["ProdSettings"]
+_MIN_SECRET_KEY_LENGTH: int = 32
+_INSECURE_DEFAULT: str = "change-me-in-production"
 
 
 class ProdSettings(BaseAppSettings):
@@ -19,3 +22,14 @@ class ProdSettings(BaseAppSettings):
     log_level: str = "WARNING"
     host: str = "0.0.0.0"  # noqa: S104  – intentional: container networking
     database_echo: bool = False
+
+    @model_validator(mode="after")
+    def _validate_secret_key(self) -> "ProdSettings":
+        if self.secret_key == _INSECURE_DEFAULT or len(self.secret_key) < _MIN_SECRET_KEY_LENGTH:
+            msg = (
+                "secret_key must be at least 32 characters and not the default "
+                "placeholder. Set the environment variable "
+                f"{self.model_config.get('env_prefix', '')}SECRET_KEY."
+            )
+            raise ValueError(msg)
+        return self

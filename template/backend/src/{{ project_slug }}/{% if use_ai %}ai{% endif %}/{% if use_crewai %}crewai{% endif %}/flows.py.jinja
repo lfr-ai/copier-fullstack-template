@@ -1,0 +1,214 @@
+"""CrewAI Flows — event-driven, stateful workflow orchestration.
+
+Provides structured 'Flow' base classes and a 'FlowRunner'
+utility for executing flows with logging, error handling, and
+result extraction.
+
+CrewAI Flows key features:
+* '@start' — marks the entry-point method of a flow
+* '@listen' — reacts to the output of another method
+* '@router' — conditional branching based on method output
+* Structured state via Pydantic 'BaseModel' subclasses
+* 'Flow.kickoff()' / 'Flow.kickoff_async()' execution
+* Crew embedding — run full crews inside flow steps
+
+Usage::
+
+    class AnalysisFlow(Flow[AnalysisState]):
+        @start()
+        def gather(self):
+            self.state.raw_data = "..."
+            return self.state.raw_data
+
+        @listen(gather)
+        def analyze(self, raw_data):
+            crew = build_analysis_crew()
+            result = crew.kickoff(inputs={"data": raw_data})
+            self.state.report = str(result)
+            return self.state.report
+
+    runner = FlowRunner(AnalysisFlow)
+    result = await runner.run()
+"""
+
+from __future__ import annotations
+
+import structlog
+from dataclasses import dataclass
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_LOG_TRUNCATE: int = 200
+
+# ── Flow state helpers ───────────────────────────────────────────────
+
+
+def create_flow_state_class(
+    name: str,
+    *,
+    fields: dict[str, tuple[type, object]],
+) -> type:
+    """Dynamically create a Pydantic-based flow state class.
+
+    Useful when flow state structure is determined at runtime
+    (e.g. from YAML configuration or user input).
+
+    Args:
+        name (str): Class name for the generated state model.
+        fields (dict[str, tuple[type, object]]): Mapping of 'field_name' to '(type, default_value)'.
+
+    Returns:
+        A Pydantic 'BaseModel' subclass suitable for 'Flow[State]'.
+
+    Example::
+
+        State = create_flow_state_class("PipelineState", fields={
+            "query": (str, ""),
+            "results": (list, []),
+            "score": (float, 0.0),
+        })
+    """
+    from pydantic import BaseModel
+
+    annotations: dict[str, type] = {}
+    defaults: dict[str, object] = {}
+    for fname, (ftype, fdefault) in fields.items():
+        annotations[fname] = ftype
+        defaults[fname] = fdefault
+
+    ns: dict[str, object] = {"__annotations__": annotations, **defaults}
+    return type(name, (BaseModel,), ns)
+
+
+# ── Flow runner ──────────────────────────────────────────────────────
+
+
+@dataclass(slots=True)
+class FlowRunResult:
+    """Result container for a flow execution."""
+
+    flow_name: str
+    result: object = None
+    error: str | None = None
+    state: object = None
+
+
+class FlowRunner:
+    """Execute a CrewAI Flow with logging, error handling, and state capture.
+
+    Wraps any 'crewai.Flow' subclass and provides both sync and
+    async execution with structured result extraction.
+
+    Args:
+        flow_class (type): 'crewai.Flow' subclass.
+        inputs (dict[str, object] | None): Optional initial inputs for 'Flow.kickoff()'.
+    """
+
+    def __init__(
+        self,
+        flow_class: type,
+        *,
+        inputs: dict[str, object] | None = None,
+    ) -> None:
+        self._flow_class = flow_class
+        self._inputs = inputs or {}
+
+    async def run(self) -> FlowRunResult:
+        """Execute the flow asynchronously and return a structured result."""
+        flow_name = self._flow_class.__name__
+        logger.info("crewai_flow_start", flow=flow_name)
+        try:
+            flow = self._flow_class()
+            result = await flow.kickoff_async()
+            state = getattr(flow, "state", None)
+            logger.info("crewai_flow_complete", flow=flow_name)
+            return FlowRunResult(
+                flow_name=flow_name,
+                result=result,
+                state=state,
+            )
+        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+            logger.exception("crewai_flow_failed", flow=flow_name)
+            return FlowRunResult(
+                flow_name=flow_name,
+                error=str(exc),
+            )
+
+    def run_sync(self) -> FlowRunResult:
+        """Execute the flow synchronously and return a structured result."""
+        flow_name = self._flow_class.__name__
+        logger.info("crewai_flow_start", flow=flow_name)
+        try:
+            flow = self._flow_class()
+            result = flow.kickoff()
+            state = getattr(flow, "state", None)
+            logger.info("crewai_flow_complete", flow=flow_name)
+            return FlowRunResult(
+                flow_name=flow_name,
+                result=result,
+                state=state,
+            )
+        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+            logger.exception("crewai_flow_failed", flow=flow_name)
+            return FlowRunResult(
+                flow_name=flow_name,
+                error=str(exc),
+            )
+
+
+# ── Flow registry ────────────────────────────────────────────────────
+
+
+class FlowRegistry:
+    """Registry for named flow classes.
+
+    Enables the application layer to look up and execute flows
+    by name without coupling to specific flow implementations.
+
+    Usage::
+
+        registry = FlowRegistry()
+        registry.register("analysis", AnalysisFlow)
+        result = await registry.run("analysis")
+    """
+
+    def __init__(self) -> None:
+        self._flows: dict[str, type] = {}
+
+    def register(self, name: str, flow_class: type) -> None:
+        """Register a flow class under a unique name."""
+        self._flows[name] = flow_class
+        logger.info("crewai_flow_registered", name=name, flow=flow_class.__name__)
+
+    def get(self, name: str) -> type | None:
+        """Retrieve a registered flow class by name."""
+        return self._flows.get(name)
+
+    def list_flows(self) -> list[str]:
+        """Return the names of all registered flows."""
+        return sorted(self._flows)
+
+    async def run(
+        self,
+        name: str,
+        *,
+        inputs: dict[str, object] | None = None,
+    ) -> FlowRunResult:
+        """Execute a registered flow by name.
+
+        Args:
+            name (str): Registered flow identifier.
+            inputs (dict[str, object] | None): Optional initial inputs.
+
+        Returns:
+            FlowRunResult with the execution outcome.
+
+        Raises:
+            ValueError: If no flow is registered under 'name'.
+        """
+        flow_class = self._flows.get(name)
+        if flow_class is None:
+            msg = f"Flow '{name}' not registered. Available: {self.list_flows()}"
+            raise ValueError(msg)
+        runner = FlowRunner(flow_class, inputs=inputs)
+        return await runner.run()

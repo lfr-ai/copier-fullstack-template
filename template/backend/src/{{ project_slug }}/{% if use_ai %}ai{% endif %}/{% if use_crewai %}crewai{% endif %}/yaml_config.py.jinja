@@ -1,0 +1,208 @@
+"""CrewAI YAML config loader — build agents and tasks from YAML definitions.
+
+Loads agents and tasks from the 'config/' directory, enabling
+declarative crew definition following CrewAI '@CrewBase' patterns
+without requiring the decorator infrastructure.
+
+Usage::
+
+    loader = CrewConfigLoader()
+    agents = loader.load_agents()
+    tasks = loader.load_tasks(agents)
+    crew = loader.build_crew("research", agents, tasks)
+"""
+
+from __future__ import annotations
+
+import structlog
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from crewai import Crew
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_CONFIG_DIR = Path(__file__).parent / "config"
+
+
+def _load_yaml(path: Path) -> dict[str, object]:
+    """Load a YAML file safely."""
+    import yaml
+
+    with path.open() as f:
+        return yaml.safe_load(f) or {}
+
+
+class CrewConfigLoader:
+    """Loads CrewAI agents and tasks from YAML configuration.
+
+    Mirrors the '@CrewBase' decorator pattern but works with
+    the application's hexagonal architecture and DI container.
+
+    Args:
+        config_dir (Path | None): Directory containing 'agents.yaml' and 'tasks.yaml'.
+        default_llm (str): Default LLM model when not specified in YAML.
+        verbose (bool): Default verbose flag for agents.
+    """
+
+    def __init__(
+        self,
+        config_dir: Path | None = None,
+        *,
+        default_llm: str = "gpt-4o",
+        verbose: bool = False,
+    ) -> None:
+        self._config_dir = config_dir or _CONFIG_DIR
+        self._default_llm = default_llm
+        self._verbose = verbose
+
+    def load_agents(
+        self,
+        *,
+        tools: list[object] | None = None,
+        filter_names: list[str] | None = None,
+    ) -> dict[str, object]:
+        """Load agents from 'agents.yaml'.
+
+        Args:
+            tools (list[object] | None): Shared tools to assign to all agents.
+            filter_names (list[str] | None): Only load agents with these names ('None' = all).
+
+        Returns:
+            dict[str, object]: Mapping of agent name to 'crewai.Agent' instance.
+        """
+        from {{ project_slug }}.ai.crewai.agents import build_agents_from_config
+
+        agents_path = self._config_dir / "agents.yaml"
+        if not agents_path.exists():
+            logger.warning("crewai_agents_yaml_not_found", path=str(agents_path))
+            return {}
+
+        raw = _load_yaml(agents_path)
+
+        if filter_names:
+            raw = {k: v for k, v in raw.items() if k in filter_names}
+
+        # Apply defaults
+        for cfg in raw.values():
+            cfg.setdefault("llm", self._default_llm)
+            cfg.setdefault("verbose", self._verbose)
+
+        return build_agents_from_config(raw, shared_tools=tools)
+
+    def load_tasks(
+        self,
+        agents: dict[str, object],
+        *,
+        filter_names: list[str] | None = None,
+    ) -> dict[str, object]:
+        """Load tasks from 'tasks.yaml'.
+
+        Args:
+            agents (dict[str, object]): Agent mapping (from 'load_agents()').
+            filter_names (list[str] | None): Only load tasks with these names ('None' = all).
+
+        Returns:
+            dict[str, object]: Mapping of task name to 'crewai.Task' instance.
+        """
+        from {{ project_slug }}.ai.crewai.tasks import build_tasks_from_config
+
+        tasks_path = self._config_dir / "tasks.yaml"
+        if not tasks_path.exists():
+            logger.warning("crewai_tasks_yaml_not_found", path=str(tasks_path))
+            return {}
+
+        raw = _load_yaml(tasks_path)
+
+        if filter_names:
+            raw = {k: v for k, v in raw.items() if k in filter_names}
+
+        return build_tasks_from_config(raw, agents)
+
+    def build_crew(
+        self,
+        crew_type: str,
+        agents: dict[str, object],
+        tasks: dict[str, object],
+        *,
+        process: str = "sequential",
+        memory: bool = True,
+        planning: bool = False,
+    ) -> Crew:
+        """Build a crew from loaded agents and tasks by type.
+
+        Crew types map to subsets of agents/tasks from the YAML:
+          - 'research': researcher + analyst -> gather + synthesize
+          - 'analysis': analyst + writer -> analyze + report
+          - 'content': writer + editor + reviewer -> draft + edit + review
+          - 'planning': planner + reviewer -> plan + validate
+
+        Args:
+            crew_type (str): Template type name.
+            agents (dict[str, object]): Full agent mapping.
+            tasks (dict[str, object]): Full task mapping.
+            process (str): 'sequential' or 'hierarchical'.
+            memory (bool): Enable crew memory.
+            planning (bool): Enable planning step.
+
+        Returns:
+            Crew: Assembled 'crewai.Crew'.
+        """
+        from crewai import Crew, Process
+
+        crew_configs = {
+            "research": {
+                "agents": ["researcher", "analyst"],
+                "tasks": ["research_gather", "research_synthesize"],
+            },
+            "analysis": {
+                "agents": ["analyst", "writer"],
+                "tasks": ["analyze_data", "analysis_report"],
+                "process": "hierarchical",
+            },
+            "content": {
+                "agents": ["writer", "editor", "reviewer"],
+                "tasks": ["content_draft", "content_edit", "content_review"],
+            },
+            "planning": {
+                "agents": ["planner", "reviewer"],
+                "tasks": ["create_plan", "validate_plan"],
+                "planning": True,
+            },
+        }
+
+        config = crew_configs.get(crew_type)
+        if config is None:
+            msg = f"Unknown crew type '{crew_type}'. Available: {sorted(crew_configs)}"
+            raise ValueError(msg)
+
+        crew_agents = [agents[n] for n in config["agents"] if n in agents]
+        crew_tasks = [tasks[n] for n in config["tasks"] if n in tasks]
+
+        proc = config.get("process", process)
+        use_planning = config.get("planning", planning)
+
+        kwargs: dict[str, object] = {
+            "agents": crew_agents,
+            "tasks": crew_tasks,
+            "process": Process.hierarchical if proc == "hierarchical" else Process.sequential,
+            "memory": memory,
+            "verbose": self._verbose,
+        }
+
+        if use_planning:
+            kwargs["planning"] = True
+            kwargs["planning_llm"] = self._default_llm
+
+        if proc == "hierarchical":
+            kwargs["manager_llm"] = self._default_llm
+
+        crew = Crew(**kwargs)
+        logger.info(
+            "crewai_yaml_crew_built",
+            crew_type=crew_type,
+            agents=len(crew_agents),
+            tasks=len(crew_tasks),
+            process=proc,
+        )
+        return crew

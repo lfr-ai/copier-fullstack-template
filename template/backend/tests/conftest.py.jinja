@@ -17,6 +17,9 @@ from {{ project_slug }}.ports.api.app import create_api_app
 pytest_plugins = [
     "tests.fixtures.cache",
     "tests.fixtures.database",
+{%- if use_ai %}
+    "tests.fixtures.ai",
+{%- endif %}
 ]
 
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
@@ -45,6 +48,8 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     Yields:
         AsyncIterator[AsyncEngine]: Configured async engine with tables created.
     """
+    if not TEST_DATABASE_URL:
+        pytest.skip("No database URL configured for this template variant")
     eng = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with eng.begin() as conn:
         await conn.run_sync(ORMBase.metadata.create_all)
@@ -62,7 +67,7 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
         engine (AsyncEngine): Test database engine.
 
     Yields:
-        AsyncIterator[AsyncSession]: Async session rolled back after each test.
+        Async session rolled back after each test.
     """
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:

@@ -1,0 +1,13 @@
+/**
+ * Lit Context definitions for dependency injection.
+ *
+ * Contexts allow ancestor elements to provide values to descendant
+ * elements without prop-drilling through the shadow DOM tree.
+ *
+ * @see https://lit.dev/docs/data/context/
+ */
+import { createContext } from '@lit/context';
+import type { AppConfig } from './env';
+
+/** Context key for runtime application configuration. */
+export const configContext = createContext<AppConfig>('app-config');

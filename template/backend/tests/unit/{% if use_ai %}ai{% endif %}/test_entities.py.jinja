@@ -1,0 +1,135 @@
+"""Unit tests for core AI entities and value objects."""
+{%- if use_ai %}
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.core.entities.conversation import ConversationSession, Message
+from {{ project_slug }}.core.entities.knowledge_graph import GraphEdge, GraphNode, Triplet
+from {{ project_slug }}.core.entities.mcp import ResourceContent, ResourceDefinition, ToolDefinition, ToolResult
+from {{ project_slug }}.core.entities.retrieval import RetrievalResult, SearchResult
+from {{ project_slug }}.core.value_objects.chunk_metadata import ChunkMetadata
+from {{ project_slug }}.core.value_objects.embedding_config import EmbeddingConfig
+from {{ project_slug }}.core.value_objects.retrieval_config import RetrievalConfig
+
+
+class TestSearchResult:
+    """Tests for SearchResult entity."""
+
+    def test_create(self) -> None:
+        r = SearchResult(id="1", score=0.95, content="test", metadata={})
+        assert r.id == "1"
+        assert r.score == 0.95
+
+    def test_default_metadata(self) -> None:
+        r = SearchResult(id="1", score=0.5, content="test")
+        assert r.metadata == {} or r.metadata is None
+
+
+class TestRetrievalResult:
+    """Tests for RetrievalResult entity."""
+
+    def test_create(self) -> None:
+        r = RetrievalResult(query="What?", answer="42", sources=[], model="gpt-4o", total_tokens=100)
+        assert r.query == "What?"
+        assert r.answer == "42"
+
+
+class TestMessage:
+    """Tests for Message entity."""
+
+    def test_create(self) -> None:
+        m = Message(id="m1", session_id="s1", role="user", content="Hello")
+        assert m.role == "user"
+        assert m.content == "Hello"
+
+
+class TestConversationSession:
+    """Tests for ConversationSession entity."""
+
+    def test_create_empty(self) -> None:
+        s = ConversationSession(id="s1")
+        assert s.id == "s1"
+        assert s.messages == [] or len(s.messages) == 0
+
+
+class TestGraphNode:
+    """Tests for GraphNode entity."""
+
+    def test_create(self) -> None:
+        n = GraphNode(id="n1", label="Python", properties={"type": "language"})
+        assert n.label == "Python"
+
+
+class TestTriplet:
+    """Tests for Triplet entity."""
+
+    def test_create(self) -> None:
+        t = Triplet(subject="Python", predicate="is_a", object="language")
+        assert t.subject == "Python"
+        assert t.predicate == "is_a"
+        assert t.object == "language"
+
+
+class TestGraphEdge:
+    """Tests for GraphEdge entity."""
+
+    def test_create(self) -> None:
+        e = GraphEdge(source_id="n1", target_id="n2", relation="is_a")
+        assert e.source_id == "n1"
+
+
+class TestToolDefinition:
+    """Tests for MCP ToolDefinition entity."""
+
+    def test_create(self) -> None:
+        t = ToolDefinition(name="search", description="Search")
+        assert t.name == "search"
+
+
+class TestChunkMetadata:
+    """Tests for ChunkMetadata value object."""
+
+    def test_create(self) -> None:
+        m = ChunkMetadata(source="test.pdf", page_number=1)
+        assert m.source == "test.pdf"
+        assert m.page_number == 1
+
+
+class TestEmbeddingConfig:
+    """Tests for EmbeddingConfig value object."""
+
+    def test_defaults(self) -> None:
+        c = EmbeddingConfig()
+        assert c.model == "text-embedding-3-small"
+        assert c.dimensions == 1536
+
+    def test_validate_positive_dimensions(self) -> None:
+        c = EmbeddingConfig(dimensions=768)
+        c.validate()  # Should not raise
+
+    def test_validate_invalid_dimensions(self) -> None:
+        c = EmbeddingConfig(dimensions=-1)
+        with pytest.raises(ValueError):
+            c.validate()
+
+
+class TestRetrievalConfig:
+    """Tests for RetrievalConfig value object."""
+
+    def test_defaults(self) -> None:
+        c = RetrievalConfig()
+        assert c.top_k == 5
+        assert c.strategy == "similarity"
+
+    def test_validate_valid(self) -> None:
+        c = RetrievalConfig(top_k=10, score_threshold=0.5)
+        c.validate()  # Should not raise
+        assert c.top_k == 10
+
+    def test_validate_invalid_top_k(self) -> None:
+        c = RetrievalConfig(top_k=0)
+        with pytest.raises(ValueError):
+            c.validate()
+{%- endif %}

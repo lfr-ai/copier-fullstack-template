@@ -9,7 +9,7 @@
 | [uv](https://docs.astral.sh/uv/) | latest | Python package manager | Yes |
 | [go-task](https://taskfile.dev/) | 3.x | Task runner | Yes |
 | Node.js | {{ node_version }} LTS | Frontend runtime | Yes (via `fnm`) |
-| [pnpm](https://pnpm.io/) | 9.x | Node package manager | Yes (via `corepack`) |
+| [pnpm](https://pnpm.io/) | 10 | Node package manager | Yes (via `corepack`) |
 | {{ container_runtime | capitalize }} | latest | Container runtime | Yes |
 | [pre-commit](https://pre-commit.com/) | latest | Git hooks | Yes (via `uv`) |
 {% if use_caddy -%}
@@ -29,7 +29,7 @@
 ```bash
 zsh scripts/install/install-all.zsh   # installs Python, uv, Node, pnpm, Docker, etc.
 zsh scripts/bootstrap.zsh             # installs deps, pre-commit, creates .env
-task dev                               # start developing!
+task dev                               # start development
 ```
 
 
@@ -67,23 +67,57 @@ task docker:up
 | `task clean` | Remove all build artifacts and caches |
 
 
+- Health: http://localhost:8000/health
+{%- if api_style in ('rest', 'both') %}
 - Swagger UI: http://localhost:8000/api/docs
 - ReDoc: http://localhost:8000/api/redoc
-- Health: http://localhost:8000/api/v1/health
+{%- endif %}
+{%- if api_style in ('graphql', 'both') %}
+- GraphQL (GraphiQL): http://localhost:8000/graphql
+{%- endif %}
 
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed overview.
+{% if use_ai %}
+**Data backends:**
 
-This project follows **hexagonal (ports-and-adapters) architecture**:
+| Layer | Backend | Use case |
+|-------|---------|----------|
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+| Application DB | PostgreSQL | Primary relational storage |
+{%- endif %}
+{%- if use_pgvector %}
+| Vector store | pgvector | Embedding similarity search |
+{%- endif %}
+{%- if use_faiss %}
+| Vector store | FAISS | In-process similarity search |
+{%- endif %}
+{%- if use_ai_search %}
+| Vector store | Azure AI Search | Cloud-hosted vector + keyword search |
+{%- endif %}
+{%- if use_knowledge_graph %}
+| Knowledge graph | {{ knowledge_graph_backend | default('networkx') }} | Entity-relation storage (`networkx`, `neo4j`, `rdflib`) |
+{%- endif %}
+{%- if use_agents %}
+| Checkpointer | Memory / SQLite / PostgreSQL | Durable workflow state |
+{%- endif %}
+{%- if use_redis %}
+| Cache / broker | Redis | Caching and task queue |
+{%- endif %}
+{% endif %}
+This project follows **clean / hexagonal (ports-and-adapters) architecture**:
 
 ```
 backend/src/{{ project_slug }}/
 ├── core/            # Pure domain — ZERO external imports
 ├── application/     # Use cases, services, DTOs, mappers
 ├── ports/           # Inbound adapters (API routes, CLI, web)
-│   └── api/middleware/  # HTTP cross-cutting concerns
+│   ├── api/middleware/  # HTTP cross-cutting concerns
+{%- if api_style in ('graphql', 'both') %}
+│   └── graphql/     # Strawberry GraphQL schema, resolvers, types
+{%- endif %}
 ├── adapters/        # Outbound adapters (DB, cache, messaging)
-├── infrastructure/  # Low-level (database, HTTP, security, observability)
+├── infrastructure/  # Low-level (database, HTTP, security, profiling, observability)
 ├── config/          # Settings, DI container
 ├── ai/              # LLM/agent tooling
 └── utils/           # Shared utilities
@@ -91,6 +125,115 @@ backend/src/{{ project_slug }}/
 
 
 See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+{% if use_sftp %}
+## SSH & SFTP
+
+SSH key management, SFTP configuration, and VS Code remote development
+support are included. See [docs/SSH_SFTP.md](docs/SSH_SFTP.md) for the
+full guide.
+
+```bash
+# Quick start — client mode
+task ssh:setup -- --remote-host myserver.example.com
+
+# Validate the setup
+task ssh:validate
+
+# Server mode with hardening
+task ssh:setup:server
+```
+{% endif %}
+
+## Profiling
+
+Built-in profiling for CPU (pyinstrument), memory (tracemalloc), SQL queries, and frontend
+Web Vitals. See [docs/PROFILING.md](docs/PROFILING.md) for full usage guide.
+
+```bash
+task backend:profile:cpu       # CPU flame chart
+task backend:profile:memory    # Memory snapshot
+task backend:profile:report    # Open latest HTML report
+```
+
+{% if with_opencode %}
+## OpenCode
+
+- Project-level config: `opencode.json`
+- oh-my-opencode config: `.opencode/oh-my-opencode.jsonc`
+- Project agents/commands/skills/plugins: `.opencode/`
+- Operations and verification guide: [docs/OPENCODE.md](docs/OPENCODE.md)
+- Quick health check command in OpenCode: `/mcp-health`
+- Default addon plugins: `oh-my-opencode`, `opencode-agent-skills`, `superpowers`, `opencode-dynamic-context-pruning`, `opencode-shell-strategy`
+
+### oh-my-opencode
+
+The [oh-my-opencode](https://github.com/code-yeongyu/oh-my-openagent) plugin (v3.12+) provides multi-model orchestration with discipline agents:
+
+| Agent | Role | Default Model |
+|-------|------|---------------|
+| **Sisyphus** | Main ultraworker orchestrator | Claude Opus 4.6 / Kimi K2.5 / GLM-5 |
+| **Hephaestus** | Deep autonomous worker (The Legitimate Craftsman) | GPT-5.3 Codex |
+| **Prometheus** | Strategic planner (interview mode) | Claude Opus 4.6 |
+| **Oracle** | Architecture/debugging advisor | GPT-5.4 |
+| **Librarian** | Docs/code search | Gemini 3 Flash |
+| **Explore** | Fast codebase grep | Grok Code Fast 1 |
+
+Key commands: `ultrawork` (or `ulw`), `/init-deep`, `/start-work`, `/ralph-loop`
+
+Key features: hash-anchored edits (zero stale-line errors), background agents, LSP/AST tools, skill-embedded MCPs
+
+### Superpowers
+
+The [Superpowers](https://github.com/obra/superpowers) plugin provides composable skills that trigger automatically:
+
+1. **brainstorming** → Socratic design refinement before coding
+2. **writing-plans** → Bite-sized tasks with verification steps
+3. **subagent-driven-development** → Parallel subagent execution with two-stage review
+4. **test-driven-development** → RED-GREEN-REFACTOR enforcement
+5. **requesting-code-review** → Pre-review checklist by severity
+6. **using-git-worktrees** → Isolated development branches
+
+### opencode-agent-skills
+
+The [opencode-agent-skills](https://github.com/joshuadavidthomas/opencode-agent-skills) plugin provides dynamic skill discovery:
+- Auto-discovers skills from `.opencode/skills/`
+- Context injection that survives compaction
+- Automatic skill matching based on message content
+
+### OpenAgents Control (OAC)
+
+[OpenAgents Control](https://github.com/darrenhinde/OpenAgentsControl) extends OpenCode with pattern-controlled development:
+- **ContextScout**: Discovers YOUR coding patterns before generating code
+- **Approval gates**: Agents propose → you approve → agents execute
+- **3 main agents**: OpenAgent, OpenCoder, SystemBuilder
+- **7+ subagents**: ContextScout, TaskManager, CoderAgent, TestEngineer, CodeReviewer, BuildAgent, ExternalScout
+- **MVI principle**: 80% token reduction via Minimal Viable Information design
+- Commands: `/add-context`, `/commit`, `/test`, `/optimize`
+{% if with_gsd %}
+
+### GSD-2 (Get Shit Done)
+
+[GSD v2.28+](https://github.com/gsd-build/GSD-2) (`gsd-pi`) is a standalone autonomous coding agent:
+
+```bash
+npm install -g gsd-pi    # Install globally
+gsd                       # Start interactive session
+# Inside GSD:
+/gsd                      # Step mode (one unit at a time)
+/gsd auto                 # Autonomous mode — walk away, come back to built software
+/gsd status               # Progress dashboard
+/gsd discuss              # Architecture discussions alongside auto mode
+/gsd quick                # Quick task, skip planning overhead
+/gsd keys                 # Manage LLM provider keys
+/gsd export --html --all  # Generate HTML milestone reports
+```
+
+GSD state lives in `.gsd/` — see `agent-instructions.md` for project-specific context.
+Config via `.gsd/preferences.md` — manage interactively with `/gsd prefs`.
+Verification commands run automatically after each task (`task lint`, `task test:unit`, `task typecheck`).
+{% endif %}
+
+{% endif %}
 
 
 {{ license }}

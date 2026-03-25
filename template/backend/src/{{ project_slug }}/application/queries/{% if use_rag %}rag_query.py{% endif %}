@@ -1,0 +1,85 @@
+"""RAG query handler — CQRS read operation for retrieval-augmented generation."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Final, override
+
+import structlog
+
+from {{ project_slug }}.application.dtos.rag_dto import RAGResponseDTO, SourceDTO
+from {{ project_slug }}.application.queries.base import QueryHandler
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.retriever import RetrieverPort
+
+logger = structlog.get_logger(__name__)
+
+_RAG_TEMPERATURE: Final[float] = 0.3
+_DEFAULT_MAX_TOKENS: Final[int] = 2048
+_DEFAULT_SIMILARITY_TOP_K: Final[int] = 5
+
+
+@dataclass(frozen=True, slots=True)
+class RAGQuery:
+    """Query for retrieval-augmented generation."""
+
+    question: str
+    top_k: int = _DEFAULT_SIMILARITY_TOP_K
+    strategy: str = "hybrid"
+    use_graph: bool = False
+
+
+class RAGQueryHandler(QueryHandler[RAGQuery, RAGResponseDTO]):
+    """Handles RAG queries by retrieving context and generating answers."""
+
+    def __init__(self, *, retriever: RetrieverPort, llm: LLMPort) -> None:
+        self._retriever = retriever
+        self._llm = llm
+
+    @override
+    async def handle(self, query: RAGQuery) -> RAGResponseDTO:
+        """Execute the RAG query pipeline.
+
+        Args:
+            query (RAGQuery): Query parameters.
+
+        Returns:
+            RAGResponseDTO: Generated answer with sources.
+        """
+        logger.info("RAG query", question_length=len(query.question), strategy=query.strategy)
+
+        results = await self._retriever.retrieve(
+            query=query.question,
+            top_k=query.top_k,
+        )
+
+        context = "\n\n".join(
+            f"[Source {i + 1}]: {r.content}"
+            for i, r in enumerate(results)
+            if r.content
+        )
+
+        prompt = (
+            f"Answer the following question based on the provided context.\n\n"
+            f"Context:\n{context}\n\n"
+            f"Question: {query.question}\n\n"
+            f"Answer:"
+        )
+
+        answer = await self._llm.complete(
+            prompt=prompt,
+            system_prompt="You are a helpful assistant. Answer based on the provided context only.",
+            max_tokens=_DEFAULT_MAX_TOKENS,
+            temperature=_RAG_TEMPERATURE,
+        )
+
+        sources = [
+            SourceDTO(id=r.id, score=r.score, content=r.content)
+            for r in results
+        ]
+
+        return RAGResponseDTO(
+            question=query.question,
+            answer=answer,
+            sources=sources,
+        )
