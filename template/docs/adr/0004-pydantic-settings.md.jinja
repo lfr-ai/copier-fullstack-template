@@ -1,14 +1,18 @@
 
+# ADR-0004 — Pydantic Settings
+
+## Status
 
 Accepted
 
+## Context
 
 {{ '%Y-%m-%d' | strftime }}
-
 
 We need a configuration system that supports environment variables, `.env` files, type validation,
 and environment-specific overrides (local, test, prod).
 
+## Decision
 
 Use `pydantic-settings` for application configuration:
 
@@ -18,8 +22,14 @@ Use `pydantic-settings` for application configuration:
 - Nested settings objects for logical grouping
 - Settings hierarchy: defaults → `.env` → environment variables → CLI flags
 
+## Consequences
 
-- **Positive**: Fail-fast on misconfiguration at startup
-- **Positive**: Full IDE autocompletion on settings
-- **Positive**: Environment-specific settings classes (LocalSettings, ProdSettings)
-- **Negative**: Slight startup overhead for validation
+### Positive
+
+- Fail-fast on misconfiguration at startup
+- Full IDE autocompletion on settings
+- Environment-specific settings classes (LocalSettings, ProdSettings)
+
+### Negative
+
+- Slight startup overhead for validation

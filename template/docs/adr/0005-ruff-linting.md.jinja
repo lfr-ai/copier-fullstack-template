@@ -1,14 +1,18 @@
 
+# ADR-0005 — Ruff Linting
+
+## Status
 
 Accepted
 
+## Context
 
 {{ '%Y-%m-%d' | strftime }}
-
 
 We need a fast Python linter and formatter that replaces multiple tools (flake8, black, isort,
 pyupgrade, bandit) with a single unified tool.
 
+## Decision
 
 Use [Ruff](https://docs.astral.sh/ruff/) for both linting and formatting:
 
@@ -17,8 +21,14 @@ Use [Ruff](https://docs.astral.sh/ruff/) for both linting and formatting:
 - Single configuration in `backend/pyproject.toml` (`[tool.ruff]` section)
 - Integrated in pre-commit, CI, and VS Code
 
+## Consequences
 
-- **Positive**: Faster linting (often sub-second on large codebases)
-- **Positive**: Single tool replaces 6+ separate tools
-- **Positive**: VS Code extension with auto-fix on save
-- **Negative**: Some niche rules from pylint/flake8 plugins not yet supported
+### Positive
+
+- Faster linting (often sub-second on large codebases)
+- Single tool replaces 6+ separate tools
+- VS Code extension with auto-fix on save
+
+### Negative
+
+- Some niche rules from pylint/flake8 plugins not yet supported

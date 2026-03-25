@@ -27,8 +27,8 @@ infrastructure/profiling/
 └── sql.py             ← SQLAlchemy event hooks
 
 ports/api/middleware/
-├── profiling.py       ← On-demand per-request profiling (?profile=cpu|memory)
-└── timing.py          ← Server-Timing header + slow-request warnings
+├── profiling.py       ← On-demand per-request CPU profiling (?profile=1 or ?profile=cpu)
+└── timing.py          ← Server-Timing header + request duration logging
 
 frontend/src/lib/profiling/
 ├── index.ts           ← Barrel exports
@@ -167,7 +167,7 @@ curl -H "X-Profile-Secret: my-secret" \
 | Header | Description |
 |--------|-------------|
 | `Server-Timing: profile;dur=<ms>` | Profiled request duration |
-| `X-Profile-Path` | Path to saved HTML report |
+| `X-Profile-Saved` | Set to `true` when a profile report was saved |
 
 The `TimingMiddleware` adds `Server-Timing: total;dur=<ms>` to every response
 and logs the duration via structured logging.
@@ -176,7 +176,8 @@ and logs the duration via structured logging.
 
 ## Frontend — Core Web Vitals
 
-The `web-vitals` library tracks the six standard performance metrics.
+The `web-vitals` library (v4+) tracks the five standard performance metrics:
+CLS, FCP, INP, LCP, and TTFB.
 
 ```typescript
 import { reportWebVitals } from '@/lib/profiling';
@@ -194,11 +195,21 @@ reportWebVitals((metric) => {
 
 ## Task Runner Commands
 
+**Backend profiling:**
+
 ```bash
 task backend:profile:cpu        # CPU profile with pyinstrument
 task backend:profile:memory     # Memory snapshot with tracemalloc
 task backend:profile:report     # Open latest HTML report
 task backend:profile:clean      # Remove all profiling artifacts
+```
+
+**Frontend profiling:**
+
+```bash
+task frontend:profile:bundle        # Analyze bundle size with rollup-plugin-visualizer
+task frontend:profile:lighthouse    # Run Lighthouse audit (local)
+task frontend:profile:lighthouse:ci # Run Lighthouse audit (CI headless)
 ```
 
 ## Tox Environments

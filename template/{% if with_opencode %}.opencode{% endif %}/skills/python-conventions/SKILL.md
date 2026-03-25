@@ -102,7 +102,7 @@ except httpx.HTTPError as exc:
 
 ## Style
 
-- Line length: 99 characters
+- Line length: 88 characters
 - Python 3.12+ syntax: `type` statements, `X | Y` unions, `match`
 - `collections.abc` over `typing` for generic types
 - `datetime.UTC` for timezone-aware datetimes

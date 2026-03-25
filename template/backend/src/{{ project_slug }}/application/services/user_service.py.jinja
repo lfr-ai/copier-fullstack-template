@@ -1,10 +1,16 @@
-"""User application service."""
+"""User application service.
+
+Orchestrates user management use-cases by delegating domain
+rules to :class:`UserDomainService` and persistence to the
+Unit of Work.
+"""
 
 from __future__ import annotations
 
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
 from {{ project_slug }}.application.mappers.user_mapper import UserMapper
 from {{ project_slug }}.application.services.base import BaseService
+from {{ project_slug }}.core.domain_services.user_domain_service import UserDomainService
 from {{ project_slug }}.core.entities.user import User
 from {{ project_slug }}.core.events.user_events import UserCreated
 from {{ project_slug }}.core.exceptions.base import NotFoundError
@@ -13,7 +19,13 @@ from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
 
 class UserService(BaseService):
-    """Application service for user management."""
+    """Application service for user management.
+
+    Follows the clean-architecture use-case pattern:
+    1. Validate via domain service
+    2. Construct the entity
+    3. Persist via UoW and dispatch domain events
+    """
 
     def __init__(
         self,
@@ -23,24 +35,42 @@ class UserService(BaseService):
     ) -> None:
         super().__init__(uow=uow)
         self._password_hasher = password_hasher
+        self._domain_service = UserDomainService()
 
     async def create_user(self, dto: CreateUserDTO) -> UserDTO:
         """Create a new user from a creation DTO.
+
+        Validates the email format via the domain service, checks
+        for duplicate emails, then persists and dispatches events.
 
         Args:
             dto (CreateUserDTO): User creation data.
 
         Returns:
             UserDTO: Persisted user representation.
+
+        Raises:
+            ValidationError: If the email format is invalid.
+            ConflictError: If a user with the email already exists.
         """
-        user = User(
-            email=dto.email,
-            display_name=dto.display_name,
-            password_hash=self._password_hasher.hash(dto.password),
-        )
-        user.register_event(UserCreated(user_id=user.id, email=user.email))
+        # --- Domain validation (delegated to domain service) ---
+        self._domain_service.validate_email(dto.email)
 
         async with self._uow as uow:
+            existing = await uow.users.get_by_email(email=dto.email)
+            self._domain_service.ensure_not_duplicate(
+                existing_user=existing,
+                email=dto.email,
+            )
+
+            user = User(
+                email=dto.email,
+                display_name=dto.display_name,
+                password_hash=self._password_hasher.hash(dto.password),
+            )
+            user.register_event(UserCreated(user_id=user.id, email=user.email))
+            uow.collect_entity(user)
+
             created = await uow.users.add(user)
             await uow.commit()
 

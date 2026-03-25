@@ -1,7 +1,6 @@
-
+# Git Workflow
 
 We use a **trunk-based development** workflow with short-lived feature branches.
-
 
 - `feat/<description>` — new features
 - `fix/<description>` — bug fixes
@@ -9,7 +8,6 @@ We use a **trunk-based development** workflow with short-lived feature branches.
 - `docs/<description>` — documentation changes
 - `test/<description>` — test additions/changes
 - `chore/<description>` — maintenance tasks
-
 
 1. Create a feature branch from `main`
 2. Make small, focused commits
@@ -19,7 +17,6 @@ We use a **trunk-based development** workflow with short-lived feature branches.
 6. Squash-merge to `main`
 
 ---
-
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
@@ -31,7 +28,6 @@ Enforced by `commitizen` pre-commit hook.
 
 ---
 
-
 - Keep PRs small and focused (ideally < 400 lines changed)
 - Include tests for all new functionality
 - Update documentation when behavior changes
@@ -39,6 +35,5 @@ Enforced by `commitizen` pre-commit hook.
 - At least one approval required
 
 ---
-
 
 See [docs/RELEASE.md](../RELEASE.md) for the full release process.

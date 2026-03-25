@@ -35,10 +35,10 @@ param hostingMode string = 'default'
 
 @description('Public network access')
 @allowed(['enabled', 'disabled'])
-param publicNetworkAccess string = 'enabled'
+param publicNetworkAccess string = 'disabled'
 
 @description('Disable local (API key) authentication in favour of RBAC')
-param disableLocalAuth bool = false
+param disableLocalAuth bool = true
 
 @description('Authentication options: apiKeyOnly or aadOrApiKey')
 param authOptions object = {

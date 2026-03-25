@@ -1,7 +1,10 @@
+# Release Process
 
 This project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ---
+
+## Version Format
 
 
 ```
@@ -14,12 +17,13 @@ MAJOR.MINOR.PATCH
 
 ---
 
+## Release Steps
 
 1. Ensure all tests pass: `task test`
 2. Update `CHANGELOG.md`  move items from `[Unreleased]` to `[X.Y.Z]`
-3. Bump version:
+3. Tag the release:
    ```zsh
-   cd backend && uv run cz bump
+   git tag -a vX.Y.Z -m "vX.Y.Z"
    ```
 4. Push the tag:
    ```zsh
@@ -29,10 +33,11 @@ MAJOR.MINOR.PATCH
 
 ---
 
+## Changelog Format
 
 Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-
+### Categories
 - **Added**  new features
 - **Changed**  changes in existing functionality
 - **Deprecated**  soon-to-be removed features
@@ -42,6 +47,7 @@ Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ---
 
+## Hotfix Process
 
 1. Branch from the release tag: `git checkout -b hotfix/X.Y.Z+1 vX.Y.Z`
 2. Apply fix and add tests

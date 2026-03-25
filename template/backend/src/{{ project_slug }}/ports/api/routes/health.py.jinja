@@ -5,11 +5,14 @@ from __future__ import annotations
 import time
 from importlib.metadata import PackageNotFoundError, version
 
+import structlog
 from fastapi import APIRouter
 
 from {{ project_slug }}.config.constants import MS_PER_SECOND
 from {{ project_slug }}.core.enums import ServiceStatus
 from {{ project_slug }}.ports.api.schemas.health import DependencyHealth, HealthResponse
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 router = APIRouter()
 
@@ -53,22 +56,22 @@ async def _check_database() -> DependencyHealth:
     """Probe database connectivity."""
     start = time.monotonic()
     try:
-        from sqlalchemy import text
-
         from {{ project_slug }}.ports.container import get_container
 
         container = get_container()
         uow = container.unit_of_work()
         async with uow:
-            await uow.session.execute(text("SELECT 1"))
+            healthy = await uow.check_connection()
         latency = (time.monotonic() - start) * MS_PER_SECOND
+        status = ServiceStatus.HEALTHY if healthy else ServiceStatus.DEGRADED
         return DependencyHealth(
             name="database",
-            status=ServiceStatus.HEALTHY,
+            status=status,
             latency_ms=round(latency, 2),
         )
     except Exception as exc:  # noqa: BLE001
         latency = (time.monotonic() - start) * MS_PER_SECOND
+        logger.warning("health_check_database_failed", error=type(exc).__name__)
         return DependencyHealth(
             name="database",
             status=ServiceStatus.DEGRADED,
@@ -94,6 +97,7 @@ async def _check_cache() -> DependencyHealth:
         )
     except Exception as exc:  # noqa: BLE001
         latency = (time.monotonic() - start) * MS_PER_SECOND
+        logger.warning("health_check_cache_failed", error=type(exc).__name__)
         return DependencyHealth(
             name="cache",
             status=ServiceStatus.DEGRADED,

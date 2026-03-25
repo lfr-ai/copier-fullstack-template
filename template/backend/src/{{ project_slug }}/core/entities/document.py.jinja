@@ -1,16 +1,17 @@
-"""Document entity — domain model for ingested documents and chunks."""
+"""Document entity — aggregate root for ingested documents and chunks."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from {{ project_slug }}.core.entities.base import Entity, generate_id
+from {{ project_slug }}.core.entities.base import AggregateRoot, generate_id
 @dataclass(slots=True)
-class Document(Entity):
-    """Domain entity representing an ingested document.
+class Document(AggregateRoot):
+    """Aggregate root representing an ingested document.
 
-    Documents are the primary input to the RAG pipeline. They are
-    split into 'Chunk' instances for embedding and retrieval.
+    Documents are the primary input to the RAG pipeline. They own
+    their ``Chunk`` children and serve as the consistency boundary
+    for ingestion operations.
     """
 
     content: str = ""

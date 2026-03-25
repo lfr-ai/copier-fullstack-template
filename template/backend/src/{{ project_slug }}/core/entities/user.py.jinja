@@ -1,19 +1,19 @@
-"""User domain entity."""
+"""User domain entity — aggregate root for user management."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from {{ project_slug }}.core.entities.base import Entity, utcnow
+from {{ project_slug }}.core.entities.base import AggregateRoot, utcnow
 
 
 @dataclass(slots=True)
-class User(Entity):
-    """User domain entity with authentication attributes.
+class User(AggregateRoot):
+    """User aggregate root with authentication attributes.
 
-    Represents a user in the system with email-based
-    identification and activation status.
+    Serves as the consistency boundary for user identity,
+    email, activation status, and password hash.
     """
 
     email: str = ""

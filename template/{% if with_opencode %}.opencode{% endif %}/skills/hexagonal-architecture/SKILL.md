@@ -30,7 +30,7 @@ core/           → Pure domain. ZERO external imports. Only stdlib + typing.
                   Defines interface protocols (ports) that adapters implement.
 application/    → Use cases, services, DTOs. Imports from core only.
                   Access repos via UoW properties (uow.users). NO adapter imports.
-ports/          → API routes, CLI, webhooks, DI container. FastAPI/Typer allowed.
+ports/          → API routes, CLI, webhooks, DI container. FastAPI/Click allowed.
                   Wires concrete adapters into services.
 adapters/       → DB repos, cache, HTTP clients. Implements core interface protocols.
                   Concrete UoW exposes typed repository properties.

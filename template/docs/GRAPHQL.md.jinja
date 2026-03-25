@@ -10,8 +10,8 @@
 # Start the development server
 task dev
 
-# Open GraphiQL IDE (debug mode only)
-open http://localhost:8000/graphql
+# GraphiQL IDE is available at (debug mode only):
+# http://localhost:8000/graphql
 ```
 
 ## Architecture
@@ -184,10 +184,11 @@ for batching database queries. Create new loaders following the existing
 ## Testing
 
 ```bash
-# Run GraphQL-specific tests
-pytest tests/unit/ports/test_graphql.py -v
+# Run GraphQL-specific tests (from backend/ directory)
+cd backend
+uv run pytest tests/unit/ports/test_graphql.py -v
 
-# Run schema integrity tests
-pytest tests/integration/test_graphql_schema.py -v
+# Run schema integrity tests (from backend/ directory)
+uv run pytest tests/integration/test_graphql_schema.py -v
 ```
 {%- endif %}

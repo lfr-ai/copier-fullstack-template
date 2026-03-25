@@ -59,7 +59,7 @@ EVERY source module MUST have corresponding test(s):
 | `utils/*`                          | `unit/utils/test_*.py` (one per util module)  |
 | `config/settings.py`              | `unit/config/test_settings.py`                |
 
-Target: ≥ 90% line coverage on `backend/src/{{ project_slug }}/`
+Target: ≥ 80% line coverage on `core` + `application` layers (enforced by `tox -e coverage-core`)
 
 
 ```python

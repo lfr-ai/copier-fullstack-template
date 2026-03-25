@@ -1,6 +1,6 @@
+# Utils
 
 Pure-Python helper functions with **no framework or ORM dependencies**.
-
 
 | Module                | Purpose                                            |
 | --------------------- | -------------------------------------------------- |
@@ -12,8 +12,6 @@ Pure-Python helper functions with **no framework or ORM dependencies**.
 | `retry_policies.py`   | Tenacity retry decorator presets                   |
 | `string_utils.py`     | Slug, truncation, and string manipulation          |
 | `timing.py`           | Wall-clock timing context manager                  |
-| `validators.py`       | Standalone validation functions (email, URL, …)    |
-
 
 - No imports from `adapters/`, `ports/`, or `infrastructure/`.
 - Functions should be stateless and side-effect-free where possible.

@@ -63,8 +63,8 @@ skuCapacity: 0
 redisVersion: '6'
 minimumTlsVersion: '1.2'
 enableNonSslPort: false
-publicNetworkAccess: 'Enabled'
-disableAccessKeyAuthentication: false
+publicNetworkAccess: 'Disabled'
+disableAccessKeyAuthentication: true
 enableEntraAuth: false
 enableManagedIdentity: false
 updateChannel: 'Stable'
@@ -95,12 +95,12 @@ skuName: 'Standard_B1ms'
 skuTier: 'Burstable'
 version: '17'
 storageSizeGB: 32
-adminLogin: 'pgadmin'
+adminLogin: ''
 adminPassword: ''
 highAvailabilityMode: 'Disabled'
 backupRetentionDays: 7
 geoRedundantBackup: 'Disabled'
-publicNetworkAccess: 'Enabled'
+publicNetworkAccess: 'Disabled'
 deploy: true
 }
 {%- endif %}
@@ -111,8 +111,8 @@ param openai object = {
 accountName: ''
 skuName: 'S0'
 customSubDomainName: ''
-publicNetworkAccess: 'Enabled'
-disableLocalAuth: false
+publicNetworkAccess: 'Disabled'
+disableLocalAuth: true
 chatModelName: 'gpt-4o'
 chatModelVersion: '2024-08-06'
 chatDeploymentSkuName: 'Standard'
@@ -136,8 +136,8 @@ replicaCount: 1
 partitionCount: 1
 semanticSearch: 'free'
 hostingMode: 'default'
-publicNetworkAccess: 'enabled'
-disableLocalAuth: false
+publicNetworkAccess: 'disabled'
+disableLocalAuth: true
 deploy: true
 }
 {%- endif %}
@@ -148,8 +148,8 @@ param documentIntelligence object = {
 accountName: ''
 skuName: 'S0'
 customSubDomainName: ''
-publicNetworkAccess: 'Enabled'
-disableLocalAuth: false
+publicNetworkAccess: 'Disabled'
+disableLocalAuth: true
 deploy: true
 }
 {%- endif %}

@@ -29,7 +29,6 @@ backend/src/{{ project_slug }}/
 │   ├── queries/              # Read-side inputs (frozen dataclasses)
 │   ├── dtos/                 # Inherit BaseDTO (dtos/base.py), Annotated[..., Field(...)]
 │   ├── mappers/              # Entity ↔ DTO mapping functions
-│   ├── validators/           # Application-level validation
 │   └── tasks/                # Async task definitions (Celery signatures)
 │
 ├── adapters/                 # Concrete port implementations
@@ -56,19 +55,16 @@ backend/src/{{ project_slug }}/
 │   ├── graphql/              # Strawberry GraphQL (conditional)
 │   ├── web/                  # Jinja2 web UI
 │   │   └── controllers/      # Call application services, never adapters
-│   └── cli/                  # Typer CLI
-│       └── app.py            # create_cli_app() -> typer.Typer
+│   └── cli/                  # Click CLI
+│       └── app.py            # cli() -> click.Group
 │
-├── config/                   # Settings, logging, Celery
+├── config/                   # Settings, logging{% if use_celery %}, Celery{% endif %}
+
 │   ├── settings/             # Environment-specific settings (base, dev, prod, etc.)
-│   ├── logging.py            # Structured logging configuration
-│   └── celery.py             # Celery config (reads from AppSettings)
+│   └── logging.py            # Structured logging configuration
 │
 ├── infrastructure/           # Cross-cutting infrastructure concerns
-│   ├── database/             # Database health checks
-│   ├── profiling/            # CPU, memory, SQL profiling
-│   ├── scheduling/           # Task scheduler abstraction
-│   └── security/             # Password hashing, crypto
+│   └── profiling/            # CPU, memory, SQL profiling
 │
 └── utils/                    # Framework-agnostic, pure functions, stdlib ONLY
     ├── logger_factory.py     # Structured logging setup
@@ -121,8 +117,10 @@ ALL entry points use factory functions — no global mutable state:
 
 - `create_api_app() -> FastAPI` in `ports/api/app.py`
 - `create_web_app() -> FastAPI` in `ports/web/app.py`
-- `create_cli_app() -> typer.Typer` in `ports/cli/app.py`
+- `cli() -> click.Group` in `ports/cli/app.py`
+{%- if use_celery %}
 - `create_celery_app() -> Celery` in `config/celery.py`
+{%- endif %}
 
 
 - `ports/container.py` wires port protocols to concrete adapters

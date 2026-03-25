@@ -18,7 +18,6 @@ DEFAULT_FROM_ADDRESS = "noreply@example.com"
 MS_PER_SECOND = 1_000
 
 TOKEN_EXPIRY_MINUTES = 30
-REFRESH_TOKEN_EXPIRY_DAYS = 7  # FIXME: unused — wire into auth adapter or remove
 
 DEFAULT_TRUNCATE_LENGTH = 100
 

@@ -52,6 +52,8 @@ class IsAuthenticated(BasePermission):
             logger.debug("auth_token_validation_failed", exc_info=True)
             return False
 {%- else %}
-        # Without the auth module, accept any non-empty bearer token.
+        # SECURITY: Without the auth module this only checks for token
+        # presence — it does NOT validate the token.  Enable `use_auth`
+        # before exposing this to untrusted networks.
         return bool(auth_header.removeprefix("Bearer ").strip())
 {%- endif %}

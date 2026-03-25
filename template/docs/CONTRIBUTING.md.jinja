@@ -1,83 +1,8 @@
 # Contributing — Detailed Guide
 
-> **Quick version:** see [CONTRIBUTING.md](../CONTRIBUTING.md) in the project root.
->
-> This page expands on test locations and backend/frontend-specific workflows.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) in the project root for the full
+contribution guide: branch naming, commit messages, code standards, PR checklist,
+and architecture rules.
 
----
-
-## Setup
-
-1. Clone the repository
-2. Run `task setup` to install all dependencies
-3. Run `task dev` to start the development servers
-
-## Branch Naming
-
-- `feat/<description>` for new features
-- `fix/<description>` for bug fixes
-- `refactor/<description>` for code improvements
-- `docs/<description>` for documentation changes
-
-## Commit Messages
-
-Follow [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-<type>(<scope>): <description>
-
-[optional body]
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
-
-## Pre-commit Hooks
-
-Pre-commit hooks run automatically on `git commit`. Install with:
-
-```bash
-pre-commit install
-pre-commit install --hook-type commit-msg
-```
-
-## Backend
-
-```bash
-task backend:lint       # Run ruff linter
-task backend:format     # Auto-format with ruff
-task backend:test       # Run test suite via tox
-```
-
-## Frontend
-
-```bash
-task frontend:lint      # Run eslint
-task frontend:format    # Auto-format with prettier
-task frontend:test:unit # Run vitest unit tests
-```
-
-## Test Locations
-
-### Backend
-
-- Unit tests: `backend/tests/unit/`
-- Integration tests: `backend/tests/integration/`
-- Property-based tests: `backend/tests/property/`
-- Run with: `task backend:test`
-
-### Frontend
-
-- Unit tests: `frontend/tests/unit/`
-- Run with: `task frontend:test:unit`
-{% if use_playwright %}
-- E2E tests: `frontend/tests/e2e/`
-- Run with: `task test:e2e`
-{% endif %}
-
-## PR Checklist
-
-- [ ] Tests pass locally
-- [ ] Linters pass with no warnings
-- [ ] Type checks pass
-- [ ] Documentation updated if needed
-- [ ] CHANGELOG.md updated
+For test locations, runner commands, and coverage details, see
+[TESTING.md](TESTING.md).

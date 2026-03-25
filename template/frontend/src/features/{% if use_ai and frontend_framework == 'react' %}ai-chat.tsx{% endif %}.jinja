@@ -12,91 +12,91 @@ initialSessionId?: string;
 export function AiChat({ initialSessionId }: AiChatProps) {
 const [sessionId, setSessionId] = useState(initialSessionId ?? crypto.randomUUID());
 const [messages, setMessages] = useState<ConversationMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [input, setInput] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-    getConversationHistory(sessionId)
-    .then((data) => setMessages(data.messages))
-    .catch(() => {});
-    }, [sessionId]);
+        useEffect(() => {
+        getConversationHistory(sessionId)
+        .then((data) => setMessages(data.messages))
+        .catch(() => setError('Failed to load conversation history.'));
+        }, [sessionId]);
 
-    useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, [messages]);
 
-    const handleSend = useCallback(async () => {
-    const content = input.trim();
-    if (!content || loading) return;
+        const handleSend = useCallback(async () => {
+        const content = input.trim();
+        if (!content || loading) return;
 
-    setInput('');
-    setLoading(true);
-    setError('');
-    setMessages((prev) => [...prev, { role: 'user', content }]);
+        setInput('');
+        setLoading(true);
+        setError('');
+        setMessages((prev) => [...prev, { role: 'user', content }]);
 
-    try {
-    const response = await sendMessage(sessionId, content);
-    setMessages((prev) => [...prev, response.assistant_message]);
-    } catch (err) {
-    setError(err instanceof Error ? err.message : 'Failed to send message');
-    } finally {
-    setLoading(false);
-    }
-    }, [input, loading, sessionId]);
+        try {
+        const response = await sendMessage(sessionId, content);
+        setMessages((prev) => [...prev, response.assistant_message]);
+        } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to send message');
+        } finally {
+        setLoading(false);
+        }
+        }, [input, loading, sessionId]);
 
-    const handleClear = useCallback(async () => {
-    try {
-    await clearConversation(sessionId);
-    setMessages([]);
-    setSessionId(crypto.randomUUID());
-    } catch (err) {
-    setError(err instanceof Error ? err.message : 'Failed to clear');
-    }
-    }, [sessionId]);
+        const handleClear = useCallback(async () => {
+        try {
+        await clearConversation(sessionId);
+        setMessages([]);
+        setSessionId(crypto.randomUUID());
+        } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to clear');
+        }
+        }, [sessionId]);
 
-    return (
-    <div style={{ display: 'flex' , flexDirection: 'column' , height: '100%' }}>
-      <div role="log" aria-live="polite" aria-label="Chat messages" style={{ flex: 1, overflowY: 'auto' ,
-        padding: '1rem' , display: 'flex' , flexDirection: 'column' , gap: '0.75rem' }}>
-        {messages.map((msg, i) => (
-        <div key={i} style={{ alignSelf: msg.role==='user' ? 'flex-end' : 'flex-start' , background: msg.role==='user'
-          ? '#3b82f6' : '#f3f4f6' , color: msg.role==='user' ? 'white' : '#1f2937' , padding: '0.75rem 1rem' ,
-          borderRadius: '0.75rem' , maxWidth: '80%' }}>
-          {msg.content}
+        return (
+        <div style={{ display: 'flex' , flexDirection: 'column' , height: '100%' }}>
+            <div role="log" aria-live="polite" aria-label="Chat messages" style={{ flex: 1, overflowY: 'auto' ,
+                padding: '1rem' , display: 'flex' , flexDirection: 'column' , gap: '0.75rem' }}>
+                {messages.map((msg, i) => (
+                <div key={i} style={{ alignSelf: msg.role==='user' ? 'flex-end' : 'flex-start' , background:
+                    msg.role==='user' ? '#3b82f6' : '#f3f4f6' , color: msg.role==='user' ? 'white' : '#1f2937' ,
+                    padding: '0.75rem 1rem' , borderRadius: '0.75rem' , maxWidth: '80%' }}>
+                    {msg.content}
+                </div>
+                ))}
+                {loading && (
+                <div aria-busy="true" style={{ alignSelf: 'flex-start' , background: '#f3f4f6' , padding: '0.75rem 1rem'
+                    , borderRadius: '0.75rem' }}>
+                    Thinking...
+                </div>
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+            {error && <div role="alert" style={{ color: '#ef4444' , padding: '0.5rem 1rem' , fontSize: '0.875rem' }}>
+                {error}</div>}
+            <div style={{ display: 'flex' , gap: '0.5rem' , padding: '1rem' , borderTop: '1px solid #e5e7eb' }}>
+                <input value={input} onChange={(e)=> setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
+                placeholder="Ask a question..."
+                aria-label="Chat message input"
+                disabled={loading}
+                style={{ flex: 1, padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem',
+                fontSize: '1rem' }}
+                />
+                <button onClick={()=> void handleSend()} disabled={loading} aria-label="Send message"
+                    style={{ padding: '0.75rem 1.5rem', background: '#3b82f6', color: 'white', border: 'none',
+                    borderRadius: '0.5rem', cursor: 'pointer' }}>
+                    Send
+                </button>
+                <button onClick={()=> void handleClear()} disabled={loading} aria-label="Clear conversation"
+                    style={{ padding: '0.75rem 1.5rem', background: '#6b7280', color: 'white', border: 'none',
+                    borderRadius: '0.5rem', cursor: 'pointer' }}>
+                    Clear
+                </button>
+            </div>
         </div>
-        ))}
-        {loading && (
-        <div aria-busy="true" style={{ alignSelf: 'flex-start' , background: '#f3f4f6' , padding: '0.75rem 1rem' ,
-          borderRadius: '0.75rem' }}>
-          Thinking...
-        </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      {error && <div role="alert" style={{ color: '#ef4444' , padding: '0.5rem 1rem' , fontSize: '0.875rem' }}>
-        {error}</div>}
-      <div style={{ display: 'flex' , gap: '0.5rem' , padding: '1rem' , borderTop: '1px solid #e5e7eb' }}>
-        <input value={input} onChange={(e)=> setInput(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
-        placeholder="Ask a question..."
-        aria-label="Chat message input"
-        disabled={loading}
-        style={{ flex: 1, padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-        fontSize: '1rem' }}
-        />
-        <button onClick={()=> void handleSend()} disabled={loading} aria-label="Send message"
-          style={{ padding: '0.75rem 1.5rem', background: '#3b82f6', color: 'white', border: 'none',
-          borderRadius: '0.5rem', cursor: 'pointer' }}>
-          Send
-        </button>
-        <button onClick={()=> void handleClear()} disabled={loading} aria-label="Clear conversation"
-          style={{ padding: '0.75rem 1.5rem', background: '#6b7280', color: 'white', border: 'none',
-          borderRadius: '0.5rem', cursor: 'pointer' }}>
-          Clear
-        </button>
-      </div>
-    </div>
-    );
-    }
+        );
+        }

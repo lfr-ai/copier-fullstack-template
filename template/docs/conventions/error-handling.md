@@ -1,3 +1,5 @@
+# Error Handling
+
 ```text
 DomainError
 ├── NotFoundError
@@ -27,13 +29,12 @@ All API errors return a consistent JSON structure:
 
 ```json
 {
-  "detail": {
-    "code": "NOT_FOUND",
-    "message": "User not found",
-    "params": { "user_id": "..." }
-  }
+  "detail": "Human-readable error message"
 }
 ```
+
+`ValidationError` responses may include an additional `"field"` key when the error is
+associated with a specific input field.
 
 HTTP status code mapping:
 
@@ -43,4 +44,5 @@ HTTP status code mapping:
 | `ValidationError`       | 422         |
 | `AuthorizationError`    | 403         |
 | `ConflictError`         | 409         |
-| Unhandled `DomainError` | 500         |
+| Unhandled `DomainError` | 422         |
+| Uncaught `Exception`    | 500         |

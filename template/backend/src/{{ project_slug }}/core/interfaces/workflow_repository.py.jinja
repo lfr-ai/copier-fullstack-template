@@ -1,0 +1,21 @@
+"""Workflow repository protocol for domain persistence contracts."""
+
+from __future__ import annotations
+
+from typing import Protocol, runtime_checkable
+
+from {{ project_slug }}.core.entities.workflow import Workflow
+from {{ project_slug }}.core.interfaces.repository import Repository
+
+
+@runtime_checkable
+class WorkflowRepositoryPort(Repository[Workflow], Protocol):
+    """Port defining workflow persistence operations.
+
+    Extends the generic :class:`Repository` with workflow-specific
+    lookup methods.
+    """
+
+    async def get_by_name(self, *, name: str) -> Workflow | None:
+        """Retrieve workflow by unique name."""
+        ...

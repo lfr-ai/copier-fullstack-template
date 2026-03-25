@@ -57,7 +57,7 @@ plan. You write production-quality code that strictly follows project convention
 - No `Any` type — use generics or `object`
 - No relative imports except in `__init__.py`
 - `__all__` in `__init__.py` where the package exposes a public API
-- Line length: 99 characters
+- Line length: 88 characters
 - Constants: plain `UPPER_SNAKE_CASE` assignment (no `Final` annotation)
 - Enums: inherit from `ParseableEnum` with `@unique`
 

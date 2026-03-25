@@ -1,64 +1,99 @@
-"""User repository SQLAlchemy implementation."""
+"""User repository SQLAlchemy implementation.
+
+Returns domain ``User`` entities — the persistence mapper handles
+ORM ↔ entity translation so the application layer never sees
+SQLAlchemy models.
+"""
 
 from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from {{ project_slug }}.adapters.persistence.mappers.user_mapper import (
+    UserPersistenceMapper,
+)
 from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
 from {{ project_slug }}.adapters.persistence.repositories.base import SQLAlchemyRepository
 from {{ project_slug }}.core.constants import DEFAULT_LIST_LIMIT
+from {{ project_slug }}.core.entities.user import User
+
+
+_mapper = UserPersistenceMapper()
 
 
 class UserRepository(SQLAlchemyRepository[UserModel]):
-    """Repository for user persistence operations."""
+    """Repository for user persistence operations.
+
+    All public methods return domain :class:`User` entities
+    rather than ORM models, enforcing the Dependency Rule.
+    """
 
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session=session, model_class=UserModel)
 
-    async def get_by_email(self, email: str) -> UserModel | None:
-        """Retrieve user by email address.
+    async def add(self, entity: User) -> User:  # type: ignore[override]
+        """Persist a new User entity and return the created entity."""
+        model = _mapper.to_model(entity)
+        self._session.add(model)
+        await self._session.flush()
+        await self._session.refresh(model)
+        return _mapper.to_entity(model)
 
-        Args:
-            email (str): User email address.
+    async def get_by_id(self, entity_id: str) -> User | None:  # type: ignore[override]
+        """Retrieve user by ID, returning a domain entity."""
+        model = await self._session.get(UserModel, entity_id)
+        return _mapper.to_entity(model) if model else None
 
-        Returns:
-            UserModel | None: 'UserModel' instance or 'None' if not found.
-        """
+    async def update(self, entity: User) -> User:  # type: ignore[override]
+        """Update an existing user from entity state."""
+        existing = await self._session.get(UserModel, entity.id)
+        if existing is None:
+            msg = f"User with id '{entity.id}' not found"
+            raise ValueError(msg)
+        _mapper.update_model(model=existing, entity=entity)
+        await self._session.flush()
+        return _mapper.to_entity(existing)
+
+    async def delete(self, entity_id: str) -> bool:
+        """Remove user by identifier."""
+        model = await self._session.get(UserModel, entity_id)
+        if model is None:
+            return False
+        await self._session.delete(model)
+        await self._session.flush()
+        return True
+
+    async def list_all(
+        self, *, offset: int = 0, limit: int = DEFAULT_LIST_LIMIT
+    ) -> list[User]:  # type: ignore[override]
+        """Retrieve paginated list of users as domain entities."""
+        stmt = select(UserModel).offset(offset).limit(limit)
+        result = await self._session.execute(stmt)
+        return [_mapper.to_entity(m) for m in result.scalars().all()]
+
+    async def get_by_email(self, *, email: str) -> User | None:
+        """Retrieve user by email address."""
         stmt = select(UserModel).where(UserModel.email == email)
         result = await self._session.execute(stmt)
-        return result.scalar_one_or_none()
+        model = result.scalar_one_or_none()
+        return _mapper.to_entity(model) if model else None
 
-    async def get_by_ids(self, ids: list[str]) -> list[UserModel]:
-        """Retrieve multiple users by their IDs in a single query.
-
-        Args:
-            ids (list[str]): User identifiers.
-
-        Returns:
-            list[UserModel]: Found user models (may be fewer than requested).
-        """
+    async def get_by_ids(self, ids: list[str]) -> list[User]:
+        """Retrieve multiple users by their IDs in a single query."""
         if not ids:
             return []
         stmt = select(UserModel).where(UserModel.id.in_(ids))
         result = await self._session.execute(stmt)
-        return list(result.scalars().all())
+        return [_mapper.to_entity(m) for m in result.scalars().all()]
 
     async def get_active_users(
         self,
         *,
         offset: int = 0,
         limit: int = DEFAULT_LIST_LIMIT,
-    ) -> list[UserModel]:
-        """Retrieve active users with pagination.
-
-        Args:
-            offset (int): Number of records to skip.
-            limit (int): Maximum records to return.
-
-        Returns:
-            list[UserModel]: List of active user models.
-        """
+    ) -> list[User]:
+        """Retrieve active users with pagination."""
         stmt = (
             select(UserModel)
             .where(UserModel.is_active.is_(True))
@@ -66,4 +101,4 @@ class UserRepository(SQLAlchemyRepository[UserModel]):
             .limit(limit)
         )
         result = await self._session.execute(stmt)
-        return list(result.scalars().all())
+        return [_mapper.to_entity(m) for m in result.scalars().all()]

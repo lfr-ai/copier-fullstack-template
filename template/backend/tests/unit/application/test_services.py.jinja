@@ -28,8 +28,14 @@ class _FakeUnitOfWork:
 
     def __init__(self, *, users: object | None = None) -> None:
         self.users = users
+        self._tracked_entities: list[object] = []
+
+    def collect_entity(self, entity: object) -> None:
+        """Track an entity for domain event dispatch on commit."""
+        self._tracked_entities.append(entity)
 
     async def __aenter__(self) -> _FakeUnitOfWork:
+        self._tracked_entities = []
         return self
 
     async def __aexit__(
@@ -47,6 +53,9 @@ class _FakeUnitOfWork:
     async def rollback(self) -> None:
         self.rolled_back = True
 
+    async def check_connection(self) -> bool:
+        return True
+
 @pytest.mark.asyncio
 class TestUserService:
     """Test suite for UserService."""
@@ -55,6 +64,7 @@ class TestUserService:
         """Verify create_user returns populated UserDTO."""
         repo = AsyncMock()
         repo.add = AsyncMock(side_effect=lambda u: u)
+        repo.get_by_email = AsyncMock(return_value=None)
         uow = _FakeUnitOfWork(users=repo)
 
         service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
@@ -74,6 +84,7 @@ class TestUserService:
         """Verify UoW committed after user creation."""
         repo = AsyncMock()
         repo.add = AsyncMock(side_effect=lambda u: u)
+        repo.get_by_email = AsyncMock(return_value=None)
         uow = _FakeUnitOfWork(users=repo)
 
         service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
@@ -90,6 +101,7 @@ class TestUserService:
         """Verify repository add called with User entity."""
         repo = AsyncMock()
         repo.add = AsyncMock(side_effect=lambda u: u)
+        repo.get_by_email = AsyncMock(return_value=None)
         uow = _FakeUnitOfWork(users=repo)
 
         service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
@@ -130,3 +142,54 @@ class TestUserService:
 
         with pytest.raises(NotFoundError):
             await service.get_user("nonexistent")
+
+    async def test_create_user_rejects_duplicate_email(self) -> None:
+        """Verify create_user raises ConflictError when email exists."""
+        from {{ project_slug }}.core.exceptions.base import ConflictError
+
+        existing = User(id="u-existing", email="taken@example.com", display_name="X")
+        repo = AsyncMock()
+        repo.get_by_email = AsyncMock(return_value=existing)
+        uow = _FakeUnitOfWork(users=repo)
+
+        service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
+        dto = CreateUserDTO(
+            email="taken@example.com",
+            display_name="New",
+            password="securePassword1!",
+        )
+        with pytest.raises(ConflictError):
+            await service.create_user(dto)
+
+    async def test_create_user_rejects_invalid_email(self) -> None:
+        """Verify create_user raises ValidationError for bad email format."""
+        from {{ project_slug }}.core.exceptions.validation import ValidationError
+
+        repo = AsyncMock()
+        uow = _FakeUnitOfWork(users=repo)
+
+        service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
+        dto = CreateUserDTO(
+            email="not-an-email",
+            display_name="Bad",
+            password="securePassword1!",
+        )
+        with pytest.raises(ValidationError):
+            await service.create_user(dto)
+
+    async def test_create_user_tracks_entity_for_events(self) -> None:
+        """Verify collect_entity is called for domain event dispatch."""
+        repo = AsyncMock()
+        repo.add = AsyncMock(side_effect=lambda u: u)
+        repo.get_by_email = AsyncMock(return_value=None)
+        uow = _FakeUnitOfWork(users=repo)
+
+        service = UserService(uow=uow, password_hasher=_FakePasswordHasher())
+        dto = CreateUserDTO(
+            email="eve@example.com",
+            display_name="Eve",
+            password="securePassword1!",
+        )
+        await service.create_user(dto)
+
+        assert len(uow._tracked_entities) == 1

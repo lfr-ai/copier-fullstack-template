@@ -10,12 +10,16 @@ Shell scripts for project setup, bootstrap, and maintenance.
 | `install/install-all.ps1` | Install ALL prerequisites (Windows PowerShell)          |
 | `bootstrap.zsh`           | Full project bootstrap (deps, hooks, env)               |
 | `health-check.zsh`        | Verify all services are healthy                         |
-| `run-migrations.zsh`      | Run database migrations                                 |
 | `seed-database.zsh`       | Seed database with development data                     |
+{%- if use_ai %}
+| `setup-ai.zsh`            | Validate AI deps, init FAISS/KG/RAG dirs                |
+{%- endif %}
 
 ## Individual Installers
 
-Individual installers for each tool, called by `install-all.zsh`:
+Individual installers under `install/`, called by `install-all.zsh`:
+
+**Always installed:**
 
 | Script                   | Tool                                |
 | ------------------------ | ----------------------------------- |
@@ -27,12 +31,40 @@ Individual installers for each tool, called by `install-all.zsh`:
 | `install-task.zsh`       | go-task CLI                         |
 | `install-vscode.zsh`     | VS Code with extensions             |
 | `install-linters.zsh`    | hadolint, shellcheck, yamllint      |
+
+**Conditional:**
+
+| Script                        | Tool                                | Condition                       |
+| ----------------------------- | ----------------------------------- | ------------------------------- |
+{%- if use_devcontainer %}
+| `setup-devcontainer.zsh`      | @devcontainers/cli                  | `use_devcontainer`              |
+{%- endif %}
+{%- if use_caddy %}
+| `install-caddy.zsh`           | Caddy reverse proxy                 | `use_caddy`                     |
+{%- endif %}
+{%- if use_redis %}
+| `install-redis.zsh`           | Redis server                        | `use_redis`                     |
+{%- endif %}
+{%- if use_faiss %}
+| `install-faiss.zsh`           | FAISS vector store                  | `use_faiss`                     |
+{%- endif %}
 {%- if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
-| `install-neo4j.zsh`      | Neo4j graph database (knowledge graph) |
+| `install-neo4j.zsh`           | Neo4j graph database                | `use_knowledge_graph` + `neo4j` |
 {%- endif %}
-{%- if use_ai %}
-| `setup-ai.zsh`           | Validate AI deps, init FAISS/KG/RAG dirs |
+{%- if cloud_provider != 'none' %}
+| `install-cloud-cli.zsh`       | Azure CLI + Bicep                   | `cloud_provider != "none"`      |
 {%- endif %}
+{%- if with_opencode %}
+| `install-opencode.zsh`        | OpenCode CLI                        | `with_opencode`                 |
+| `install-opencode-ecosystem.zsh` | GSD, OAC, plugins               | `with_opencode`                 |
+{%- endif %}
+
+**Windows-only (called by `install-all.ps1`):**
+
+| Script               | Tool                                |
+| -------------------- | ----------------------------------- |
+| `install-vscode.ps1` | VS Code with extensions (Windows)   |
+| `install-wsl2.ps1`   | WSL2 with Ubuntu                    |
 
 ## Quick Start
 

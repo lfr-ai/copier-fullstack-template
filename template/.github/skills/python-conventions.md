@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Apply project Python standards consistently for readability, safety, and maintainability.
+Apply project Python standards consistently for readability, safety, and
+maintainability.
 
 ## Use This Skill When
 
@@ -17,7 +18,7 @@ Apply project Python standards consistently for readability, safety, and maintai
 - Use keyword-only args (`*`) for multi-parameter constructors/functions
 - Use structured logging, not `print()`
 - Avoid `Any`; prefer precise types or `object`
-- Keep line length <= 99
+- Keep line length <= 88
 
 ## Quick Checklist
 

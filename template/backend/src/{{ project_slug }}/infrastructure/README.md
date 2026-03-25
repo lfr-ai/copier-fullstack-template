@@ -1,15 +1,17 @@
+# Infrastructure
 
 Low-level technical concerns that support the application.
 
+This layer corresponds to the **Frameworks & Drivers** circle — the outermost ring in
+Clean Architecture. It contains glue code for cross-cutting technical concerns that
+don't implement a specific port interface.
 
-| Package       | Purpose                                                   |
-| ------------- | --------------------------------------------------------- |
-| `database/`   | Database health checks                                    |
-| `scheduling/` | Background job scheduling (APScheduler / cron)            |
-| `security/`   | Password hashing, encryption, JWT token handling, secrets |
-
+| Package      | Purpose                              |
+| ------------ | ------------------------------------ |
+| `profiling/` | CPU, memory, and SQL query profiling |
 
 - Infrastructure modules may import from `config/` and `core/` only.
 - No business logic — only technical plumbing.
-- All external service connections should be managed here.
-- Connection pools must be properly configured per environment.
+- Password hashing: `adapters/security/hashing.py` (implements
+  `core.interfaces.PasswordHasher` port).
+- Database health checks: `UnitOfWork.check_connection()` (via the UoW protocol).

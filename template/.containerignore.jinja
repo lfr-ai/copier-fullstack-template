@@ -1,53 +1,61 @@
-.git
-.gitignore
-.gitattributes
+# ── Build artifacts & caches ──────────────────────────────────────────────────
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*$py.class
+**/dist/
+**/build/
+**/*.egg-info/
+**/.pytest_cache/
+**/.ty_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/.vite/
+**/.uv/
+.tox
+.pnpm-store
 
-.github
+# ── Environment & secrets ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+**/*.key
+**/*.pem
+*.baseline
 
-.vscode
-.idea
+# ── VCS & editor ─────────────────────────────────────────────────────────────
+.git/
+.github/
+.vscode/
+.idea/
 *.swp
 *.swo
 
-__pycache__
-*.py[cod]
-*$py.class
-.venv
-venv
-.pytest_cache
-.ruff_cache
-.mypy_cache
-.ty
-.tox
-htmlcov
-.coverage
-*.egg-info
-dist
-build
+# ── Logs & reports ───────────────────────────────────────────────────────────
+logs/
+*.log
+playwright-report/
+test-results/
+coverage/
+htmlcov/
 
-node_modules
-.pnpm-store
-coverage
-playwright-report
-test-results
-
-frontend/dist
-frontend/node_modules
-
-.env
-.env.local
-.env.*.local
-
-docs
+# ── Documentation & tooling (not needed in image) ───────────────────────────
 *.md
 !README.md
-
-logs
-
+docs/
+{%- if secret_backend == "azure_kv" %}
+azure/
+{%- endif %}
+tasks/
+registry/
+backend/seeds/
+backend/tests/
+scripts/
+frontend/tests/
 data/*.db
-
 .task
-
 .dockerignore
 .containerignore
 .editorconfig

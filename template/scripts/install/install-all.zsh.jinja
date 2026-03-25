@@ -133,6 +133,9 @@ run_installer "Caddy" "${SCRIPT_DIR}/install-caddy.zsh"
 {% if use_redis %}
 run_installer "Redis" "${SCRIPT_DIR}/install-redis.zsh"
 {% endif %}
+{% if use_faiss %}
+run_installer "FAISS" "${SCRIPT_DIR}/install-faiss.zsh"
+{% endif %}
 {% if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
 run_installer "Neo4j" "${SCRIPT_DIR}/install-neo4j.zsh"
 {% endif %}

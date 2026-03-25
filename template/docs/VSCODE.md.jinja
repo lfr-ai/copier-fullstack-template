@@ -1,6 +1,8 @@
+# VS Code Setup
 
 Recommended VS Code setup for {{ project_name }}.
 
+## Workspace
 
 Open the multi-root workspace to use the predefined project settings:
 
@@ -10,7 +12,7 @@ Open the multi-root workspace to use the predefined project settings:
 
 This provides:
 
-- Four workspace folders — Root, Backend (src), Frontend, Tests
+- Four workspace folders — Root, Backend (src), Backend (tests), Frontend
 - Language-specific formatters (Ruff → Python, Prettier → JS/TS/JSON/YAML/MD)
 - Debug launch configurations for FastAPI, pytest, and the CLI
 - Task definitions for `dev`, `test`, `lint`, and `typecheck`
@@ -18,7 +20,7 @@ This provides:
 
 ---
 
-
+## Extensions
 
 | Extension | Purpose |
 | -------------------------------------------- | ----------------------------------- |
@@ -68,6 +70,8 @@ This provides:
 | `ms-azure-devops.azure-pipelines` | `cloud_provider = azure` |
 
 
+### Personal Extensions
+
 Install these per-developer, not in workspace recommendations:
 
 ```powershell
@@ -93,6 +97,7 @@ code --install-extension ms-vscode.powershell
 
 ---
 
+## Keybindings
 
 These shortcuts are optional. The project works with default VS Code
 keybindings. Copy the block below into your **user** `keybindings.json`
@@ -156,6 +161,7 @@ keybindings. Copy the block below into your **user** `keybindings.json`
 
 ---
 
+## User Settings
 
 Add these to your **user** `settings.json` (the workspace file already sets
 the project-specific subset):
@@ -185,6 +191,7 @@ the project-specific subset):
 
 ---
 
+## Linting and Formatting Configuration
 
 | File | Tool | Purpose |
 | --------------------------------- | -------------- | ---------------------------------- |

@@ -8,25 +8,19 @@ Production-ready project scaffolding for fullstack Python + TypeScript applicati
 
 ### Prerequisites
 
-| Tool                     | Purpose                  | Auto-installed?      |
-| ------------------------ | ------------------------ | -------------------- |
-| **Python 3.12+**         | Backend runtime          | Yes (via `uv`)       |
-| **uv**                   | Python package manager   | Yes                  |
-| **Node.js 22 LTS**       | Frontend runtime         | Yes (via `fnm`)      |
-| **pnpm**                 | Node package manager     | Yes (via `corepack`) |
-| **Docker** or **Podman** | Container runtime        | Yes                  |
-| **go-task**              | Task runner              | Yes                  |
-| **Git**                  | Version control          | Yes                  |
-| **VS Code**              | Editor                   | Yes                  |
-| **WSL2** (Windows only)  | Linux on Windows         | Yes                  |
-| **Redis**                | Cache and message broker | Yes (conditional)    |
-| **Celery**               | Async task processing    | Yes (conditional)    |
-| **Caddy**                | Reverse proxy (HTTPS)    | Yes (conditional)    |
-| **Cloud CLI**            | Azure CLI (`az`)         | Yes (conditional)    |
-| **zsh**                  | Shell                    | Yes                  |
-| **pre-commit**           | Git hooks                | Yes (via `uv`)       |
-| **hadolint**             | Containerfile linting    | Recommended          |
-| **ShellCheck**           | Shell script linting     | Recommended          |
+| Tool                     | Purpose                | Auto-installed?      |
+| ------------------------ | ---------------------- | -------------------- |
+| **Python 3.12+**         | Backend runtime        | Yes (via `uv`)       |
+| **uv**                   | Python package manager | Yes                  |
+| **Node.js 22 LTS**       | Frontend runtime       | Yes (via `fnm`)      |
+| **pnpm**                 | Node package manager   | Yes (via `corepack`) |
+| **Docker** or **Podman** | Container runtime      | Yes                  |
+| **go-task**              | Task runner            | Yes                  |
+| **Git**                  | Version control        | Yes                  |
+| **VS Code**              | Editor                 | Yes                  |
+| **zsh**                  | Shell                  | Yes                  |
+| **pre-commit**           | Git hooks              | Yes (via `uv`)       |
+| **WSL2** (Windows only)  | Linux on Windows       | Yes                  |
 
 ### Usage — Local-First (Recommended)
 
@@ -100,29 +94,57 @@ uvx copier update --trust
 
 During `copier copy`, you'll be prompted for:
 
-| Choice                     | Options                               | Default    |
-| -------------------------- | ------------------------------------- | ---------- |
-| **Project name**           | Any string                            | —          |
-| **Python version**         | 3.12, 3.13                            | 3.13       |
-| **Node.js version**        | 20, 22                                | 22         |
-| **Database**               | None, PostgreSQL, Azure PostgreSQL    | PostgreSQL |
-| **Celery**                 | Yes / No                              | Yes        |
-| **Redis**                  | Yes / No                              | Yes        |
-| **Caddy** (reverse proxy)  | Yes / No                              | Yes        |
-| **Auth** (JWT + session)   | Yes / No                              | Yes        |
-| **Playwright** (E2E tests) | Yes / No                              | Yes        |
-| **DevContainer**           | Yes / No                              | Yes        |
-| **OpenCode**               | Yes / No                              | No         |
-| **Container runtime**      | Docker, Podman                        | Podman     |
-| **Cloud provider**         | None, Azure                           | None       |
-| **Secret backend**         | Env files, Azure KV                   | Env        |
-| **License**                | MIT, Apache-2.0, GPL-3.0, Proprietary | MIT        |
+| Choice                          | Options                               | Default                        |
+| ------------------------------- | ------------------------------------- | ------------------------------ |
+| **Project name**                | Any string                            | —                              |
+| **Project description**         | Any string                            | A fullstack Python application |
+| **Author name**                 | Any string                            | —                              |
+| **Author email**                | Valid email address                   | —                              |
+| **GitHub username**             | GitHub user or org                    | _(from author)_                |
+| **Python version**              | 3.12, 3.13, 3.14                      | 3.13                           |
+| **Node.js version**             | 20, 22, 24                            | 22                             |
+| **Frontend framework**          | Lit (Web Components), React 19        | Lit                            |
+| **Database**                    | None, PostgreSQL, Azure PostgreSQL    | PostgreSQL                     |
+| **API style**                   | REST only, GraphQL only, Both         | REST                           |
+| **GraphQL subscriptions**       | Yes / No (requires GraphQL)           | No                             |
+| **Celery**                      | Yes / No                              | Yes                            |
+| **Redis**                       | Yes / No                              | Yes                            |
+| **Caddy** (reverse proxy)       | Yes / No                              | Yes                            |
+| **Auth** (JWT + session)        | Yes / No                              | Yes                            |
+| **Playwright** (E2E tests)      | Yes / No                              | Yes                            |
+| **DevContainer**                | Yes / No                              | Yes                            |
+| **AI / LLM**                    | Yes / No                              | No                             |
+| **FAISS** (vector store)        | Yes / No (requires AI)                | No                             |
+| **pgvector**                    | Yes / No (requires AI + PostgreSQL)   | No                             |
+| **LangChain**                   | Yes / No (requires AI)                | No                             |
+| **LlamaIndex**                  | Yes / No (requires AI)                | No                             |
+| **Knowledge graph**             | Yes / No (requires AI)                | No                             |
+| **KG backend**                  | NetworkX, Neo4j, RDFLib               | NetworkX                       |
+| **External KG connectors**      | Yes / No (requires KG)                | No                             |
+| **MCP server**                  | Yes / No (requires AI)                | No                             |
+| **RAG pipeline**                | Yes / No (requires AI)                | No                             |
+| **AI agents**                   | Yes / No (requires AI)                | No                             |
+| **CrewAI**                      | Yes / No (requires AI)                | No                             |
+| **Anthropic**                   | Yes / No (requires AI)                | No                             |
+| **Azure OpenAI**                | Yes / No (requires Azure + AI)        | No                             |
+| **Azure AI Search**             | Yes / No (requires Azure + AI)        | No                             |
+| **Azure Document Intelligence** | Yes / No (requires Azure + AI)        | No                             |
+| **SSH / SFTP**                  | Yes / No                              | No                             |
+| **OpenCode**                    | Yes / No                              | No                             |
+| **GSD-2**                       | Yes / No (requires OpenCode)          | No                             |
+| **Container runtime**           | Docker, Podman                        | Podman                         |
+| **Cloud provider**              | None, Azure                           | None                           |
+| **Azure location**              | Any Azure region (requires Azure)     | swedencentral                  |
+| **Secret backend**              | Env files, Azure KV                   | Env                            |
+| **License**                     | MIT, Apache-2.0, GPL-3.0, Proprietary | MIT                            |
 
 ---
 
 ## What Gets Installed
 
 The `scripts/install/install-all.zsh` script installs the **complete development environment** in order:
+
+**Always installed:**
 
 1. **Git** — version control with recommended global config
 2. **Zsh** — shell with Oh My Zsh, autosuggestions, syntax highlighting, fzf
@@ -131,74 +153,99 @@ The `scripts/install/install-all.zsh` script installs the **complete development
 5. **Container engine** — Docker or Podman (based on `copier.yml` choice)
 6. **go-task** — modern task runner (`Taskfile.yml`)
 7. **VS Code** — with all recommended extensions pre-installed
-8. **DevContainer** — (conditional) for fully reproducible development environments
-9. **Caddy** — (conditional) reverse proxy with automatic HTTPS
-10. **Redis** — (conditional) local server as fallback to container
-11. **Cloud CLI** — (conditional) Azure CLI + Bicep
+8. **Linters** — hadolint, shellcheck, yamllint
+
+**Conditional (based on template choices):**
+
+- **DevContainer** — _(if enabled)_ `@devcontainers/cli` setup
+- **Caddy** — _(if enabled)_ reverse proxy with automatic HTTPS
+- **Redis** — _(if enabled)_ installed as a container service for caching and message brokering
+- **FAISS** — _(if enabled)_ system deps + `faiss-cpu` Python package
+- **Neo4j** — _(if knowledge graph + neo4j backend)_ graph database + Python driver
+- **Azure CLI + Bicep** — _(if cloud provider is Azure)_ cloud management tooling
+- **OpenCode + ecosystem** — _(if enabled)_ CLI, GSD, plugins
 
 After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 
+- Prerequisite verification (Git, Task, uv, Node, pnpm, container runtime, and conditional Caddy/Azure CLI)
+- `.env` creation from `.env.example`
 - `uv sync --all-groups` — install all Python dependencies
 - `pnpm install` — install all frontend dependencies
-- `pre-commit install` — activate Git hooks
-- `.env` creation from `.env.example`
-- Prerequisite verification (including container runtime, cloud CLI, Caddy)
+- `pre-commit install` — activate Git hooks (both `pre-commit` and `commit-msg`)
 
 ---
 
 ## Features
 
 - **Clean / hexagonal (ports-and-adapters) architecture** with the Dependency Rule enforced
-- **FastAPI** backend with Pydantic v2 strict validation
-- **TypeScript frontend** with Vite, Tailwind CSS, Vitest
-- **PostgreSQL** — production-grade database via repository/adapter pattern
-- **Redis + Celery** — (conditional) async task processing and caching
-- **Caddy** — (conditional) reverse proxy with auto-TLS, compression, security headers
-- **AI/LLM abstraction** — OpenAI, Anthropic, Azure OpenAI adapters
-- **Centralized naming registry** with code generation
-- **Docker Compose** with optional Caddy gateway profile
-- **Azure Bicep IaC** — infrastructure as code (conditional on cloud provider)
-- **DevContainer** for reproducible development
-- **GitHub Actions CI/CD** — lint, test, build, deploy
+- **FastAPI** backend with Pydantic v2 strict validation and SQLAlchemy 2.0 async
+- **TypeScript frontend** (Lit Web Components or React 19) with Vite, Tailwind CSS v4, Vitest
+- **PostgreSQL** — production-grade database via repository/unit-of-work pattern
+- **Redis + Celery** — _(conditional)_ async task processing and caching
+- **Caddy** — _(conditional)_ reverse proxy with auto-TLS, compression, security headers
+- **GraphQL** — _(conditional)_ Strawberry GraphQL with DataLoaders, depth limiting, and error masking
+- **AI/LLM abstraction** — _(conditional)_ OpenAI, Anthropic, Azure OpenAI via LiteLLM gateway
+- **RAG pipeline** — _(conditional)_ ingestion, vector/graph/hybrid retrieval, reranking
+- **AI agents** — _(conditional)_ ReAct, tool-calling, LangGraph workflow engine with durable checkpointing
+- **Knowledge graphs** — _(conditional)_ NetworkX, Neo4j, RDFLib backends with LLM triplet extraction
+- **MCP server** — _(conditional)_ Model Context Protocol with streamable-http transport
+- **CrewAI** — _(conditional)_ multi-agent orchestration with HMAS hierarchical processes
+- **Centralized naming registry** — JSON → generated Python constants, TypeScript enums, and `.env` keys
+- **Docker Compose** with per-environment overrides (dev, test, staging, prod)
+- **Azure Bicep IaC** — _(conditional)_ infrastructure as code
+- **DevContainer** — _(conditional)_ reproducible development environments
+- **GitHub Actions CI/CD** — lint, test, build, deploy, CodeQL security scanning
 - **Renovate** for automated dependency updates
-- **Pre-commit hooks** — ruff, ty, prettier, detect-secrets, typos, shellcheck, hadolint
-- **Testing** — pytest (unit, integration, property), Vitest, Playwright E2E
-- **Full documentation** — architecture, setup, development, testing, deployment, ADRs
+- **Pre-commit hooks** — ruff, ty, prettier, detect-secrets, typos, shellcheck, hadolint, markdownlint
+- **Testing** — pytest (unit, integration, property-based, performance), Vitest, Playwright E2E
+- **Full documentation** — architecture, setup, development, testing, deployment, config, ADRs, conventions
 
 ---
 
 ## Project Structure (Generated)
 
-```
+```text
 my-project/
-├── src/my_project/           # Backend (clean / hexagonal architecture)
-│   ├── adapters/             # External integrations (DB, cache, APIs)
-│   ├── ai/                   # LLM/agent tooling
-│   ├── application/          # Use cases, services, DTOs
-│   ├── config/               # Settings, DI container, logging
-│   ├── core/                 # Pure domain (entities, enums, interfaces)
-│   ├── infrastructure/       # DB engines, HTTP clients, security
-│   ├── middleware/           # Auth, CORS, rate limiting, logging
-│   ├── models/               # Pydantic request/response schemas
-│   ├── ports/                # API routes, CLI, webhooks
-│   └── utils/                # Shared utilities
-├── frontend/                 # TypeScript + Vite + Tailwind
-├── tests/                    # unit, integration, e2e, property
-├── data/                     # Seeds, migrations, naming registry
-├── docs/                     # Architecture, setup, ADRs
-├── scripts/                  # Bootstrap, install, setup
+├── .devcontainer/            # DevContainer config (conditional: use_devcontainer)
+├── .github/                  # GitHub Actions CI/CD, Dependabot, skills, agents
+│   ├── workflows/            # CI, deploy, CodeQL workflows
+│   └── agents/               # Copilot agent instructions
+├── .gsd/                     # GSD-2 autonomous agent (conditional: with_gsd)
+├── .opencode/                # OpenCode AI agent config (conditional: with_opencode)
+├── backend/
+│   ├── src/my_project/       # Backend (clean / hexagonal architecture)
+│   │   ├── adapters/         # Outbound: DB repos, cache, email, storage, auth
+│   │   ├── ai/               # LLM/agent tooling (conditional: use_ai)
+│   │   ├── application/      # Use cases, services, DTOs, commands, queries
+│   │   ├── config/           # Settings, constants, logging, DI container
+│   │   ├── core/             # Pure domain (entities, enums, interfaces, value objects)
+│   │   ├── infrastructure/   # DB engines, HTTP clients, security, profiling
+│   │   ├── ports/            # Inbound: API routes, CLI, web
+│   │   │   ├── api/middleware/ # CORS, auth, rate limiting, error handling
+│   │   │   └── graphql/      # Strawberry schema (conditional: graphql/both)
+│   │   └── utils/            # Shared utilities
+│   ├── tests/                # unit, integration, property, performance
+│   └── alembic/              # Database migrations
+├── frontend/                 # TypeScript + Vite + Tailwind CSS
+├── registry/                 # Naming registry + code generator + tests
+├── docs/                     # Architecture, setup, ADRs, conventions, diagrams
+├── scripts/                  # Bootstrap, install, setup, health-check
 │   └── install/              # Per-tool auto-installers (zsh + ps1)
-├── infra/                    # IaC (Azure Bicep / OpenTofu) — conditional
-├── caddy/                    # Caddyfile + Containerfile — conditional
+├── tasks/                    # Taskfile includes (backend, frontend, docker, infra)
+├── infra/                    # IaC (Azure Bicep) — conditional: cloud_provider == azure
+├── caddy/                    # Caddyfile + Containerfile — conditional: use_caddy
 ├── logs/                     # Runtime logs (.gitkeep)
 ├── compose.yml               # Base services with healthchecks
 ├── compose.override.yml      # Local dev overrides
+├── compose.dev.yml           # Development config
+├── compose.staging.yml       # Staging config
 ├── compose.prod.yml          # Production config
 ├── compose.test.yml          # CI test config
 ├── Containerfile             # Multi-stage production build
-├── Taskfile.yml              # go-task commands
-├── pyproject.toml            # Python project config
-└── ...                       # Config files (ruff, prettier, eslint, etc.)
+├── docker-bake.hcl           # Docker Buildx Bake orchestration (multi-image builds)
+├── docker-bake.override.hcl  # Local Bake cache overrides
+├── Taskfile.yml              # go-task commands (includes tasks/*.yml)
+└── tox.ini                   # Tox configuration for backend test matrices
 ```
 
 ---
@@ -207,24 +254,53 @@ my-project/
 
 After setup, use `task --list` to see all available commands:
 
-| Command                  | Description                          |
-| ------------------------ | ------------------------------------ |
-| `task setup`             | Full project setup                   |
-| `task dev`               | Start backend + frontend in dev mode |
-| `task build`             | Build everything for production      |
-| `task test`              | Run all tests                        |
-| `task test:unit`         | Run unit tests only                  |
-| `task test:integration`  | Run integration tests                |
-| `task test:e2e`          | Run Playwright E2E tests             |
-| `task test:coverage`     | Run tests with coverage report       |
-| `task lint`              | Run all linters                      |
-| `task format`            | Format all code                      |
-| `task typecheck`         | Run type checkers                    |
-| `task docker:up`         | Start all Docker services            |
-| `task docker:down`       | Stop all Docker services             |
-| `task db:migrate`        | Run database migrations              |
-| `task registry:generate` | Generate code from naming registry   |
-| `task clean`             | Remove all build artifacts           |
+**Core workflow:**
+
+| Command             | Description                                   |
+| ------------------- | --------------------------------------------- |
+| `task setup`        | Full project setup (deps + pre-commit + .env) |
+| `task dev`          | Start backend + frontend in dev mode          |
+| `task dev:backend`  | Start backend only with hot reload            |
+| `task dev:frontend` | Start frontend only with HMR                  |
+| `task start`        | Start all services (compose up)               |
+| `task build`        | Build everything for production               |
+| `task clean`        | Remove all build artifacts and caches         |
+
+**Testing:**
+
+| Command                 | Description                                               |
+| ----------------------- | --------------------------------------------------------- |
+| `task test`             | Run default tests (registry + unit + property + frontend) |
+| `task test:unit`        | Run unit tests only                                       |
+| `task test:integration` | Run integration tests                                     |
+| `task test:property`    | Run property-based tests (Hypothesis)                     |
+| `task test:performance` | Run performance benchmarks                                |
+| `task test:coverage`    | Run tests with coverage report                            |
+| `task test:e2e`         | Run Playwright E2E tests _(conditional)_                  |
+
+**Code quality:**
+
+| Command               | Description                                |
+| --------------------- | ------------------------------------------ |
+| `task lint`           | Run all linters                            |
+| `task format`         | Format all code                            |
+| `task typecheck`      | Run type checkers                          |
+| `task pre-commit`     | Run pre-commit on all files                |
+| `task security:audit` | Audit all dependencies for vulnerabilities |
+
+**Infrastructure:**
+
+| Command                  | Description                                  |
+| ------------------------ | -------------------------------------------- |
+| `task docker:up`         | Start all Docker services                    |
+| `task docker:down`       | Stop all Docker services                     |
+| `task docker:build`      | Build container images (compose build)       |
+| `task docker:bake`       | Build images via Buildx Bake _(Docker only)_ |
+| `task db:migrate`        | Run database migrations (Alembic)            |
+| `task db:seed`           | Seed the database with development data      |
+| `task registry:generate` | Generate code from naming registry           |
+| `task health`            | Check health of all running services         |
+| `task worker`            | Start Celery worker _(conditional)_          |
 
 ---
 

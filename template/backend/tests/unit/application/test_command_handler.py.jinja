@@ -20,6 +20,9 @@ class _FakeUnitOfWork:
     committed: bool = False
     rolled_back: bool = False
 
+    def collect_entity(self, entity: object) -> None:
+        """Track entity (no-op in tests)."""
+
     async def __aenter__(self) -> _FakeUnitOfWork:
         return self
 
@@ -37,6 +40,9 @@ class _FakeUnitOfWork:
 
     async def rollback(self) -> None:
         self.rolled_back = True
+
+    async def check_connection(self) -> bool:
+        return True
 
 
 @dataclass(frozen=True, slots=True)

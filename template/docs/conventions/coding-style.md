@@ -1,3 +1,5 @@
+# Coding Style
+
 - **Line length**: 88 characters (Ruff/Black standard)
 - **Quote style**: double quotes
 - **Indent style**: 4 spaces
@@ -43,13 +45,13 @@ def create_user(email: str, name: str) -> User:
 - Order: stdlib → third-party → local (enforced by ruff isort)
 - `__all__` in `__init__.py` where the package exposes a public API
 
-### Layer Import Rules (Dependency Rule — Clean Architecture)
+## Layer Import Rules (Dependency Rule — Clean Architecture)
 
 - **Core**: ZERO external imports — only stdlib and typing
 - **Application**: imports core only — no framework imports. Application services access
   persistence via **UoW repository properties** (e.g. `uow.users`), NEVER by importing
   concrete adapter classes.
-- **Ports**: imports application and core — FastAPI/Typer allowed
+- **Ports**: imports application and core — FastAPI/Click allowed
 - **Adapters**: imports all inner layers — SQLAlchemy, httpx, redis allowed. Concrete
   repo instantiation belongs here (inside the UoW adapter).
 

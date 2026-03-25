@@ -66,6 +66,8 @@ jobs:
       - run: uv sync --frozen
       - name: Bandit via Ruff
         run: uv run ruff check --select S src/
+      - name: Dependency audit
+        run: uv run pip-audit
 
   test:
     name: Test (Python ${{ matrix.python-version }})

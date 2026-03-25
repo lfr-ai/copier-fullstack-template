@@ -16,7 +16,7 @@ readonly DB_USER="${POSTGRES_USER:-{{ project_slug }}}"
 
 mkdir -p "${BACKUP_DIR}"
 
-readonly BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${TIMESTAMP}.sql.gz"
+readonly BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${TIMESTAMP}.dump"
 
 print "Backing up ${DB_NAME}@${DB_HOST}:${DB_PORT} → ${BACKUP_FILE}"
 

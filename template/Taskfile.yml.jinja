@@ -87,7 +87,7 @@ tasks:
 {%- endif %}
 
   test:
-    desc: "Run all tests (registry + backend + frontend)"
+    desc: "Run default tests (registry + backend unit/property + frontend unit)"
     cmds:
       - task: registry:check
       - task: registry:test

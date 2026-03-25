@@ -1,8 +1,10 @@
+# Contributing
 
 Thank you for contributing. This guide covers the development setup and workflow.
 
 ---
 
+## Setup
 
 Ensure you have all prerequisites installed:
 
@@ -15,7 +17,7 @@ See [docs/SETUP.md](docs/SETUP.md) for detailed setup instructions.
 
 ---
 
-
+## Branch Naming
 
 ```bash
 git checkout -b feat/your-feature-name
@@ -30,6 +32,7 @@ Follow the branch naming convention:
 - `test/` — test-only changes
 - `chore/` — maintenance tasks
 
+## Development Workflow
 
 ```bash
 task dev          # Start development servers
@@ -37,6 +40,7 @@ task test:unit    # Run unit tests
 task lint         # Run all linters
 ```
 
+## Commit Messages
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
 
@@ -50,6 +54,7 @@ Format: `type(scope): description`
 
 **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`, `revert`
 
+## Submitting Changes
 
 ```bash
 git push origin feat/your-feature-name
@@ -57,7 +62,9 @@ git push origin feat/your-feature-name
 
 ---
 
+## Code Standards
 
+### Python
 
 - **Line length**: 88 characters (Ruff/Black standard)
 - **Type hints**: required on all public functions and methods
@@ -67,12 +74,14 @@ git push origin feat/your-feature-name
 - **Type checker**: `ty check`
 - **Architecture**: clean / hexagonal — core has zero framework imports, Dependency Rule enforced
 
+### TypeScript
 
 - **Strict mode**: enabled (`strict: true`)
 - **No `any`**: use `unknown` or proper generics
 - **Formatter**: Prettier
 - **Linter**: ESLint
 
+### Shell Scripts
 
 - **Extension**: `.zsh`
 - **Shebang**: `#!/usr/bin/env zsh`
@@ -80,9 +89,10 @@ git push origin feat/your-feature-name
 
 ---
 
+## Testing
 
 ```bash
-task test              # All tests
+task test              # Default tests (registry + unit + property + frontend)
 task test:unit         # Unit tests only
 task test:integration  # Integration tests
 {%- if use_playwright %}
@@ -95,6 +105,7 @@ All new features must include tests. Aim for ≥80% coverage on core and applica
 
 ---
 
+## PR Checklist
 
 - [ ] Code follows the project's coding standards
 - [ ] Tests added/updated for all changes
@@ -105,6 +116,7 @@ All new features must include tests. Aim for ≥80% coverage on core and applica
 
 ---
 
+## Architecture Rules
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture guide.
 

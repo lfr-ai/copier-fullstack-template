@@ -89,7 +89,7 @@ core/        → Pure domain (entities, enums, value objects, interface protocol
 application/ → Use cases, services, DTOs, commands — imports from core only. NO adapter imports.
 adapters/    → DB repos, cache, HTTP clients — implements core interface protocols.
                UoW impl exposes typed repo properties (uow.users)
-ports/       → API routes, CLI, webhooks, DI container — FastAPI/Typer allowed. Wires adapters.
+ports/       → API routes, CLI, webhooks, DI container — FastAPI/Click allowed. Wires adapters.
 infrastructure/ → DB engines, HTTP clients, security primitives
 utils/       → Shared utilities — stdlib + third-party only
 config/      → Settings, constants — separate pillar

@@ -1,5 +1,5 @@
 
-
+# Architecture
 
 This project follows **clean / hexagonal architecture** (ports & adapters).
 The Dependency Rule is the fundamental invariant: source-code dependencies
@@ -33,16 +33,109 @@ always point **inward** toward the pure domain core.
 
 ### Dependency Rule
 
+All dependencies point **inward** toward the domain core:
+
 ```text
-adapters → ports → application → core
-              ↑
-        infrastructure
+ports ──────────┐
+                ├──→ application ──→ core
+adapters ───────┘
+        ↑
+  infrastructure
 ```
 
+- **Ports** (driving/inbound) depend on application services
+- **Adapters** (driven/outbound) implement core protocols
+- **Ports and adapters never depend on each other**
+
 Application services depend on **core protocols** (e.g. `UnitOfWork`,
-`UserRepositoryPort`) — never on concrete adapter classes.  The Unit
+`UserRepositoryPort`) — never on concrete adapter classes. The Unit
 of Work exposes typed repository properties so services access
 persistence without importing adapter modules.
+
+## Clean Architecture Concepts
+
+This section maps each concept from Uncle Bob's Clean Architecture
+and Herberto Graça's Explicit Architecture to the project structure.
+
+### Ports (Interfaces)
+
+Ports are the **contracts** that define how the application core
+communicates with the outside world. They are Protocol classes defined
+in `core/interfaces/` — the innermost circle.
+
+- **Driven / Output Ports**: `Repository`, `UnitOfWork`, `CachePort`,
+  `EventBus`, `StoragePort`, `EmailPort`, `PasswordHasher`, and all
+  AI-related ports. Adapters in `adapters/` implement these.
+- **Driving / Input Ports**: The Application Services themselves
+  (`application/services/`) act as the input ports — they define what
+  the outside world can do with the system. Controllers call them.
+
+### Controllers (Driving / Primary Adapters)
+
+Controllers translate external input into calls on the Application Core.
+
+| Delivery Mechanism | Location                    | Role                                |
+| ------------------ | --------------------------- | ----------------------------------- |
+| REST API           | `ports/api/routes/`         | Receive HTTP, call services         |
+| CLI                | `ports/cli/`                | Parse arguments, call services      |
+| Web (HTML)         | `ports/web/controllers/`    | Handle web requests, render pages   |
+{%- if api_style in ('graphql', 'both') %}
+| GraphQL            | `ports/graphql/queries.py`  | Resolve fields, call services       |
+{%- endif %}
+
+### Presenters & ViewModels
+
+In Uncle Bob's model, a Presenter takes use-case output and formats
+it for the View. This project implements this pragmatically:
+
+- **REST API**: Route handlers map DTOs → Pydantic **response schemas**
+  (`ports/api/schemas/`). The schema IS the presentation format.
+- **Web HTML**: Controllers build **ViewModels** (`ports/web/view_models/`)
+  that carry pre-formatted template context.
+- **Application Mappers**: `application/mappers/` convert domain entities
+  into DTOs — the output boundary of the use-case layer.
+
+### Gateways
+
+In Clean Architecture a gateway is an interface to an external system.
+This project implements gateways as output port + adapter pairs:
+
+- **Port (contract)**: `core/interfaces/` e.g. `StoragePort`,
+  `EmailPort`, `KnowledgeGraphPort`, `MCPClientPort`
+- **Adapter (implementation)**: `adapters/` e.g. `adapters/storage/`,
+  `adapters/email/`, `adapters/external/`
+
+### Use Cases (Application Services & Command/Query Handlers)
+
+Use cases orchestrate domain logic for a single business operation:
+
+- **Application Services** (`application/services/`): Stateful
+  orchestrators that accept DTOs, delegate to domain services, and
+  return DTOs. E.g. `UserService.create_user()`.
+- **Command Handlers** (`application/commands/`): Handle write
+  operations following CQRS.
+- **Query Handlers** (`application/queries/`): Handle read operations.
+
+### Domain Model (Core)
+
+The innermost circle contains:
+
+- **Entities & Aggregate Roots** (`core/entities/`): Mutable domain
+  objects. `AggregateRoot` marks the transactional boundary.
+- **Value Objects** (`core/value_objects/`): Immutable, equality by
+  value. E.g. `Email`.
+- **Domain Events** (`core/events/`): Record facts about what happened.
+- **Domain Services** (`core/domain_services/`): Stateless cross-entity
+  logic that doesn't belong in a single entity.
+- **Specifications** (`core/specifications/`): Composable business
+  predicates using `&`, `|`, `~` operators.
+
+### Composition Root
+
+The DI container (`ports/container.py`) is the **Composition Root** —
+the single place where concrete adapter classes are wired to port
+interfaces. It lives in the outermost layer where all concrete types
+are visible.
 
 
 - **Dependency Inversion**: Core domain has no external dependencies; adapters implement core protocols
