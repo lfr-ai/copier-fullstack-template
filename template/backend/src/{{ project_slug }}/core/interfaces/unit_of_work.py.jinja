@@ -1,0 +1,45 @@
+"""Unit of Work protocol for transactional boundaries."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
+
+if TYPE_CHECKING:
+    from {{ project_slug }}.core.interfaces.user_repository import UserRepositoryPort
+
+
+@runtime_checkable
+class UnitOfWork(Protocol):
+    """Unit of Work protocol for transactional boundaries.
+
+    Provides repository access and transactional commit/rollback.
+    Application services use 'async with uow:' to open a
+    transaction, access 'uow.users' for persistence, and call
+    'await uow.commit()' when ready.
+    """
+
+    @property
+    def users(self) -> UserRepositoryPort:
+        """Access the user repository within the current transaction."""
+        ...
+
+    async def __aenter__(self) -> Self:
+        """Enter transactional context."""
+        ...
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
+        """Exit transactional context with auto rollback on error."""
+        ...
+
+    async def commit(self) -> None:
+        """Commit current transaction."""
+        ...
+
+    async def rollback(self) -> None:
+        """Rollback current transaction."""
+        ...

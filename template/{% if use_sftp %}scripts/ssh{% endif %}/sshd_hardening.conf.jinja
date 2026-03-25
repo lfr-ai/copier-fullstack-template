@@ -1,0 +1,54 @@
+# {{ project_name }} — SSH Server Hardening Template
+# ─────────────────────────────────────────────────────────
+# Copy this to /etc/ssh/sshd_config.d/90-{{ project_slug }}.conf
+# or use setup-ssh.zsh --harden to apply automatically.
+#
+# Validate before applying:
+#   sudo sshd -t
+# Reload after applying:
+#   sudo systemctl reload sshd
+# ─────────────────────────────────────────────────────────
+
+# ── Authentication ─────────────────────────────────────────
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+PermitRootLogin no
+MaxAuthTries 3
+LoginGraceTime 30
+AuthenticationMethods publickey
+
+# ── Network / Forwarding ──────────────────────────────────
+X11Forwarding no
+AllowTcpForwarding no
+AllowAgentForwarding no
+PermitTunnel no
+GatewayPorts no
+
+# ── SFTP ──────────────────────────────────────────────────
+Subsystem sftp internal-sftp
+
+# ── Logging ───────────────────────────────────────────────
+LogLevel VERBOSE
+
+# ── Session ───────────────────────────────────────────────
+ClientAliveInterval 300
+ClientAliveCountMax 2
+MaxSessions 5
+
+# ── Ciphers & MACs (modern, strong only) ──────────────────
+# Uncomment to restrict to strong algorithms:
+# Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+# MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+# KexAlgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+
+# ── SFTP-Only User Example ────────────────────────────────
+# Uncomment and adjust for a restricted SFTP-only account:
+#
+# Match User sftpuser
+#     ForceCommand internal-sftp
+#     ChrootDirectory /home/sftpuser
+#     AllowTcpForwarding no
+#     X11Forwarding no
+#     PermitTunnel no

@@ -1,0 +1,20 @@
+"""Embedding configuration value object."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from {{ project_slug }}.core.entities.base import ValueObject
+
+_DEFAULT_DIMENSIONS: int = 1536
+_DEFAULT_BATCH_SIZE: int = 100
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingConfig(ValueObject):
+    """Immutable embedding model configuration."""
+
+    model: str = "text-embedding-3-small"
+    dimensions: int = _DEFAULT_DIMENSIONS
+    batch_size: int = _DEFAULT_BATCH_SIZE
+    normalize: bool = True

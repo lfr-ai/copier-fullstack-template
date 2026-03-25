@@ -14,6 +14,19 @@ task docker:build          # Build container images
 task docker:up             # Start services
 task docker:down           # Stop services
 ```
+{%- if container_runtime == "docker" %}
+
+#### Production builds with Bake
+
+```bash
+task docker:bake:prod                                     # Build all prod images
+TAG=v1.0.0 REGISTRY=ghcr.io/{{ github_username }} docker buildx bake prod  # Tag + push
+docker buildx bake --print prod                           # Preview build plan
+```
+
+Bake builds all production images in parallel with SBOM and provenance
+attestations. CI pipelines use GitHub Actions cache for layer reuse.
+{%- endif %}
 
 
 ```bash
@@ -32,7 +45,7 @@ Caddy provides automatic HTTPS. Set `CADDY_DOMAIN` in your environment.
 
 Production deployments use Azure Key Vault for secret management:
 
-1. Configure `AZURE_KEY_VAULT_URL` environment variable
+1. Configure `{{ project_slug | upper }}_AZURE_KEY_VAULT_URL` environment variable
 2. Ensure the application identity has `Key Vault Secrets User` role
 3. Secrets are loaded automatically via `DefaultAzureCredential`
 {% endif %}
@@ -48,14 +61,51 @@ See `docs/CONFIG.md` for the full variable reference.
 
 The application exposes health endpoints:
 
-- `/api/v1/health`  basic liveness check
-- `/api/v1/health/ready`  readiness check (includes database)
+- `/health` — universal liveness probe (always available)
+{%- if api_style in ('rest', 'both') %}
+- `/api/v1/health` — REST health check
+- `/api/v1/health/ready` — readiness check (includes database)
+{%- endif %}
+{%- if api_style in ('graphql', 'both') %}
+- GraphQL `{ health { status } }` — health query
+- GraphQL `{ healthReady { status dependencies { name status } } }` — readiness query
+{%- endif %}
+{%- if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
+
+
+### Neo4j Deployment
+
+Include the `knowledge-graph` Compose profile when starting services in
+production:
+
+```bash
+{{ container_runtime }} compose --profile knowledge-graph -f compose.yml -f compose.prod.yml up -d
+```
+
+Production configuration:
+
+| Variable | Recommended |
+|----------|-------------|
+| `NEO4J_AUTH` | `neo4j/<strong-password>` |
+| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND` | `neo4j` |
+| `{{ project_slug | upper }}_NEO4J_URI` | `bolt://neo4j:7687` (internal Compose network) |
+| `{{ project_slug | upper }}_NEO4J_USER` | `neo4j` |
+| `{{ project_slug | upper }}_NEO4J_PASSWORD` | Match `NEO4J_AUTH` password |
+| `{{ project_slug | upper }}_NEO4J_DATABASE` | `neo4j` |
+
+The Neo4j service stores data in a named Docker volume (`neo4j-data`).
+Back up the volume before upgrading Neo4j versions:
+
+```bash
+{{ container_runtime }} run --rm -v neo4j-data:/data -v "$(pwd)":/backup busybox tar czf /backup/neo4j-backup.tar.gz /data
+```
+{%- endif %}
 
 
 Before deploying a new version with schema changes:
 
 ```bash
-task backend:db:upgrade    # Apply pending migrations
+task db:migrate            # Apply pending migrations
 ```
 
 
@@ -65,7 +115,7 @@ To rollback a deployment:
 2. Deploy the specific version tag
 3. If database migration was applied:
    ```bash
-   task backend:db:downgrade
+   task db:downgrade
    ```
 {% if cloud_provider == "azure" %}
 
@@ -88,4 +138,21 @@ az deployment sub create \
 
 See [infra/README.md](../infra/README.md) for full infrastructure documentation.
 {% endif %}
+{%- if use_sftp %}
+
+## SSH / SFTP Access
+
+For SSH-based deployment or file synchronization:
+
+```bash
+# Set up SSH client with key-based auth
+task ssh:setup -- --remote-host prod.example.com --remote-user deploy
+
+# Validate connectivity
+task ssh:validate -- --remote-host prod.example.com
+```
+
+See [SSH_SFTP.md](SSH_SFTP.md) for server hardening, SFTP-only users,
+and VS Code SFTP extension setup.
+{%- endif %}
 

@@ -1,0 +1,101 @@
+"""Document management API routes — upload, list, and manage documents."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException, UploadFile, status
+from pydantic import BaseModel, Field
+
+from {{ project_slug }}.ports.api.dependencies import RAGServiceDep
+
+router = APIRouter()
+
+_MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024  # 10 MB
+_UPLOAD_READ_CHUNK_BYTES: int = 64 * 1024
+_BYTES_PER_MB: int = 1024 * 1024
+_ALLOWED_EXTENSIONS: frozenset[str] = frozenset({
+    ".txt", ".md", ".pdf", ".csv", ".json", ".xml",
+    ".html", ".htm", ".rst", ".doc", ".docx",
+})
+
+
+class DocumentResponse(BaseModel):
+    """Response for a single document."""
+
+    id: str
+    source: str
+    chunk_count: int
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class DocumentListResponse(BaseModel):
+    """Response for listing documents."""
+
+    documents: list[DocumentResponse]
+    total: int
+
+
+class IngestionResponse(BaseModel):
+    """Response after document ingestion."""
+
+    source: str
+    chunk_count: int
+    success: bool
+
+
+@router.post(
+    "/ingest",
+    response_model=IngestionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ingest a document into the knowledge base",
+)
+async def ingest_document(source: str, rag_service: RAGServiceDep) -> IngestionResponse:
+    """Ingest a document from a file path or URL."""
+    result = await rag_service.ingest(source)
+    return IngestionResponse(
+        source=source,
+        chunk_count=result.chunk_count if hasattr(result, "chunk_count") else 0,
+        success=True,
+    )
+
+
+@router.post(
+    "/upload",
+    response_model=IngestionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload and ingest a file",
+)
+async def upload_document(file: UploadFile, rag_service: RAGServiceDep) -> IngestionResponse:
+    """Upload a file and ingest it into the knowledge base."""
+    import tempfile
+    from pathlib import Path
+
+    suffix = Path(file.filename or "upload.txt").suffix.lower()
+    if suffix not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"File type '{suffix}' is not supported.",
+        )
+
+    # Stream to temp file with size guard to avoid memory exhaustion
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        total = 0
+        while chunk := await file.read(_UPLOAD_READ_CHUNK_BYTES):
+            total += len(chunk)
+            if total > _MAX_UPLOAD_BYTES:
+                Path(tmp.name).unlink(missing_ok=True)
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"File exceeds maximum size of {_MAX_UPLOAD_BYTES // _BYTES_PER_MB} MB.",
+                )
+            tmp.write(chunk)
+        tmp_path = tmp.name
+
+    try:
+        result = await rag_service.ingest(tmp_path)
+        return IngestionResponse(
+            source=file.filename or tmp_path,
+            chunk_count=result.chunk_count if hasattr(result, "chunk_count") else 0,
+            success=True,
+        )
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)

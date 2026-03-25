@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from typing import Final
 
-__all__ = ["TOKEN_BYTES", "generate_token", "hash_sha256"]
-
-TOKEN_BYTES: Final[int] = 32
+TOKEN_BYTES = 32
 
 
 def generate_token(*, nbytes: int = TOKEN_BYTES) -> str:

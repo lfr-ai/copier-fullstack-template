@@ -1,0 +1,72 @@
+{%- if with_gsd %}
+# {{ project_name }} — GSD-2 Agent Instructions
+
+## Project Overview
+{{ project_description }}
+
+## Architecture
+This project follows **clean / hexagonal (ports-and-adapters) architecture**.
+The Dependency Rule is the fundamental invariant: source-code dependencies
+always point **inward** (adapters → ports → application → core).
+All domain logic lives in `backend/src/{{ project_slug }}/core/` with zero external imports.
+Inbound adapters live in `ports/`, outbound adapters in `adapters/`.
+Application services access persistence via UoW repository properties (`uow.users`),
+never by importing concrete adapter classes.
+
+## Coding Standards
+- **Python**: {{ python_version }}+, keyword-only args after first positional, `ParseableEnum` for enums
+- **Frontend**: {{ frontend_framework | capitalize }}, TypeScript strict, Vite
+- **Testing**: pytest with markers (`@pytest.mark.unit`, `integration`, `property`, `performance`)
+- **Formatting**: `ruff format` for Python, `prettier` for TS/JS/JSON/CSS/MD
+
+## Task Runner
+Use `task <command>` for all operations. Key commands:
+    - `task dev` — Start dev servers
+    - `task test` — Run all tests
+    - `task lint` — Run all linters
+    - `task format` — Auto-format
+    - `task db:migrate` — Run Alembic migrations
+    - `task registry:generate` — Generate registry constants
+
+    ## GSD-2 Workflow Rules
+    1. Every task MUST fit in one context window — if it can't, split it
+    2. Follow RED → GREEN → REFACTOR TDD cycle
+    3. Commit atomically per task completion
+    4. Research before planning, plan before executing
+    5. Verify every task's must-haves before marking complete
+    6. Use `/gsd discuss` for architecture decisions alongside auto mode
+    7. Use `/gsd quick` for small, well-defined tasks that skip planning
+    8. After each slice, roadmap is reassessed — embrace adaptive replanning
+    9. Verification commands run automatically after each task (`task lint`, `task test:unit`, `task typecheck`)
+    10. Use `/gsd keys` to manage LLM provider keys interactively
+    11. Use `/gsd update` to self-update GSD-2 to latest version
+    12. Use `/gsd export --html --all` to generate milestone HTML reports
+
+    ## Verification Enforcement
+    Preferences define `verification_commands` that run after each task:
+    - `task lint` — Lint all code
+    - `task test:unit` — Run unit tests
+    - `task typecheck` — Type check all code
+    On failure, `verification_auto_fix: true` attempts automatic repair up to
+    `verification_max_retries: 2` times before escalating.
+
+    ## Context Engineering
+    - `PROJECT.md` — Living doc of what the project is
+    - `DECISIONS.md` — Append-only register of architectural decisions
+    - `STATE.md` — Quick-glance dashboard (always read first)
+    - `M*-ROADMAP.md` — Milestone plan with slice checkboxes
+    - `S*-PLAN.md` — Slice task decomposition with must-haves
+    - `T*-SUMMARY.md` — Task outcome (YAML frontmatter + narrative)
+
+    ## Headless Mode
+    GSD-2 supports non-interactive (CI/scripted) operation:
+    - `gsd headless status` — JSON status output
+    - `gsd headless doctor` — Health check
+    - `gsd headless next` — Execute next pending task
+    - `gsd headless quick` — Quick task without planning
+    - `gsd headless --timeout 600000 auto` — Time-boxed autonomous mode
+
+    ## Git Strategy
+    Branch-per-milestone with squash merge. Fully automated via worktree isolation.
+    One squash commit per milestone on main. Individual milestones are revertable.
+    {%- endif %}

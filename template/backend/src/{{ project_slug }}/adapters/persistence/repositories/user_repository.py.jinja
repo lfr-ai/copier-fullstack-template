@@ -9,18 +9,11 @@ from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
 from {{ project_slug }}.adapters.persistence.repositories.base import SQLAlchemyRepository
 from {{ project_slug }}.core.constants import DEFAULT_LIST_LIMIT
 
-__all__ = ["UserRepository"]
-
 
 class UserRepository(SQLAlchemyRepository[UserModel]):
     """Repository for user persistence operations."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize user repository.
-
-        Args:
-            session (AsyncSession): Async SQLAlchemy session.
-        """
         super().__init__(session=session, model_class=UserModel)
 
     async def get_by_email(self, email: str) -> UserModel | None:
@@ -30,11 +23,26 @@ class UserRepository(SQLAlchemyRepository[UserModel]):
             email (str): User email address.
 
         Returns:
-            UserModel | None: UserModel instance or None if not found.
+            UserModel | None: 'UserModel' instance or 'None' if not found.
         """
         stmt = select(UserModel).where(UserModel.email == email)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_by_ids(self, ids: list[str]) -> list[UserModel]:
+        """Retrieve multiple users by their IDs in a single query.
+
+        Args:
+            ids (list[str]): User identifiers.
+
+        Returns:
+            list[UserModel]: Found user models (may be fewer than requested).
+        """
+        if not ids:
+            return []
+        stmt = select(UserModel).where(UserModel.id.in_(ids))
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_active_users(
         self,

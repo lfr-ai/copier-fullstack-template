@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
@@ -12,28 +12,27 @@ from slowapi.util import get_remote_address
 if TYPE_CHECKING:
     from fastapi import FastAPI, Request
 
-__all__ = ["configure_rate_limiting", "limiter"]
 
-DEFAULT_RATE_LIMIT: Final[str] = "60/minute"
-HTTP_TOO_MANY_REQUESTS: Final[int] = 429
+DEFAULT_RATE_LIMIT = "60/minute"
+HTTP_TOO_MANY_REQUESTS = 429
 
-limiter: Final[Limiter] = Limiter(
-    key_func=get_remote_address, default_limits=[DEFAULT_RATE_LIMIT]
-)
+
+def _get_real_client_ip(request: "Request") -> str:
+    """Extract client IP respecting reverse proxy headers.
+
+    Uses 'X-Forwarded-For' (first entry) when behind a trusted
+    proxy (Caddy, nginx), falls back to 'request.client.host'.
+    """
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return get_remote_address(request)
 
 
 async def _rate_limit_exceeded(
     request: Request, exc: RateLimitExceeded
 ) -> JSONResponse:
-    """Return 429 response with Retry-After header.
-
-    Args:
-        request (Request): Incoming request.
-        exc (RateLimitExceeded): The rate limit exception.
-
-    Returns:
-        JSONResponse: JSON error payload with appropriate status and header.
-    """
+    """Return 429 response with Retry-After header."""
     retry_after = getattr(exc, "retry_after", None)
     headers = {"Retry-After": str(retry_after)} if retry_after else {}
     return JSONResponse(
@@ -44,10 +43,17 @@ async def _rate_limit_exceeded(
 
 
 def configure_rate_limiting(app: FastAPI) -> None:
-    """Configure rate limiting on FastAPI app.
+    """Configure rate limiting on the FastAPI app.
+
+    Uses 'rate_limit' from settings if available, otherwise
+    falls back to :data:`DEFAULT_RATE_LIMIT`.
 
     Args:
-        app (FastAPI): FastAPI application instance.
+        app (FastAPI): Application instance to configure.
     """
+    settings = app.state.settings
+    limit = getattr(settings, "rate_limit", DEFAULT_RATE_LIMIT)
+
+    limiter = Limiter(key_func=_get_real_client_ip, default_limits=[limit])
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded)  # type: ignore[arg-type]

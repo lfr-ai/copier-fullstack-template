@@ -1,0 +1,120 @@
+"""CrewAI tools adapter — bridge application tools to the CrewAI tool protocol.
+
+CrewAI agents can use tools from the CrewAI Toolkit or LangChain.
+This module provides utilities to:
+
+* Wrap plain async callables as CrewAI-compatible tools
+* Create common built-in tools from 'crewai_tools'
+* Register application-layer tools for use in crews
+
+All tools follow the 'crewai.tools.BaseTool' protocol so they
+work with 'Agent(tools=[...])'.
+"""
+
+from __future__ import annotations
+
+import structlog
+from collections.abc import Callable
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+def wrap_callable_as_tool(
+    name: str,
+    description: str,
+    func: Callable[..., object],
+) -> object:
+    """Wrap a plain Python callable as a CrewAI 'BaseTool'.
+
+    Uses 'crewai.tools.tool' decorator semantics to create
+    a tool that agents can invoke during task execution.
+
+    Args:
+        name (str): Tool name (used in agent prompts).
+        description (str): What the tool does (used by the LLM for tool selection).
+        func (Callable[..., object]): The callable to wrap. Can be sync or async.
+
+    Returns:
+        A CrewAI-compatible tool instance.
+    """
+    from crewai.tools import tool as crewai_tool
+
+    @crewai_tool(name)
+    def _wrapper(*args: object, **kwargs: object) -> object:
+        return func(*args, **kwargs)
+
+    _wrapper.__doc__ = description
+    _wrapper.description = description
+
+    logger.info("crewai_tool_wrapped", name=name)
+    return _wrapper
+
+
+def create_serper_search_tool(api_key: str | None = None) -> object:
+    """Create a SerperDev web search tool.
+
+    Requires 'SERPER_API_KEY' env var or explicit 'api_key'.
+
+    Args:
+        api_key (str | None): Optional API key override.
+
+    Returns:
+        A 'SerperDevTool' instance.
+    """
+    from crewai_tools import SerperDevTool
+
+    kwargs: dict[str, object] = {}
+    if api_key is not None:
+        kwargs["api_key"] = api_key
+    return SerperDevTool(**kwargs)  # type: ignore[arg-type]
+
+
+def create_website_search_tool(website: str | None = None) -> object:
+    """Create a website-scoped search tool.
+
+    Args:
+        website (str | None): Optional URL to restrict search scope.
+
+    Returns:
+        A 'WebsiteSearchTool' instance.
+    """
+    from crewai_tools import WebsiteSearchTool
+
+    kwargs: dict[str, object] = {}
+    if website is not None:
+        kwargs["website"] = website
+    return WebsiteSearchTool(**kwargs)  # type: ignore[arg-type]
+
+
+def create_file_read_tool(file_path: str | None = None) -> object:
+    """Create a file reading tool.
+
+    Args:
+        file_path (str | None): Optional default file path.
+
+    Returns:
+        A 'FileReadTool' instance.
+    """
+    from crewai_tools import FileReadTool
+
+    kwargs: dict[str, object] = {}
+    if file_path is not None:
+        kwargs["file_path"] = file_path
+    return FileReadTool(**kwargs)  # type: ignore[arg-type]
+
+
+def create_directory_read_tool(directory: str | None = None) -> object:
+    """Create a directory listing tool.
+
+    Args:
+        directory (str | None): Optional default directory path.
+
+    Returns:
+        A 'DirectoryReadTool' instance.
+    """
+    from crewai_tools import DirectoryReadTool
+
+    kwargs: dict[str, object] = {}
+    if directory is not None:
+        kwargs["directory"] = directory
+    return DirectoryReadTool(**kwargs)  # type: ignore[arg-type]

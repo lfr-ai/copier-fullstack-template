@@ -1,0 +1,95 @@
+"""Summarization chain — multi-document summarization via map-reduce."""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_DEFAULT_CHUNK_SIZE: int = 4000
+_MAP_MAX_TOKENS: int = 256
+_REDUCE_MAX_TOKENS: int = 512
+_SUMMARIZE_TEMPERATURE: float = 0.2
+_DEFAULT_MAX_SENTENCES: int = 5
+
+
+class SummarizationChain(BaseChain):
+    """Multi-document summarization using map-reduce pattern.
+
+    Maps each document chunk to a summary, then reduces
+    all summaries into a final consolidated summary.
+
+    Args:
+        llm (LLMPort): LLM port for generation.
+        chunk_size (int): Maximum characters per chunk for map step.
+    """
+
+    __slots__ = ("_chunk_size", "_llm")
+
+    def __init__(self, *, llm: LLMPort, chunk_size: int = _DEFAULT_CHUNK_SIZE) -> None:
+        self._llm = llm
+        self._chunk_size = chunk_size
+
+    @override
+    async def run(self, *, input_text: str, **kwargs: object) -> ChainResult:
+        """Summarize text using map-reduce.
+
+        Args:
+            input_text (str): Full text to summarize.
+            **kwargs (object): Optional 'max_sentences' parameter.
+
+        Returns:
+            ChainResult: Consolidated summary.
+        """
+        max_sentences = int(kwargs.get("max_sentences", _DEFAULT_MAX_SENTENCES))
+
+        # Split into chunks
+        chunks = [
+            input_text[i : i + self._chunk_size]
+            for i in range(0, len(input_text), self._chunk_size)
+        ]
+
+        if len(chunks) <= 1:
+            # Single chunk — direct summarization
+            summary = await self._llm.complete(
+                prompt=f"Summarize in {max_sentences} sentences or fewer:\n\n{input_text}",
+                system_prompt="You are a precise summarizer.",
+                max_tokens=_REDUCE_MAX_TOKENS,
+                temperature=_SUMMARIZE_TEMPERATURE,
+            )
+            return ChainResult(content=summary, metadata={"chunks": 1})
+
+        # Map step — summarize each chunk
+        chunk_summaries: list[str] = []
+        for i, chunk in enumerate(chunks):
+            summary = await self._llm.complete(
+                prompt=f"Summarize the key points from this text:\n\n{chunk}",
+                system_prompt="Extract key points concisely.",
+                max_tokens=_MAP_MAX_TOKENS,
+                temperature=_SUMMARIZE_TEMPERATURE,
+            )
+            chunk_summaries.append(summary)
+            logger.debug("Map step %d/%d complete", i + 1, len(chunks))
+
+        # Reduce step — consolidate summaries
+        combined = "\n\n".join(
+            f"Section {i + 1}: {s}" for i, s in enumerate(chunk_summaries)
+        )
+        final = await self._llm.complete(
+            prompt=(
+                f"Combine these section summaries into a single coherent summary "
+                f"of {max_sentences} sentences or fewer:\n\n{combined}"
+            ),
+            system_prompt="Create a unified, coherent summary.",
+            max_tokens=_REDUCE_MAX_TOKENS,
+            temperature=_SUMMARIZE_TEMPERATURE,
+        )
+
+        logger.info("Summarization complete: %d chunks", len(chunks))
+        return ChainResult(
+            content=final,
+            metadata={"chunks": len(chunks), "map_summaries": len(chunk_summaries)},
+        )

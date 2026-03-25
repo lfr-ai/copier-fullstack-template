@@ -1,0 +1,66 @@
+"""Knowledge graph query — CQRS read operation for graph traversal."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Final, override
+
+import structlog
+
+from {{ project_slug }}.application.queries.base import QueryHandler
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+
+logger = structlog.get_logger(__name__)
+
+_DEFAULT_QUERY_LIMIT: Final[int] = 50
+
+
+@dataclass(frozen=True, slots=True)
+class KnowledgeGraphQueryResult:
+    """Result from a knowledge graph query."""
+
+    entity: str
+    neighbors: list[dict[str, object]]
+    triplets: list[tuple[str, str, str]]
+    entity_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class KnowledgeGraphQuery:
+    """Query for knowledge graph traversal."""
+
+    entity: str
+    depth: int = 1
+    limit: int = _DEFAULT_QUERY_LIMIT
+
+
+class KnowledgeGraphQueryHandler(QueryHandler[KnowledgeGraphQuery, KnowledgeGraphQueryResult]):
+    """Handles knowledge graph neighborhood queries."""
+
+    def __init__(self, *, knowledge_graph: KnowledgeGraphPort) -> None:
+        self._kg = knowledge_graph
+
+    @override
+    async def handle(self, query: KnowledgeGraphQuery) -> KnowledgeGraphQueryResult:
+        """Query the knowledge graph for an entity's neighborhood.
+
+        Args:
+            query: Entity and traversal parameters.
+
+        Returns:
+            Neighbors, triplets, and graph stats.
+        """
+        logger.info("KG query", entity=query.entity, depth=query.depth)
+
+        neighbors = await self._kg.query_neighbors(
+            query.entity, depth=query.depth, limit=query.limit,
+        )
+        triplets = await self._kg.query_triplets(subject=query.entity)
+        entity_count = await self._kg.get_entity_count()
+
+        return KnowledgeGraphQueryResult(
+            entity=query.entity,
+            neighbors=neighbors,
+            triplets=triplets,
+            entity_count=entity_count,
+        )

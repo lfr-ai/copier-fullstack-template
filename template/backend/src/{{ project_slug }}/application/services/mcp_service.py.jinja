@@ -1,0 +1,72 @@
+"""MCP application service."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.application.dtos.mcp_dto import MCPToolCallDTO, MCPToolResultDTO
+from {{ project_slug }}.application.services.base import BaseService
+from {{ project_slug }}.core.interfaces.mcp_server import MCPServerPort
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+class MCPService(BaseService):
+    """Application-level MCP orchestration.
+
+    Manages MCP server lifecycle and delegates tool invocations
+    to the MCP server/client infrastructure.
+    """
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+        mcp_server: MCPServerPort,
+    ) -> None:
+        super().__init__(uow=uow)
+        self._mcp_server = mcp_server
+
+    def get_mcp_app(self) -> object:
+        """Return the ASGI-mountable MCP application.
+
+        Uses 'streamable_http_app()' (MCP SDK >= 1.x) with fallback
+        to 'create_app()' for 'MCPServerPort' implementations.
+        """
+        server = self._mcp_server
+        if hasattr(server, "streamable_http_app"):
+            return server.streamable_http_app()
+        return server.create_app()
+
+    async def start(self) -> None:
+        """Start the MCP server."""
+        self._logger.info("mcp_server_starting")
+        await self._mcp_server.start()
+        self._logger.info("mcp_server_started")
+
+    async def stop(self) -> None:
+        """Stop the MCP server and release resources."""
+        self._logger.info("mcp_server_stopping")
+        await self._mcp_server.stop()
+        self._logger.info("mcp_server_stopped")
+
+    async def call_tool(self, dto: MCPToolCallDTO) -> MCPToolResultDTO:
+        """Invoke an MCP tool through the server."""
+        self._logger.info("mcp_tool_call", tool=dto.tool, server=dto.server)
+        try:
+            # FastMCP instances expose call_tool directly for programmatic use.
+            server = self._mcp_server
+            if hasattr(server, "call_tool"):
+                result = await server.call_tool(dto.tool, arguments=dto.arguments)
+                return MCPToolResultDTO(
+                    tool=dto.tool,
+                    content=str(result),
+                    is_error=False,
+                )
+            return MCPToolResultDTO(
+                tool=dto.tool,
+                content="Direct tool invocation not supported on this MCP server.",
+                is_error=True,
+            )
+        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+            self._logger.exception("mcp_tool_call_failed", tool=dto.tool)
+            return MCPToolResultDTO(
+                tool=dto.tool,
+                content=f"Tool invocation failed: {type(exc).__name__}",
+                is_error=True,
+            )

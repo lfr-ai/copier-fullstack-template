@@ -1,0 +1,46 @@
+"""Unit tests for text splitter."""
+{%- if use_ai %}
+
+from __future__ import annotations
+
+
+from {{ project_slug }}.ai.text_splitter import RecursiveTextSplitter
+from {{ project_slug }}.core.entities.document import Document
+
+
+class TestRecursiveTextSplitter:
+    """Test suite for RecursiveTextSplitter."""
+
+    def test_split_short_document(self) -> None:
+        """Short documents should produce a single chunk."""
+        splitter = RecursiveTextSplitter(chunk_size=100, chunk_overlap=10)
+        doc = Document(id="d1", content="Short text.", metadata={})
+
+        chunks = splitter.split(doc)
+
+        assert len(chunks) == 1
+        assert chunks[0].content == "Short text."
+
+    def test_split_long_document_produces_multiple_chunks(self) -> None:
+        """Long documents should be split into overlapping chunks."""
+        splitter = RecursiveTextSplitter(chunk_size=50, chunk_overlap=10)
+        doc = Document(id="d2", content="word " * 100, metadata={})
+
+        chunks = splitter.split(doc)
+
+        assert len(chunks) > 1
+        for chunk in chunks:
+            assert len(chunk.content) <= 55  # allow some tolerance
+
+    def test_chunk_metadata_preserves_source(self) -> None:
+        """Chunk metadata should include the parent document id."""
+        splitter = RecursiveTextSplitter(chunk_size=50, chunk_overlap=0)
+        doc = Document(id="d3", content="word " * 100, metadata={"source": "test.txt"})
+
+        chunks = splitter.split(doc)
+
+        for chunk in chunks:
+            assert chunk.metadata.get("source") == "test.txt" or "document_id" in chunk.metadata
+{%- else %}
+# AI tests are only generated when use_ai is enabled.
+{%- endif %}

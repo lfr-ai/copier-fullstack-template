@@ -42,13 +42,12 @@ EVERY source module MUST have corresponding test(s):
 
 | Source                              | Test                                          |
 | ----------------------------------- | --------------------------------------------- |
-| `core/base.py`                     | `unit/core/test_base.py`                      |
-| `core/errors.py`                   | `unit/core/test_errors.py`                    |
-| `core/ports.py`                    | `unit/core/test_ports.py`                     |
 | `core/entities/*`                  | `unit/core/test_*_entity.py`                  |
 | `core/value_objects/*`             | `unit/core/test_value_objects.py`             |
 | `core/events/*`                    | `unit/core/test_events.py`                    |
 | `core/enums/*`                     | `unit/core/test_enums.py`                     |
+| `core/exceptions/*`               | `unit/core/test_exceptions.py`                |
+| `core/interfaces/*`               | `unit/core/test_interfaces.py`                |
 | `application/services/*`          | `unit/application/test_*_service.py`          |
 | `application/dtos/*`              | `unit/application/test_*_dto.py`              |
 | `application/mappers/*`           | `unit/application/test_*_mapper.py`           |
@@ -56,7 +55,7 @@ EVERY source module MUST have corresponding test(s):
 | `adapters/cache/*`                | `unit/adapters/test_*_cache.py`               |
 | `adapters/messaging/*`            | `unit/adapters/test_*_event_bus.py`           |
 | `ports/api/routes/*`              | `integration/test_api_routes.py`              |
-| `ports/api/error_handlers.py`     | `unit/ports/test_error_handlers.py`           |
+| `ports/api/middleware/*`          | `unit/ports/test_middleware.py`               |
 | `utils/*`                          | `unit/utils/test_*.py` (one per util module)  |
 | `config/settings.py`              | `unit/config/test_settings.py`                |
 

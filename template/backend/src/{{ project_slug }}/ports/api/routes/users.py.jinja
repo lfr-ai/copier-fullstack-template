@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Final
 
 from fastapi import APIRouter
 from starlette import status
 
-from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
+from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
 from {{ project_slug }}.ports.api.dependencies import UserServiceDep
 from {{ project_slug }}.ports.api.schemas.user_schema import CreateUserRequest, UserResponse
 
-__all__ = ["create_user", "get_user", "router"]
-
-router: Final[APIRouter] = APIRouter()
+router = APIRouter()
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -21,16 +18,8 @@ async def create_user(
     payload: CreateUserRequest,
     service: UserServiceDep,
 ) -> UserResponse:
-    """Create new user.
-
-    Args:
-        payload (CreateUserRequest): User creation request.
-        service (UserServiceDep): Injected user service.
-
-    Returns:
-        UserResponse: Created user data.
-    """
-    dto = CreateUserDTO(email=payload.email, display_name=payload.display_name)
+    """Create new user."""
+    dto = CreateUserDTO(email=payload.email, display_name=payload.display_name, password=payload.password)
     user = await service.create_user(dto)
     return UserResponse(
         id=user.id,
@@ -46,13 +35,6 @@ async def get_user(
     service: UserServiceDep,
 ) -> UserResponse:
     """Retrieve user by ID.
-
-    Args:
-        user_id (str): User identifier.
-        service (UserServiceDep): Injected user service.
-
-    Returns:
-        UserResponse: User data.
 
     Raises:
         NotFoundError: If user not found (mapped to 404 by error handler).

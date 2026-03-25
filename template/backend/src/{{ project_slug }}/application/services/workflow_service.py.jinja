@@ -1,0 +1,134 @@
+"""Workflow application service."""
+
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+
+from {{ project_slug }}.application.dtos.workflow_dto import (
+    ExecuteWorkflowDTO,
+    ResumeWorkflowDTO,
+    WorkflowResultDTO,
+    WorkflowStepDTO,
+)
+from {{ project_slug }}.application.services.base import BaseService
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+from {{ project_slug }}.core.interfaces.workflow_engine import (
+    WorkflowConfig,
+    WorkflowEnginePort,
+)
+
+
+class WorkflowService(BaseService):
+    """Application-level workflow orchestration.
+
+    Dispatches multi-agent graph execution to the configured
+    workflow engine (LangGraph, etc.) and maps results to DTOs.
+    """
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+        engine: WorkflowEnginePort,
+    ) -> None:
+        super().__init__(uow=uow)
+        self._engine = engine
+
+    async def execute(self, dto: ExecuteWorkflowDTO) -> WorkflowResultDTO:
+        """Execute a workflow to completion.
+
+        Args:
+            dto (ExecuteWorkflowDTO): Workflow execution parameters.
+
+        Returns:
+            WorkflowResultDTO: Executor result with steps and answer.
+        """
+        self._logger.info(
+            "workflow_execute",
+            workflow_id=dto.workflow_id,
+            goal_length=len(dto.goal),
+            max_iterations=dto.max_iterations,
+        )
+
+        config = WorkflowConfig(
+            max_iterations=dto.max_iterations,
+            thread_id=dto.thread_id,
+            interrupt_before=dto.interrupt_before,
+        )
+
+        result = await self._engine.execute(
+            goal=dto.goal,
+            initial_state=dto.initial_state or None,
+            config=config,
+        )
+
+        steps = [
+            WorkflowStepDTO(
+                step_type=s.get("type", ""),
+                agent_name=s.get("agent", ""),
+                input_data=s.get("input", {}),
+                output_data=s.get("output", {}),
+                duration_ms=s.get("duration_ms", 0.0),
+                token_usage=s.get("token_usage", {}),
+            )
+            for s in result.trace
+        ]
+
+        self._logger.info(
+            "workflow_execute_complete",
+            success=result.success,
+            total_steps=result.total_steps,
+        )
+
+        return WorkflowResultDTO(
+            workflow_id=dto.workflow_id,
+            goal=dto.goal,
+            answer=result.answer,
+            steps=steps,
+            total_steps=result.total_steps,
+            total_tokens=result.total_tokens,
+            success=result.success,
+            error=result.error,
+        )
+
+    async def execute_streaming(self, dto: ExecuteWorkflowDTO) -> AsyncIterator[dict[str, object]]:
+        """Stream workflow execution events.
+
+        Yields:
+            Dicts with step information as events occur.
+        """
+        self._logger.info("workflow_stream_start", goal_length=len(dto.goal))
+
+        config = WorkflowConfig(
+            max_iterations=dto.max_iterations,
+            thread_id=dto.thread_id,
+            interrupt_before=dto.interrupt_before,
+        )
+
+        async for event in self._engine.stream(
+            goal=dto.goal,
+            initial_state=dto.initial_state or None,
+            config=config,
+        ):
+            yield {
+                "node": event.node,
+                "event_type": event.event_type,
+                "data": event.data,
+                "step_index": event.step_index,
+            }
+
+    async def resume(self, dto: ResumeWorkflowDTO) -> WorkflowResultDTO:
+        """Resume a paused workflow from a checkpoint."""
+        self._logger.info("workflow_resume", checkpoint_id=dto.checkpoint_id)
+
+        result = await self._engine.resume(
+            checkpoint_id=dto.checkpoint_id,
+            input_data=dto.input_data or None,
+        )
+
+        return WorkflowResultDTO(
+            answer=result.answer,
+            total_steps=result.total_steps,
+            success=result.success,
+            error=result.error,
+        )

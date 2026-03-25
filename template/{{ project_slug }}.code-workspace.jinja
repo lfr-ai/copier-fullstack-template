@@ -49,7 +49,7 @@
     // ── Editor ───────────────────────────────────────────────────────
     "editor.formatOnSave": true,
     "editor.folding": false,
-    "editor.rulers": [99],
+    "editor.rulers": [88],
     "editor.tabCompletion": "on",
     "editor.trimAutoWhitespace": true,
     "editor.autoIndentOnPaste": true,
@@ -73,10 +73,12 @@
 
     // ── JavaScript / TypeScript ──────────────────────────────────────
     "[javascript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "prettier.printWidth": 88
     },
     "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "prettier.printWidth": 88
     },
     "javascript.referencesCodeLens.enabled": true,
     "javascript.referencesCodeLens.showOnAllFunctions": true,
@@ -96,25 +98,31 @@
 
     // ── HTML / CSS / Markup ──────────────────────────────────────────
     "[html]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "prettier.printWidth": 88
     },
     "[css]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "prettier.printWidth": 88
     },
     "[less]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "prettier.printWidth": 88
     },
     "html.format.indentInnerHtml": true,
 
     // ── JSON / YAML / TOML / Markdown ────────────────────────────────
     "[json]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "prettier.printWidth": 88
     },
     "[jsonc]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "prettier.printWidth": 88
     },
     "[yaml]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "prettier.printWidth": 88
     },
     "[markdown]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -126,7 +134,7 @@
     "evenBetterToml.formatter.arrayAutoExpand": true,
 
     // ── Spell checker ────────────────────────────────────────────────
-    "cSpell.language": "en",
+    "cSpell.language": "en, da",
 
     // ── Workbench ────────────────────────────────────────────────────
     "workbench.iconTheme": "vscode-icons",
@@ -145,7 +153,7 @@
     ],
 
     // ── Extensions behaviour ─────────────────────────────────────────
-    "extensions.ignoreRecommendations": false,
+    "extensions.ignoreRecommendations": true,
 
     // ── Copilot / Chat ───────────────────────────────────────────────
     "chat.instructionsFilesLocations": {

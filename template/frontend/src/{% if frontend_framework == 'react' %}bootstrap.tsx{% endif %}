@@ -1,19 +1,70 @@
 /**
  * React application bootstrap.
  *
- * Mounts the root React component into the DOM.
+ * Mounts the root component tree with required providers:
+ * - React.StrictMode for development warnings
+ * - ErrorBoundary for graceful crash recovery
+ * - QueryClientProvider for TanStack Query server-state management
+ * - BrowserRouter for client-side routing
  */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { ErrorBoundary } from 'react-error-boundary';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router';
 import { App } from './components/App';
+import './styles/tailwind.css';
 import './styles/main.css';
+
+const _QUERY_STALE_TIME_MS = 5 * 60 * 1000;
+const _QUERY_GC_TIME_MS = 10 * 60 * 1000;
+const _QUERY_RETRY_COUNT = 2;
+const _MUTATION_RETRY_COUNT = 1;
+
+/** TanStack Query client with tuned defaults for stale time, GC, and retry. */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: _QUERY_STALE_TIME_MS,
+      gcTime: _QUERY_GC_TIME_MS,
+      retry: _QUERY_RETRY_COUNT,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: _MUTATION_RETRY_COUNT,
+    },
+  },
+});
+
+/** Fallback UI rendered when an unrecoverable error occurs. */
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  return (
+    <main role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
+      <h1 className="text-2xl font-bold text-error">Something went wrong</h1>
+      <pre className="max-w-lg overflow-auto rounded bg-gray-100 p-4 text-sm">{error.message}</pre>
+      <button
+        type="button"
+        onClick={resetErrorBoundary}
+        className="rounded bg-primary px-4 py-2 text-white hover:opacity-90"
+      >
+        Try again
+      </button>
+    </main>
+  );
+}
 
 const rootElement = document.getElementById('root');
 
 if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <App />
+      <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => queryClient.clear()}>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ErrorBoundary>
     </React.StrictMode>,
   );
 }

@@ -1,0 +1,120 @@
+"""Rule-based guardrail adapter."""
+
+from __future__ import annotations
+
+import structlog
+import re
+from typing import override
+
+from {{ project_slug }}.core.interfaces.guardrail import GuardrailPort, GuardrailResult
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_DEFAULT_MAX_INPUT_LENGTH: int = 32_000
+_DEFAULT_MAX_OUTPUT_LENGTH: int = 64_000
+
+
+class RuleBasedGuardrail(GuardrailPort):
+    """Configurable rule-based input/output guardrail.
+
+    Checks for:
+    - Input/output length limits
+    - Blocked keyword patterns
+    - PII detection patterns (basic)
+    - Prompt injection heuristics
+    """
+
+    __slots__ = (
+        "_blocked_patterns",
+        "_max_input_length",
+        "_max_output_length",
+        "_pii_patterns",
+    )
+
+    def __init__(
+        self,
+        *,
+        blocked_patterns: list[str] | None = None,
+        max_input_length: int = _DEFAULT_MAX_INPUT_LENGTH,
+        max_output_length: int = _DEFAULT_MAX_OUTPUT_LENGTH,
+        detect_pii: bool = True,
+    ) -> None:
+        self._max_input_length = max_input_length
+        self._max_output_length = max_output_length
+        self._blocked_patterns = [
+            re.compile(p, re.IGNORECASE)
+            for p in (blocked_patterns or [])
+        ]
+        self._pii_patterns: list[re.Pattern[str]] = []
+        if detect_pii:
+            self._pii_patterns = [
+                re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),  # SSN
+                re.compile(r"\b(?:\d[ -]*?){13,16}\b"),  # Credit card (13-16 digits, optional separators)
+                re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"),  # Email
+            ]
+
+    @override
+    async def validate_input(
+        self,
+        *,
+        content: str,
+        context: dict[str, object] | None = None,
+    ) -> GuardrailResult:
+        violations: list[str] = []
+
+        if len(content) > self._max_input_length:
+            violations.append(f"Input exceeds maximum length ({self._max_input_length})")
+
+        for pattern in self._blocked_patterns:
+            if pattern.search(content):
+                violations.append(f"Blocked pattern detected: {pattern.pattern}")
+
+        # Prompt injection heuristics
+        injection_signals = [
+            "ignore previous instructions",
+            "ignore all instructions",
+            "disregard the above",
+            "system prompt:",
+            "you are now",
+        ]
+        content_lower = content.lower()
+        for signal in injection_signals:
+            if signal in content_lower:
+                violations.append(f"Potential prompt injection detected: '{signal}'")
+
+        if violations:
+            logger.warning("Guardrail input violations: %s", violations)
+            return GuardrailResult(allowed=False, violations=violations, reason="; ".join(violations))
+
+        return GuardrailResult(allowed=True)
+
+    @override
+    async def validate_output(
+        self,
+        *,
+        content: str,
+        original_input: str | None = None,
+        context: dict[str, object] | None = None,
+    ) -> GuardrailResult:
+        violations: list[str] = []
+
+        if len(content) > self._max_output_length:
+            violations.append(f"Output exceeds maximum length ({self._max_output_length})")
+
+        for pattern in self._blocked_patterns:
+            if pattern.search(content):
+                violations.append(f"Blocked pattern in output: {pattern.pattern}")
+
+        for pii_pattern in self._pii_patterns:
+            if pii_pattern.search(content):
+                violations.append("Potential PII detected in output")
+                break
+
+        if violations:
+            logger.warning("Guardrail output violations: %s", violations)
+            return GuardrailResult(
+                allowed=False,
+                violations=violations,
+                reason="; ".join(violations),
+            )
+
+        return GuardrailResult(allowed=True)

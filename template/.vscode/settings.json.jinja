@@ -26,7 +26,7 @@
   "python.testing.pytestArgs": ["tests", "-q", "--tb=short"],
 
   // ── Ruff ──────────────────────────────────────────────────────
-  "ruff.lineLength": 99,
+  "ruff.lineLength": 88,
   "ruff.lint.args": ["--config=backend/pyproject.toml"],
   "ruff.format.args": ["--config=backend/pyproject.toml"],
 
@@ -42,7 +42,7 @@
   },
   "editor.formatOnSave": true,
   "editor.folding": false,
-  "editor.rulers": [99],
+  "editor.rulers": [88],
   "editor.tabCompletion": "on",
   "editor.trimAutoWhitespace": true,
   "editor.tabSize": 2,
@@ -71,35 +71,35 @@
   },
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.printWidth": 99
+    "prettier.printWidth": 88
   },
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.printWidth": 99
+    "prettier.printWidth": 88
   },
   "[html]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.printWidth": 99
+    "prettier.printWidth": 88
   },
   "[css]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.printWidth": 99
+    "prettier.printWidth": 88
   },
   "[less]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.printWidth": 99
+    "prettier.printWidth": 88
   },
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.printWidth": 99
+    "prettier.printWidth": 88
   },
   "[jsonc]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.printWidth": 99
+    "prettier.printWidth": 88
   },
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.printWidth": 99
+    "prettier.printWidth": 88
   },{% if cloud_provider == 'azure' %}
   "[azure-pipelines]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -221,7 +221,9 @@
     "**/.mypy_cache": true,
     "**/.pytest_cache": true,
     "**/pnpm-lock.yaml": true,
-    "**/uv.lock": true
+    "**/uv.lock": true,
+    "**/.lycheecache": true,
+    "**/jscpd-report": true
   },
 
   // ── CSS ───────────────────────────────────────────────────────

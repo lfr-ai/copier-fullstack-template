@@ -41,7 +41,22 @@
     "fullstack",
     "hexagonal",
     "copier",
-    "uv"
+    "uv",
+    "buildx",
+    "bake",
+    "lychee",
+    "jscpd",
+    "hmas",
+    "jsonrpc"
+{%- if api_style in ('graphql', 'both') -%}
+    ,
+    "graphql",
+    "graphiql",
+    "strawberry",
+    "dataloaders",
+    "dataloader"
+{%- endif %}
+
   ],
   "ignorePaths": [
     "node_modules/**",
@@ -66,7 +81,7 @@
       "dictionaries": ["python"]
     },
     {
-      "filename": "**/*.ts",
+      "filename": "**/*.{ts,tsx}",
       "language": "en",
       "dictionaries": ["typescript"]
     }

@@ -1,0 +1,75 @@
+"""AI API routes — REST endpoints for completions, RAG, search, and ingestion."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, status
+
+from {{ project_slug }}.ai.models import (
+    CompletionRequest,
+    CompletionResponse,
+    DocumentIngestRequest,
+    DocumentIngestResponse,
+    RAGQueryRequest,
+    RAGQueryResponse,
+    VectorSearchRequest,
+    VectorSearchResponse,
+)
+from {{ project_slug }}.ports.api.dependencies import AIServiceDep, RAGServiceDep
+
+router = APIRouter()
+
+
+@router.post(
+    "/completions",
+    response_model=CompletionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Generate AI completion",
+)
+async def create_completion(
+    request: CompletionRequest,
+    ai_service: AIServiceDep,
+) -> CompletionResponse:
+    """Generate a text completion using the configured LLM provider."""
+    return await ai_service.complete(request)
+
+
+@router.post(
+    "/rag/query",
+    response_model=RAGQueryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Query knowledge base (RAG)",
+)
+async def rag_query(
+    request: RAGQueryRequest,
+    rag_service: RAGServiceDep,
+) -> RAGQueryResponse:
+    """Query the knowledge base using retrieval-augmented generation."""
+    return await rag_service.query(request)
+
+
+@router.post(
+    "/rag/ingest",
+    response_model=DocumentIngestResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ingest document into knowledge base",
+)
+async def ingest_document(
+    request: DocumentIngestRequest,
+    rag_service: RAGServiceDep,
+) -> DocumentIngestResponse:
+    """Ingest a document into the RAG knowledge base."""
+    return await rag_service.ingest(request.source)
+
+
+@router.post(
+    "/search",
+    response_model=VectorSearchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Semantic vector search",
+)
+async def vector_search(
+    request: VectorSearchRequest,
+    rag_service: RAGServiceDep,
+) -> VectorSearchResponse:
+    """Execute a semantic similarity search."""
+    return await rag_service.search(request)

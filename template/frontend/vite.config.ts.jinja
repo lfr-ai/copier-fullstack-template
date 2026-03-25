@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import tailwindcss from '@tailwindcss/vite';
 {%- if frontend_framework == "react" %}
 import react from '@vitejs/plugin-react';
 {%- endif %}
+import { visualizer } from 'rollup-plugin-visualizer';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
 plugins: [
@@ -11,28 +15,59 @@ tailwindcss(),
 {%- if frontend_framework == "react" %}
 react(),
 {%- endif %}
+// Bundle analysis — activate with ANALYZE=true environment variable
+...(process.env.ANALYZE === 'true'
+? [
+visualizer({
+filename: 'dist/stats.html',
+open: false,
+gzipSize: true,
+brotliSize: true,
+template: 'treemap',
+}),
+]
+: []),
 ],
 root: '.',
 build: {
 outDir: 'dist',
+sourcemap: true,
+target: 'es2022',
+cssMinify: 'lightningcss',
 rollupOptions: {
 input: {
-main: resolve(import.meta.dirname, 'index.html'),
+main: resolve(__dirname, 'index.html'),
+},
+output: {
+manualChunks: {
+{%- if frontend_framework == "react" %}
+'react-vendor': ['react', 'react-dom', 'react-router'],
+'query-vendor': ['@tanstack/react-query'],
+{%- elif frontend_framework == "lit" %}
+'lit-vendor': ['lit', '@lit-labs/router', '@lit/context', '@lit/task'],
+{%- endif %}
+'validation': ['zod'],
+},
 },
 },
 },
 resolve: {
 alias: {
-'@': resolve(import.meta.dirname, 'src'),
+'@': resolve(__dirname, 'src'),
 },
 },
 server: {
 port: 3000,
+strictPort: true,
 proxy: {
 '/api': {
 target: 'http://localhost:8000',
 changeOrigin: true,
 },
 },
+},
+preview: {
+port: 3001,
+strictPort: true,
 },
 });

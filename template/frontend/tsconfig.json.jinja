@@ -3,6 +3,8 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+
+    /* ── Strict type-checking (all enabled) ────────────── */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
@@ -10,6 +12,10 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "exactOptionalPropertyTypes": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "verbatimModuleSyntax": true,
+
+    /* ── Module interop ────────────────────────────────── */
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -18,12 +24,16 @@
     "noEmit": true,
     "sourceMap": true,
 {%- if frontend_framework == "react" %}
+
+    /* ── React JSX transform ───────────────────────────── */
     "jsx": "react-jsx",
 {%- endif %}
 {%- if frontend_framework == "lit" %}
-    "experimentalDecorators": true,
+
+    /* ── Lit standard TC39 decorators (TS 5.x+) ────────── */
     "useDefineForClassFields": false,
 {%- endif %}
+
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": {
       "@/*": ["./src/*"]

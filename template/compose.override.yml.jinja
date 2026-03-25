@@ -1,10 +1,11 @@
+{# Local development override — auto-loaded by Docker Compose.
+   For explicit CI/remote dev, use compose.dev.yml instead. -#}
 services:
   app:
     build:
       target: dev
     volumes:
       - ./backend/src:/app/src
-      - ./data:/app/data
       - ./logs:/app/logs
     environment:
       {{ project_slug | upper }}_ENVIRONMENT: local
@@ -16,6 +17,7 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
+    command: ["pnpm", "dev", "--host"]
 {%- if use_celery %}
 
   worker:
@@ -24,5 +26,7 @@ services:
     volumes:
       - ./backend/src:/app/src
     environment:
+      {{ project_slug | upper }}_ENVIRONMENT: local
       {{ project_slug | upper }}_DEBUG: "true"
+      {{ project_slug | upper }}_LOG_LEVEL: DEBUG
 {%- endif %}

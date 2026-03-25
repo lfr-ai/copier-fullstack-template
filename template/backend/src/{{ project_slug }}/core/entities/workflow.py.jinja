@@ -1,0 +1,104 @@
+"""Workflow domain entities — stateful agent graphs and execution traces."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import StrEnum, unique
+
+from {{ project_slug }}.core.entities.base import Entity, generate_id
+from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
+
+
+@unique
+class WorkflowStatus(StrEnum):
+    """Lifecycle states for a workflow execution."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+@unique
+class StepType(StrEnum):
+    """Type discriminator for workflow execution steps."""
+
+    AGENT = "agent"
+    TOOL_CALL = "tool_call"
+    LLM_CALL = "llm_call"
+    RETRIEVAL = "retrieval"
+    HUMAN_INPUT = "human_input"
+    ROUTING = "routing"
+    ERROR = "error"
+
+
+@dataclass(slots=True)
+class WorkflowStep:
+    """Single step in a workflow execution trace."""
+
+    id: str = field(default_factory=generate_id)
+    step_type: StepType = StepType.AGENT
+    agent_name: str = ""
+    input_data: dict[str, object] = field(default_factory=dict)
+    output_data: dict[str, object] = field(default_factory=dict)
+    duration_ms: float = 0.0
+    token_usage: dict[str, int] = field(default_factory=dict)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+
+
+@dataclass(slots=True)
+class WorkflowNode:
+    """Definition of a node in a workflow graph."""
+
+    name: str = ""
+    agent_type: str = ""
+    system_prompt: str = ""
+    description: str = ""
+    tools: list[str] = field(default_factory=list)
+    config: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class WorkflowEdge:
+    """Directed edge in a workflow graph defining agent transitions."""
+
+    source: str = ""
+    target: str = ""
+    condition: str = ""
+    metadata: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class Workflow(Entity):
+    """Domain entity representing a multi-agent workflow definition.
+
+    A workflow is a directed graph of agent nodes connected by
+    conditional edges. It can be compiled into a LangGraph
+    StateGraph for execution.
+    """
+
+    name: str = ""
+    description: str = ""
+    nodes: list[WorkflowNode] = field(default_factory=list)
+    edges: list[WorkflowEdge] = field(default_factory=list)
+    entrypoint: str = ""
+    max_iterations: int = DEFAULT_MAX_ITERATIONS
+    config: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class WorkflowExecution(Entity):
+    """Domain entity tracking a single execution of a workflow."""
+
+    workflow_id: str = ""
+    status: WorkflowStatus = WorkflowStatus.PENDING
+    goal: str = ""
+    answer: str = ""
+    steps: list[WorkflowStep] = field(default_factory=list)
+    total_token_usage: dict[str, int] = field(default_factory=dict)
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    error: str = ""

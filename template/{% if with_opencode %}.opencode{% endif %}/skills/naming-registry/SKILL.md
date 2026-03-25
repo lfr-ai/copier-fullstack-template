@@ -1,11 +1,15 @@
 ---
 name: naming-registry
-description: Manages the naming registry workflow for generating Python and TypeScript constants from naming_registry.json
+description:
+  Manages the naming registry workflow for generating Python and TypeScript constants
+  from naming_registry.json — guides registry edits, validation, code generation, and CI
+  gating
 license: MIT
 compatibility: opencode
 metadata:
   audience: developers
   workflow: codegen
+  layer: fullstack
 ---
 
 ## What I do
@@ -13,7 +17,7 @@ metadata:
 - Guide updates to `registry/naming_registry.json`
 - Validate registry structure against JSON Schema
 - Generate Python constants → `backend/src/<project>/core/registry_constants.py`
-- Generate TypeScript constants → `frontend/src/registryConstants.ts`
+- Generate TypeScript constants → `frontend/src/config/registry_constants.ts`
 - Generate env ports → `.env.ports`
 
 ## Workflow
@@ -45,6 +49,7 @@ metadata:
 ## When to use me
 
 Use this skill when:
+
 - Adding new API routes or endpoints
 - Adding new database fields or columns
 - Creating new enum types

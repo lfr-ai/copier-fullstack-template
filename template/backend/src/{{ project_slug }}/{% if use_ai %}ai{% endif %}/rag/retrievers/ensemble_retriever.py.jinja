@@ -1,0 +1,65 @@
+"""Ensemble retriever — weighted combination of multiple retriever strategies."""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
+from {{ project_slug }}.ai.rag.retrievers._rrf import reciprocal_rank_fusion
+from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_OVERSAMPLE_FACTOR: int = 2
+"""Fetch this many times top_k results before fusing/reranking."""
+
+
+class EnsembleRetriever(RetrieverPort):
+    """Ensemble retriever combining multiple strategies via RRF.
+
+    Uses Reciprocal Rank Fusion to merge ranked result lists
+    from multiple retrievers into a single unified ranking.
+
+    Args:
+        retrievers (list[tuple[RetrieverPort, float]]): (retriever, weight) tuples.
+    """
+
+    __slots__ = ("_retrievers",)
+
+    def __init__(self, *, retrievers: list[tuple[RetrieverPort, float]]) -> None:
+        if not retrievers:
+            msg = "At least one retriever is required"
+            raise ValueError(msg)
+        self._retrievers = retrievers
+
+    @override
+    async def retrieve(
+        self,
+        *,
+        query: str,
+        top_k: int = DEFAULT_GRAPH_NEIGHBOR_LIMIT,
+        filters: dict[str, object] | None = None,
+    ) -> list[RetrievedContext]:
+        """Retrieve and fuse results from all configured retrievers.
+
+        Args:
+            query (str): User query text.
+            top_k (int): Maximum number of results after fusion.
+            filters (dict[str, object] | None): Optional metadata filters passed to sub-retrievers.
+
+        Returns:
+            list[RetrievedContext]: Fused and re-ranked retrieved context.
+        """
+        ranked_lists: list[tuple[list[RetrievedContext], float]] = []
+        for retriever, weight in self._retrievers:
+            results = await retriever.retrieve(query=query, top_k=top_k * _OVERSAMPLE_FACTOR, filters=filters)
+            ranked_lists.append((results, weight))
+
+        fused = reciprocal_rank_fusion(ranked_lists, top_k=top_k)
+
+        logger.info(
+            "Ensemble retrieval complete: retrievers=%d results=%d",
+            len(self._retrievers),
+            len(fused),
+        )
+        return fused

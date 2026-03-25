@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from typing import BinaryIO
 
-__all__ = ["StoragePort"]
-
 
 @runtime_checkable
 class StoragePort(Protocol):
@@ -19,43 +17,17 @@ class StoragePort(Protocol):
     """
 
     async def upload(self, *, key: str, data: BinaryIO) -> str:
-        """Upload binary data under the given key.
-
-        Args:
-            key: Object key (path) in the storage backend.
-            data: Binary stream to upload.
-
-        Returns:
-            URI or path of the uploaded object.
-        """
+        """Upload binary data and return the URI or path of the stored object."""
         ...
 
     async def download(self, key: str) -> bytes:
-        """Download object by key and return raw bytes.
-
-        Args:
-            key: Object key (path) in the storage backend.
-
-        Returns:
-            Raw bytes of the downloaded object.
-        """
+        """Download object by key and return raw bytes."""
         ...
 
     async def delete(self, key: str) -> None:
-        """Delete object by key.
-
-        Args:
-            key: Object key (path) in the storage backend.
-        """
+        """Delete object by key."""
         ...
 
     async def exists(self, key: str) -> bool:
-        """Check whether an object exists.
-
-        Args:
-            key: Object key (path) in the storage backend.
-
-        Returns:
-            True if the object exists.
-        """
+        """Check whether an object exists."""
         ...

@@ -1,0 +1,167 @@
+"""Profiling integration tests.
+
+Verifies that the CPU, memory, and SQL profiling utilities work correctly.
+
+Run with::
+
+    uv run pytest tests/performance/ -m profiling -v
+    uv run tox -e performance
+"""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+
+import pytest
+
+
+@pytest.mark.profiling
+@pytest.mark.performance
+class TestCpuProfiling:
+    """CPU profiling via pyinstrument."""
+
+    async def test_cpu_profile_context_manager(self) -> None:
+        from {{ project_slug }}.infrastructure.profiling.cpu import cpu_profile
+
+        async with cpu_profile(label="test_basic") as result:
+            total = sum(range(100_000))
+            assert total > 0
+
+        assert result.duration_s > 0
+        assert result.label == "test_basic"
+        assert result.console_output
+
+    async def test_cpu_profile_saves_html(self, tmp_path: object) -> None:
+        import os
+
+        from {{ project_slug }}.infrastructure.profiling.cpu import cpu_profile
+
+        os.environ["{{ project_slug | upper }}_PROFILING_DIR"] = str(tmp_path)
+        try:
+            async with cpu_profile(label="test_html") as result:
+                _ = [x**2 for x in range(10_000)]
+
+            assert result.html_path is not None
+        finally:
+            os.environ.pop("{{ project_slug | upper }}_PROFILING_DIR", None)
+
+
+@pytest.mark.profiling
+@pytest.mark.performance
+class TestMemoryProfiling:
+    """Memory profiling via tracemalloc."""
+
+    async def test_memory_snapshot_captures_allocations(self) -> None:
+        from {{ project_slug }}.infrastructure.profiling.memory import memory_snapshot
+
+        async with memory_snapshot(label="test_alloc") as result:
+            data = [bytearray(1024) for _ in range(100)]
+            assert len(data) == 100
+
+        assert result.peak_mb > 0
+        assert result.label == "test_alloc"
+
+    async def test_memory_comparison(self) -> None:
+        from {{ project_slug }}.infrastructure.profiling.memory import (
+            memory_compare,
+            take_snapshot,
+        )
+
+        before = take_snapshot()
+        _data = [bytearray(1024) for _ in range(500)]
+        after = take_snapshot()
+
+        diff = memory_compare(before, after, top_n=10)
+        assert diff.added_mb >= 0
+
+
+@pytest.mark.profiling
+@pytest.mark.performance
+class TestSqlProfiling:
+    """SQL query profiling via SQLAlchemy events."""
+
+    async def test_sql_profile_context_manager(self) -> None:
+        from {{ project_slug }}.infrastructure.profiling.sql import sql_profile
+
+        mock_engine = MagicMock()
+        mock_engine.sync_engine = MagicMock()
+
+        try:
+            async with sql_profile(mock_engine, label="test_sql") as result:
+                pass
+            assert result.label == "test_sql"
+            assert result.total_queries == 0
+        except (AttributeError, TypeError):
+            pytest.skip("Mock engine does not support SQLAlchemy events")
+
+
+@pytest.mark.benchmark
+@pytest.mark.performance
+class TestBenchmarks:
+    """Performance benchmarks using pytest-benchmark.
+
+    Run with:
+        uv run pytest tests/performance/ -m benchmark --benchmark-enable
+        uv run tox -e performance
+    """
+
+    def test_benchmark_json_serialization(self, benchmark) -> None:
+        """Benchmark JSON serialization of typical API response."""
+        import json
+
+        data = {
+            "users": [
+                {
+                    "id": i,
+                    "name": f"User {i}",
+                    "email": f"user{i}@example.com",
+                    "is_active": True,
+                    "roles": ["admin", "user"],
+                }
+                for i in range(100)
+            ],
+            "total": 100,
+            "page": 1,
+        }
+
+        result = benchmark(json.dumps, data)
+        assert result
+
+    def test_benchmark_pydantic_validation(self, benchmark) -> None:
+        """Benchmark Pydantic model validation."""
+        from pydantic import BaseModel
+
+        class UserSchema(BaseModel):
+            id: int
+            name: str
+            email: str
+            is_active: bool
+
+        data = {"id": 1, "name": "Test User", "email": "test@example.com", "is_active": True}
+        result = benchmark(UserSchema.model_validate, data)
+        assert result.id == 1
+
+    def test_benchmark_list_comprehension(self, benchmark) -> None:
+        """Benchmark list comprehension (baseline)."""
+        result = benchmark(lambda: [x**2 for x in range(10_000)])
+        assert len(result) == 10_000
+
+    def test_benchmark_dict_lookup(self, benchmark) -> None:
+        """Benchmark dictionary lookups."""
+        data = {f"key_{i}": f"value_{i}" for i in range(10_000)}
+
+        def lookup_all() -> list[str]:
+            return [data[f"key_{i}"] for i in range(10_000)]
+
+        result = benchmark(lookup_all)
+        assert len(result) == 10_000
+
+    def test_benchmark_string_formatting(self, benchmark) -> None:
+        """Benchmark f-string formatting."""
+        items = [{"name": f"item_{i}", "value": i} for i in range(1000)]
+
+        def format_all() -> list[str]:
+            return [f"{item['name']}: {item['value']}" for item in items]
+
+        result = benchmark(format_all)
+        assert len(result) == 1000

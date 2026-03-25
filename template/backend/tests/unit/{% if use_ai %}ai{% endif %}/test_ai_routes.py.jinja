@@ -1,0 +1,92 @@
+"""Unit tests for AI API routes."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+
+from {{ project_slug }}.ai.models import CompletionResponse
+from {{ project_slug }}.ports.api.app import create_api_app
+
+
+@pytest.fixture
+def client() -> TestClient:
+    """Create a test client for the API."""
+    app = create_api_app()
+    return TestClient(app)
+
+
+class TestCompletionEndpoint:
+    """Tests for POST /api/v1/ai/completions."""
+
+    def test_completion_without_config_returns_501(self, client: TestClient) -> None:
+        """Should return 501 when AI service not configured."""
+        response = client.post(
+            "/api/v1/ai/completions",
+            json={"prompt": "Hello"},
+        )
+        assert response.status_code == 501
+
+    @patch("{{ project_slug }}.ports.container.get_container")
+    def test_completion_success(self, mock_container, client: TestClient) -> None:
+        """Should return completion response when AI service is available."""
+        mock_ai = AsyncMock()
+        mock_ai.complete.return_value = CompletionResponse(
+            content="Generated text",
+            model="gpt-4o",
+        )
+        mock_container.return_value.ai_service.return_value = mock_ai
+
+        response = client.post(
+            "/api/v1/ai/completions",
+            json={"prompt": "Hello"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["content"] == "Generated text"
+
+    def test_completion_empty_prompt_returns_422(self, client: TestClient) -> None:
+        """Should return 422 for empty prompt."""
+        response = client.post(
+            "/api/v1/ai/completions",
+            json={"prompt": ""},
+        )
+        assert response.status_code == 422
+
+
+class TestRAGEndpoint:
+    """Tests for POST /api/v1/ai/rag/query."""
+
+    def test_rag_query_without_config_returns_501(self, client: TestClient) -> None:
+        """Should return 501 when RAG service not configured."""
+        response = client.post(
+            "/api/v1/ai/rag/query",
+            json={"question": "What is AI?"},
+        )
+        assert response.status_code == 501
+
+
+class TestIngestEndpoint:
+    """Tests for POST /api/v1/ai/rag/ingest."""
+
+    def test_ingest_without_config_returns_501(self, client: TestClient) -> None:
+        """Should return 501 when RAG service not configured."""
+        response = client.post(
+            "/api/v1/ai/rag/ingest",
+            json={"source": "/path/to/doc.pdf"},
+        )
+        assert response.status_code == 501
+
+
+class TestSearchEndpoint:
+    """Tests for POST /api/v1/ai/search."""
+
+    def test_search_without_config_returns_501(self, client: TestClient) -> None:
+        """Should return 501 when search not configured."""
+        response = client.post(
+            "/api/v1/ai/search",
+            json={"query": "test search"},
+        )
+        assert response.status_code == 501

@@ -1,0 +1,63 @@
+"""Sentence-transformers embedding adapter — implements 'EmbeddingPort'.
+
+Uses local sentence-transformer models for embedding generation,
+running entirely on CPU without external API calls.
+
+Add 'sentence-transformers' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_SENTENCE_TRANSFORMER_MODEL
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class SentenceTransformerEmbeddingAdapter(EmbeddingPort):
+    """Embedding adapter backed by sentence-transformers (local inference)."""
+
+    __slots__ = ("_dimension", "_model", "_model_name")
+
+    def __init__(
+        self,
+        *,
+        model_name: str = DEFAULT_SENTENCE_TRANSFORMER_MODEL,
+    ) -> None:
+        try:
+            from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
+
+            self._model = SentenceTransformer(model_name)
+        except ImportError as exc:
+            msg = "sentence-transformers is required — pip install sentence-transformers"
+            raise ImportError(msg) from exc
+        self._model_name = model_name
+        self._dimension = self._model.get_sentence_embedding_dimension()
+        logger.info(
+            "SentenceTransformer loaded: %s (dim=%d)",
+            model_name,
+            self._dimension,
+        )
+
+    @property
+    @override
+    def model(self) -> str:
+        """Return the sentence-transformer model name."""
+        return self._model_name
+
+    @override
+    async def embed_text(self, text: str) -> list[float]:
+        embedding = await asyncio.to_thread(self._model.encode, text, convert_to_numpy=True)
+        return embedding.tolist()
+
+    @override
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        embeddings = await asyncio.to_thread(self._model.encode, texts, convert_to_numpy=True)
+        return embeddings.tolist()
+
+    @property
+    @override
+    def dimension(self) -> int:
+        return self._dimension

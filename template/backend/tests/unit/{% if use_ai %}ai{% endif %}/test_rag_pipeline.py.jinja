@@ -1,0 +1,186 @@
+"""Unit tests for RAG ingestion and retrieval pipelines."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from {{ project_slug }}.ai.rag.ingestion import IngestionPipeline
+from {{ project_slug }}.ai.rag.retrieval import RetrievalPipeline
+from {{ project_slug }}.core.entities.document import Chunk, Document
+from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult
+
+
+@pytest.fixture
+def mock_loader() -> AsyncMock:
+    """Mock DocumentLoaderPort."""
+    loader = AsyncMock()
+    loader.load.return_value = [
+        Document(content="Test document content.", source="test.txt"),
+    ]
+    return loader
+
+
+@pytest.fixture
+def mock_splitter() -> MagicMock:
+    """Mock TextSplitterPort."""
+    splitter = MagicMock()
+
+    def split_fn(doc: Document) -> list[Chunk]:
+        return [
+            Chunk(document_id=doc.id, content="chunk 1", index=0),
+            Chunk(document_id=doc.id, content="chunk 2", index=1),
+        ]
+
+    splitter.split.side_effect = split_fn
+    return splitter
+
+
+@pytest.fixture
+def mock_embedding() -> AsyncMock:
+    """Mock EmbeddingPort."""
+    embedding = AsyncMock()
+    embedding.embed_texts.return_value = [[0.1] * 8, [0.2] * 8]
+    embedding.embed_text.return_value = [0.1] * 8
+    embedding.dimension = 8
+    return embedding
+
+
+@pytest.fixture
+def mock_vector_store() -> AsyncMock:
+    """Mock VectorStorePort."""
+    store = AsyncMock()
+    store.add_vectors.return_value = None
+    store.search.return_value = [
+        VectorSearchResult(id="chunk-1", score=0.95, metadata={"content": "relevant text"}),
+    ]
+    return store
+
+
+@pytest.fixture
+def mock_llm() -> AsyncMock:
+    """Mock LLMPort."""
+    llm = AsyncMock()
+    llm.complete.return_value = "Generated answer based on context."
+    return llm
+
+
+class TestIngestionPipeline:
+    """Tests for the ingestion pipeline."""
+
+    @pytest.mark.asyncio
+    async def test_ingest_processes_documents(
+        self,
+        mock_loader: AsyncMock,
+        mock_splitter: MagicMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Ingestion should load, split, embed, and store."""
+        pipeline = IngestionPipeline(
+            loader=mock_loader,
+            splitter=mock_splitter,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        chunks = await pipeline.ingest("test.txt")
+
+        assert len(chunks) == 2
+        mock_loader.load.assert_awaited_once_with("test.txt")
+        mock_splitter.split.assert_called_once()
+        mock_embedding.embed_texts.assert_awaited_once()
+        mock_vector_store.add_vectors.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_ingest_stores_embeddings_on_chunks(
+        self,
+        mock_loader: AsyncMock,
+        mock_splitter: MagicMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Chunks should receive their embedding vectors."""
+        pipeline = IngestionPipeline(
+            loader=mock_loader,
+            splitter=mock_splitter,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        chunks = await pipeline.ingest("test.txt")
+
+        assert chunks[0].embedding == [0.1] * 8
+        assert chunks[1].embedding == [0.2] * 8
+
+
+class TestRetrievalPipeline:
+    """Tests for the retrieval pipeline."""
+
+    @pytest.mark.asyncio
+    async def test_query_returns_answer_with_sources(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """RAG query should embed, search, and generate answer."""
+        pipeline = RetrievalPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        result = await pipeline.query("What is the answer?")
+
+        assert result.answer == "Generated answer based on context."
+        assert len(result.sources) == 1
+        assert result.sources[0].id == "chunk-1"
+        mock_embedding.embed_text.assert_awaited_once_with("What is the answer?")
+        mock_vector_store.search.assert_awaited_once()
+        mock_llm.complete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_query_without_graph(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Query without graph should still work."""
+        pipeline = RetrievalPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        result = await pipeline.query("question", use_graph=False)
+
+        assert result.graph_context == []
+        assert result.answer
+
+    @pytest.mark.asyncio
+    async def test_query_with_graph_enrichment(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Query with knowledge graph should include graph context."""
+        mock_kg = AsyncMock()
+        mock_kg.query_neighbors.return_value = [
+            {"entity": "related_item", "outgoing": {}, "incoming": {}},
+        ]
+
+        pipeline = RetrievalPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+            knowledge_graph=mock_kg,
+        )
+
+        result = await pipeline.query("question", use_graph=True)
+
+        assert len(result.graph_context) == 1
+        mock_kg.query_neighbors.assert_awaited_once()

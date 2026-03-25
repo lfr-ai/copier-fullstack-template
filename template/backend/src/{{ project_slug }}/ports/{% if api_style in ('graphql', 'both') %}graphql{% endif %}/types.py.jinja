@@ -1,0 +1,111 @@
+"""Strawberry GraphQL object types."""
+
+from __future__ import annotations
+
+import strawberry
+
+
+@strawberry.type(description="Application user account.")
+class UserType:
+    """GraphQL representation of a user."""
+
+    id: strawberry.ID
+    email: str
+    display_name: str
+    is_active: bool
+
+
+@strawberry.type(description="Health status of a single dependency.")
+class DependencyHealthType:
+    """GraphQL representation of a dependency health probe."""
+
+    name: str
+    status: str
+    latency_ms: float | None = None
+    message: str | None = None
+
+
+@strawberry.type(description="Aggregate health check result.")
+class HealthType:
+    """GraphQL representation of application health."""
+
+    status: str
+    version: str
+    dependencies: list[DependencyHealthType]
+
+
+@strawberry.input(description="Input for creating a new user.")
+class CreateUserInput:
+    """GraphQL input type for user creation."""
+
+    email: str
+    display_name: str
+    password: str
+
+
+@strawberry.type(description="Paginated list of users.")
+class UserConnection:
+    """Relay-style connection for paginated user lists."""
+
+    items: list[UserType]
+    total: int
+    offset: int
+    limit: int
+    has_more: bool
+{%- if use_ai %}
+
+
+@strawberry.input(description="Input for an AI completion request.")
+class CompletionInput:
+    """GraphQL input for AI text completion."""
+
+    prompt: str
+    max_tokens: int | None = None
+    temperature: float | None = None
+
+
+@strawberry.type(description="AI completion response.")
+class CompletionResult:
+    """GraphQL result for an AI completion."""
+
+    text: str
+    model: str
+    tokens_used: int | None = None
+{%- endif %}
+{%- if use_rag %}
+
+_DEFAULT_RAG_TOP_K: int = 5
+
+
+@strawberry.input(description="Input for a RAG query.")
+class RAGQueryInput:
+    """GraphQL input for Retrieval-Augmented Generation."""
+
+    query: str
+    top_k: int | None = _DEFAULT_RAG_TOP_K
+
+
+@strawberry.type(description="A single retrieved document chunk.")
+class RetrievedChunk:
+    """GraphQL type for a RAG-retrieved chunk."""
+
+    content: str
+    score: float | None = None
+    source: str | None = None
+
+
+@strawberry.type(description="RAG query response.")
+class RAGResult:
+    """GraphQL result for a RAG query."""
+
+    answer: str
+    chunks: list[RetrievedChunk]
+{%- endif %}
+
+
+@strawberry.type(description="Mutation outcome with success flag and optional error message.")
+class MutationResult:
+    """Generic mutation result envelope."""
+
+    success: bool
+    message: str | None = None

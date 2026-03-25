@@ -1,0 +1,47 @@
+"""Reciprocal Rank Fusion (RRF) utility shared across retrievers."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
+from {{ project_slug }}.core.interfaces.retriever import RetrievedContext
+_RRF_K: int = 60
+"""Standard RRF constant from the original paper."""
+
+_DOC_KEY_TRUNCATE_LEN: int = 100
+"""Truncation length for content-based document keys."""
+
+
+def reciprocal_rank_fusion(
+    ranked_lists: list[tuple[list[RetrievedContext], float]],
+    *,
+    top_k: int = DEFAULT_GRAPH_NEIGHBOR_LIMIT,
+) -> list[RetrievedContext]:
+    """Merge multiple ranked result lists using weighted RRF.
+
+    Args:
+        ranked_lists (list[tuple[list[RetrievedContext], float]]): (results, weight) tuples from each retriever.
+        top_k (int): Maximum number of results to return.
+
+    Returns:
+        list[RetrievedContext]: Fused and re-ranked results.
+    """
+    rrf_scores: dict[str, float] = {}
+    rrf_docs: dict[str, RetrievedContext] = {}
+
+    for results, weight in ranked_lists:
+        for rank, result in enumerate(results):
+            doc_key = result.id or result.content[:_DOC_KEY_TRUNCATE_LEN]
+            rrf_scores[doc_key] = rrf_scores.get(doc_key, 0.0) + weight / (_RRF_K + rank + 1)
+            if doc_key not in rrf_docs:
+                rrf_docs[doc_key] = result
+
+    sorted_keys = sorted(rrf_scores, key=lambda k: rrf_scores[k], reverse=True)
+    return [
+        RetrievedContext(
+            id=rrf_docs[key].id,
+            score=rrf_scores[key],
+            content=rrf_docs[key].content,
+            metadata=rrf_docs[key].metadata,
+        )
+        for key in sorted_keys[:top_k]
+    ]

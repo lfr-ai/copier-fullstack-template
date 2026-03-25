@@ -1,0 +1,54 @@
+"""Unit tests for AI services."""
+{%- if use_ai %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock
+
+import pytest
+
+from {{ project_slug }}.ai.models import CompletionRequest, CompletionResponse
+from {{ project_slug }}.ai.services import AIService
+
+pytestmark = pytest.mark.asyncio
+
+
+class TestAIService:
+    """Test suite for AIService."""
+
+    async def test_complete_returns_response(self, mock_llm: AsyncMock) -> None:
+        """Verify completion returns expected response structure."""
+        service = AIService(llm=mock_llm)
+        request = CompletionRequest(prompt="Hello")
+
+        result = await service.complete(request)
+
+        assert isinstance(result, CompletionResponse)
+        assert result.content == "Mock LLM response"
+        mock_llm.complete.assert_awaited_once()
+
+    async def test_complete_propagates_parameters(self, mock_llm: AsyncMock) -> None:
+        """Verify completion forwards max_tokens and temperature."""
+        service = AIService(llm=mock_llm)
+        request = CompletionRequest(prompt="Test", max_tokens=100, temperature=0.5)
+
+        await service.complete(request)
+
+        mock_llm.complete.assert_awaited_once_with(
+            prompt="Test",
+            system_prompt=None,
+            max_tokens=100,
+            temperature=0.5,
+        )
+
+    async def test_complete_raises_on_llm_error(self, mock_llm: AsyncMock) -> None:
+        """Verify exceptions from LLM are propagated."""
+        mock_llm.complete.side_effect = RuntimeError("API error")
+        service = AIService(llm=mock_llm)
+        request = CompletionRequest(prompt="Fail")
+
+        with pytest.raises(RuntimeError, match="API error"):
+            await service.complete(request)
+{%- else %}
+# AI tests are only generated when use_ai is enabled.
+{%- endif %}

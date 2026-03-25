@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-__all__ = ["check_database_health"]
-
 import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,10 +13,10 @@ async def check_database_health(session: AsyncSession) -> bool:
     """Check if the database is reachable and responding.
 
     Args:
-        session (AsyncSession): An async database session.
+        session (AsyncSession): Active SQLAlchemy async session.
 
     Returns:
-        bool: True if the database responds to a simple query, False otherwise.
+        bool: 'True' if the database responds to a test query.
     """
     try:
         result = await session.execute(text("SELECT 1"))

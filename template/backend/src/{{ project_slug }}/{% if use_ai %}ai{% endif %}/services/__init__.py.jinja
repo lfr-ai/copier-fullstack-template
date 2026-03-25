@@ -1,0 +1,13 @@
+"""AI application services — orchestrate LLM, RAG, and vector search.
+
+These services sit in the application layer and depend on domain
+ports ('LLMPort', 'EmbeddingPort', 'VectorStorePort', etc.).
+Concrete adapters are injected at composition root.
+"""
+
+from __future__ import annotations
+
+from {{ project_slug }}.ai.services.ai_service import AIService
+from {{ project_slug }}.ai.services.rag_service import RAGService
+
+__all__ = ["AIService", "RAGService"]

@@ -1,0 +1,32 @@
+{
+  "threshold": 5,
+  "minLines": 5,
+  "minTokens": 50,
+  "reporters": ["console"],
+  "ignore": [
+    "node_modules",
+    "dist",
+    "build",
+    ".venv",
+    "__pycache__",
+    "*.egg-info",
+    ".tox",
+    ".git",
+    "*.lock",
+    "*.min.js",
+    "*.min.css",
+    "pnpm-lock.yaml",
+    "uv.lock",
+    "package-lock.json",
+    "alembic/versions",
+    "htmlcov",
+    "coverage",
+    ".lycheecache",
+    "logs/**"
+  ],
+  "format": ["python", "typescript", "javascript", "markup", "css"],
+  "absolute": true,
+  "gitignore": true,
+  "blame": false,
+  "exitCode": 1
+}

@@ -7,55 +7,25 @@ from typing import Protocol, runtime_checkable
 from {{ project_slug }}.core.constants import DEFAULT_LIST_LIMIT
 from {{ project_slug }}.core.entities.base import Entity
 
-__all__ = ["Repository"]
-
 
 @runtime_checkable
 class Repository[EntityT: Entity](Protocol):
     """Generic repository protocol for entity persistence."""
 
     async def get_by_id(self, entity_id: str) -> EntityT | None:
-        """Retrieve entity by unique identifier.
-
-        Args:
-            entity_id (str): Unique entity identifier.
-
-        Returns:
-            EntityT | None: Entity instance or None if not found.
-        """
+        """Retrieve entity by unique identifier."""
         ...
 
     async def add(self, entity: EntityT) -> EntityT:
-        """Persist new entity.
-
-        Args:
-            entity (EntityT): Entity instance to persist.
-
-        Returns:
-            EntityT: Persisted entity with generated fields populated.
-        """
+        """Persist new entity."""
         ...
 
     async def update(self, entity: EntityT) -> EntityT:
-        """Update existing entity.
-
-        Args:
-            entity (EntityT): Entity instance with updated fields.
-
-        Returns:
-            EntityT: Updated entity instance.
-        """
+        """Update existing entity."""
         ...
 
     async def delete(self, entity_id: str) -> bool:
-        """Remove entity by identifier.
-
-        Args:
-            entity_id (str): Unique entity identifier.
-
-        Returns:
-            bool: True if entity was deleted, False if not found.
-        """
+        """Remove entity by identifier."""
         ...
 
     async def list_all(
@@ -64,13 +34,5 @@ class Repository[EntityT: Entity](Protocol):
         offset: int = 0,
         limit: int = DEFAULT_LIST_LIMIT,
     ) -> list[EntityT]:
-        """Retrieve paginated list of entities.
-
-        Args:
-            offset (int): Number of records to skip.
-            limit (int): Maximum records to return.
-
-        Returns:
-            list[EntityT]: List of entity instances.
-        """
+        """Retrieve paginated list of entities."""
         ...

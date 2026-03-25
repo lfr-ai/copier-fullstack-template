@@ -1,0 +1,248 @@
+#!/usr/bin/env zsh
+# ─────────────────────────────────────────────────────────────
+#  {{ project_name }} — SSH / SFTP Rollback
+#
+#  Reverses changes made by setup-ssh.zsh. All destructive
+#  actions require explicit confirmation.
+#
+#  Usage:
+#    zsh scripts/ssh/rollback-ssh.zsh [OPTIONS]
+#
+#  Options:
+#    --key-name <name>        Key filename (default: id_ed25519)
+#    --remote-host <host>     Remove key from this remote host
+#    --remote-user <user>     Remote user (default: current user)
+#    --remote-port <port>     Remote SSH port (default: 22)
+#    --remove-keys            Delete the generated key pair
+#    --remove-authorized      Remove key from local authorized_keys
+#    --remove-sshd-config     Remove project sshd config block
+#    --remove-sftp-json       Delete .vscode/sftp.json
+#    --remove-ssh-config      Remove project entry from ~/.ssh/config
+#    --remove-sftp-user <u>   Remove SFTP-only user (requires root)
+#    --all                    Perform all removals
+#    --dry-run                Show what would be done
+#    --non-interactive        Skip confirmation prompts
+#    --help                   Show this help
+# ─────────────────────────────────────────────────────────────
+emulate -L zsh
+setopt PIPE_FAIL NO_UNSET
+
+readonly SCRIPT_DIR="${0:A:h}"
+readonly PROJECT_ROOT="${SCRIPT_DIR:h:h}"
+readonly RED=$'\033[0;31m'
+readonly YELLOW=$'\033[0;33m'
+readonly GREEN=$'\033[0;32m'
+readonly CYAN=$'\033[0;36m'
+readonly BOLD=$'\033[1m'
+readonly RESET=$'\033[0m'
+
+KEY_NAME="id_ed25519"
+REMOTE_HOST=""
+REMOTE_USER="${USER}"
+REMOTE_PORT=22
+REMOVE_KEYS=false
+REMOVE_AUTH=false
+REMOVE_SSHD=false
+REMOVE_SFTP_JSON=false
+REMOVE_SSH_CONFIG=false
+REMOVE_SFTP_USER=""
+DRY_RUN=false
+NON_INTERACTIVE=false
+
+log_info()  { print "${CYAN}[INFO]${RESET}  $*" }
+log_ok()    { print "${GREEN}[OK]${RESET}    $*" }
+log_warn()  { print "${YELLOW}[WARN]${RESET}  $*" >&2 }
+log_error() { print "${RED}[ERROR]${RESET} $*" >&2 }
+log_dry()   { print "${YELLOW}[DRY-RUN]${RESET} $*" }
+
+confirm() {
+  if [[ "${NON_INTERACTIVE}" == "true" ]]; then return 0; fi
+  print -n "${YELLOW}$1 [y/N]:${RESET} "
+  read -r answer
+  [[ "${answer}" =~ ^[yY] ]]
+}
+
+while (( $# )); do
+  case "$1" in
+    --key-name)           KEY_NAME="$2"; shift 2 ;;
+    --remote-host)        REMOTE_HOST="$2"; shift 2 ;;
+    --remote-user)        REMOTE_USER="$2"; shift 2 ;;
+    --remote-port)        REMOTE_PORT="$2"; shift 2 ;;
+    --remove-keys)        REMOVE_KEYS=true; shift ;;
+    --remove-authorized)  REMOVE_AUTH=true; shift ;;
+    --remove-sshd-config) REMOVE_SSHD=true; shift ;;
+    --remove-sftp-json)   REMOVE_SFTP_JSON=true; shift ;;
+    --remove-ssh-config)  REMOVE_SSH_CONFIG=true; shift ;;
+    --remove-sftp-user)   REMOVE_SFTP_USER="$2"; shift 2 ;;
+    --all)
+      REMOVE_KEYS=true; REMOVE_AUTH=true; REMOVE_SSHD=true
+      REMOVE_SFTP_JSON=true; REMOVE_SSH_CONFIG=true; shift ;;
+    --dry-run)            DRY_RUN=true; shift ;;
+    --non-interactive)    NON_INTERACTIVE=true; shift ;;
+    --help)               head -n 27 "$0" | tail -n +2 | sed 's/^# *//'; exit 0 ;;
+    *)                    log_error "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+print "${BOLD}=== SSH/SFTP Rollback ===${RESET}"
+print ""
+
+# ── Remove key pair ─────────────────────────────────────────
+if [[ "${REMOVE_KEYS}" == "true" ]]; then
+  key_path="${HOME}/.ssh/${KEY_NAME}"
+  if [[ -f "${key_path}" ]]; then
+    if confirm "Delete private key ${key_path}?"; then
+      if [[ "${DRY_RUN}" == "true" ]]; then
+        log_dry "Would delete: ${key_path} and ${key_path}.pub"
+      else
+        rm -f "${key_path}" "${key_path}.pub"
+        log_ok "Deleted key pair: ${key_path}"
+      fi
+    fi
+  else
+    log_info "Key not found: ${key_path} (nothing to remove)"
+  fi
+fi
+
+# ── Remove from local authorized_keys ──────────────────────
+if [[ "${REMOVE_AUTH}" == "true" ]]; then
+  auth_keys="${HOME}/.ssh/authorized_keys"
+  pub_key_path="${HOME}/.ssh/${KEY_NAME}.pub"
+  if [[ -f "${auth_keys}" && -f "${pub_key_path}" ]]; then
+    pub_key="$(<"${pub_key_path}")"
+    if grep -qF "${pub_key}" "${auth_keys}" 2>/dev/null; then
+      if confirm "Remove key from ${auth_keys}?"; then
+        if [[ "${DRY_RUN}" == "true" ]]; then
+          log_dry "Would remove key entry from ${auth_keys}"
+        else
+          grep -vF "${pub_key}" "${auth_keys}" > "${auth_keys}.tmp" || true
+          mv "${auth_keys}.tmp" "${auth_keys}"
+          chmod 600 "${auth_keys}"
+          log_ok "Key removed from ${auth_keys}"
+        fi
+      fi
+    else
+      log_info "Key not found in ${auth_keys}"
+    fi
+  fi
+fi
+
+# ── Remove sshd config block ───────────────────────────────
+if [[ "${REMOVE_SSHD}" == "true" ]]; then
+  marker="# BEGIN {{ project_slug }} SSH config"
+  end_marker="# END {{ project_slug }} SSH config"
+
+  # Check drop-in
+  drop_in="/etc/ssh/sshd_config.d/90-{{ project_slug }}.conf"
+  if [[ -f "${drop_in}" ]]; then
+    if confirm "Remove sshd drop-in config ${drop_in}?"; then
+      if [[ "${DRY_RUN}" == "true" ]]; then
+        log_dry "Would delete: ${drop_in}"
+      else
+        rm -f "${drop_in}"
+        log_ok "Removed: ${drop_in}"
+      fi
+    fi
+  fi
+
+  # Check main config
+  sshd_config="/etc/ssh/sshd_config"
+  if [[ -f "${sshd_config}" ]] && grep -qF "${marker}" "${sshd_config}"; then
+    if confirm "Remove project config block from ${sshd_config}?"; then
+      if [[ "${DRY_RUN}" == "true" ]]; then
+        log_dry "Would remove config block from ${sshd_config}"
+      else
+        sed -i.bak "/${marker}/,/${end_marker}/d" "${sshd_config}"
+        log_ok "Config block removed from ${sshd_config}"
+        log_info "Backup: ${sshd_config}.bak"
+        if sshd -t 2>/dev/null; then
+          systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+          log_ok "sshd reloaded"
+        else
+          log_warn "sshd config validation failed after removal"
+        fi
+      fi
+    fi
+  fi
+fi
+
+# ── Remove SSH config entry ─────────────────────────────────
+if [[ "${REMOVE_SSH_CONFIG}" == "true" ]]; then
+  ssh_config="${HOME}/.ssh/config"
+  host_alias="{{ project_slug }}-${REMOTE_HOST:-*}"
+  if [[ -f "${ssh_config}" ]]; then
+    # Remove the project's Host block
+    if grep -q "# {{ project_name }}" "${ssh_config}" 2>/dev/null; then
+      if confirm "Remove project SSH config entry from ${ssh_config}?"; then
+        if [[ "${DRY_RUN}" == "true" ]]; then
+          log_dry "Would remove project entry from ${ssh_config}"
+        else
+          # Remove block from "# {{ project_name }}" to next blank line
+          awk '/^# {{ project_name }}/{skip=1; next} /^$/{if(skip){skip=0; next}} !skip' \
+            "${ssh_config}" > "${ssh_config}.tmp"
+          mv "${ssh_config}.tmp" "${ssh_config}"
+          chmod 600 "${ssh_config}"
+          log_ok "SSH config entry removed"
+        fi
+      fi
+    else
+      log_info "No project entry in ${ssh_config}"
+    fi
+  fi
+fi
+
+# ── Remove .vscode/sftp.json ───────────────────────────────
+if [[ "${REMOVE_SFTP_JSON}" == "true" ]]; then
+  sftp_json="${PROJECT_ROOT}/.vscode/sftp.json"
+  if [[ -f "${sftp_json}" ]]; then
+    if confirm "Delete ${sftp_json}?"; then
+      if [[ "${DRY_RUN}" == "true" ]]; then
+        log_dry "Would delete: ${sftp_json}"
+      else
+        rm -f "${sftp_json}"
+        log_ok "Deleted: ${sftp_json}"
+      fi
+    fi
+  else
+    log_info "sftp.json not found"
+  fi
+fi
+
+# ── Remove SFTP-only user ──────────────────────────────────
+if [[ -n "${REMOVE_SFTP_USER}" ]]; then
+  if (( EUID != 0 )); then
+    log_error "Removing user requires root"
+  elif id "${REMOVE_SFTP_USER}" &>/dev/null; then
+    if confirm "Delete user ${REMOVE_SFTP_USER} and their home directory?"; then
+      if [[ "${DRY_RUN}" == "true" ]]; then
+        log_dry "Would delete user: ${REMOVE_SFTP_USER}"
+      else
+        userdel -r "${REMOVE_SFTP_USER}" 2>/dev/null || true
+        log_ok "User ${REMOVE_SFTP_USER} removed"
+      fi
+    fi
+  else
+    log_info "User ${REMOVE_SFTP_USER} does not exist"
+  fi
+fi
+
+# ── Remove from remote authorized_keys ─────────────────────
+if [[ -n "${REMOTE_HOST}" && "${REMOVE_AUTH}" == "true" ]]; then
+  pub_key_path="${HOME}/.ssh/${KEY_NAME}.pub"
+  if [[ -f "${pub_key_path}" ]]; then
+    if confirm "Remove key from ${REMOTE_USER}@${REMOTE_HOST} authorized_keys?"; then
+      if [[ "${DRY_RUN}" == "true" ]]; then
+        log_dry "Would remove key from remote authorized_keys"
+      else
+        pub_key="$(<"${pub_key_path}")"
+        escaped=$(printf '%s\n' "${pub_key}" | sed 's/[[\.*^$()+?{|]/\\&/g')
+        ssh -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" \
+          "sed -i '/${escaped}/d' ~/.ssh/authorized_keys" 2>/dev/null || true
+        log_ok "Key removed from remote authorized_keys"
+      fi
+    fi
+  fi
+fi
+
+print ""
+print "${BOLD}Rollback complete.${RESET}"

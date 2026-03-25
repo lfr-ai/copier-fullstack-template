@@ -1,0 +1,439 @@
+# SSH & SFTP Setup Guide
+
+Complete guide for setting up SSH access, SFTP file transfer, and VS Code
+remote development for {{ project_name }}.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Supported Platforms](#supported-platforms)
+- [Setup Modes](#setup-modes)
+- [Key Management](#key-management)
+- [Server Setup](#server-setup)
+- [SFTP Configuration](#sftp-configuration)
+- [VS Code SFTP Extension](#vs-code-sftp-extension)
+- [Windows Admin vs Standard User](#windows-admin-vs-standard-user)
+- [Security Hardening](#security-hardening)
+- [Troubleshooting](#troubleshooting)
+- [Key Rotation](#key-rotation)
+- [Rollback & Uninstall](#rollback--uninstall)
+- [Verification Checklist](#verification-checklist)
+
+---
+
+## Overview
+
+The SSH/SFTP scripts provide:
+
+- **Key generation** — Ed25519 (preferred) or RSA key pairs with passphrase
+- **Key installation** — local and remote authorized\_keys management
+- **Server setup** — openssh-server installation and configuration
+- **SFTP enablement** — internal-sftp subsystem configuration
+- **VS Code integration** — `.vscode/sftp.json` scaffold generation
+- **Hardening** — production-ready sshd hardening config
+- **Validation** — standalone verification of the entire setup
+- **Rollback** — safe, explicit undo of all changes
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Client Machine                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐ │
+│  │ SSH Key Pair  │  │ ~/.ssh/config│  │ .vscode/sftp.json  │ │
+│  │ (private+pub) │  │ (host alias) │  │ (SFTP extension)   │ │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬───────────┘ │
+│         └──────────────────┼───────────────────┘             │
+│                            │                                 │
+│                   SSH / SFTP connection                       │
+│                            │                                 │
+└────────────────────────────┼─────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Server Machine                                              │
+│  ┌────────────────┐  ┌───────────────┐  ┌────────────────┐  │
+│  │ sshd service   │  │ authorized_   │  │ sshd_config    │  │
+│  │ (OpenSSH)      │  │ keys          │  │ (hardened)     │  │
+│  └────────────────┘  └───────────────┘  └────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## Prerequisites
+
+| Requirement | Linux/macOS | Windows |
+|---|---|---|
+| SSH client | `openssh-client` (usually pre-installed) | Windows OpenSSH Client (built-in on Win10+) |
+| SSH server (server mode) | `openssh-server` | OpenSSH Server Windows Capability |
+| Shell | Zsh | PowerShell 5.1+ |
+
+The scripts detect and install missing components when `--install-server` is used.
+
+## Quick Start
+
+### I want to connect to a remote server (client mode)
+
+```bash
+# Linux / macOS
+zsh scripts/ssh/setup-ssh.zsh \
+  --mode client \
+  --remote-host myserver.example.com \
+  --remote-user deploy
+```
+
+```powershell
+# Windows
+.\scripts\ssh\setup-ssh.ps1 `
+  -Mode Client `
+  -RemoteHost myserver.example.com `
+  -RemoteUser deploy
+```
+
+This will:
+1. Create `~/.ssh` with correct permissions
+2. Generate an Ed25519 key pair (with passphrase prompt)
+3. Install the public key on the remote server (asks for password once)
+4. Generate `~/.ssh/config` entry for easy access
+5. Generate `.vscode/sftp.json` for the project
+6. Validate the connection
+
+### I want to accept SSH/SFTP connections (server mode)
+
+```bash
+# Linux / macOS (requires root)
+sudo zsh scripts/ssh/setup-ssh.zsh \
+  --mode server \
+  --harden \
+  --install-server
+```
+
+```powershell
+# Windows (requires Administrator)
+.\scripts\ssh\setup-ssh.ps1 `
+  -Mode Server `
+  -Harden `
+  -InstallServer
+```
+
+### I want to do both
+
+```bash
+sudo zsh scripts/ssh/setup-ssh.zsh --mode both --harden --install-server
+```
+
+## Supported Platforms
+
+| Platform | Client | Server | Script |
+|---|---|---|---|
+| Ubuntu / Debian | Yes | Yes | `setup-ssh.zsh` |
+| Fedora / RHEL / CentOS | Yes | Yes | `setup-ssh.zsh` |
+| Arch Linux | Yes | Yes | `setup-ssh.zsh` |
+| macOS | Yes | Yes (System Preferences) | `setup-ssh.zsh` |
+| Windows 10/11 (Standard) | Yes | Yes | `setup-ssh.ps1` |
+| Windows 10/11 (Admin) | Yes | Yes | `setup-ssh.ps1` |
+
+## Setup Modes
+
+### Client
+
+Prepares the local machine to **connect to** remote servers.
+
+- Generates SSH key pair
+- Installs public key on remote host (if `--remote-host` is given)
+- Creates SSH client config entry
+- Generates VS Code SFTP config
+
+### Server
+
+Prepares the local machine to **accept** SSH/SFTP connections.
+
+- Installs `openssh-server` (if `--install-server`)
+- Configures sshd for SFTP support
+- Applies hardening (if `--harden`)
+- Installs public keys into `authorized_keys`
+- Sets up SFTP-only user (if `--sftp-only-user`)
+
+### Both
+
+Runs both client and server setup. Useful when the machine is both
+a workstation and a development server.
+
+## Key Management
+
+### Generation
+
+```bash
+# Default: Ed25519 with passphrase
+zsh scripts/ssh/setup-ssh.zsh --mode client
+
+# RSA 4096-bit (for legacy compatibility)
+zsh scripts/ssh/setup-ssh.zsh --mode client --key-type rsa
+
+# Custom key name
+zsh scripts/ssh/setup-ssh.zsh --mode client --key-name id_deploy
+
+# Without passphrase (CI/automation only — NOT recommended)
+zsh scripts/ssh/setup-ssh.zsh --mode client --no-passphrase
+```
+
+### Where keys are stored
+
+| Platform | Private key | Public key |
+|---|---|---|
+| Linux/macOS | `~/.ssh/id_ed25519` | `~/.ssh/id_ed25519.pub` |
+| Windows | `%USERPROFILE%\.ssh\id_ed25519` | `%USERPROFILE%\.ssh\id_ed25519.pub` |
+
+### Loading into ssh-agent
+
+```bash
+# Linux / macOS
+eval $(ssh-agent)
+ssh-add ~/.ssh/id_ed25519
+
+# Windows (PowerShell — run as Administrator once)
+Get-Service ssh-agent | Set-Service -StartupType Automatic
+Start-Service ssh-agent
+ssh-add $env:USERPROFILE\.ssh\id_ed25519
+```
+
+## Server Setup
+
+### Linux (systemd)
+
+```bash
+sudo zsh scripts/ssh/setup-ssh.zsh --mode server --install-server --harden
+
+# Verify
+sudo systemctl status sshd
+sudo sshd -t  # config validation
+```
+
+### macOS
+
+macOS does not use a package manager for SSH server. Instead:
+
+1. Open **System Preferences** → **Sharing** → **Remote Login**
+2. Run `setup-ssh.zsh --mode server --harden` to write the config
+
+### Windows
+
+```powershell
+# Administrator PowerShell
+.\scripts\ssh\setup-ssh.ps1 -Mode Server -InstallServer -Harden
+
+# Verify
+Get-Service sshd
+```
+
+## SFTP Configuration
+
+The setup scripts configure `internal-sftp` as the SFTP subsystem.
+This is the recommended approach because:
+
+- It runs in-process (no additional binary)
+- It supports `ChrootDirectory` for restricted users
+- It's maintained as part of OpenSSH
+
+### SFTP-only restricted user
+
+```bash
+sudo zsh scripts/ssh/setup-ssh.zsh \
+  --mode server \
+  --sftp-only-user sftpdeploy \
+  --harden
+```
+
+This creates a user `sftpdeploy` with:
+- No shell access (`/usr/sbin/nologin`)
+- Chroot to `/home/sftpdeploy`
+- Writable upload directory at `/home/sftpdeploy/upload`
+- No TCP/X11 forwarding
+
+## VS Code SFTP Extension
+
+### Automatic generation
+
+The setup scripts generate `.vscode/sftp.json` automatically when
+`--remote-host` is specified. The file is **git-ignored**.
+
+### Manual setup
+
+1. Copy the template:
+   ```bash
+   cp scripts/ssh/sftp.json.example .vscode/sftp.json
+   ```
+2. Replace `REPLACE_WITH_HOST` and `REPLACE_WITH_USER`
+3. Install the extension: `Natizyskunk.sftp`
+
+### Configuration options
+
+| Key | Default | Description |
+|---|---|---|
+| `host` | (required) | Remote hostname or IP |
+| `port` | 22 | SSH port |
+| `username` | (required) | Remote username |
+| `remotePath` | (required) | Absolute path on remote |
+| `privateKeyPath` | `~/.ssh/id_ed25519` | Path to private key |
+| `uploadOnSave` | `false` | Auto-upload on file save |
+| `useTempFile` | `true` | Upload via temp file (atomic) |
+| `openSsh` | `true` | Use OpenSSH for connections |
+
+### Multi-environment support
+
+Create separate configs by copying and modifying the template for each
+environment. The VS Code SFTP extension supports profile switching.
+
+## Windows Admin vs Standard User
+
+Windows OpenSSH uses different authorized\_keys locations depending
+on privilege level:
+
+| Account | Authorized Keys Location | ACL Requirements |
+|---|---|---|
+| **Standard user** | `%USERPROFILE%\.ssh\authorized_keys` | Current user + SYSTEM |
+| **Administrator** | `%ProgramData%\ssh\administrators_authorized_keys` | Administrators + SYSTEM only |
+
+The PowerShell setup script **automatically detects** the account type
+and writes to the correct location with proper ACLs.
+
+### Why this matters
+
+If you're an admin and write your public key to
+`%USERPROFILE%\.ssh\authorized_keys`, **it will be ignored** by default.
+The script prevents this common mistake.
+
+## Security Hardening
+
+### What `--harden` does
+
+| Setting | Value | Effect |
+|---|---|---|
+| `PubkeyAuthentication` | yes | Allow key-based auth |
+| `PasswordAuthentication` | no | Disable password login |
+| `PermitRootLogin` | no | Block root SSH access |
+| `MaxAuthTries` | 3 | Limit auth attempts |
+| `LoginGraceTime` | 30 | Timeout for auth (seconds) |
+| `X11Forwarding` | no | Disable X11 forwarding |
+| `AllowTcpForwarding` | no | Disable TCP forwarding |
+| `PermitEmptyPasswords` | no | Block empty passwords |
+| `KbdInteractiveAuthentication` | no | Disable keyboard-interactive |
+
+### Manual hardening
+
+Use the provided template:
+
+```bash
+sudo cp scripts/ssh/sshd_hardening.conf /etc/ssh/sshd_config.d/90-{{ project_slug }}.conf
+sudo sshd -t        # validate
+sudo systemctl reload sshd
+```
+
+### Hardening checklist
+
+- [ ] `PasswordAuthentication no` (only after confirming key access works)
+- [ ] `PermitRootLogin no`
+- [ ] `MaxAuthTries 3`
+- [ ] Firewall allows only port 22 (or custom port)
+- [ ] Fail2ban or equivalent installed
+- [ ] SSH keys have passphrases
+- [ ] `authorized_keys` does not contain stale/unknown keys
+- [ ] Host keys are verified on first connection
+
+## Troubleshooting
+
+### Permission denied (publickey)
+
+1. Check key permissions:
+   ```bash
+   ls -la ~/.ssh/
+   # id_ed25519 should be 600
+   # authorized_keys should be 600
+   # .ssh/ should be 700
+   ```
+2. On Windows admin accounts, check `%ProgramData%\ssh\administrators_authorized_keys`
+3. Verify the correct key is installed: `ssh-keygen -lf ~/.ssh/id_ed25519.pub`
+4. Check sshd logs: `journalctl -u sshd -f`
+
+### Connection refused
+
+1. Verify sshd is running: `systemctl status sshd`
+2. Check firewall: `sudo ufw status` or `sudo iptables -L`
+3. Verify port: `ss -tlnp | grep 22`
+
+### SFTP works but shell doesn't (or vice versa)
+
+- If using `ForceCommand internal-sftp`, shell access is intentionally disabled
+- Check the `Match` blocks in sshd\_config
+
+### VS Code SFTP extension not connecting
+
+1. Verify `.vscode/sftp.json` has correct host/user/key path
+2. Test SSH manually first: `ssh user@host`
+3. Check the VS Code Output panel → SFTP
+4. Ensure `privateKeyPath` uses forward slashes even on Windows
+
+### Windows: sshd won't start
+
+```powershell
+# Check service status
+Get-Service sshd
+# Check event log
+Get-EventLog -LogName Application -Source sshd -Newest 10
+# Validate config
+sshd -t
+```
+
+## Key Rotation
+
+To rotate keys safely:
+
+1. **Generate new key**: `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_new`
+2. **Install new key on remote**: `ssh-copy-id -i ~/.ssh/id_ed25519_new.pub user@host`
+3. **Verify new key works**: `ssh -i ~/.ssh/id_ed25519_new user@host`
+4. **Remove old key from remote** `authorized_keys`
+5. **Replace local key**: `mv ~/.ssh/id_ed25519_new ~/.ssh/id_ed25519`
+6. **Update ssh-agent**: `ssh-add -d ~/.ssh/id_ed25519; ssh-add ~/.ssh/id_ed25519`
+
+## Rollback & Uninstall
+
+The rollback script removes changes made by the setup script. All
+destructive actions require confirmation.
+
+```bash
+# Preview what would be removed
+zsh scripts/ssh/rollback-ssh.zsh --all --dry-run
+
+# Remove everything
+zsh scripts/ssh/rollback-ssh.zsh --all
+
+# Remove specific items
+zsh scripts/ssh/rollback-ssh.zsh --remove-keys
+zsh scripts/ssh/rollback-ssh.zsh --remove-sftp-json
+zsh scripts/ssh/rollback-ssh.zsh --remove-sshd-config
+zsh scripts/ssh/rollback-ssh.zsh --remove-ssh-config
+zsh scripts/ssh/rollback-ssh.zsh --remove-sftp-user sftpdeploy
+```
+
+## Verification Checklist
+
+Run after setup to confirm everything works:
+
+```bash
+zsh scripts/ssh/validate-ssh.zsh \
+  --check-server \
+  --remote-host myserver.example.com
+```
+
+Manual checklist:
+
+- [ ] SSH key pair exists with correct permissions
+- [ ] Public key is in the correct `authorized_keys` file
+- [ ] SSH connection works: `ssh user@host`
+- [ ] SFTP connection works: `sftp user@host`
+- [ ] sshd config is valid: `sudo sshd -t`
+- [ ] sshd service is running
+- [ ] `.vscode/sftp.json` is valid JSON and git-ignored
+- [ ] Private key is **not** in the repository
+- [ ] Host key fingerprint is known and trusted

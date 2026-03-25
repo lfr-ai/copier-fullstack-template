@@ -6,24 +6,14 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-__all__ = ["DomainEvent", "Entity", "ValueObject", "generate_id", "utcnow"]
-
 
 def utcnow() -> datetime:
-    """Return current UTC datetime.
-
-    Returns:
-        datetime: Current time in UTC.
-    """
+    """Current UTC datetime."""
     return datetime.now(tz=UTC)
 
 
 def generate_id() -> str:
-    """Generate unique entity identifier.
-
-    Returns:
-        str: UUID4 string.
-    """
+    """Generate UUID4 entity identifier."""
     return str(uuid.uuid4())
 
 
@@ -56,19 +46,11 @@ class Entity:
     )
 
     def register_event(self, event: DomainEvent) -> None:
-        """Register domain event for later dispatch.
-
-        Args:
-            event (DomainEvent): Domain event to register.
-        """
+        """Register domain event for later dispatch."""
         self._events.append(event)
 
     def collect_events(self) -> list[DomainEvent]:
-        """Collect and clear all pending domain events.
-
-        Returns:
-            list[DomainEvent]: List of pending domain events.
-        """
+        """Collect and clear all pending domain events."""
         events = self._events.copy()
         self._events.clear()
         return events
@@ -90,14 +72,14 @@ class ValueObject:
 
     Value objects are compared by their attributes
     rather than identity.  Subclasses **must** call
-    ``validate()`` from ``__post_init__`` to enforce
+    'validate()' from '__post_init__' to enforce
     domain invariants.
     """
 
     def validate(self) -> None:
         """Validate domain invariants.
 
-        Override in subclasses and call from ``__post_init__``
+        Override in subclasses and call from '__post_init__'
         to enforce constraints.
 
         Raises:

@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Final
 
-__all__ = ["ensure_directory", "file_sha256", "safe_filename"]
-
-_READ_CHUNK_SIZE: Final[int] = 8192
+_READ_CHUNK_SIZE: int = 8192
 
 
 def ensure_directory(path: Path) -> Path:
@@ -51,4 +48,9 @@ def safe_filename(name: str) -> str:
         str: Sanitised filename with unsafe characters replaced by underscores.
     """
     keep = {" ", ".", "-", "_"}
-    return "".join(c if (c.isalnum() or c in keep) else "_" for c in name).strip()
+    result = (
+        "".join(c if (c.isalnum() or c in keep) else "_" for c in name)
+        .strip()
+        .lstrip(".")
+    )
+    return result or "_unnamed"

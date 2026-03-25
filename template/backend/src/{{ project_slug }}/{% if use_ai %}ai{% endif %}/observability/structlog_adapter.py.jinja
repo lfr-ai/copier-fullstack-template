@@ -1,0 +1,104 @@
+"""Structlog observability adapter."""
+
+from __future__ import annotations
+
+import time
+import uuid
+from typing import override
+
+import structlog
+
+from {{ project_slug }}.config.constants import MS_PER_SECOND
+from {{ project_slug }}.core.interfaces.observability import ObservabilityPort, TraceSpan
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_MS_PER_SECOND: int = MS_PER_SECOND
+
+
+class StructlogObservability(ObservabilityPort):
+    """Structlog-backed AI tracing and telemetry."""
+
+    __slots__ = ("_active_traces",)
+
+    def __init__(self) -> None:
+        self._active_traces: dict[str, dict[str, object]] = {}
+
+    @override
+    async def start_trace(
+        self,
+        *,
+        name: str,
+        metadata: dict[str, object] | None = None,
+    ) -> str:
+        trace_id = str(uuid.uuid4())
+        self._active_traces[trace_id] = {
+            "name": name,
+            "start_time": time.monotonic(),
+            "metadata": metadata or {},
+            "spans": [],
+        }
+        logger.info(
+            "trace_started",
+            trace_id=trace_id,
+            trace_name=name,
+            metadata=metadata,
+        )
+        return trace_id
+
+    @override
+    async def log_span(
+        self,
+        *,
+        trace_id: str,
+        span: TraceSpan,
+    ) -> None:
+        """Record a trace span as a structured log event.
+
+        Args:
+            trace_id (str): Identifier of the parent trace.
+            span (TraceSpan): Span data to log.
+        """
+        trace = self._active_traces.get(trace_id)
+        if trace:
+            trace["spans"].append({  # type: ignore[union-attr]
+                "name": span.name,
+                "type": span.span_type,
+                "duration_ms": span.duration_ms,
+                "error": span.error,
+            })
+
+        logger.info(
+            "trace_span",
+            trace_id=trace_id,
+            span_name=span.name,
+            span_type=span.span_type,
+            duration_ms=span.duration_ms,
+            error=span.error,
+        )
+
+    @override
+    async def end_trace(
+        self,
+        *,
+        trace_id: str,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
+        """Finalize and log the completed trace.
+
+        Args:
+            trace_id (str): Identifier of the trace to end.
+            metadata (dict[str, object] | None): Optional final metadata.
+        """
+        trace = self._active_traces.pop(trace_id, None)
+        duration = 0.0
+        if trace:
+            duration = (time.monotonic() - trace["start_time"]) * _MS_PER_SECOND  # type: ignore[operator]
+
+        logger.info(
+            "trace_ended",
+            trace_id=trace_id,
+            total_duration_ms=duration,
+            span_count=len(trace["spans"]) if trace else 0,  # type: ignore[index]
+            metadata=metadata,
+        )

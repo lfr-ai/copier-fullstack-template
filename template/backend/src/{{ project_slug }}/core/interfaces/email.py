@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-__all__ = ["EmailPort"]
-
 
 @runtime_checkable
 class EmailPort(Protocol):
@@ -26,10 +24,6 @@ class EmailPort(Protocol):
     ) -> None:
         """Send a single email message.
 
-        Args:
-            to: Recipient email address.
-            subject: Email subject line.
-            body: Email body content.
-            from_addr: Sender email address (adapter may use a default).
+        If 'from_addr' is empty the adapter uses its configured default.
         """
         ...

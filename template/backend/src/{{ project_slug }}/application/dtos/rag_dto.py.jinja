@@ -1,0 +1,39 @@
+"""RAG-related DTOs for request/response payloads."""
+
+from __future__ import annotations
+
+from pydantic import Field
+
+from {{ project_slug }}.application.dtos.base import BaseDTO
+
+_MAX_QUESTION_LENGTH: int = 8192
+_DEFAULT_TOP_K: int = 5
+_MAX_TOP_K: int = 50
+
+
+class SourceDTO(BaseDTO):
+    """Source reference from retrieval."""
+
+    id: str = ""
+    score: float = Field(default=0.0, ge=0.0, le=1.0, description="Similarity score")
+    content: str = ""
+
+
+class RAGQueryDTO(BaseDTO):
+    """Input for a RAG query operation."""
+
+    question: str = Field(min_length=1, max_length=_MAX_QUESTION_LENGTH, description="User question")
+    session_id: str | None = None
+    top_k: int = Field(default=_DEFAULT_TOP_K, ge=1, le=_MAX_TOP_K, description="Number of sources to retrieve")
+    strategy: str = "hybrid"
+    use_graph: bool = False
+
+
+class RAGResponseDTO(BaseDTO):
+    """Output from a RAG query operation."""
+
+    question: str = ""
+    answer: str = ""
+    sources: list[SourceDTO] = Field(default_factory=list)
+    model: str = ""
+    tokens_used: int = 0

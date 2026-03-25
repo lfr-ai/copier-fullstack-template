@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Final
-
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from {{ project_slug }}.config.constants import (
+    DEFAULT_HOST,
     DEFAULT_PORT,
     MAX_PORT,
 {%- if use_auth %}
@@ -15,10 +14,8 @@ from {{ project_slug }}.config.constants import (
 {%- endif %}
 )
 from {{ project_slug }}.core.enums.environment import Environment
-
-__all__ = ["BaseAppSettings"]
-
-_DEFAULT_HOST: Final[str] = "127.0.0.1"
+_MAX_GRAPHQL_DEPTH: int = 50
+_MAX_AGENT_STEPS: int = 50
 
 
 class BaseAppSettings(BaseSettings):
@@ -79,7 +76,7 @@ class BaseAppSettings(BaseSettings):
     )
 
     host: str = Field(
-        default=_DEFAULT_HOST,
+        default=DEFAULT_HOST,
         description="Server bind host.",
         examples=["127.0.0.1", "0.0.0.0"],
     )
@@ -96,6 +93,45 @@ class BaseAppSettings(BaseSettings):
         description="Allowed CORS origins for non-local environments.",
         examples=[["https://example.com"]],
     )
+
+    rate_limit: str = Field(
+        default="60/minute",
+        description="Default rate limit (slowapi format: 'count/period').",
+        examples=["60/minute", "100/minute", "10/second"],
+    )
+
+    # Profiling
+    profiling_enabled: bool = Field(
+        default=False,
+        description="Enable on-demand profiling middleware (?profile=cpu|memory).",
+        examples=[False, True],
+    )
+    profiling_secret: str = Field(
+        default="",
+        description="Shared secret for X-Profile-Secret header (required when profiling_enabled).",
+        examples=["change-me-profiling-secret"],
+    )
+    profiling_dir: str = Field(
+        default="profiles",
+        description="Directory for saved profiling reports.",
+        examples=["profiles", "/tmp/profiles"],
+    )
+{%- if api_style in ('graphql', 'both') %}
+
+    # GraphQL
+    graphql_max_depth: int = Field(
+        default=10,
+        gt=0,
+        le=_MAX_GRAPHQL_DEPTH,
+        description="Maximum allowed query nesting depth for the GraphQL endpoint.",
+        examples=[10, 15],
+    )
+    graphql_ide: str = Field(
+        default="graphiql",
+        description="GraphQL IDE to show in debug mode (graphiql, apollo-sandbox, pathfinder, or empty to disable).",
+        examples=["graphiql", "apollo-sandbox", ""],
+    )
+{%- endif %}
 {%- if use_redis %}
 
     redis_url: str = Field(
@@ -145,3 +181,267 @@ class BaseAppSettings(BaseSettings):
         examples=["https://my-vault.vault.azure.net/"],
     )
 {%- endif %}
+{%- if use_ai %}
+
+    # AI / LLM
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key for LLM and embedding.",
+        examples=["sk-..."],
+    )
+    openai_model: str = Field(
+        default="gpt-4o",
+        description="Default OpenAI model for completions.",
+        examples=["gpt-4o", "gpt-4o-mini"],
+    )
+    embedding_model: str = Field(
+        default="text-embedding-3-small",
+        description="Embedding model identifier.",
+        examples=["text-embedding-3-small", "text-embedding-3-large"],
+    )
+    embedding_dimension: int = Field(
+        default=1536,
+        gt=0,
+        description="Embedding vector dimension.",
+        examples=[1536, 3072],
+    )
+{%- endif %}
+{%- if use_azure_openai %}
+
+    # Azure OpenAI
+    azure_openai_endpoint: str = Field(
+        default="",
+        description="Azure OpenAI endpoint URL.",
+        examples=["https://my-openai.openai.azure.com/"],
+    )
+    azure_openai_api_key: str = Field(
+        default="",
+        description="Azure OpenAI API key.",
+        examples=["..."],
+    )
+    azure_openai_api_version: str = Field(
+        default="2025-04-01-preview",
+        description="Azure OpenAI API version.",
+    )
+    azure_openai_deployment: str = Field(
+        default="",
+        description="Azure OpenAI deployment name.",
+    )
+{%- endif %}
+{%- if use_faiss %}
+
+    # FAISS
+    faiss_persist_dir: str | None = Field(
+        default=None,
+        description="Directory to persist FAISS index (None for in-memory only).",
+        examples=["/data/faiss", "data/faiss_index"],
+    )
+{%- endif %}
+{%- if use_pgvector %}
+
+    # pgvector
+    pgvector_table_name: str = Field(
+        default="vector_embeddings",
+        description="PostgreSQL table name for pgvector storage.",
+    )
+{%- endif %}
+{%- if use_knowledge_graph %}
+
+    # Knowledge Graph
+    knowledge_graph_backend: str = Field(
+        default="{{ knowledge_graph_backend | default('networkx') }}",
+        description="Knowledge graph backend: networkx, neo4j, or rdflib.",
+    )
+    knowledge_graph_path: str | None = Field(
+        default=None,
+        description="Path to persist knowledge graph (None for in-memory only).",
+        examples=["data/knowledge_graph.json", "data/knowledge_graph.ttl"],
+    )
+{%- endif %}
+{%- if use_rag %}
+
+    # RAG Pipeline
+    chunk_size: int = Field(
+        default=512,
+        gt=0,
+        description="Default text chunk size for RAG ingestion.",
+    )
+    chunk_overlap: int = Field(
+        default=64,
+        ge=0,
+        description="Overlap between consecutive text chunks.",
+    )
+{%- endif %}
+{%- if use_mcp %}
+
+    # MCP Server
+    mcp_server_name: str = Field(
+        default="{{ project_name }} MCP",
+        description="MCP server display name.",
+    )
+    mcp_enabled: bool = Field(
+        default=False,
+        description="Enable MCP (Model Context Protocol) server.",
+    )
+{%- endif %}
+{%- if use_anthropic %}
+
+    # Anthropic
+    anthropic_api_key: str = Field(
+        default="",
+        description="Anthropic API key for Claude models.",
+        examples=["sk-ant-..."],
+    )
+    anthropic_model: str = Field(
+        default="claude-sonnet-4-6",
+        description="Default Anthropic model for completions.",
+        examples=["claude-sonnet-4-6", "claude-opus-4-6"],
+    )
+{%- endif %}
+{%- if use_ai_search %}
+
+    # Azure AI Search
+    azure_ai_search_endpoint: str = Field(
+        default="",
+        description="Azure AI Search service endpoint URL.",
+        examples=["https://my-search.search.windows.net"],
+    )
+    azure_ai_search_api_key: str = Field(
+        default="",
+        description="Azure AI Search admin or query API key.",
+    )
+    azure_ai_search_index: str = Field(
+        default="{{ project_slug }}-index",
+        description="Azure AI Search index name.",
+    )
+{%- endif %}
+{%- if use_document_intelligence %}
+
+    # Azure Document Intelligence
+    azure_doc_intelligence_endpoint: str = Field(
+        default="",
+        description="Azure Document Intelligence endpoint URL.",
+        examples=["https://my-di.cognitiveservices.azure.com/"],
+    )
+    azure_doc_intelligence_api_key: str = Field(
+        default="",
+        description="Azure Document Intelligence API key.",
+    )
+{%- endif %}
+{%- if use_agents %}
+
+    # Agent Framework
+    agent_max_steps: int = Field(
+        default=10,
+        gt=0,
+        le=_MAX_AGENT_STEPS,
+        description="Maximum steps per agent execution.",
+    )
+    agent_default_model: str = Field(
+        default="gpt-4o",
+        description="Default model for agent LLM calls.",
+    )
+    checkpointer_backend: str = Field(
+        default="memory",
+        description="LangGraph checkpointer backend: memory, sqlite, or postgres.",
+        examples=["memory", "sqlite", "postgres"],
+    )
+{%- endif %}
+{%- if use_rag %}
+
+    # RAG Advanced
+    rag_score_threshold: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity score for retrieval results.",
+    )
+    rag_retrieval_strategy: str = Field(
+        default="similarity",
+        description="Retrieval strategy (similarity, mmr, hybrid).",
+        examples=["similarity", "mmr", "hybrid"],
+    )
+    embedding_batch_size: int = Field(
+        default=100,
+        gt=0,
+        description="Batch size for embedding operations.",
+    )
+{%- endif %}
+{%- if use_knowledge_graph %}
+
+    # Knowledge Graph
+    neo4j_uri: str = Field(
+        default="bolt://localhost:7687",
+        description="Neo4j database URI.",
+        examples=["bolt://localhost:7687", "neo4j+s://my-instance.neo4j.io:7687"],
+    )
+    neo4j_user: str = Field(
+        default="neo4j",
+        description="Neo4j authentication username.",
+    )
+    neo4j_password: str = Field(
+        default="changeme",
+        description="Neo4j authentication password.",
+    )
+    neo4j_database: str = Field(
+        default="neo4j",
+        description="Neo4j database name.",
+    )
+{%- endif %}
+{%- if use_crewai %}
+
+    # CrewAI Multi-Agent
+    crewai_default_model: str = Field(
+        default="gpt-4o",
+        description="Default LLM model for CrewAI agents.",
+        examples=["gpt-4o", "gpt-4o-mini", "claude-sonnet-4-6"],
+    )
+    crewai_verbose: bool = Field(
+        default=False,
+        description="Enable verbose logging for CrewAI crew execution.",
+    )
+    crewai_embedder_provider: str = Field(
+        default="openai",
+        description="Embedding provider for CrewAI knowledge and memory.",
+        examples=["openai", "azure", "ollama"],
+    )
+    crewai_embedder_model: str | None = Field(
+        default=None,
+        description="Override the default embedder model for CrewAI.",
+        examples=["text-embedding-3-small", "text-embedding-ada-002"],
+    )
+    crewai_memory_scoring: str = Field(
+        default="default",
+        description="Memory scoring preset: 'default', 'sprint', or 'knowledge_base'.",
+        examples=["default", "sprint", "knowledge_base"],
+    )
+{%- endif %}
+
+    @model_validator(mode="after")
+    def _check_default_secrets(self) -> "BaseAppSettings":
+        """Reject insecure default secrets outside local environment."""
+        if self.environment == Environment.LOCAL:
+            return self
+        insecure = {
+            "secret_key": "change-me-in-production",
+{%- if use_auth %}
+            "jwt_secret_key": "change-me-jwt-secret",
+{%- endif %}
+{%- if use_knowledge_graph %}
+            "neo4j_password": "changeme",
+{%- endif %}
+        }
+        for attr, default_val in insecure.items():
+            if getattr(self, attr, None) == default_val:
+                msg = (
+                    f"{attr!r} still has its insecure default value. "
+                    f"Set {self.model_config.get('env_prefix', '')}{attr.upper()} before deploying."
+                )
+                raise ValueError(msg)
+        if self.profiling_enabled and not self.profiling_secret:
+            msg = (
+                "profiling_secret must be set when profiling_enabled is True "
+                "outside the LOCAL environment."
+            )
+            raise ValueError(msg)
+        return self

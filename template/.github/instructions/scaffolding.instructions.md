@@ -9,12 +9,12 @@ applyTo: '**/*.jinja'
 - Static files (no Jinja2 inside) do NOT need `.jinja` suffix
 
 ```jinja2
-{# ✅ Spaces inside delimiters #}
+{# CORRECT: Spaces inside delimiters #}
 {{ variable_name }}
 {% if condition %}
 {% for item in items %}
 
-{# ❌ No spaces (hard to read) #}
+{# INCORRECT: No spaces (hard to read) #}
 {{variable_name}}
 {%if condition%}
 ```
@@ -43,7 +43,7 @@ azure-identity = ">=1.17"
 copier-fullstack-template/
 ├── copier.yml              # Template configuration and variables
 ├── template/               # _subdirectory: "template" in copier.yml
-│   ├── backend/            # Python backend (FastAPI + hexagonal)
+│   ├── backend/            # Python backend (FastAPI + clean / hexagonal architecture)
 │   │   ├── src/{{ project_slug }}/
 │   │   │   ├── core/       # Domain layer
 │   │   │   ├── application/ # Use cases

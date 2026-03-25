@@ -1,8 +1,8 @@
 // ── Azure Cache for Redis ─────────────────────────────────────────
 //
-// Production-ready module supporting Basic, Standard, and Premium tiers
-// with security hardening, diagnostics, patching, firewall, persistence,
-// availability zones, clustering, and Microsoft Entra authentication.
+// Supports Basic, Standard, and Premium tiers with security hardening,
+// diagnostics, patching, firewall, persistence, availability zones,
+// clustering, and Microsoft Entra authentication.
 //
 // API reference: https://learn.microsoft.com/azure/templates/microsoft.cache/redis
 
@@ -333,10 +333,8 @@ output redisCachePort int = enabled ? redisCache.properties.sslPort : 0
 @description('Full resource ID of the Redis cache')
 output redisCacheResourceId string = enabled ? redisCache.id : ''
 
-@description('Primary connection string (empty when access keys are disabled)')
-output redisPrimaryConnectionString string = enabled && !disableAccessKeyAuthentication
-  ? '${redisCache.properties.hostName}:${redisCache.properties.sslPort},password=${redisCache.listKeys().primaryKey},ssl=True,abortConnect=False'
-  : ''
+@description('Whether access-key authentication is available (does NOT output the key itself)')
+output redisAccessKeysEnabled bool = enabled && !disableAccessKeyAuthentication
 
 @description('System-assigned managed identity principal ID (empty if not enabled)')
 output redisManagedIdentityPrincipalId string = (enabled && enableManagedIdentity)

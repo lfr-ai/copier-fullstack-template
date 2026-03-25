@@ -2,68 +2,180 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 import structlog
 from fastapi import FastAPI
 
-from {{ project_slug }}.config.constants import API_V1_PREFIX
 from {{ project_slug }}.ports.api.middleware.cors import setup_cors
 from {{ project_slug }}.ports.api.middleware.error_handler import register_error_handlers
+from {{ project_slug }}.ports.api.middleware.profiling import ProfilingMiddleware
 from {{ project_slug }}.ports.api.middleware.rate_limit import configure_rate_limiting
 from {{ project_slug }}.ports.api.middleware.request_id import RequestIdMiddleware
 from {{ project_slug }}.ports.api.middleware.security_headers import SecurityHeadersMiddleware
 from {{ project_slug }}.ports.api.middleware.timing import TimingMiddleware
+{%- if api_style in ('rest', 'both') %}
 from {{ project_slug }}.ports.api.router import api_router
-
-__all__ = ["create_api_app"]
+{%- endif %}
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage application startup and shutdown resources."""
+    yield
+    # Dispose the DI container's DB engine on shutdown to release connections.
+    from {{ project_slug }}.ports.container import get_container
+
+    container = get_container()
+    await container.dispose()
 
 
 def create_api_app(*, debug: bool = False) -> FastAPI:
     """Create and configure FastAPI application.
 
     Factory function wiring middleware, routes, and error handlers.
-
-    Args:
-        debug (bool): Enable debug mode with verbose logging.
-
-    Returns:
-        FastAPI: Configured FastAPI instance.
     """
+    from {{ project_slug }}.config.settings import get_settings
+
     app = FastAPI(
         title="{{ project_name }}",
         version="v1",
         debug=debug,
+        lifespan=_lifespan,
+{%- if api_style in ('rest', 'both') %}
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
+{%- else %}
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+{%- endif %}
     )
 
+    app.state.settings = get_settings()
+
     _configure_middleware(app)
+    _register_health_probe(app)
+{%- if api_style in ('rest', 'both') %}
     _register_routes(app)
+{%- endif %}
     register_error_handlers(app)
     configure_rate_limiting(app)
+{%- if api_style in ('graphql', 'both') %}
+    _mount_graphql(app, debug=debug)
+{%- endif %}
+{%- if use_mcp %}
+    _mount_mcp(app)
+{%- endif %}
 
-    logger.info("API application created (debug=%s)", debug)
+    logger.info("api_app_created", debug=debug)
     return app
 
 
 def _configure_middleware(app: FastAPI) -> None:
-    """Configure application middleware stack.
-
-    Args:
-        app (FastAPI): FastAPI application instance.
-    """
+    """Configure application middleware stack."""
+    app.add_middleware(ProfilingMiddleware)
     app.add_middleware(TimingMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIdMiddleware)
     setup_cors(app)
 
 
-def _register_routes(app: FastAPI) -> None:
-    """Register API route modules.
+def _register_health_probe(app: FastAPI) -> None:
+    """Register a lightweight '/health' liveness endpoint.
 
-    Args:
-        app (FastAPI): FastAPI application instance.
+    Available regardless of 'api_style' so that Docker
+    health-checks, Kubernetes probes, and load-balancers always
+    have a stable URL to hit.
     """
+    from fastapi.responses import JSONResponse
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        _version = version("{{ project_slug }}")
+    except PackageNotFoundError:
+        _version = "0.0.0-dev"
+
+    @app.get("/health", tags=["health"], include_in_schema=False)
+    async def _liveness() -> JSONResponse:
+        return JSONResponse({"status": "healthy", "version": _version})
+
+{%- if api_style in ('rest', 'both') %}
+
+
+def _register_routes(app: FastAPI) -> None:
+    """Register API route modules."""
+    from {{ project_slug }}.config.constants import API_V1_PREFIX
+
     app.include_router(api_router, prefix=API_V1_PREFIX)
+{%- endif %}
+{%- if api_style in ('graphql', 'both') %}
+
+
+def _mount_graphql(app: FastAPI, *, debug: bool = False) -> None:
+    """Mount the Strawberry GraphQL endpoint on '/graphql'.
+
+    Uses the custom 'ProductionGraphQLRouter' with structured
+    error logging, optional 'orjson' acceleration, and the
+    'QueryDepthLimiter' schema extension for abuse prevention.
+    """
+    from {{ project_slug }}.ports.graphql.context import get_graphql_context
+    from {{ project_slug }}.ports.graphql.router import ProductionGraphQLRouter
+    from {{ project_slug }}.ports.graphql.schema import create_schema
+
+    settings = app.state.settings
+    gql_schema = create_schema(max_depth=settings.graphql_max_depth)
+    ide = settings.graphql_ide if debug else None
+
+    graphql_app = ProductionGraphQLRouter(
+        gql_schema,
+        context_getter=get_graphql_context,
+        graphql_ide=ide,
+        debug=debug,
+    )
+    app.include_router(graphql_app, prefix="/graphql", tags=["graphql"])
+    logger.info("GraphQL endpoint mounted at /graphql")
+{%- endif %}
+{%- if use_mcp %}
+
+
+def _mount_mcp(app: FastAPI) -> None:
+    """Mount MCP server as streamable-http ASGI sub-application.
+
+    Uses the MCP SDK's 'streamable_http_app()' for production-ready
+    transport (recommended by MCP v1.26+). Falls back to 'mount()'
+    for older SDK versions.
+
+    The MCP server is fully wired to application adapters (LLM,
+    search, knowledge graph) via the DI container.
+    """
+    from {{ project_slug }}.config.settings import get_settings
+
+    settings = get_settings()
+    if not getattr(settings, "mcp_enabled", False):
+        return
+
+    try:
+        from starlette.routing import Mount
+
+        from {{ project_slug }}.ports.container import get_container
+
+        container = get_container()
+        mcp = container.mcp_server()
+
+        if hasattr(mcp, "streamable_http_app"):
+            mcp.settings.streamable_http_path = "/"
+            app.router.routes.append(
+                Mount("/mcp", app=mcp.streamable_http_app())
+            )
+            logger.info("MCP server mounted at /mcp (streamable-http)")
+        else:
+            mcp.mount(app, path="/mcp")
+            logger.info("MCP server mounted at /mcp (legacy)")
+    except ImportError:
+        logger.warning("MCP dependencies not installed — skipping MCP mount")
+{%- endif %}

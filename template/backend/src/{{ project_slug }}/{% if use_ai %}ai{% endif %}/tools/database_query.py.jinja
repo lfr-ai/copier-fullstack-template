@@ -1,0 +1,140 @@
+"""Database query tool — natural language to SQL via LLM."""
+
+from __future__ import annotations
+
+import structlog
+import re
+from typing import override
+
+from {{ project_slug }}.ai.config import EVAL_MAX_TOKENS
+from {{ project_slug }}.ai.tools.base_tool import BaseTool, ToolResult
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_FORBIDDEN_PATTERNS: re.Pattern[str] = re.compile(
+    r"\b(DROP|DELETE|TRUNCATE|ALTER|CREATE|INSERT|UPDATE|GRANT|REVOKE)\b",
+    re.IGNORECASE,
+)
+
+_STATEMENT_TIMEOUT_MS: int = 5_000
+_MAX_RESULT_ROWS: int = 50
+_SQL_GEN_TEMPERATURE: float = 0.0
+
+
+class DatabaseQueryTool(BaseTool):
+    """Natural language to read-only SQL query tool."""
+
+    __slots__ = ("_database_url", "_llm", "_schema_description")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        database_url: str,
+        schema_description: str = "",
+    ) -> None:
+        self._llm = llm
+        self._database_url = database_url
+        self._schema_description = schema_description
+
+    @property
+    @override
+    def name(self) -> str:
+        return "database_query"
+
+    @property
+    @override
+    def description(self) -> str:
+        return "Query the database using natural language. Only read-only SELECT queries are allowed."
+
+    @property
+    @override
+    def parameters_schema(self) -> dict[str, object]:
+        return {
+            "type": "object",
+            "properties": {
+                "question": {
+                    "type": "string",
+                    "description": "Natural language question about the data",
+                },
+            },
+            "required": ["question"],
+        }
+
+    @override
+    async def execute(self, **kwargs: object) -> ToolResult:
+        """Generate and execute a read-only SQL query.
+
+        '**kwargs' must include 'question'.
+        """
+        question = str(kwargs.get("question", ""))
+        if not question:
+            return ToolResult(error="Question parameter is required.")
+
+        # Generate SQL from natural language
+        schema_ctx = (
+            f"\n\nDatabase schema:\n{self._schema_description}"
+            if self._schema_description
+            else ""
+        )
+        sql = await self._llm.complete(
+            prompt=(
+                f"Convert this question to a PostgreSQL SELECT query.{schema_ctx}\n\n"
+                f"Question: {question}\n\n"
+                f"Return ONLY the SQL query, nothing else. "
+                f"Use only SELECT statements — no mutations."
+            ),
+            system_prompt=(
+                "You are a SQL expert. Generate only safe, read-only SELECT statements. "
+                "Never generate DROP, DELETE, INSERT, UPDATE, ALTER, CREATE, GRANT, or REVOKE statements."
+            ),
+            max_tokens=EVAL_MAX_TOKENS,
+            temperature=_SQL_GEN_TEMPERATURE,
+        )
+
+        sql = sql.strip().strip(";").strip("`").removeprefix("sql\n").strip()
+
+        # Safety checks: only allow single, read-only SELECT statements
+        if _FORBIDDEN_PATTERNS.search(sql):
+            return ToolResult(error="Generated SQL contains forbidden mutation commands.")
+        if not sql.upper().startswith("SELECT"):
+            return ToolResult(error="Only SELECT queries are allowed.")
+        # Reject multiple statements (semicolons after stripping)
+        if ";" in sql:
+            return ToolResult(error="Only single SQL statements are allowed.")
+
+        engine = None
+        try:
+            from sqlalchemy import text
+            from sqlalchemy.ext.asyncio import create_async_engine
+
+            engine = create_async_engine(self._database_url)
+            async with engine.connect() as conn:
+                # Enforce read-only at the transaction level
+                await conn.execute(text("SET TRANSACTION READ ONLY"))
+                await conn.execute(text(f"SET statement_timeout = '{_STATEMENT_TIMEOUT_MS}'"))
+                result = await conn.execute(text(sql))
+                rows = result.fetchmany(_MAX_RESULT_ROWS)
+                columns = list(result.keys())
+
+            if not rows:
+                return ToolResult(
+                    content="Query returned no results.",
+                )
+
+            # Format as text table
+            header = " | ".join(str(c) for c in columns)
+            lines = [header, "-" * len(header)]
+            for row in rows:
+                lines.append(" | ".join(str(v) for v in row))
+
+            return ToolResult(
+                content="\n".join(lines),
+                metadata={"row_count": len(rows)},
+            )
+        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+            logger.warning("Database query failed: %s", type(exc).__name__)
+            return ToolResult(error="Query execution failed. Check logs for details.")
+        finally:
+            if engine is not None:
+                await engine.dispose()

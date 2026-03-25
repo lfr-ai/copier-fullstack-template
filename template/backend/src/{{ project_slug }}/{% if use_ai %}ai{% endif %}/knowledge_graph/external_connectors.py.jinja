@@ -1,0 +1,375 @@
+"""External knowledge graph connectors — Wikidata, DBpedia, ConceptNet."""
+
+from __future__ import annotations
+
+import asyncio
+import structlog
+from typing import override
+
+from {{ project_slug }}.core.interfaces.knowledge_graph import (
+    DEFAULT_ENTITY_LOOKUP_LIMIT,
+    DEFAULT_RELATION_LIMIT,
+    DEFAULT_SPARQL_TIMEOUT_SECONDS,
+    ExternalKnowledgeGraphPort,
+)
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_WIKIDATA_SPARQL = "https://query.wikidata.org/sparql"
+_DBPEDIA_SPARQL = "https://dbpedia.org/sparql"
+_CONCEPTNET_API = "https://api.conceptnet.io"
+
+
+class _SPARQLMixin:
+    """Shared SPARQL query execution for Wikidata and DBpedia connectors."""
+
+    _endpoint: str
+    _timeout: int
+
+    async def _run_sparql(self, query: str) -> list[dict[str, str]]:
+        try:
+            from SPARQLWrapper import JSON, SPARQLWrapper  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "SPARQLWrapper is required — pip install SPARQLWrapper"
+            raise ImportError(msg) from exc
+
+        sparql = SPARQLWrapper(self._endpoint)
+        sparql.setQuery(query)
+        sparql.setReturnFormat(JSON)
+        sparql.setTimeout(self._timeout)
+        sparql.addCustomHttpHeader("User-Agent", "CopierTemplate/1.0")
+
+        try:
+            response = await asyncio.to_thread(lambda: sparql.query().convert())
+        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+            logger.exception("SPARQL query failed on %s", self._endpoint)
+            msg = f"SPARQL query failed against {self._endpoint}"
+            raise RuntimeError(msg) from exc
+
+        bindings = response.get("results", {}).get("bindings", [])
+        return [
+            {k: v.get("value", "") for k, v in row.items()}
+            for row in bindings
+        ]
+
+
+class WikidataKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphPort):
+    """Query Wikidata via its public SPARQL endpoint.
+
+    Wikidata is a free, collaborative, multilingual knowledge base with
+    over 100 million items covering people, places, concepts, and more.
+    """
+
+    __slots__ = ("_endpoint", "_timeout")
+
+    def __init__(
+        self,
+        *,
+        endpoint: str = _WIKIDATA_SPARQL,
+        timeout: int = DEFAULT_SPARQL_TIMEOUT_SECONDS,
+    ) -> None:
+        self._endpoint = endpoint
+        self._timeout = timeout
+
+    @override
+    async def lookup_entity(
+        self,
+        entity: str,
+        *,
+        language: str = "en",
+        limit: int = DEFAULT_ENTITY_LOOKUP_LIMIT,
+    ) -> list[dict[str, object]]:
+        """Search Wikidata for entities matching the given name.
+
+        Args:
+            entity (str): Entity name or search term.
+            language (str): ISO 639-1 language code for results.
+            limit (int): Maximum number of results to return.
+
+        Returns:
+            list[dict[str, object]]: Dicts with 'id', 'label', 'description', and 'source' keys.
+        """
+        query = f"""
+        SELECT ?item ?itemLabel ?itemDescription WHERE {{
+          SERVICE wikibase:mwapi {{
+            bd:serviceParam wikibase:endpoint "www.wikidata.org";
+                            wikibase:api "EntitySearch";
+                            mwapi:search "{_sanitize(entity)}";
+                            mwapi:language "{language}".
+            ?item wikibase:apiOutputItem mwapi:item.
+          }}
+          SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language},en". }}
+        }}
+        LIMIT {limit}
+        """
+        results = await self._run_sparql(query)
+        return [
+            {
+                "id": row.get("item", ""),
+                "label": row.get("itemLabel", ""),
+                "description": row.get("itemDescription", ""),
+                "source": "wikidata",
+            }
+            for row in results
+        ]
+
+    @override
+    async def get_entity_relations(
+        self,
+        entity_id: str,
+        *,
+        limit: int = DEFAULT_RELATION_LIMIT,
+    ) -> list[tuple[str, str, str]]:
+        """Retrieve relations for a Wikidata entity.
+
+        Args:
+            entity_id (str): Wikidata Q-ID (e.g. '"Q42"') or full URI.
+            limit (int): Maximum number of relations to return.
+
+        Returns:
+            list[tuple[str, str, str]]: '(subject, predicate, object)' triplet tuples.
+        """
+        # Accept Q-IDs like "Q42" or full URIs
+        if not entity_id.startswith("http"):
+            entity_id = f"http://www.wikidata.org/entity/{entity_id}"
+
+        query = f"""
+        SELECT ?propLabel ?valueLabel WHERE {{
+          <{entity_id}> ?prop ?value .
+          ?property wikibase:directClaim ?prop .
+          SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
+        }}
+        LIMIT {limit}
+        """
+        results = await self._run_sparql(query)
+        return [
+            (entity_id.rsplit("/", 1)[-1], row.get("propLabel", ""), row.get("valueLabel", ""))
+            for row in results
+        ]
+
+    # _run_sparql inherited from _SPARQLMixin
+
+
+class DBpediaKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphPort):
+    """Query DBpedia via its public SPARQL endpoint.
+
+    DBpedia extracts structured information from Wikipedia, making it
+    available as Linked Open Data with over 1.5 billion RDF triples.
+    """
+
+    __slots__ = ("_endpoint", "_timeout")
+
+    def __init__(
+        self,
+        *,
+        endpoint: str = _DBPEDIA_SPARQL,
+        timeout: int = DEFAULT_SPARQL_TIMEOUT_SECONDS,
+    ) -> None:
+        self._endpoint = endpoint
+        self._timeout = timeout
+
+    @override
+    async def lookup_entity(
+        self,
+        entity: str,
+        *,
+        language: str = "en",
+        limit: int = DEFAULT_ENTITY_LOOKUP_LIMIT,
+    ) -> list[dict[str, object]]:
+        """Search DBpedia for entities matching the given name.
+
+        Args:
+            entity (str): Entity name or search term.
+            language (str): ISO 639-1 language code for results.
+            limit (int): Maximum number of results to return.
+
+        Returns:
+            list[dict[str, object]]: Dicts with 'id', 'label', 'description', and 'source' keys.
+        """
+        safe = _sanitize(entity)
+        query = f"""
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX dbo: <http://dbpedia.org/ontology/>
+
+        SELECT DISTINCT ?entity ?label ?abstract WHERE {{
+          ?entity rdfs:label ?label .
+          OPTIONAL {{ ?entity dbo:abstract ?abstract . FILTER(lang(?abstract) = "{language}") }}
+          FILTER(lang(?label) = "{language}")
+          FILTER(CONTAINS(LCASE(?label), LCASE("{safe}")))
+        }}
+        LIMIT {limit}
+        """
+        results = await self._run_sparql(query)
+        return [
+            {
+                "id": row.get("entity", ""),
+                "label": row.get("label", ""),
+                "description": row.get("abstract", ""),
+                "source": "dbpedia",
+            }
+            for row in results
+        ]
+
+    @override
+    async def get_entity_relations(
+        self,
+        entity_id: str,
+        *,
+        limit: int = DEFAULT_RELATION_LIMIT,
+    ) -> list[tuple[str, str, str]]:
+        """Retrieve relations for a DBpedia entity.
+
+        Args:
+            entity_id (str): DBpedia resource name (e.g. '"Albert_Einstein"') or full URI.
+            limit (int): Maximum number of relations to return.
+
+        Returns:
+            list[tuple[str, str, str]]: '(subject, predicate, object)' triplet tuples.
+        """
+        if not entity_id.startswith("http"):
+            entity_id = f"http://dbpedia.org/resource/{entity_id.replace(' ', '_')}"
+
+        query = f"""
+        SELECT ?predicate ?object WHERE {{
+          <{entity_id}> ?predicate ?object .
+          FILTER(isURI(?object))
+        }}
+        LIMIT {limit}
+        """
+        results = await self._run_sparql(query)
+        entity_label = entity_id.rsplit("/", 1)[-1].replace("_", " ")
+        return [
+            (
+                entity_label,
+                row.get("predicate", "").rsplit("/", 1)[-1],
+                row.get("object", "").rsplit("/", 1)[-1].replace("_", " "),
+            )
+            for row in results
+        ]
+
+    # _run_sparql inherited from _SPARQLMixin
+
+
+class ConceptNetKnowledgeGraph(ExternalKnowledgeGraphPort):
+    """Query ConceptNet via its REST API.
+
+    ConceptNet is a multilingual knowledge graph connecting words and
+    phrases with labeled, weighted edges representing common-sense
+    relationships (e.g., IsA, UsedFor, CapableOf).
+    """
+
+    __slots__ = ("_base_url", "_timeout")
+
+    def __init__(
+        self,
+        *,
+        base_url: str = _CONCEPTNET_API,
+        timeout: int = DEFAULT_SPARQL_TIMEOUT_SECONDS,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout = timeout
+
+    @override
+    async def lookup_entity(
+        self,
+        entity: str,
+        *,
+        language: str = "en",
+        limit: int = DEFAULT_ENTITY_LOOKUP_LIMIT,
+    ) -> list[dict[str, object]]:
+        """Search ConceptNet for concepts matching the given term.
+
+        Args:
+            entity (str): Concept name or search term.
+            language (str): ISO 639-1 language code.
+            limit (int): Maximum number of results to return.
+
+        Returns:
+            list[dict[str, object]]: Dicts with 'id', 'label', 'description', 'weight', and 'source' keys.
+        """
+        import httpx
+
+        term = entity.lower().replace(" ", "_")
+        url = f"{self._base_url}/c/{language}/{term}"
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            try:
+                resp = await client.get(url, params={"limit": limit})
+                resp.raise_for_status()
+            except httpx.HTTPError as exc:
+                logger.exception("ConceptNet lookup failed for '%s'", entity)
+                msg = f"ConceptNet lookup failed for entity '{entity}'"
+                raise RuntimeError(msg) from exc
+
+        data = resp.json()
+        edges = data.get("edges", [])
+        results: list[dict[str, object]] = []
+        for edge in edges[:limit]:
+            results.append({
+                "id": edge.get("@id", ""),
+                "label": edge.get("surfaceText", edge.get("@id", "")),
+                "description": f"{edge.get('rel', {}).get('label', '')}: "
+                f"{edge.get('start', {}).get('label', '')} → "
+                f"{edge.get('end', {}).get('label', '')}",
+                "weight": edge.get("weight", 0.0),
+                "source": "conceptnet",
+            })
+        return results
+
+    @override
+    async def get_entity_relations(
+        self,
+        entity_id: str,
+        *,
+        limit: int = DEFAULT_RELATION_LIMIT,
+    ) -> list[tuple[str, str, str]]:
+        """Retrieve relations for a ConceptNet concept.
+
+        Args:
+            entity_id (str): ConceptNet node URI (e.g. '"/c/en/dog"') or plain term.
+            limit (int): Maximum number of relations to return.
+
+        Returns:
+            list[tuple[str, str, str]]: '(start_label, relation_label, end_label)' triplet tuples.
+        """
+        import httpx
+
+        if entity_id.startswith("/c/"):
+            url = f"{self._base_url}{entity_id}"
+        else:
+            term = entity_id.lower().replace(" ", "_")
+            url = f"{self._base_url}/c/en/{term}"
+
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            try:
+                resp = await client.get(url, params={"limit": limit})
+                resp.raise_for_status()
+            except httpx.HTTPError as exc:
+                logger.exception("ConceptNet relations failed for '%s'", entity_id)
+                msg = f"ConceptNet relations failed for entity '{entity_id}'"
+                raise RuntimeError(msg) from exc
+
+        data = resp.json()
+        edges = data.get("edges", [])
+        return [
+            (
+                edge.get("start", {}).get("label", ""),
+                edge.get("rel", {}).get("label", ""),
+                edge.get("end", {}).get("label", ""),
+            )
+            for edge in edges[:limit]
+        ]
+
+
+def _sanitize(value: str) -> str:
+    """Sanitize a string for safe inclusion in SPARQL string literals."""
+    return (
+        value
+        .replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("'", "\\'")
+        .replace("\n", " ")
+        .replace("\r", "")
+        .replace("<", "")
+        .replace(">", "")
+        .replace("{", "")
+        .replace("}", "")
+    )

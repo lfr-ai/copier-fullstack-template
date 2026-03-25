@@ -1,0 +1,26 @@
+"""Performance test fixtures and configuration.
+
+Automatically applies 'pytest.mark.performance' to every test collected
+under 'tests/performance/'.
+"""
+
+from __future__ import annotations
+
+import pathlib
+
+import pytest
+
+pytestmark = pytest.mark.performance
+
+
+@pytest.fixture(scope="session")
+def profiles_dir(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
+    """Create a temporary profiles directory for test output.
+
+    Returns:
+        pathlib.Path: Temporary directory for profiling reports.
+    """
+    d = tmp_path_factory.mktemp("profiles")
+    (d / "cpu").mkdir()
+    (d / "memory").mkdir()
+    return d

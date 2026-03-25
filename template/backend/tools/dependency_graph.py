@@ -7,9 +7,6 @@ import logging
 import sys
 from pathlib import Path
 
-__all__ = ["analyze_imports", "main"]
-
-
 logger = logging.getLogger(__name__)
 
 

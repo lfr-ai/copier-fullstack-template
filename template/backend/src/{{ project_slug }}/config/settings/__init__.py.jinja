@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-__all__ = ["get_settings"]
-
+import structlog
 import os
 from functools import lru_cache
-from typing import Final
 
 from {{ project_slug }}.config.settings.base import BaseAppSettings
 from {{ project_slug }}.config.settings.dev import DevSettings
@@ -16,7 +14,8 @@ from {{ project_slug }}.config.settings.staging import StagingSettings
 from {{ project_slug }}.config.settings.test import TestSettings
 from {{ project_slug }}.core.enums.environment import Environment
 
-_SETTINGS_MAP: Final[dict[Environment, type[BaseAppSettings]]] = {
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_SETTINGS_MAP: dict[Environment, type[BaseAppSettings]] = {
     Environment.LOCAL: LocalSettings,
     Environment.DEV: DevSettings,
     Environment.TEST: TestSettings,
@@ -36,6 +35,15 @@ def get_settings() -> BaseAppSettings:
         BaseAppSettings: Configured application settings.
     """
     env_name = os.getenv("{{ project_slug | upper }}_ENVIRONMENT", "local")
-    environment = Environment(env_name.lower())
-    settings_class = _SETTINGS_MAP.get(environment, LocalSettings)
+    try:
+        environment = Environment(env_name.lower())
+    except ValueError:
+        logger.warning(
+            "Invalid environment %r — falling back to LOCAL. "
+            "Valid values: %s",
+            env_name,
+            ", ".join(e.value for e in Environment),
+        )
+        environment = Environment.LOCAL
+    settings_class = _SETTINGS_MAP[environment]
     return settings_class()

@@ -1,0 +1,109 @@
+"""LLM-as-judge evaluator."""
+
+from __future__ import annotations
+
+import json
+import structlog
+
+from {{ project_slug }}.core.interfaces.evaluator import EvalResult, EvalSuite
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+from {{ project_slug }}.ai.config import EVAL_MAX_TOKENS
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_DEFAULT_THRESHOLD: float = 0.7
+_JUDGE_TEMPERATURE: float = 0.0
+_ZERO_SCORE: float = 0.0
+
+_EVAL_SYSTEM_PROMPT = (
+    "You are an expert evaluator. Score the provided answer on a scale of "
+    "0.0 to 1.0 based on the given criteria. Return ONLY valid JSON with "
+    'keys: "score" (float), "passed" (bool, true if score >= 0.7), '
+    '"reason" (brief explanation).'
+)
+
+
+class LLMJudgeEvaluator:
+    """LLM-as-judge evaluator for automated quality assessment."""
+
+    __slots__ = ("_llm", "_metric", "_threshold")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        metric: str = "relevance",
+        threshold: float = _DEFAULT_THRESHOLD,
+    ) -> None:
+        self._llm = llm
+        self._metric = metric
+        self._threshold = threshold
+
+    async def evaluate(
+        self,
+        *,
+        question: str,
+        answer: str,
+        context: str = "",
+        expected: str = "",
+    ) -> EvalResult:
+        """Evaluate a single LLM output using LLM-as-judge."""
+        parts = [
+            f"Metric: {self._metric}",
+            f"Question: {question}",
+            f"Answer: {answer}",
+        ]
+        if context:
+            parts.append(f"Context: {context}")
+        if expected:
+            parts.append(f"Expected: {expected}")
+
+        prompt = "\n\n".join(parts)
+
+        try:
+            raw = await self._llm.complete(
+                prompt=prompt,
+                system_prompt=_EVAL_SYSTEM_PROMPT,
+                max_tokens=EVAL_MAX_TOKENS,
+                temperature=_JUDGE_TEMPERATURE,
+            )
+            result = json.loads(raw)
+            score = float(result.get("score", _ZERO_SCORE))
+            return EvalResult(
+                metric=self._metric,
+                score=score,
+                passed=score >= self._threshold,
+                reason=str(result.get("reason", "")),
+            )
+        except (json.JSONDecodeError, KeyError, TypeError):
+            logger.warning("Eval parse failed for metric %s, defaulting to 0", self._metric)
+            return EvalResult(
+                metric=self._metric,
+                score=_ZERO_SCORE,
+                passed=False,
+                reason="Failed to parse evaluator response",
+            )
+
+    async def evaluate_batch(
+        self,
+        *,
+        samples: list[dict[str, str]],
+    ) -> EvalSuite:
+        """Run evaluation across multiple samples."""
+        results: list[EvalResult] = []
+        for sample in samples:
+            result = await self.evaluate(
+                question=sample.get("question", ""),
+                answer=sample.get("answer", ""),
+                context=sample.get("context", ""),
+                expected=sample.get("expected", ""),
+            )
+            results.append(result)
+
+        scores = [r.score for r in results]
+        overall = sum(scores) / len(scores) if scores else _ZERO_SCORE
+        return EvalSuite(
+            results=results,
+            overall_score=overall,
+            passed=all(r.passed for r in results),
+        )

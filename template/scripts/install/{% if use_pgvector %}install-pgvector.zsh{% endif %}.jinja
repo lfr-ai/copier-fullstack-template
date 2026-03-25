@@ -1,0 +1,126 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Install pgvector extension for PostgreSQL.
+# Supports Linux (apt/dnf), macOS (homebrew), and from-source builds.
+
+detect_platform() {
+emulate -L zsh
+local os_type
+os_type="$(uname -s)"
+case "${os_type}" in
+Linux)
+if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+print "wsl"
+else
+print "linux"
+fi
+;;
+Darwin) print "macos" ;;
+*) print "unknown" ;;
+esac
+}
+
+check_existing() {
+emulate -L zsh
+# Check if pgvector extension is available in PostgreSQL
+if command -v psql &>/dev/null; then
+if psql -U postgres -c "SELECT * FROM pg_available_extensions WHERE name = 'vector';" 2>/dev/null | grep -q vector; then
+print "pgvector extension is available."
+return 0
+fi
+fi
+# Also check Python binding
+if python3 -c "import pgvector" 2>/dev/null; then
+print "pgvector Python binding installed."
+return 0
+fi
+return 1
+}
+
+install_pgvector_linux() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "Installing pgvector on Linux..."
+if command -v apt-get &>/dev/null; then
+# Try the official PostgreSQL apt repo first
+local pg_version
+pg_version="$(pg_config --version 2>/dev/null | grep -oP '\d+' | head -1)"
+if [[ -n "${pg_version}" ]]; then
+sudo apt-get update -qq
+sudo apt-get install -y --no-install-recommends \
+"postgresql-${pg_version}-pgvector" 2>/dev/null || {
+print "Package not available, building from source..."
+_build_from_source
+}
+else
+print "PostgreSQL not found, installing Python binding only."
+fi
+elif command -v dnf &>/dev/null; then
+sudo dnf install -y pgvector 2>/dev/null || {
+print "Package not available, building from source..."
+_build_from_source
+}
+fi
+
+# Always install the Python binding
+pip install --upgrade "pgvector>=0.3"
+}
+
+install_pgvector_macos() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "Installing pgvector on macOS..."
+if command -v brew &>/dev/null; then
+brew install pgvector 2>/dev/null || {
+print "Homebrew package not found, building from source..."
+_build_from_source
+}
+fi
+pip install --upgrade "pgvector>=0.3"
+}
+
+_build_from_source() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+if ! command -v pg_config &>/dev/null; then
+print "pg_config not found — cannot build pgvector from source." >&2
+return 1
+fi
+
+local tmpdir
+tmpdir="$(mktemp -d)"
+git clone --branch v0.8.0 --depth 1 https://github.com/pgvector/pgvector.git "${tmpdir}/pgvector"
+cd "${tmpdir}/pgvector"
+make
+sudo make install
+cd -
+rm -rf "${tmpdir}"
+}
+
+main() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "==== pgvector Installation ===="
+
+local platform
+platform="$(detect_platform)"
+
+case "${platform}" in
+linux|wsl) install_pgvector_linux ;;
+macos) install_pgvector_macos ;;
+*)
+print "Unsupported platform: ${platform}" >&2
+return 1
+;;
+esac
+
+print "pgvector installation complete."
+}
+
+main "$@"

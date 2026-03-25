@@ -1,0 +1,175 @@
+"""SQL query profiling via SQLAlchemy events."""
+
+from __future__ import annotations
+
+import contextlib
+import time
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+import structlog
+
+from {{ project_slug }}.config.constants import MS_PER_SECOND
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from sqlalchemy.engine import Engine
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_QUERY_START_KEY = "_profiling_query_start"
+_DEFAULT_TRUNCATE_LEN: int = 200
+_LOG_TRUNCATE_LEN: int = 100
+_DEFAULT_SLOW_THRESHOLD_MS: float = 100.0
+_PROFILE_SLOW_THRESHOLD_MS: float = 50.0
+
+
+@dataclass(frozen=True, slots=True)
+class QueryTiming:
+    """Timing data for single SQL query."""
+
+    statement: str
+    duration_ms: float
+    parameters: str | None = None
+
+
+@dataclass(slots=True)
+class SqlProfileResult:
+    """Aggregated result of SQL query profiling."""
+
+    label: str = "adhoc"
+    total_queries: int = 0
+    total_ms: float = 0.0
+    queries: list[QueryTiming] = field(default_factory=list)
+    slow_queries: list[QueryTiming] = field(default_factory=list)
+
+
+def _truncate(text: str, max_length: int = _DEFAULT_TRUNCATE_LEN) -> str:
+    """Truncate SQL statement for safe logging."""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length] + "..."
+
+
+def attach_sql_profiling(
+    engine: Engine,
+    *,
+    slow_threshold_ms: float = _DEFAULT_SLOW_THRESHOLD_MS,
+    log_all: bool = False,
+) -> None:
+    """Attach SQLAlchemy event listeners for query timing."""
+    from sqlalchemy import event
+
+    @event.listens_for(engine.sync_engine, "before_cursor_execute")
+    def _before_cursor_execute(
+        conn: object,
+        cursor: object,
+        statement: str,
+        parameters: object,
+        context: object,
+        executemany: bool,
+    ) -> None:
+        conn.info.setdefault(_QUERY_START_KEY, []).append(time.perf_counter())
+
+    @event.listens_for(engine.sync_engine, "after_cursor_execute")
+    def _after_cursor_execute(
+        conn: object,
+        cursor: object,
+        statement: str,
+        parameters: object,
+        context: object,
+        executemany: bool,
+    ) -> None:
+        start_times = conn.info.get(_QUERY_START_KEY)
+        if not start_times:
+            return
+
+        start = start_times.pop()
+        duration_ms = (time.perf_counter() - start) * MS_PER_SECOND
+
+        if duration_ms >= slow_threshold_ms:
+            logger.warning(
+                "slow_query_detected",
+                duration_ms=round(duration_ms, 2),
+                statement=_truncate(statement),
+            )
+        elif log_all:
+            logger.debug(
+                "query_executed",
+                duration_ms=round(duration_ms, 2),
+                statement=_truncate(statement, max_length=_LOG_TRUNCATE_LEN),
+            )
+
+
+@contextlib.asynccontextmanager
+async def sql_profile(
+    engine: Engine,
+    *,
+    label: str = "adhoc",
+    slow_threshold_ms: float = _PROFILE_SLOW_THRESHOLD_MS,
+) -> AsyncIterator[SqlProfileResult]:
+    """Async context manager that profiles SQL queries during the enclosed block."""
+    from sqlalchemy import event
+
+    result = SqlProfileResult(label=label)
+    timings: list[tuple[float, str, str | None]] = []  # (start, stmt, params)
+
+    def _before(
+        conn: object,
+        cursor: object,
+        statement: str,
+        parameters: object,
+        context: object,
+        executemany: bool,
+    ) -> None:
+        timings.append(
+            (
+                time.perf_counter(),
+                statement,
+                str(parameters)[:_DEFAULT_TRUNCATE_LEN] if parameters else None,
+            )
+        )
+
+    def _after(
+        conn: object,
+        cursor: object,
+        statement: str,
+        parameters: object,
+        context: object,
+        executemany: bool,
+    ) -> None:
+        if not timings:
+            return
+        start, stmt, params = timings.pop()
+        duration_ms = (time.perf_counter() - start) * MS_PER_SECOND
+        qt = QueryTiming(
+            statement=_truncate(stmt),
+            duration_ms=round(duration_ms, 2),
+            parameters=params,
+        )
+        result.queries.append(qt)
+        result.total_queries += 1
+        result.total_ms += duration_ms
+        if duration_ms >= slow_threshold_ms:
+            result.slow_queries.append(qt)
+
+    sync_engine = engine.sync_engine
+    event.listen(sync_engine, "before_cursor_execute", _before)
+    event.listen(sync_engine, "after_cursor_execute", _after)
+
+    try:
+        yield result
+    finally:
+        event.remove(sync_engine, "before_cursor_execute", _before)
+        event.remove(sync_engine, "after_cursor_execute", _after)
+
+        result.total_ms = round(result.total_ms, 2)
+
+        logger.info(
+            "sql_profile_completed",
+            label=label,
+            total_queries=result.total_queries,
+            total_ms=result.total_ms,
+            slow_query_count=len(result.slow_queries),
+        )

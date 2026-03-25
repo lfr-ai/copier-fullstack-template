@@ -1,0 +1,49 @@
+"""Build knowledge graph command — CQRS write operation for KG construction."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import override
+
+import structlog
+
+from {{ project_slug }}.application.commands.base import CommandHandler
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+logger = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class BuildKnowledgeGraphCommand:
+    """Command to add triplets to the knowledge graph."""
+
+    triplets: list[tuple[str, str, str]] = field(default_factory=list)
+
+
+class BuildKnowledgeGraphHandler(CommandHandler[BuildKnowledgeGraphCommand, int]):
+    """Handles bulk knowledge graph construction."""
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+        knowledge_graph: KnowledgeGraphPort,
+    ) -> None:
+        super().__init__(uow=uow)
+        self._kg = knowledge_graph
+
+    @override
+    async def handle(self, command: BuildKnowledgeGraphCommand) -> int:
+        """Add triplets to the knowledge graph.
+
+        Args:
+            command (BuildKnowledgeGraphCommand): Triplets to persist.
+
+        Returns:
+            int: Number of triplets added.
+        """
+        logger.info("Building knowledge graph", triplet_count=len(command.triplets))
+        await self._kg.add_triplets(command.triplets)
+        logger.info("Knowledge graph updated", triplet_count=len(command.triplets))
+        return len(command.triplets)

@@ -1,0 +1,422 @@
+"""Pre-built crew templates — production-ready crew configurations.
+
+Provides factory functions for common crew patterns:
+
+* **Research Crew** — gather, analyze, and synthesize information
+* **Analysis Crew** — data analysis, pattern recognition, reporting
+* **Content Crew** — content creation, editing, quality assurance
+* **Planning Crew** — strategic planning, task decomposition
+
+Each factory returns a fully configured 'crewai.Crew' that can
+be registered with the HMAS supervisor or executed standalone.
+"""
+
+from __future__ import annotations
+
+import structlog
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from crewai import Crew
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_DEFAULT_MAX_REASONING_ATTEMPTS: int = 3
+def create_research_crew(
+    *,
+    llm: str = "gpt-4o",
+    tools: list[object] | None = None,
+    verbose: bool = False,
+    knowledge_sources: list[object] | None = None,
+    embedder: dict[str, object] | None = None,
+) -> Crew:
+    """Create a research crew with researcher + analyst agents.
+
+    The research crew follows a sequential process:
+    1. Researcher gathers and validates information
+    2. Analyst synthesizes findings into a structured report
+
+    Args:
+        llm (str): LLM model identifier for all agents.
+        tools (list[object] | None): Shared tools available to all agents.
+        verbose (bool): Enable detailed execution logging.
+        knowledge_sources (list[object] | None): Optional crew-level knowledge sources.
+        embedder (dict[str, object] | None): Embedder config for memory and knowledge.
+
+    Returns:
+        Crew: Configured 'crewai.Crew' instance.
+    """
+    from crewai import Agent, Crew, Process, Task
+
+    researcher = Agent(
+        role="Senior Research Analyst",
+        goal="Gather comprehensive, accurate information on the given topic",
+        backstory=(
+            "You are a seasoned research analyst with expertise in finding "
+            "and validating information from multiple sources. You are known "
+            "for thoroughness and attention to detail."
+        ),
+        llm=llm,
+        tools=tools or [],
+        verbose=verbose,
+        memory=True,
+        allow_delegation=False,
+    )
+
+    analyst = Agent(
+        role="Research Synthesizer",
+        goal="Analyze research findings and produce clear, actionable insights",
+        backstory=(
+            "You are an expert at turning raw research into structured, "
+            "insightful analysis. You identify patterns, draw conclusions, "
+            "and present findings in an accessible format."
+        ),
+        llm=llm,
+        verbose=verbose,
+        memory=True,
+        allow_delegation=False,
+    )
+
+    research_task = Task(
+        description=(
+            "Conduct thorough research on: {task}\n"
+            "Find relevant facts, data points, and expert opinions. "
+            "Validate information accuracy and note sources."
+        ),
+        expected_output=(
+            "Comprehensive research notes with key findings, "
+            "supporting data, and source references."
+        ),
+        agent=researcher,
+    )
+
+    synthesis_task = Task(
+        description=(
+            "Analyze the research findings and create a structured report.\n"
+            "Identify key themes, patterns, and actionable insights."
+        ),
+        expected_output=(
+            "A clear, structured analysis report with executive summary, "
+            "key findings, analysis, and recommendations."
+        ),
+        agent=analyst,
+        markdown=True,
+    )
+
+    crew_kwargs: dict[str, object] = {
+        "agents": [researcher, analyst],
+        "tasks": [research_task, synthesis_task],
+        "process": Process.sequential,
+        "verbose": verbose,
+        "memory": True,
+    }
+    if knowledge_sources:
+        crew_kwargs["knowledge_sources"] = knowledge_sources
+    if embedder is not None:
+        crew_kwargs["embedder"] = embedder
+
+    crew = Crew(**crew_kwargs)
+
+    logger.info("crewai_research_crew_created")
+    return crew
+
+
+def create_analysis_crew(
+    *,
+    llm: str = "gpt-4o",
+    tools: list[object] | None = None,
+    verbose: bool = False,
+    knowledge_sources: list[object] | None = None,
+    embedder: dict[str, object] | None = None,
+) -> Crew:
+    """Create a data analysis crew with hierarchical management.
+
+    Uses 'Process.hierarchical' with a manager agent that
+    coordinates between a data analyst and a reporting specialist.
+
+    Args:
+        llm (str): LLM model identifier.
+        tools (list[object] | None): Shared tools.
+        verbose (bool): Enable logging.
+        knowledge_sources (list[object] | None): Optional crew-level knowledge sources.
+        embedder (dict[str, object] | None): Embedder config for memory and knowledge.
+
+    Returns:
+        Crew: Configured 'crewai.Crew' with hierarchical process.
+    """
+    from crewai import Agent, Crew, Process, Task
+
+    data_analyst = Agent(
+        role="Senior Data Analyst",
+        goal="Perform deep quantitative and qualitative analysis",
+        backstory=(
+            "Expert in statistical analysis, data visualization, "
+            "and pattern recognition across diverse datasets."
+        ),
+        llm=llm,
+        tools=tools or [],
+        verbose=verbose,
+        memory=True,
+        reasoning=True,
+    )
+
+    reporter = Agent(
+        role="Report Specialist",
+        goal="Transform analysis into clear, professional reports",
+        backstory=(
+            "Skilled at presenting complex data insights in accessible "
+            "formats with charts, tables, and executive summaries."
+        ),
+        llm=llm,
+        verbose=verbose,
+        memory=True,
+    )
+
+    analysis_task = Task(
+        description=(
+            "Analyze the following: {task}\n"
+            "Apply appropriate analytical methods. "
+            "Identify trends, anomalies, and correlations."
+        ),
+        expected_output="Detailed analytical findings with supporting evidence.",
+    )
+
+    report_task = Task(
+        description=(
+            "Create a comprehensive report based on the analysis. "
+            "Include visualizations descriptions and actionable recommendations."
+        ),
+        expected_output=(
+            "Professional report with executive summary, methodology, "
+            "findings, visualizations, and recommendations."
+        ),
+        markdown=True,
+    )
+
+    crew_kwargs: dict[str, object] = {
+        "agents": [data_analyst, reporter],
+        "tasks": [analysis_task, report_task],
+        "process": Process.hierarchical,
+        "manager_llm": llm,
+        "verbose": verbose,
+        "memory": True,
+        "planning": True,
+    }
+    if knowledge_sources:
+        crew_kwargs["knowledge_sources"] = knowledge_sources
+    if embedder is not None:
+        crew_kwargs["embedder"] = embedder
+
+    crew = Crew(**crew_kwargs)
+
+    logger.info("crewai_analysis_crew_created")
+    return crew
+
+
+def create_content_crew(
+    *,
+    llm: str = "gpt-4o",
+    tools: list[object] | None = None,
+    verbose: bool = False,
+    knowledge_sources: list[object] | None = None,
+    embedder: dict[str, object] | None = None,
+) -> Crew:
+    """Create a content creation crew (writer + editor + QA).
+
+    Three-agent sequential pipeline for high-quality content:
+    1. Writer drafts the content
+    2. Editor refines style, structure, and clarity
+    3. QA reviewer validates accuracy and completeness
+
+    Args:
+        llm (str): LLM model identifier.
+        tools (list[object] | None): Shared tools.
+        verbose (bool): Enable logging.
+        knowledge_sources (list[object] | None): Optional crew-level knowledge sources.
+        embedder (dict[str, object] | None): Embedder config for memory and knowledge.
+
+    Returns:
+        Crew: Configured 'crewai.Crew' instance.
+    """
+    from crewai import Agent, Crew, Process, Task
+
+    writer = Agent(
+        role="Content Writer",
+        goal="Create engaging, informative content on the assigned topic",
+        backstory=(
+            "Professional content writer with expertise in creating "
+            "clear, compelling material for diverse audiences."
+        ),
+        llm=llm,
+        tools=tools or [],
+        verbose=verbose,
+        memory=True,
+    )
+
+    editor = Agent(
+        role="Content Editor",
+        goal="Refine content for clarity, accuracy, and engagement",
+        backstory=(
+            "Senior editor with a keen eye for structure, tone, "
+            "and readability. Ensures content meets professional standards."
+        ),
+        llm=llm,
+        verbose=verbose,
+        memory=True,
+    )
+
+    qa_reviewer = Agent(
+        role="Quality Assurance Reviewer",
+        goal="Verify factual accuracy, completeness, and consistency",
+        backstory=(
+            "Detail-oriented reviewer who ensures content is accurate, "
+            "complete, and free from errors or inconsistencies."
+        ),
+        llm=llm,
+        verbose=verbose,
+        memory=True,
+    )
+
+    write_task = Task(
+        description=(
+            "Write content about: {task}\n"
+            "Create a well-structured draft with clear sections."
+        ),
+        expected_output="Complete content draft with proper structure and formatting.",
+        agent=writer,
+    )
+
+    edit_task = Task(
+        description=(
+            "Review and refine the content. Improve clarity, flow, "
+            "and engagement while maintaining the author's voice."
+        ),
+        expected_output="Polished content with improved readability and structure.",
+        agent=editor,
+    )
+
+    qa_task = Task(
+        description=(
+            "Perform quality assurance review. Check factual accuracy, "
+            "completeness, and consistency. Flag any issues."
+        ),
+        expected_output="Final reviewed content with QA sign-off.",
+        agent=qa_reviewer,
+        markdown=True,
+    )
+
+    crew_kwargs: dict[str, object] = {
+        "agents": [writer, editor, qa_reviewer],
+        "tasks": [write_task, edit_task, qa_task],
+        "process": Process.sequential,
+        "verbose": verbose,
+        "memory": True,
+    }
+    if knowledge_sources:
+        crew_kwargs["knowledge_sources"] = knowledge_sources
+    if embedder is not None:
+        crew_kwargs["embedder"] = embedder
+
+    crew = Crew(**crew_kwargs)
+
+    logger.info("crewai_content_crew_created")
+    return crew
+
+
+def create_planning_crew(
+    *,
+    llm: str = "gpt-4o",
+    tools: list[object] | None = None,
+    verbose: bool = False,
+    knowledge_sources: list[object] | None = None,
+    embedder: dict[str, object] | None = None,
+) -> Crew:
+    """Create a strategic planning crew with hierarchical management.
+
+    Designed for goal decomposition and strategic task planning.
+    Uses agents with 'reasoning=True' for methodical planning.
+
+    Args:
+        llm (str): LLM model identifier.
+        tools (list[object] | None): Shared tools.
+        verbose (bool): Enable logging.
+        knowledge_sources (list[object] | None): Optional crew-level knowledge sources.
+        embedder (dict[str, object] | None): Embedder config for memory and knowledge.
+
+    Returns:
+        Crew: Configured 'crewai.Crew' with planning enabled.
+    """
+    from crewai import Agent, Crew, Process, Task
+
+    strategist = Agent(
+        role="Strategic Planner",
+        goal="Decompose complex goals into actionable execution plans",
+        backstory=(
+            "Expert strategic planner who methodically breaks down "
+            "complex challenges into manageable, ordered steps."
+        ),
+        llm=llm,
+        tools=tools or [],
+        verbose=verbose,
+        memory=True,
+        reasoning=True,
+        max_reasoning_attempts=_DEFAULT_MAX_REASONING_ATTEMPTS,
+    )
+
+    validator = Agent(
+        role="Plan Validator",
+        goal="Review and validate execution plans for feasibility and completeness",
+        backstory=(
+            "Experienced project manager who evaluates plans for "
+            "completeness, risk, resource needs, and timeline feasibility."
+        ),
+        llm=llm,
+        verbose=verbose,
+        memory=True,
+        reasoning=True,
+    )
+
+    plan_task = Task(
+        description=(
+            "Create a detailed execution plan for: {task}\n"
+            "Break down into phases, milestones, and action items. "
+            "Consider dependencies, risks, and resource requirements."
+        ),
+        expected_output=(
+            "Structured plan with phases, milestones, action items, "
+            "timeline estimates, risk assessment, and resource needs."
+        ),
+        agent=strategist,
+    )
+
+    validate_task = Task(
+        description=(
+            "Review the proposed plan. Evaluate feasibility, identify "
+            "gaps, assess risks, and suggest improvements."
+        ),
+        expected_output=(
+            "Validated plan with feasibility assessment, gap analysis, "
+            "risk mitigation strategies, and final recommendations."
+        ),
+        agent=validator,
+        markdown=True,
+    )
+
+    crew_kwargs: dict[str, object] = {
+        "agents": [strategist, validator],
+        "tasks": [plan_task, validate_task],
+        "process": Process.sequential,
+        "verbose": verbose,
+        "memory": True,
+        "planning": True,
+        "planning_llm": llm,
+    }
+    if knowledge_sources:
+        crew_kwargs["knowledge_sources"] = knowledge_sources
+    if embedder is not None:
+        crew_kwargs["embedder"] = embedder
+
+    crew = Crew(**crew_kwargs)
+
+    logger.info("crewai_planning_crew_created")
+    return crew

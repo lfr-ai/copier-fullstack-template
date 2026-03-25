@@ -1,0 +1,30 @@
+# Superseded by .containerignore.jinja (generated at scaffold time).
+# Exists as a fallback for the template repository itself.
+.git
+.github
+.devcontainer
+.vscode
+.opencode
+.gsd
+node_modules
+__pycache__
+*.pyc
+*.pyo
+.tox
+.pytest_cache
+.ruff_cache
+htmlcov
+coverage.xml
+*.egg-info
+dist
+build
+.env
+.env.*
+!.env.example
+logs/*.log
+docs
+*.md
+!README.md
+LICENSE
+Taskfile.yml
+tox.ini

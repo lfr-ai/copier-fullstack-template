@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT NO_UNSET
 
@@ -29,7 +30,7 @@ check_command "git" "https://git-scm.com/downloads" || ((missing_count++))
 check_command "task" "https://taskfile.dev/installation" || ((missing_count++))
 check_command "uv" "curl -LsSf https://astral.sh/uv/install.sh | sh" || ((missing_count++))
 check_command "node" "https://nodejs.org/" || ((missing_count++))
-check_command "pnpm" "corepack enable && corepack prepare pnpm@latest --activate" || ((missing_count++))
+check_command "pnpm" "corepack enable && corepack prepare pnpm@10 --activate" || ((missing_count++))
 check_command "{{ container_runtime }}" "zsh scripts/install/install-container.zsh" || ((missing_count++))
 {% if use_caddy %}
 check_command "caddy" "zsh scripts/install/install-caddy.zsh" || ((missing_count++))

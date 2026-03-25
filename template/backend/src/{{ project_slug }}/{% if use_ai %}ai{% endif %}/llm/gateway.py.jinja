@@ -1,0 +1,130 @@
+"""AI model gateway — routes requests across multiple LLM providers."""
+
+from __future__ import annotations
+
+import structlog
+from collections.abc import AsyncIterator
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
+from {{ project_slug }}.ai.llm.base_llm_adapter import BaseLLMAdapter
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+class AIGateway(BaseLLMAdapter):
+    """Routes LLM requests across multiple provider adapters.
+
+    Supports:
+    - Priority-based provider selection
+    - Automatic failover on errors
+    - Per-request provider override
+    """
+
+    __slots__ = ("_default_provider", "_providers")
+
+    def __init__(
+        self,
+        *,
+        providers: dict[str, LLMPort],
+        default_provider: str | None = None,
+    ) -> None:
+        if not providers:
+            msg = "At least one provider must be registered"
+            raise ValueError(msg)
+
+        self._providers = providers
+        self._default_provider = default_provider or next(iter(providers))
+        logger.info(
+            "AI Gateway initialized with %d providers: %s (default: %s)",
+            len(providers),
+            list(providers.keys()),
+            self._default_provider,
+        )
+
+    @property
+    @override
+    def model(self) -> str:
+        """Return the default provider's model identifier."""
+        provider = self._providers.get(self._default_provider)
+        if provider and hasattr(provider, "model"):
+            return provider.model
+        return self._default_provider
+
+    @override
+    async def complete(
+        self,
+        *,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+    ) -> str:
+        errors: list[str] = []
+
+        order = [self._default_provider] + [
+            k for k in self._providers if k != self._default_provider
+        ]
+
+        for provider_name in order:
+            provider = self._providers.get(provider_name)
+            if provider is None:
+                continue
+
+            try:
+                result = await provider.complete(
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                logger.debug("Completion served by provider: %s", provider_name)
+                return result
+            except Exception as e:  # noqa: BLE001 — top-level error boundary
+                error_msg = f"{provider_name}: {e}"
+                errors.append(error_msg)
+                logger.warning("Provider %s failed: %s", provider_name, e)
+
+        msg = f"All providers failed: {'; '.join(errors)}"
+        raise RuntimeError(msg)
+
+    @override
+    async def stream(
+        self,
+        *,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+    ) -> AsyncIterator[str]:
+        errors: list[str] = []
+
+        order = [self._default_provider] + [
+            k for k in self._providers if k != self._default_provider
+        ]
+
+        for provider_name in order:
+            provider = self._providers.get(provider_name)
+            if provider is None:
+                continue
+
+            try:
+                # Buffer chunks so a mid-stream failure doesn't yield
+                # partial output before falling back to the next provider.
+                buffered: list[str] = []
+                async for chunk in provider.stream(
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                ):
+                    buffered.append(chunk)
+
+                for chunk in buffered:
+                    yield chunk
+                return
+            except Exception as e:  # noqa: BLE001 — top-level error boundary
+                errors.append(f"{provider_name}: {e}")
+                logger.warning("Stream provider %s failed: %s", provider_name, e)
+
+        msg = f"All stream providers failed: {'; '.join(errors)}"
+        raise RuntimeError(msg)

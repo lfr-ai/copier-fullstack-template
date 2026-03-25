@@ -1,6 +1,9 @@
+# Developer Onboarding
 
-Welcome to **{{ project_name }}**. Follow the steps below to set up your
-development environment from scratch.
+Development environment setup for **{{ project_name }}**.
+
+> **Already have tools installed?** Skip to [SETUP.md](SETUP.md) for project-specific configuration.
+> **Just want to run it?** See [QUICKSTART.md](QUICKSTART.md).
 
 ---
 
@@ -12,7 +15,7 @@ development environment from scratch.
 | Python | {{ python_version }}+ | Backend runtime |
 | UV | latest | Python package manager |
 | Node.js | {{ node_version }}+ | Frontend runtime |
-| pnpm | 9+ | Node package manager |
+| pnpm | 10+ | Node package manager |
 | {{ container_runtime | capitalize }} | latest | Container runtime |
 | Task | 3+ | Task runner |
 | VS Code | latest | Editor |
@@ -62,14 +65,14 @@ fnm install {{ node_version }}
 fnm use {{ node_version }}
 
 corepack enable
-corepack prepare pnpm@latest --activate
+corepack prepare pnpm@10 --activate
 ```
 
 Verify:
 
 ```zsh
 node --version   # v{{ node_version }}.x
-pnpm --version   # 9.x
+pnpm --version   # 10.x
 ```
 
 ---
@@ -124,3 +127,73 @@ Visit:
 - Backend API: <http://localhost:8000>
 - API docs: <http://localhost:8000/api/docs>
 - Frontend: <http://localhost:3000>
+{%- if use_ai %}
+
+---
+
+
+If AI features are enabled, additional setup is required:
+
+```zsh
+task backend:ai:setup
+```
+
+This validates AI dependencies and creates data directories.
+
+Set the required environment variables in `.env`:
+
+{% if use_ai %}
+```env
+{{ project_slug | upper }}_OPENAI_API_KEY=sk-...
+```
+{% endif %}
+{% if use_azure_openai %}
+```env
+{{ project_slug | upper }}_AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+{{ project_slug | upper }}_AZURE_OPENAI_API_KEY=...
+{{ project_slug | upper }}_AZURE_OPENAI_DEPLOYMENT=your-deployment
+```
+{% endif %}
+{% if use_knowledge_graph %}
+
+For Neo4j (if using `neo4j` backend):
+
+```zsh
+# macOS/Linux
+scripts/install/install-neo4j.zsh
+# Windows (PowerShell) — or use the bundled compose profile
+{{ container_runtime }} compose --profile knowledge-graph up -d neo4j
+```
+{% endif %}
+{% if use_faiss %}
+
+For FAISS:
+
+```zsh
+# macOS/Linux
+scripts/install/install-faiss.zsh
+# Windows — install via pip
+pip install faiss-cpu
+```
+{% endif %}
+{% if use_mcp %}
+
+MCP server will be available at <http://localhost:8000/mcp> once `{{ project_slug | upper }}_MCP_ENABLED=true` is set.
+{% endif %}
+
+See [CONFIG.md](CONFIG.md) for the full list of AI configuration variables.
+{%- endif %}
+{%- if use_sftp %}
+
+---
+
+## SSH / SFTP Setup (Optional)
+
+If you need to deploy or sync files to a remote server:
+
+```zsh
+task ssh:setup -- --remote-host myserver.example.com
+```
+
+See [SSH_SFTP.md](SSH_SFTP.md) for the full guide.
+{%- endif %}

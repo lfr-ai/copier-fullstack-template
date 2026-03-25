@@ -2,7 +2,7 @@
 Recommended VS Code setup for {{ project_name }}.
 
 
-Open the multi-root workspace for the best experience:
+Open the multi-root workspace to use the predefined project settings:
 
 ```
 {{ project_slug }}.code-workspace
@@ -56,6 +56,7 @@ This provides:
 | ------------------------------------------- | ------------------------------ |
 | `ms-playwright.playwright` | `use_playwright = true` |
 | `ms-vscode-remote.remote-containers` | `use_devcontainer = true` |
+| `Natizyskunk.sftp` | `use_sftp = true` |
 | `mtxr.sqltools` | `database_backend = postgresql` |
 | `mtxr.sqltools-driver-pg` | `database_backend = postgresql` |
 | `ms-azuretools.vscode-azure-github-copilot` | `cloud_provider = azure` |
@@ -82,7 +83,6 @@ code --install-extension ms-mssql.mssql
 code --install-extension ms-dotnettools.vscode-dotnet-runtime
 
 code --install-extension ms-windows-ai-studio.windows-ai-studio
-code --install-extension teamsdevapp.vscode-ai-foundry
 
 code --install-extension streetsidesoftware.code-spell-checker-danish
 
@@ -94,8 +94,8 @@ code --install-extension ms-vscode.powershell
 ---
 
 
-These are *personal preference* shortcuts. The project works perfectly with
-VS Code defaults. Copy the block below into your **user** `keybindings.json`
+These shortcuts are optional. The project works with default VS Code
+keybindings. Copy the block below into your **user** `keybindings.json`
 (`Ctrl+K Ctrl+S` → open keyboard shortcuts JSON):
 
 ```jsonc

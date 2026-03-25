@@ -1,0 +1,203 @@
+"""Unit tests for MCP server and client adapters."""
+{%- if use_mcp %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+
+class TestMCPServerCreation:
+    """Tests for MCP server factory."""
+
+    @pytest.fixture
+    def mock_fastmcp(self) -> None:
+        """Patch FastMCP to avoid requiring mcp dependency."""
+        with patch(
+            "{{ project_slug }}.ai.mcp.server.FastMCP",
+            create=True,
+        ) as mock_cls:
+            mock_instance = MagicMock()
+            mock_instance.tool = MagicMock(side_effect=lambda: lambda fn: fn)
+            mock_instance.resource = MagicMock(side_effect=lambda *a, **kw: lambda fn: fn)
+            mock_instance.prompt = MagicMock(side_effect=lambda: lambda fn: fn)
+            mock_cls.return_value = mock_instance
+            yield mock_cls, mock_instance
+
+    def test_create_server_returns_fastmcp_instance(self, mock_fastmcp) -> None:
+        """Factory should return a configured FastMCP instance."""
+        mock_cls, mock_instance = mock_fastmcp
+
+        with patch.dict("sys.modules", {"mcp": MagicMock(), "mcp.server.fastmcp": MagicMock(FastMCP=mock_cls)}):
+            from {{ project_slug }}.ai.mcp.server import create_mcp_server
+
+            server = create_mcp_server(name="test-mcp")
+            assert server is not None
+
+    def test_create_server_with_tools(self, mock_fastmcp) -> None:
+        """Server should accept injected tool instances."""
+        mock_cls, mock_instance = mock_fastmcp
+        search_tool = AsyncMock()
+        ingest_tool = AsyncMock()
+
+        with patch.dict("sys.modules", {"mcp": MagicMock(), "mcp.server.fastmcp": MagicMock(FastMCP=mock_cls)}):
+            from {{ project_slug }}.ai.mcp.server import create_mcp_server
+
+            server = create_mcp_server(
+                search_tool=search_tool,
+                ingest_tool=ingest_tool,
+            )
+            assert server is not None
+
+
+class TestMCPClientAdapter:
+    """Tests for MCPClientAdapter."""
+
+    def test_init_defaults(self) -> None:
+        """Client should initialize with default transport."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter()
+        assert client._transport == "sse"
+        assert client._session is None
+
+    def test_init_with_url(self) -> None:
+        """Client should accept a server URL."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter(server_url="http://localhost:8080/sse")
+        assert client._server_url == "http://localhost:8080/sse"
+
+    @pytest.mark.asyncio
+    async def test_list_tools_not_connected_raises(self) -> None:
+        """Listing tools without connection should raise RuntimeError."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter()
+        with pytest.raises(RuntimeError, match="Not connected"):
+            await client.list_tools()
+
+    @pytest.mark.asyncio
+    async def test_call_tool_not_connected_raises(self) -> None:
+        """Calling a tool without connection should raise RuntimeError."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter()
+        with pytest.raises(RuntimeError, match="Not connected"):
+            await client.call_tool(name="test_tool")
+
+    @pytest.mark.asyncio
+    async def test_list_resources_not_connected_raises(self) -> None:
+        """Listing resources without connection should raise RuntimeError."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter()
+        with pytest.raises(RuntimeError, match="Not connected"):
+            await client.list_resources()
+
+    @pytest.mark.asyncio
+    async def test_read_resource_not_connected_raises(self) -> None:
+        """Reading a resource without connection should raise RuntimeError."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter()
+        with pytest.raises(RuntimeError, match="Not connected"):
+            await client.read_resource(uri="test://resource")
+
+    @pytest.mark.asyncio
+    async def test_call_tool_with_mock_session(self) -> None:
+        """Tool call should delegate to session when connected."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter(server_url="http://localhost:8080/sse")
+
+        mock_session = AsyncMock()
+        mock_result = MagicMock()
+        mock_content = MagicMock()
+        mock_content.text = "tool result"
+        mock_result.content = [mock_content]
+        mock_session.call_tool.return_value = mock_result
+        client._session = mock_session
+
+        result = await client.call_tool(name="search", arguments={"q": "test"})
+        assert result == "tool result"
+        mock_session.call_tool.assert_awaited_once_with("search", arguments={"q": "test"})
+
+    @pytest.mark.asyncio
+    async def test_list_tools_with_mock_session(self) -> None:
+        """Tool listing should parse session response."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter()
+        mock_session = AsyncMock()
+        mock_tool = MagicMock()
+        mock_tool.name = "calc"
+        mock_tool.description = "Calculator"
+        mock_tool.inputSchema = {"type": "object"}
+        mock_result = MagicMock()
+        mock_result.tools = [mock_tool]
+        mock_session.list_tools.return_value = mock_result
+        client._session = mock_session
+
+        tools = await client.list_tools()
+        assert len(tools) == 1
+        assert tools[0]["name"] == "calc"
+
+    @pytest.mark.asyncio
+    async def test_disconnect_clears_session(self) -> None:
+        """Disconnecting should clear the session."""
+        from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
+
+        client = MCPClientAdapter()
+        mock_session = AsyncMock()
+        client._session = mock_session
+
+        await client.disconnect()
+        assert client._session is None
+        mock_session.__aexit__.assert_awaited_once()
+
+
+class TestMCPToolDefinitionEntities:
+    """Tests for MCP domain entities."""
+
+    def test_tool_definition(self) -> None:
+        from {{ project_slug }}.core.entities.mcp import ToolDefinition
+
+        tool = ToolDefinition(name="search", description="Search documents")
+        assert tool.name == "search"
+        assert tool.description == "Search documents"
+
+    def test_tool_result(self) -> None:
+        from {{ project_slug }}.core.entities.mcp import ToolResult
+
+        result = ToolResult(content="answer", tool_name="search")
+        assert result.content == "answer"
+        assert not result.is_error
+
+    def test_resource_definition(self) -> None:
+        from {{ project_slug }}.core.entities.mcp import ResourceDefinition
+
+        resource = ResourceDefinition(uri="file:///path", name="config", description="Config file")
+        assert resource.uri == "file:///path"
+
+
+class TestMCPDTOs:
+    """Tests for MCP application DTOs."""
+
+    def test_tool_call_dto(self) -> None:
+        from {{ project_slug }}.application.dtos.mcp_dto import MCPToolCallDTO
+
+        dto = MCPToolCallDTO(server="local", tool="search", arguments={"q": "test"})
+        assert dto.server == "local"
+        assert dto.tool == "search"
+
+    def test_tool_result_dto(self) -> None:
+        from {{ project_slug }}.application.dtos.mcp_dto import MCPToolResultDTO
+
+        dto = MCPToolResultDTO(tool="search", content="result text", is_error=False)
+        assert not dto.is_error
+        assert dto.content == "result text"
+{%- else %}
+# MCP tests are only available when use_mcp is enabled.
+{%- endif %}

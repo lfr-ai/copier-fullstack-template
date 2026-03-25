@@ -62,7 +62,7 @@
         "python.terminal.activateEnvironment": false,
         "python.testing.pytestEnabled": true,
         "editor.formatOnSave": true,
-        "editor.rulers": [99],
+        "editor.rulers": [88],
         "editor.trimAutoWhitespace": true,
         "files.trimTrailingWhitespace": true,
         "[python]": {
@@ -74,16 +74,20 @@
           }
         },
         "[typescript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "prettier.printWidth": 88
         },
         "[javascript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "prettier.printWidth": 88
         },
         "[json]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "prettier.printWidth": 88
         },
         "[yaml]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "prettier.printWidth": 88
         },
         "[markdown]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -96,6 +100,6 @@
       }
     }
   },
-  "postCreateCommand": "zsh scripts/setup.zsh",
+  "postCreateCommand": "zsh scripts/bootstrap.zsh",
   "remoteUser": "vscode"
 }

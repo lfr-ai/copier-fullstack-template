@@ -1,0 +1,77 @@
+"""LangChain LLM adapter — wraps LangChain's 'init_chat_model' as an 'LLMPort'.
+
+Uses LangChain's universal 'init_chat_model("provider:model")' factory
+to instantiate any supported chat model. Parameters are passed via
+'.bind()' for cross-provider compatibility.
+"""
+
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_CHAT_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
+from {{ project_slug }}.ai.llm.base_llm_adapter import BaseLLMAdapter
+
+
+class LangChainLLMAdapter(BaseLLMAdapter):
+    """LangChain-backed LLM adapter extending 'BaseLLMAdapter'."""
+
+    __slots__ = ("_chat_model", "_model_name")
+
+    def __init__(self, *, provider: str = "openai", model: str = DEFAULT_CHAT_MODEL, **kwargs: object) -> None:
+        try:
+            from langchain.chat_models import init_chat_model  # type: ignore[import-untyped]
+
+            self._model_name = f"{provider}:{model}"
+            self._chat_model = init_chat_model(self._model_name, **kwargs)
+        except ImportError as exc:
+            msg = "langchain and langchain-openai are required — pip install langchain langchain-openai"
+            raise ImportError(msg) from exc
+
+    @property
+    @override
+    def model(self) -> str:
+        """Return the LangChain model identifier."""
+        return self._model_name
+
+    @override
+    async def complete(
+        self,
+        *,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+    ) -> str:
+        from langchain_core.messages import HumanMessage, SystemMessage  # type: ignore[import-untyped]
+
+        messages = []
+        if system_prompt:
+            messages.append(SystemMessage(content=system_prompt))
+        messages.append(HumanMessage(content=prompt))
+
+        bound = self._chat_model.bind(max_tokens=max_tokens, temperature=temperature)
+        response = await bound.ainvoke(messages)
+        return str(response.content)
+
+    @override
+    async def stream(
+        self,
+        *,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+    ) -> AsyncIterator[str]:
+        from langchain_core.messages import HumanMessage, SystemMessage  # type: ignore[import-untyped]
+
+        messages = []
+        if system_prompt:
+            messages.append(SystemMessage(content=system_prompt))
+        messages.append(HumanMessage(content=prompt))
+
+        bound = self._chat_model.bind(max_tokens=max_tokens, temperature=temperature)
+        async for chunk in bound.astream(messages):
+            if hasattr(chunk, "content") and chunk.content:
+                yield str(chunk.content)

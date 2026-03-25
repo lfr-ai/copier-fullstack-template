@@ -1,0 +1,84 @@
+"""Ingest document command — CQRS write operation for document ingestion."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Final, override
+
+import structlog
+
+from {{ project_slug }}.application.commands.base import CommandHandler
+from {{ project_slug }}.application.dtos.ingestion_dto import IngestionRequestDTO, IngestionResultDTO
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+
+_DEFAULT_CHUNK_SIZE: Final[int] = 512
+_DEFAULT_CHUNK_OVERLAP: Final[int] = 64
+
+logger = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class IngestDocumentCommand:
+    """Command to ingest a document into the RAG pipeline."""
+
+    source: str
+    chunking_strategy: str = "recursive"
+    chunk_size: int = _DEFAULT_CHUNK_SIZE
+    chunk_overlap: int = _DEFAULT_CHUNK_OVERLAP
+
+
+class IngestDocumentHandler(CommandHandler[IngestDocumentCommand, IngestionResultDTO]):
+    """Handles document ingestion through the RAG pipeline."""
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+        loader: DocumentLoaderPort,
+        splitter: TextSplitterPort,
+        embedding: EmbeddingPort,
+        vector_store: VectorStorePort,
+    ) -> None:
+        super().__init__(uow=uow)
+        self._loader = loader
+        self._splitter = splitter
+        self._embedding = embedding
+        self._vector_store = vector_store
+
+    @override
+    async def handle(self, command: IngestDocumentCommand) -> IngestionResultDTO:
+        """Execute document ingestion pipeline."""
+        logger.info("Ingesting document", source=command.source)
+
+        documents = await self._loader.load(source=command.source)
+        total_chunks = 0
+
+        for doc in documents:
+            chunks = self._splitter.split(doc)
+            if chunks:
+                texts = [c.content for c in chunks]
+                embeddings = await self._embedding.embed_texts(texts=texts)
+                ids = [c.id for c in chunks]
+                metadata = [{"content": c.content, "document_id": c.document_id, "index": c.index} for c in chunks]
+                await self._vector_store.add_vectors(
+                    vectors=embeddings,
+                    ids=ids,
+                    metadata=metadata,
+                )
+                total_chunks += len(chunks)
+
+        logger.info(
+            "Document ingestion complete",
+            source=command.source,
+            chunk_count=total_chunks,
+        )
+        return IngestionResultDTO(
+            source=command.source,
+            document_count=len(documents),
+            chunk_count=total_chunks,
+            success=True,
+        )

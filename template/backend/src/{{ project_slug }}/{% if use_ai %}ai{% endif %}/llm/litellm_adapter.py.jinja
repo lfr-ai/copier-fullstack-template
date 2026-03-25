@@ -1,0 +1,161 @@
+"""Universal LLM adapter via LiteLLM — one adapter for 100+ providers.
+
+LiteLLM provides a single 'completion()' / 'acompletion()' interface
+that routes to OpenAI, Anthropic, Azure, Bedrock, Vertex AI, Ollama,
+and 100+ other providers based on the model string alone.
+
+Model string examples::
+
+    "gpt-4o"                           # OpenAI
+    "anthropic/claude-sonnet-4-6"  # Anthropic
+    "azure/<deployment>"               # Azure OpenAI
+    "ollama/llama3"                    # Ollama (local)
+    "bedrock/anthropic.claude-sonnet-4-6-v1:0"  # AWS Bedrock
+    "vertex_ai/gemini-pro"             # Google Vertex
+"""
+
+from __future__ import annotations
+
+import structlog
+from collections.abc import AsyncIterator
+from typing import override
+
+from {{ project_slug }}.ai.config import DEFAULT_CHAT_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
+
+from .base_llm_adapter import BaseLLMAdapter
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_DEFAULT_NUM_RETRIES: int = 2
+class LiteLLMAdapter(BaseLLMAdapter):
+    """Universal LLM adapter backed by LiteLLM.
+
+    Handles provider routing, retry, timeout, and streaming for
+    any model that LiteLLM supports. Provider-specific API keys
+    are read from environment variables following LiteLLM conventions
+    ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'AZURE_API_KEY', etc.).
+
+    Args:
+        model (str): LiteLLM model string (e.g. '"gpt-4o"',
+            '"anthropic/claude-sonnet-4-6"').
+        api_key (str | None): Explicit API key (overrides env var).
+        api_base (str | None): Custom API base URL (for Azure, proxies, local models).
+        api_version (str | None): API version (Azure OpenAI).
+        timeout (float | None): Request timeout in seconds.
+        num_retries (int): Number of automatic retries on transient errors.
+        drop_params (bool): Drop unsupported params instead of raising.
+        extra_kwargs (object): Additional kwargs forwarded to every LiteLLM call.
+    """
+
+    __slots__ = ("_extra_kwargs", "_model")
+
+    def __init__(
+        self,
+        *,
+        model: str = DEFAULT_CHAT_MODEL,
+        api_key: str | None = None,
+        api_base: str | None = None,
+        api_version: str | None = None,
+        timeout: float | None = None,
+        num_retries: int = _DEFAULT_NUM_RETRIES,
+        drop_params: bool = True,
+        **extra_kwargs: object,
+    ) -> None:
+        self._model = model
+        self._extra_kwargs: dict[str, object] = {"drop_params": drop_params}
+        if api_key is not None:
+            self._extra_kwargs["api_key"] = api_key
+        if api_base is not None:
+            self._extra_kwargs["api_base"] = api_base
+        if api_version is not None:
+            self._extra_kwargs["api_version"] = api_version
+        if timeout is not None:
+            self._extra_kwargs["timeout"] = timeout
+        if num_retries:
+            self._extra_kwargs["num_retries"] = num_retries
+        self._extra_kwargs.update(extra_kwargs)
+
+        logger.info("LiteLLM adapter initialized: model=%s", model)
+
+    @property
+    def model(self) -> str:
+        """Return the configured model string."""
+        return self._model
+
+    @override
+    async def complete(
+        self,
+        *,
+        prompt: str = "",
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+        messages: list[dict[str, str]] | None = None,
+        **kwargs: object,
+    ) -> str:
+        """Generate a completion via LiteLLM.
+
+        Accepts either a simple 'prompt' string or a full
+        'messages' list for multi-turn conversation.
+        """
+        import litellm
+
+        msgs = self._build_messages(prompt, system_prompt, messages)
+        call_kwargs: dict[str, object] = {
+            "model": self._model,
+            "messages": msgs,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            **self._extra_kwargs,
+            **kwargs,
+        }
+
+        response = await litellm.acompletion(**call_kwargs)
+        return response.choices[0].message.content or ""
+
+    @override
+    async def stream(
+        self,
+        *,
+        prompt: str = "",
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+        messages: list[dict[str, str]] | None = None,
+        **kwargs: object,
+    ) -> AsyncIterator[str]:
+        """Stream completion chunks via LiteLLM."""
+        import litellm
+
+        msgs = self._build_messages(prompt, system_prompt, messages)
+        call_kwargs: dict[str, object] = {
+            "model": self._model,
+            "messages": msgs,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": True,
+            **self._extra_kwargs,
+            **kwargs,
+        }
+
+        response = await litellm.acompletion(**call_kwargs)
+        async for chunk in response:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
+
+    @staticmethod
+    def _build_messages(
+        prompt: str,
+        system_prompt: str | None,
+        messages: list[dict[str, str]] | None,
+    ) -> list[dict[str, str]]:
+        """Build a messages list from either a prompt or existing history."""
+        if messages:
+            return list(messages)
+        msgs: list[dict[str, str]] = []
+        if system_prompt:
+            msgs.append({"role": "system", "content": system_prompt})
+        if prompt:
+            msgs.append({"role": "user", "content": prompt})
+        return msgs

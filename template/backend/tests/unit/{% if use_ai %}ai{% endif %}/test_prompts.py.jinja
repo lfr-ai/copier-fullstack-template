@@ -1,0 +1,70 @@
+"""Unit tests for prompt templates — rendering and registry."""
+{%- if use_ai %}
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.ai.prompts import SUMMARIZE_TEMPLATE, SYSTEM_DEFAULT, render_prompt
+from {{ project_slug }}.ai.prompts.manager import PromptManager
+from {{ project_slug }}.ai.prompts.rag_prompts import RAG_CONDENSE_PROMPT, RAG_QUERY_PROMPT, RAG_SYSTEM_PROMPT
+
+
+class TestRenderPrompt:
+    """Tests for render_prompt utility."""
+
+    def test_basic_rendering(self) -> None:
+        result = render_prompt(SUMMARIZE_TEMPLATE, max_sentences=3, text="Hello world")
+        assert "3" in result
+        assert "Hello world" in result
+
+    def test_system_default_is_string(self) -> None:
+        assert isinstance(SYSTEM_DEFAULT, str)
+        assert len(SYSTEM_DEFAULT) > 0
+
+
+class TestPromptManager:
+    """Tests for PromptManager."""
+
+    @pytest.fixture
+    def manager(self) -> PromptManager:
+        return PromptManager()
+
+    def test_get_default_prompts(self, manager: PromptManager) -> None:
+        rag = manager.get("rag_query")
+        assert "context" in rag.lower() or "Context" in rag
+
+    def test_get_missing_prompt_raises(self, manager: PromptManager) -> None:
+        with pytest.raises(KeyError, match="not found"):
+            manager.get("nonexistent_prompt")
+
+    def test_register_custom_prompt(self, manager: PromptManager) -> None:
+        manager.register("custom", "Hello {{ name }}!")
+        result = manager.render("custom", name="World")
+        assert result == "Hello World!"
+
+    def test_render_with_variables(self, manager: PromptManager) -> None:
+        result = manager.render("summarize", document="Sample text")
+        assert "Sample text" in result
+
+    def test_override_existing_prompt(self, manager: PromptManager) -> None:
+        manager.register("rag_query", "Custom: {{ question }}")
+        result = manager.render("rag_query", question="What?")
+        assert "Custom: What?" == result
+
+
+class TestRAGPrompts:
+    """Tests for RAG prompt constants."""
+
+    def test_rag_system_prompt_exists(self) -> None:
+        assert isinstance(RAG_SYSTEM_PROMPT, str)
+        assert "assistant" in RAG_SYSTEM_PROMPT.lower()
+
+    def test_rag_query_prompt_has_placeholders(self) -> None:
+        assert "{context}" in RAG_QUERY_PROMPT
+        assert "{question}" in RAG_QUERY_PROMPT
+
+    def test_rag_condense_prompt_has_placeholders(self) -> None:
+        assert "{chat_history}" in RAG_CONDENSE_PROMPT
+        assert "{question}" in RAG_CONDENSE_PROMPT
+{%- endif %}

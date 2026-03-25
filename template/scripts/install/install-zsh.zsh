@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT
 

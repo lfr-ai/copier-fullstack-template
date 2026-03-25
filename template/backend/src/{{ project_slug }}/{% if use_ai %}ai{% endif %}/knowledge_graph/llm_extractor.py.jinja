@@ -1,0 +1,83 @@
+"""LLM-based entity/relation extractor for knowledge graph construction."""
+
+from __future__ import annotations
+
+import json
+import structlog
+
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+from {{ project_slug }}.ai.config import DEFAULT_MAX_TOKENS, EXTRACTION_INPUT_LIMIT
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_DEFAULT_MAX_TRIPLETS: int = 20
+_EXTRACTION_TEMPERATURE: float = 0.0
+
+_EXTRACTION_SYSTEM_PROMPT: str = """You are an entity and relationship extraction system.
+Given text, extract structured triplets in the form (subject, predicate, object).
+
+Return a JSON array of objects, each with "subject", "predicate", and "object" keys.
+Extract only factual relationships explicitly stated in the text.
+Be concise and specific with entity names.
+
+Example output:
+[
+  {"subject": "Python", "predicate": "is_a", "object": "programming language"},
+  {"subject": "FastAPI", "predicate": "built_with", "object": "Python"}
+]"""
+
+
+class LLMEntityExtractor:
+    """Extracts entity-relation triplets from text using an LLM."""
+
+    __slots__ = ("_llm", "_max_triplets")
+
+    def __init__(self, *, llm: LLMPort, max_triplets_per_chunk: int = _DEFAULT_MAX_TRIPLETS) -> None:
+        self._llm = llm
+        self._max_triplets = max_triplets_per_chunk
+
+    async def extract(self, text: str) -> list[tuple[str, str, str]]:
+        """Extract entity-relation triplets from text via LLM."""
+        if not text.strip():
+            return []
+
+        prompt = (
+            f"Extract up to {self._max_triplets} entity-relation triplets "
+            f"from the following text:\n\n{text[:EXTRACTION_INPUT_LIMIT]}"
+        )
+
+        response = await self._llm.complete(
+            prompt=prompt,
+            system_prompt=_EXTRACTION_SYSTEM_PROMPT,
+            max_tokens=DEFAULT_MAX_TOKENS,
+            temperature=_EXTRACTION_TEMPERATURE,
+        )
+
+        return self._parse_triplets(response)
+
+    def _parse_triplets(self, response: str) -> list[tuple[str, str, str]]:
+        """Parse LLM response into structured triplets."""
+        # Try to find JSON array in response
+        start = response.find("[")
+        end = response.rfind("]")
+        if start == -1 or end == -1:
+            logger.warning("No JSON array found in extraction response")
+            return []
+
+        try:
+            parsed = json.loads(response[start : end + 1])
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse extraction response as JSON")
+            return []
+
+        triplets: list[tuple[str, str, str]] = []
+        for item in parsed:
+            if isinstance(item, dict):
+                subj = str(item.get("subject", "")).strip()
+                pred = str(item.get("predicate", "")).strip()
+                obj = str(item.get("object", "")).strip()
+                if subj and pred and obj:
+                    triplets.append((subj, pred, obj))
+
+        logger.info("Extracted %d triplets", len(triplets))
+        return triplets[: self._max_triplets]

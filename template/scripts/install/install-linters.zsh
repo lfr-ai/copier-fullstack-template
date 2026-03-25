@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 emulate -L zsh
 setopt ERR_EXIT PIPE_FAIL
 
@@ -13,7 +14,7 @@ success() {
 
 warn() {
     emulate -L zsh
-    print -f "%s⚠ %s%s\n" "${YELLOW}" "$1" "${RESET}" | tee -a "${LOG_FILE}"
+    print -f "%s[WARN] %s%s\n" "${YELLOW}" "$1" "${RESET}" | tee -a "${LOG_FILE}"
 }
 
 fail() {

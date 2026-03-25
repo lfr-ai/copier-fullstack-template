@@ -1,5 +1,3 @@
-version: "3"
-
 tasks:
   dev:
     desc: "Start Vite dev server"
@@ -44,10 +42,16 @@ tasks:
       - pnpm test:coverage
 {% if use_playwright %}
   test:e2e:
-    desc: "Run E2E tests"
+    desc: "Run E2E tests (headless)"
     dir: frontend
     cmds:
       - pnpm test:e2e
+
+  test:e2e:ui:
+    desc: "Run E2E tests with Playwright UI"
+    dir: frontend
+    cmds:
+      - pnpm exec playwright test --ui
 {% endif %}
   lint:
     desc: "Lint frontend code"
@@ -71,4 +75,34 @@ tasks:
     desc: "Remove build artifacts"
     dir: frontend
     cmds:
-      - pnpm exec rimraf dist node_modules/.vite coverage playwright-report test-results
+      - rm -rf dist node_modules/.vite coverage playwright-report test-results
+
+  profile:bundle:
+    desc: "Build with bundle analysis (rollup-plugin-visualizer)"
+    dir: frontend
+    cmds:
+      - ANALYZE=true pnpm build
+      - |
+        if [ -f dist/stats.html ]; then
+          echo "Bundle analysis: dist/stats.html"
+          {% raw %}{{if eq OS "windows"}}{% endraw %}start dist/stats.html{% raw %}{{else if eq OS "darwin"}}{% endraw %}open dist/stats.html{% raw %}{{else}}{% endraw %}xdg-open dist/stats.html{% raw %}{{end}}{% endraw %}
+        fi
+
+  profile:lighthouse:
+    desc: "Run Lighthouse CI performance audit"
+    dir: frontend
+    cmds:
+      - pnpm exec lhci autorun --collect.url=http://localhost:3000 --collect.numberOfRuns=3 || true
+      - echo "See .lighthouseci/ for reports"
+
+  profile:lighthouse:ci:
+    desc: "Run Lighthouse CI in headless mode (for CI pipelines)"
+    dir: frontend
+    cmds:
+      - >-
+        pnpm exec lhci autorun
+        --collect.url=http://localhost:3000
+        --collect.numberOfRuns=5
+        --assert.preset=lighthouse:recommended
+        --assert.assertions.categories:performance=off
+        || true

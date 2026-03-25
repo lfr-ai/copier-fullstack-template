@@ -1,6 +1,8 @@
 
 
-Development: `http://localhost:8000`
+# API Reference
+
+Base URL — Development: `http://localhost:8000`
 
 {% if use_auth %}
 Include JWT token in Authorization header:
@@ -10,8 +12,9 @@ Authorization: Bearer <token>
 ```
 {% endif %}
 
+## Health Endpoints
 
-
+### GET /health
 
 Check application health status.
 
@@ -19,10 +22,13 @@ Check application health status.
 
 ```json
 {
-  "status": "healthy"
+  "status": "healthy",
+  "version": "0.1.0",
+  "dependencies": []
 }
 ```
 
+### GET /health/ready
 
 Readiness check (includes database connectivity).
 
@@ -30,11 +36,18 @@ Readiness check (includes database connectivity).
 
 ```json
 {
-  "status": "ready"
+  "status": "healthy",
+  "version": "0.1.0",
+  "dependencies": [
+    { "name": "database", "status": "healthy", "latency_ms": 2.3 },
+    { "name": "cache", "status": "healthy", "latency_ms": 0.5 }
+  ]
 }
 ```
 
+## User Endpoints
 
+### POST /api/v1/users
 
 Create a new user.
 
@@ -59,6 +72,7 @@ Create a new user.
 }
 ```
 
+### GET /api/v1/users/{user_id}
 
 Retrieve a user by ID.
 
@@ -80,3 +94,206 @@ Retrieve a user by ID.
   "detail": "User not found"
 }
 ```
+{% if use_ai %}
+
+## AI Endpoints
+
+### POST /api/v1/ai/complete
+
+Generate a text completion using the configured LLM provider.
+
+**Request Body**:
+
+```json
+{
+  "prompt": "Explain quantum computing",
+  "system_prompt": "You are a helpful assistant.",
+  "max_tokens": 1024,
+  "temperature": 0.7
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "content": "Quantum computing is a type of computation...",
+  "model": "gpt-4o"
+}
+```
+{% endif %}
+{% if use_rag %}
+
+## RAG Endpoints
+
+### POST /api/v1/rag/query
+
+Query the knowledge base using retrieval-augmented generation.
+
+**Request Body**:
+
+```json
+{
+  "question": "What is our return policy?",
+  "top_k": 5,
+  "use_graph": false,
+  "system_prompt": null
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "question": "What is our return policy?",
+  "answer": "Our return policy allows...",
+  "sources": [
+    {"id": "chunk-1", "score": 0.95, "content": "..."}
+  ]
+}
+```
+
+
+### POST /api/v1/rag/ingest
+
+Ingest a document into the knowledge base.
+
+**Request Body**:
+
+```json
+{
+  "source": "/path/to/document.pdf"
+}
+```
+
+**Response** `201 Created`:
+
+```json
+{
+  "source": "/path/to/document.pdf",
+  "document_count": 1,
+  "chunk_count": 24
+}
+```
+
+
+### POST /api/v1/rag/search
+
+Execute a semantic similarity search.
+
+**Request Body**:
+
+```json
+{
+  "query": "machine learning techniques",
+  "top_k": 10,
+  "filters": null
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "query": "machine learning techniques",
+  "results": [
+    {"id": "chunk-5", "score": 0.92, "content": "..."}
+  ]
+}
+```
+{% endif %}
+{% if use_agents %}
+
+## Agent Endpoints
+
+### POST /api/v1/agents/execute
+
+Execute a single AI agent (ReAct or tool-calling).
+
+**Request Body**:
+
+```json
+{
+  "goal": "Find the top 3 products by revenue",
+  "agent_type": "react",
+  "max_steps": 10,
+  "tools": ["search", "calculator"]
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "goal": "Find the top 3 products by revenue",
+  "answer": "The top 3 products are...",
+  "steps": [...],
+  "tool_calls": 3,
+  "success": true
+}
+```
+
+
+### POST /api/v1/agents/workflow
+
+Run a multi-agent workflow via LangGraph.
+
+**Request Body**:
+
+```json
+{
+  "goal": "Analyze this dataset and create a report"
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "answer": "Based on the analysis...",
+  "total_steps": 5,
+  "agent_trace": [...],
+  "success": true
+}
+```
+{% endif %}
+{% if use_mcp %}
+
+## MCP Server
+
+The MCP (Model Context Protocol) server is mounted at `/mcp` when enabled.
+It exposes tools, resources, and prompts via the streamable-http transport.
+
+**Tools available**:
+- `search_documents` — Semantic search across indexed documents
+- `ingest_document` — Ingest a document into the knowledge base
+- `complete` — Generate LLM completions
+{% if use_knowledge_graph %}
+- `query_knowledge_graph` — Query the knowledge graph
+{% endif %}
+
+Connect using any MCP-compatible client:
+
+```json
+{
+  "mcpServers": {
+    "{{ project_slug }}": {
+      "url": "http://localhost:8000/mcp"
+    }
+  }
+}
+```
+{% endif %}
+{%- if api_style in ('graphql', 'both') %}
+
+## GraphQL API
+
+The GraphQL endpoint is available at `/graphql`.
+{%- if api_style == 'both' %} It runs alongside the REST API, sharing the same application services.{% endif %}
+
+- **GraphiQL IDE** (debug mode): `http://localhost:8000/graphql`
+- **POST endpoint**: `http://localhost:8000/graphql`
+
+See [GRAPHQL.md](GRAPHQL.md) for full schema reference, example
+queries, and configuration options.
+{%- endif %}

@@ -1,7 +1,7 @@
 """Shared fixtures for registry tests.
 
 Ensures the registry package root is importable so test modules
-can ``from generate_registry import …`` without ``sys.path`` hacks.
+can 'from generate_registry import …' without 'sys.path' hacks.
 """
 
 from __future__ import annotations

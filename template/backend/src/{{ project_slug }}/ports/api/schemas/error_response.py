@@ -7,10 +7,6 @@ from typing import Annotated
 from pydantic import Field
 
 from .base import BaseSchema
-
-__all__ = ["ErrorDetail", "ErrorResponse"]
-
-
 class ErrorDetail(BaseSchema):
     """Single error detail entry."""
 

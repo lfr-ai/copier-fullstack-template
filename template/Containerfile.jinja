@@ -1,9 +1,11 @@
 
+ARG UV_VERSION=0.10
+
 FROM python:{{ python_version }}-slim AS builder
 
 WORKDIR /app
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /uvx /usr/local/bin/
 
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-editable
@@ -27,7 +29,8 @@ ENV PYTHONUNBUFFERED=1
 
 FROM app-base AS dev
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+ARG UV_VERSION=0.10
+COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /uvx /usr/local/bin/
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-editable
 
@@ -40,16 +43,16 @@ CMD ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8
 FROM app-base AS prod
 
 LABEL org.opencontainers.image.title="{{ project_slug }}" \
-      org.opencontainers.image.description="{{ project_description }}" \
-      org.opencontainers.image.authors="{{ author_name }} <{{ author_email }}>" \
-      org.opencontainers.image.source="https://github.com/{{ github_username }}/{{ project_slug }}" \
-      org.opencontainers.image.licenses="{{ license }}"
+    org.opencontainers.image.description="{{ project_description }}" \
+    org.opencontainers.image.authors="{{ author_name }} <{{ author_email }}>" \
+    org.opencontainers.image.source="https://github.com/{{ github_username }}/{{ project_slug }}" \
+    org.opencontainers.image.licenses="{{ license }}"
 
 USER appuser
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
 
-CMD ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

@@ -1,5 +1,5 @@
 
-Thank you for your interest in contributing! This guide will help you get started.
+Thank you for contributing. This guide covers the development setup and workflow.
 
 ---
 
@@ -59,13 +59,13 @@ git push origin feat/your-feature-name
 
 
 
-- **Line length**: 99 characters
+- **Line length**: 88 characters (Ruff/Black standard)
 - **Type hints**: required on all public functions and methods
 - **Docstrings**: Google-style on all public modules, classes, functions
 - **Formatter**: `ruff format`
 - **Linter**: `ruff check`
 - **Type checker**: `ty check`
-- **Architecture**: hexagonal — core has zero framework imports
+- **Architecture**: clean / hexagonal — core has zero framework imports, Dependency Rule enforced
 
 
 - **Strict mode**: enabled (`strict: true`)
@@ -85,7 +85,9 @@ git push origin feat/your-feature-name
 task test              # All tests
 task test:unit         # Unit tests only
 task test:integration  # Integration tests
+{%- if use_playwright %}
 task test:e2e          # End-to-end (Playwright)
+{%- endif %}
 task test:coverage     # With coverage report
 ```
 
@@ -108,7 +110,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture guide
 
 **Key rules:**
 
-1. **Core layer** has ZERO external imports (only stdlib + typing)
+1. **Core layer** has no framework dependencies (only stdlib, typing, and intra-core imports)
 2. **Dependency direction** is always inward: adapters → ports → application → core
 3. **No circular dependencies** between modules
 4. **No business logic** in adapters, ports, infrastructure, or middleware

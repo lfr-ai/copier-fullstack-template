@@ -1,0 +1,63 @@
+"""Base agent — abstract foundation for autonomous AI agents.
+
+Agents receive a user goal and autonomously plan, execute tools,
+and iterate until the goal is accomplished or a maximum step
+count is reached.
+"""
+
+from __future__ import annotations
+
+import abc
+import structlog
+from dataclasses import dataclass, field
+
+from {{ project_slug }}.ai.config import DEFAULT_AGENT_MAX_STEPS
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@dataclass(frozen=True, slots=True)
+class AgentTool:
+    """Definition of a tool available to an agent."""
+
+    name: str
+    description: str
+    parameters: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class AgentResult:
+    """Result of an agent execution cycle."""
+
+    goal: str
+    answer: str
+    steps: list[dict[str, object]] = field(default_factory=list)
+    tool_calls: int = 0
+    success: bool = True
+
+
+class BaseAgent(abc.ABC):
+    """Abstract base for AI agents with tool-calling capabilities."""
+
+    __slots__ = ("_max_steps", "_tools")
+
+    def __init__(
+        self,
+        *,
+        tools: list[AgentTool] | None = None,
+        max_steps: int = DEFAULT_AGENT_MAX_STEPS,
+    ) -> None:
+        self._tools = tools or []
+        self._max_steps = max_steps
+
+    @abc.abstractmethod
+    async def run(self, goal: str) -> AgentResult:
+        """Execute the agent with the given goal."""
+
+    @property
+    def tools(self) -> list[AgentTool]:
+        """Return available tools."""
+        return list(self._tools)
+
+    def register_tool(self, tool: AgentTool) -> None:
+        """Register an additional tool."""
+        self._tools.append(tool)
+        logger.debug("Registered agent tool: %s", tool.name)

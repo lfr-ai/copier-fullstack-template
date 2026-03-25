@@ -1,0 +1,119 @@
+# CrewAI Task Definitions (YAML Config)
+#
+# Define tasks declaratively following CrewAI best practices.
+# Reference agents by name (key from agents.yaml).
+# Use '{variable}' placeholders for dynamic input injection.
+
+# ── Research Crew Tasks ─────────────────────────────────────────
+research_gather:
+  description: >-
+    Conduct thorough research on: {task}
+
+    Find relevant facts, data points, and expert opinions.
+    Validate information accuracy and note sources.
+    Cover multiple perspectives and recent developments.
+  expected_output: >-
+    Comprehensive research notes with key findings,
+    supporting data, and source references organized by topic.
+  agent: researcher
+
+research_synthesize:
+  description: >-
+    Analyze the research findings and create a structured report.
+    Identify key themes, patterns, connections, and actionable insights.
+    Highlight areas of consensus and disagreement across sources.
+  expected_output: >-
+    Clear, structured analysis report with executive summary,
+    key findings, detailed analysis, and recommendations.
+  agent: analyst
+  context:
+    - research_gather
+  markdown: true
+
+# ── Analysis Crew Tasks ─────────────────────────────────────────
+analyze_data:
+  description: >-
+    Analyze the following: {task}
+
+    Apply appropriate analytical methods (quantitative and qualitative).
+    Identify trends, anomalies, correlations, and root causes.
+  expected_output: >-
+    Detailed analytical findings with supporting evidence,
+    statistical summaries, and identified patterns.
+  agent: analyst
+
+analysis_report:
+  description: >-
+    Create a comprehensive report based on the analysis.
+    Include visualization descriptions, methodology notes,
+    and actionable recommendations prioritized by impact.
+  expected_output: >-
+    Professional report with executive summary, methodology,
+    findings, visualization descriptions, and recommendations.
+  agent: writer
+  context:
+    - analyze_data
+  markdown: true
+
+# ── Content Crew Tasks ──────────────────────────────────────────
+content_draft:
+  description: >-
+    Write content about: {task}
+
+    Create a well-structured draft with clear sections,
+    engaging tone, and accurate information.
+  expected_output: >-
+    Complete content draft with proper structure, formatting,
+    and all key points covered.
+  agent: writer
+
+content_edit:
+  description: >-
+    Review and refine the content. Improve clarity, flow,
+    and engagement while preserving the author's voice.
+    Fix any grammatical or structural issues.
+  expected_output: >-
+    Polished content with improved readability, structure,
+    and professional quality.
+  agent: editor
+  context:
+    - content_draft
+
+content_review:
+  description: >-
+    Perform quality assurance review. Check factual accuracy,
+    completeness, consistency, and adherence to style guidelines.
+    Flag any issues with specific fix recommendations.
+  expected_output: >-
+    Final reviewed content with QA sign-off and any
+    remaining issues documented.
+  agent: reviewer
+  context:
+    - content_edit
+  markdown: true
+
+# ── Planning Crew Tasks ─────────────────────────────────────────
+create_plan:
+  description: >-
+    Create a detailed execution plan for: {task}
+
+    Break down into phases, milestones, and action items.
+    Consider dependencies, risks, resource requirements,
+    and timeline estimates.
+  expected_output: >-
+    Structured plan with phases, milestones, action items,
+    timeline estimates, risk assessment, and resource needs.
+  agent: planner
+
+validate_plan:
+  description: >-
+    Review the proposed plan. Evaluate feasibility, identify
+    coverage gaps, assess risks, and suggest improvements.
+    Ensure plan is actionable and complete.
+  expected_output: >-
+    Validated plan with feasibility assessment, gap analysis,
+    risk mitigation strategies, and final recommendations.
+  agent: reviewer
+  context:
+    - create_plan
+  markdown: true

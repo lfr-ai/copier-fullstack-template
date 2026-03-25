@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT
 
@@ -86,7 +87,7 @@ main() {
         charliermarsh.ruff
         ms-vscode-remote.remote-wsl
         ms-vscode-remote.remote-containers
-        ms-azuretools.vscode-docker
+        ms-azuretools.vscode-containers
         eamodio.gitlens
         dbaeumer.vscode-eslint
         esbenp.prettier-vscode

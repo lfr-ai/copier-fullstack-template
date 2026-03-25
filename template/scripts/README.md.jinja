@@ -1,0 +1,42 @@
+# Scripts
+
+Shell scripts for project setup, bootstrap, and maintenance.
+
+## Main Scripts
+
+| Script                    | Purpose                                                 |
+| ------------------------- | ------------------------------------------------------- |
+| `install/install-all.zsh` | Install ALL development prerequisites (Linux/macOS/WSL) |
+| `install/install-all.ps1` | Install ALL prerequisites (Windows PowerShell)          |
+| `bootstrap.zsh`           | Full project bootstrap (deps, hooks, env)               |
+| `health-check.zsh`        | Verify all services are healthy                         |
+| `run-migrations.zsh`      | Run database migrations                                 |
+| `seed-database.zsh`       | Seed database with development data                     |
+
+## Individual Installers
+
+Individual installers for each tool, called by `install-all.zsh`:
+
+| Script                   | Tool                                |
+| ------------------------ | ----------------------------------- |
+| `install-git.zsh`        | Git with recommended config         |
+| `install-zsh.zsh`        | Zsh with Oh My Zsh                  |
+| `install-python.zsh`     | Python via uv                       |
+| `install-node.zsh`       | Node.js via fnm + pnpm via corepack |
+| `install-container.zsh`  | Docker or Podman                    |
+| `install-task.zsh`       | go-task CLI                         |
+| `install-vscode.zsh`     | VS Code with extensions             |
+| `install-linters.zsh`    | hadolint, shellcheck, yamllint      |
+{%- if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
+| `install-neo4j.zsh`      | Neo4j graph database (knowledge graph) |
+{%- endif %}
+{%- if use_ai %}
+| `setup-ai.zsh`           | Validate AI deps, init FAISS/KG/RAG dirs |
+{%- endif %}
+
+## Quick Start
+
+```bash
+zsh scripts/install/install-all.zsh
+zsh scripts/bootstrap.zsh
+```

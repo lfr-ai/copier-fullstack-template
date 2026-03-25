@@ -8,8 +8,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TypeVar
 
-__all__ = ["BaseFixtureFactory"]
-
 T = TypeVar("T")
 
 
@@ -21,7 +19,6 @@ class BaseFixtureFactory[T](ABC):
     """
 
     def __init__(self) -> None:
-        """Initialize fixture factory."""
         self._counter = 0
         self._defaults: dict[str, object] = {}
 
@@ -51,22 +48,22 @@ class BaseFixtureFactory[T](ABC):
         """Build fixture instance.
 
         Args:
-            sequence (int): Sequence number for unique values.
-            attrs (dict[str, object]): Attribute values.
+            sequence: Sequence number for unique values.
+            attrs: Attribute values.
 
         Returns:
-            T: Fixture instance.
+            Fixture instance.
         """
 
     def create_batch(self, count: int, **overrides: object) -> list[T]:
         """Create multiple fixtures.
 
         Args:
-            count (int): Number of fixtures to create.
+            count: Number of fixtures to create.
             **overrides: Override values (applied to all instances).
 
         Returns:
-            list[T]: List of fixtures.
+            List of fixtures.
         """
         return [self.create(**overrides) for _ in range(count)]
 

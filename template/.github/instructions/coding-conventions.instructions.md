@@ -3,9 +3,6 @@ description: Python coding conventions — enforcement patterns and modern stand
 applyTo: '**/*.py'
 ---
 
-
-
-
 ```python
 @dataclass
 class MyClass: ...
@@ -13,7 +10,6 @@ class MyClass: ...
 @dataclass(frozen=True, slots=True)
 class MyClass: ...
 ```
-
 
 ```python
 class MyEnum(StrEnum):
@@ -33,14 +29,12 @@ class MyEnum(StrEnum):
 - NEVER use raw string literals where enum members should be
 - Provide `from_str()` classmethod for external input parsing
 
-
 ```python
 from typing import Any
 def func(param: Any) -> Any: ...
 
 def func(param: object) -> object: ...
 ```
-
 
 ```python
 from typing import Optional, Union, List, Dict, Tuple, Set
@@ -54,27 +48,28 @@ z: list[int]
 ```
 
 - ZERO `typing.List`, `Dict`, `Tuple`, `Set`, `Optional`, `Union`
-- `typing` imports ONLY for: `TypeVar`, `Protocol`, `TypeAlias`, `Annotated`, `Final`, `Literal`,
-  `NoReturn`, `Generic`, `runtime_checkable`, `TypedDict`, `final`, `overload`, `TYPE_CHECKING`,
-  `Self`, `override`
+- `typing` imports ONLY for: `TypeVar`, `Protocol`, `TypeAlias`, `Annotated`, `Literal`,
+  `NoReturn`, `Generic`, `runtime_checkable`, `TypedDict`, `final`, `overload`,
+  `TYPE_CHECKING`, `Self`, `override`
+- ZERO `Final` or `Final[type]` annotations — plain `UPPER_SNAKE_CASE` assignment is
+  sufficient
 - Use `match/case` for multi-branch dispatch over types, enums, literals
 - Use `@override` on overriding methods
 - Use `Self` for fluent/builder return types
 
-
 ```python
-MAX_RETRIES = 3
-
 MAX_RETRIES: Final[int] = 3
+
+MAX_RETRIES = 3
 
 _INTERNAL_BUFFER_SIZE = 4096
 ```
 
-- ZERO literal numbers in logic — extract to `Final` constant or `_UPPER_SNAKE`
+- ZERO `Final` or `Final[type]` annotations — plain `UPPER_SNAKE_CASE` is sufficient
+- ZERO literal numbers in logic — extract to named `UPPER_SNAKE_CASE` constant
 - ZERO hardcoded config strings — `AppSettings` or named constants
 - ZERO hardcoded field/column names — naming registry
 - ZERO hardcoded URLs/paths/timeouts/retries — named constants
-
 
 ```python
 logger.info(f"Processing {item_id}")
@@ -91,7 +86,6 @@ logger.info("Processing %s", item_id)
 - Log messages do NOT end with periods
 - Log enum values as `.value` or `.name` explicitly
 
-
 ```python
 except Exception as e:
     raise NewError("Failed")
@@ -103,13 +97,13 @@ except Exception as e:
 
 - ALWAYS `raise ... from e` — chain exceptions
 - ZERO bare `except:` — always specific types
-- ZERO silent `except Exception:` without re-raise or explicit `# Explicitly silenced: <reason>`
+- ZERO silent `except Exception:` without re-raise or explicit
+  `# Explicitly silenced: <reason>`
 - Exceptions logged BEFORE re-raising
 - Error messages: `%s` formatting, NOT f-strings
 - Domain exceptions at domain/application boundaries
 - HTTP exceptions ONLY in `ports/api/`
 - `raise ... from None` ONLY with explicit justification comment
-
 
 ```zsh
 emulate -L zsh
@@ -121,13 +115,11 @@ setopt PIPE_FAIL ERR_EXIT
 - `local` for all variables inside functions
 - `zparseopts` for option parsing
 
-
 ```python
 logger.info("Task completed.")
 
 logger.info("Task completed")
 ```
-
 
 ```python
 def process(data, validate=True, timeout=30.0): ...
@@ -157,7 +149,6 @@ When `*` is NOT required:
 - Dunder methods following Python protocols (`__eq__`, `__hash__`)
 - Callbacks matching external contracts (FastAPI DI)
 
-
 - `from __future__ import annotations` at top of EVERY Python file
 - EVERY function has return type (including `-> None`)
 - EVERY parameter has type annotation
@@ -165,22 +156,22 @@ When `*` is NOT required:
 - ALL class attributes typed
 - Default values match their type annotation
 
-
 - EVERY public module, class, method, function: docstring
 - First line: imperative, ends with period, does NOT start with "A"/"An"/"The"
 - `Args:` — each parameter described (NO types in docstring)
 - `Returns:` — describes return value
 - `Raises:` — lists exceptions
 - Remove `:param:`/`@param` style — Google style only
-
+- Use single quotes ('word') in docstrings to reference identifiers — NEVER double
+  backticks
 
 - `_` prefix on ALL non-public module-level functions, methods, attributes
 - `_UPPER_SNAKE_CASE` on ALL internal-only constants
 - NO `__` name mangling unless explicitly justified
 - `__all__` in `__init__.py` files exporting public API
 
-
 1. **Critical:** F-string logging, exception chaining (correctness + performance)
 2. **High:** Dataclass slots, enum @unique, type coverage (correctness + memory)
-3. **Medium:** Constants with Final, keyword-only args, modern syntax (maintainability)
+3. **Medium:** Named constants (no Final), keyword-only args, modern syntax
+   (maintainability)
 4. **Low:** Unused imports, punctuation, underscore compliance (cleanliness)

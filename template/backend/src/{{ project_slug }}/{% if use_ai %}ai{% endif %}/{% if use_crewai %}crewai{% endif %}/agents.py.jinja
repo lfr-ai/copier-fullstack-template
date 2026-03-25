@@ -1,0 +1,142 @@
+"""CrewAI agent factory — unified agent construction from config or code.
+
+Provides type-safe factories for creating CrewAI 'Agent' instances
+with sensible defaults and integration with the application's LLM
+configuration.
+"""
+
+from __future__ import annotations
+
+import structlog
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+from {{ project_slug }}.ai.crewai.config import (
+    DEFAULT_AGENT_MAX_ITER,
+    DEFAULT_AGENT_MAX_RPM,
+    DEFAULT_AGENT_MODEL,
+)
+
+if TYPE_CHECKING:
+    from crewai import Agent
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@dataclass(frozen=True, slots=True)
+class AgentSpec:
+    """Specification for creating a CrewAI agent.
+
+    Can be loaded from YAML config or constructed in code.
+    Provides a framework-agnostic definition that is converted
+    to a 'crewai.Agent' via :func:`build_agent`.
+    """
+
+    role: str
+    goal: str
+    backstory: str
+    llm: str = DEFAULT_AGENT_MODEL
+    tools: list[object] = field(default_factory=list)
+    allow_delegation: bool = False
+    verbose: bool = False
+    max_iter: int = DEFAULT_AGENT_MAX_ITER
+    max_rpm: int | None = DEFAULT_AGENT_MAX_RPM
+    max_execution_time: int | None = None
+    memory: bool = True
+    cache: bool = True
+    respect_context_window: bool = True
+    reasoning: bool = False
+    max_reasoning_attempts: int | None = None
+    multimodal: bool = False
+    knowledge_sources: list[object] = field(default_factory=list)
+    knowledge_config: dict[str, object] | None = None
+    embedder: dict[str, object] | None = None
+
+
+def build_agent(spec: AgentSpec) -> Agent:
+    """Create a fully configured 'crewai.Agent' from an 'AgentSpec'.
+
+    Args:
+        spec (AgentSpec): Agent specification with role, goal, tools, etc.
+
+    Returns:
+        Agent: A configured 'crewai.Agent' instance ready for crew assignment.
+    """
+    from crewai import Agent
+
+    kwargs: dict[str, object] = {
+        "role": spec.role,
+        "goal": spec.goal,
+        "backstory": spec.backstory,
+        "llm": spec.llm,
+        "tools": spec.tools,
+        "allow_delegation": spec.allow_delegation,
+        "verbose": spec.verbose,
+        "max_iter": spec.max_iter,
+        "max_rpm": spec.max_rpm,
+        "max_execution_time": spec.max_execution_time,
+        "memory": spec.memory,
+        "cache": spec.cache,
+        "respect_context_window": spec.respect_context_window,
+        "reasoning": spec.reasoning,
+        "max_reasoning_attempts": spec.max_reasoning_attempts,
+        "multimodal": spec.multimodal,
+    }
+
+    if spec.knowledge_sources:
+        kwargs["knowledge_sources"] = spec.knowledge_sources
+    if spec.knowledge_config is not None:
+        from crewai.knowledge.knowledge_config import KnowledgeConfig
+
+        kwargs["knowledge_config"] = KnowledgeConfig(**spec.knowledge_config)
+    if spec.embedder is not None:
+        kwargs["embedder"] = spec.embedder
+
+    agent = Agent(**kwargs)
+
+    logger.info(
+        "crewai_agent_built",
+        role=spec.role,
+        llm=spec.llm,
+        tools_count=len(spec.tools),
+        delegation=spec.allow_delegation,
+    )
+    return agent
+
+
+def build_agents_from_config(
+    agents_config: dict[str, dict[str, object]],
+    *,
+    shared_tools: list[object] | None = None,
+) -> dict[str, Agent]:
+    """Build multiple agents from a YAML-style config dict.
+
+    Args:
+        agents_config (dict[str, dict[str, object]]): Mapping of agent name to config dict.
+            Each config must contain 'role', 'goal', 'backstory'.
+        shared_tools (list[object] | None): Tools to merge into every agent's toolset.
+
+    Returns:
+        dict[str, Agent]: Mapping of agent name to built 'crewai.Agent'.
+    """
+    agents: dict[str, Agent] = {}
+    for name, cfg in agents_config.items():
+        tools = list(cfg.get("tools", []))
+        if shared_tools:
+            tools.extend(shared_tools)
+
+        spec = AgentSpec(
+            role=cfg["role"],
+            goal=cfg["goal"],
+            backstory=cfg.get("backstory", ""),
+            llm=cfg.get("llm", DEFAULT_AGENT_MODEL),
+            tools=tools,
+            allow_delegation=cfg.get("allow_delegation", False),
+            verbose=cfg.get("verbose", False),
+            max_iter=cfg.get("max_iter", DEFAULT_AGENT_MAX_ITER),
+            max_rpm=cfg.get("max_rpm", DEFAULT_AGENT_MAX_RPM),
+            memory=cfg.get("memory", True),
+            reasoning=cfg.get("reasoning", False),
+        )
+        agents[name] = build_agent(spec)
+
+    logger.info("crewai_agents_batch_built", count=len(agents))
+    return agents

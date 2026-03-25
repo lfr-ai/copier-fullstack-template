@@ -1,0 +1,183 @@
+"""CrewAI knowledge — production-ready knowledge source integration.
+
+Bridges the application's existing data sources with CrewAI's
+knowledge system, supporting:
+
+* **String knowledge** — in-memory text facts
+* **JSON / file knowledge** — structured data from files
+* **Custom knowledge sources** — API-backed or dynamic sources
+* **Embedder configuration** — provider-neutral embedding setup
+
+Knowledge can be attached at the *crew* level (shared by all agents)
+or at the *agent* level (private to a single agent).  The embedder
+configuration follows the same pattern as the application's
+LiteLLM-based embedding adapters.
+"""
+
+from __future__ import annotations
+
+import structlog
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_DEFAULT_RESULTS_LIMIT: int = 5
+_DEFAULT_SCORE_THRESHOLD: float = 0.35
+
+# ── Embedder presets ─────────────────────────────────────────────────
+
+OPENAI_EMBEDDER = {
+    "provider": "openai",
+    "config": {"model": "text-embedding-3-small"},
+}
+
+AZURE_OPENAI_EMBEDDER = {
+    "provider": "azure",
+    "config": {
+        "model": "text-embedding-ada-002",
+    },
+}
+
+OLLAMA_EMBEDDER = {
+    "provider": "ollama",
+    "config": {
+        "model": "mxbai-embed-large",
+        "url": "http://localhost:11434/api/embeddings",
+    },
+}
+
+
+def get_embedder_config(
+    provider: str = "openai",
+    *,
+    model: str | None = None,
+    api_key: str | None = None,
+    **extra: object,
+) -> dict[str, object]:
+    """Build an embedder config dict for CrewAI knowledge / memory.
+
+    Args:
+        provider (str): Embedding provider name ('openai', 'azure', 'ollama', etc.).
+        model (str | None): Override the default model for the chosen provider.
+        api_key (str | None): Optional API key override.
+        **extra (object): Additional provider-specific config keys.
+
+    Returns:
+        A dict suitable for 'Crew(embedder=...)' or 'Agent(embedder=...)'.
+    """
+    presets: dict[str, dict[str, object]] = {
+        "openai": OPENAI_EMBEDDER,
+        "azure": AZURE_OPENAI_EMBEDDER,
+        "ollama": OLLAMA_EMBEDDER,
+    }
+    base = presets.get(provider, {"provider": provider, "config": {}})
+    cfg: dict[str, object] = {**base}
+    inner = dict(cfg.get("config", {}))  # type: ignore[arg-type]
+    if model is not None:
+        inner["model"] = model
+    if api_key is not None:
+        inner["api_key"] = api_key
+    inner.update(extra)
+    cfg["config"] = inner
+    return cfg
+
+
+# ── Knowledge source factories ───────────────────────────────────────
+
+
+def create_string_knowledge(content: str) -> object:
+    """Create a 'StringKnowledgeSource' from raw text.
+
+    Args:
+        content (str): The text content to embed as knowledge.
+
+    Returns:
+        A 'StringKnowledgeSource' instance.
+    """
+    from crewai.knowledge.source.string_knowledge_source import (
+        StringKnowledgeSource,
+    )
+
+    source = StringKnowledgeSource(content=content)
+    logger.info("crewai_string_knowledge_created", length=len(content))
+    return source
+
+
+def create_json_knowledge(file_paths: list[str]) -> object:
+    """Create a 'JSONKnowledgeSource' from JSON file paths.
+
+    Files must be placed in the project's 'knowledge/' directory.
+
+    Args:
+        file_paths (list[str]): Relative paths inside the 'knowledge/' dir.
+
+    Returns:
+        A 'JSONKnowledgeSource' instance.
+    """
+    from crewai.knowledge.source.json_knowledge_source import (
+        JSONKnowledgeSource,
+    )
+
+    source = JSONKnowledgeSource(file_paths=file_paths)
+    logger.info("crewai_json_knowledge_created", files=len(file_paths))
+    return source
+
+
+def create_text_knowledge(file_paths: list[str]) -> object:
+    """Create a 'TextFileKnowledgeSource' from text files.
+
+    Args:
+        file_paths (list[str]): Relative paths inside the 'knowledge/' dir.
+
+    Returns:
+        A 'TextFileKnowledgeSource' instance.
+    """
+    from crewai.knowledge.source.text_file_knowledge_source import (
+        TextFileKnowledgeSource,
+    )
+
+    source = TextFileKnowledgeSource(file_paths=file_paths)
+    logger.info("crewai_text_knowledge_created", files=len(file_paths))
+    return source
+
+
+def create_pdf_knowledge(file_paths: list[str]) -> object:
+    """Create a 'PDFKnowledgeSource' from PDF files.
+
+    Args:
+        file_paths (list[str]): Relative paths inside the 'knowledge/' dir.
+
+    Returns:
+        A 'PDFKnowledgeSource' instance.
+    """
+    from crewai.knowledge.source.pdf_knowledge_source import (
+        PDFKnowledgeSource,
+    )
+
+    source = PDFKnowledgeSource(file_paths=file_paths)
+    logger.info("crewai_pdf_knowledge_created", files=len(file_paths))
+    return source
+
+
+# ── Knowledge configuration ─────────────────────────────────────────
+
+
+def create_knowledge_config(
+    *,
+    results_limit: int = _DEFAULT_RESULTS_LIMIT,
+    score_threshold: float = _DEFAULT_SCORE_THRESHOLD,
+) -> object:
+    """Create a 'KnowledgeConfig' with tuned retrieval parameters.
+
+    Args:
+        results_limit (int): Max relevant documents to return per query.
+        score_threshold (float): Minimum similarity score for inclusion.
+
+    Returns:
+        A 'KnowledgeConfig' instance.
+    """
+    from crewai.knowledge.knowledge_config import KnowledgeConfig
+
+    return KnowledgeConfig(
+        results_limit=results_limit,
+        score_threshold=score_threshold,
+    )

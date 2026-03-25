@@ -3,15 +3,11 @@
 
 from __future__ import annotations
 
-from typing import Final
-
 from celery import Celery
 
 from {{ project_slug }}.config.settings import get_settings
 
-__all__ = ["celery_app", "create_celery_app"]
-
-_WORKER_PREFETCH_MULTIPLIER: Final[int] = 1
+_WORKER_PREFETCH_MULTIPLIER = 1
 
 
 def create_celery_app() -> Celery:

@@ -1,0 +1,72 @@
+"""In-memory conversation memory adapter — implements 'ConversationMemoryPort'.
+
+Suitable for development and testing. For production, use
+Redis- or PostgreSQL-backed implementations.
+"""
+
+from __future__ import annotations
+
+import structlog
+from collections import defaultdict
+
+from {{ project_slug }}.ai.config import DEFAULT_CONVERSATION_LIMIT
+from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort, Message
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class InMemoryConversationMemory(ConversationMemoryPort):
+    """In-memory conversation history store."""
+
+    __slots__ = ("_store",)
+
+    def __init__(self) -> None:
+        self._store: dict[str, list[Message]] = defaultdict(list)
+
+    async def add_message(
+        self,
+        *,
+        conversation_id: str,
+        role: str,
+        content: str,
+    ) -> None:
+        """Append a message to the conversation.
+
+        Args:
+            conversation_id (str): Conversation identifier.
+            role (str): Message role ('user', 'assistant', 'system').
+            content (str): Message text.
+        """
+        self._store[conversation_id].append(Message(role=role, content=content))
+        logger.debug(
+            "Added message to conversation %s (role=%s)",
+            conversation_id,
+            role,
+        )
+
+    async def get_messages(
+        self,
+        conversation_id: str,
+        *,
+        limit: int = DEFAULT_CONVERSATION_LIMIT,
+    ) -> list[Message]:
+        """Retrieve recent messages for a conversation.
+
+        Args:
+            conversation_id (str): Conversation identifier.
+            limit (int): Maximum number of messages to return.
+
+        Returns:
+            list[Message]: Most recent messages up to 'limit'.
+        """
+        messages = self._store.get(conversation_id, [])
+        return messages[-limit:]
+
+    async def clear(self, conversation_id: str) -> None:
+        """Remove all messages for a conversation.
+
+        Args:
+            conversation_id (str): Conversation identifier.
+        """
+        self._store.pop(conversation_id, None)
+        logger.info("Cleared conversation %s", conversation_id)

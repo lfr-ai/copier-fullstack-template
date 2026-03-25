@@ -1,0 +1,57 @@
+"""Strawberry GraphQL permission classes for authorization.
+
+Permissions are attached to fields or types via
+'@strawberry.field(permission_classes=[IsAuthenticated])' to
+enforce access control at the resolver level, following
+Strawberry's built-in permission pattern.
+"""
+
+from __future__ import annotations
+
+import structlog
+from strawberry.permission import BasePermission
+from strawberry.types import Info
+
+from {{ project_slug }}.ports.graphql.context import GraphQLContext
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class IsAuthenticated(BasePermission):
+    """Reject requests that lack a valid authentication token.
+
+    Checks the 'Authorization' header for a Bearer token and
+    delegates validation to the application's auth infrastructure.
+    """
+
+    message = "Authentication required."
+
+    async def has_permission(
+        self,
+        source: object,
+        info: Info[GraphQLContext, object],
+        **kwargs: object,
+    ) -> bool:
+        """Return 'True' when the request carries a valid token."""
+        request = info.context.request
+        if request is None:
+            return False
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return False
+{%- if use_auth %}
+        token = auth_header.removeprefix("Bearer ").strip()
+        try:
+            # FIXME: imports concrete adapter directly — should inject via DI container
+            from {{ project_slug }}.adapters.auth.jwt_adapter import JWTAdapter
+
+            jwt = JWTAdapter(secret_key=info.context.settings.jwt_secret_key)
+            payload = jwt.decode_token(token)
+            return payload is not None
+        except Exception:  # noqa: BLE001
+            logger.debug("auth_token_validation_failed", exc_info=True)
+            return False
+{%- else %}
+        # Without the auth module, accept any non-empty bearer token.
+        return bool(auth_header.removeprefix("Bearer ").strip())
+{%- endif %}

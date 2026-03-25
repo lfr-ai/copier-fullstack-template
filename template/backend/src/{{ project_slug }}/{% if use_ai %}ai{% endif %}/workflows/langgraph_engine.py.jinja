@@ -1,0 +1,276 @@
+"""LangGraph workflow engine adapter."""
+
+from __future__ import annotations
+
+import structlog
+import time
+from collections.abc import AsyncIterator
+from typing import Annotated, TypedDict, override
+
+from {{ project_slug }}.ai.config import DEFAULT_HISTORY_WINDOW
+from {{ project_slug }}.config.constants import MS_PER_SECOND
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.workflow_engine import (
+    DEFAULT_MAX_ITERATIONS,
+    WorkflowConfig,
+    WorkflowEnginePort,
+    WorkflowResult,
+    WorkflowStreamEvent,
+)
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_AGENT_MAX_TOKENS: int = 2048
+_AGENT_TEMPERATURE: float = 0.3
+_MS_PER_SECOND: int = MS_PER_SECOND
+
+
+class _GraphState(TypedDict):
+    """Internal LangGraph state schema."""
+
+    messages: Annotated[list[dict[str, str]], "append"]
+    context: dict[str, object]
+    current_node: str
+    iteration: int
+    final_answer: str
+
+
+class LangGraphWorkflowEngine(WorkflowEnginePort):
+    """LangGraph-backed workflow engine with durable execution.
+
+    Features:
+    - Dynamic node/edge construction from workflow definitions
+    - Conditional routing between agent nodes
+    - Optional checkpointer for resume/human-in-the-loop
+    - Streaming support via 'astream_events'
+    """
+
+    __slots__ = ("_checkpointer", "_compiled", "_llm", "_max_iterations", "_nodes")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        nodes: dict[str, dict[str, object]] | None = None,
+        max_iterations: int = DEFAULT_MAX_ITERATIONS,
+        checkpointer: object | None = None,
+    ) -> None:
+        self._llm = llm
+        self._nodes = nodes or {}
+        self._max_iterations = max_iterations
+        self._checkpointer = checkpointer
+        self._compiled: object | None = None
+
+    def _build(self) -> object:
+        """Build and compile the LangGraph StateGraph."""
+        if self._compiled is not None:
+            return self._compiled
+
+        try:
+            from langgraph.graph import END, START, StateGraph
+        except ImportError as exc:
+            msg = "langgraph>=1.1 is required — pip install langgraph"
+            raise ImportError(msg) from exc
+
+        graph = StateGraph(_GraphState)
+
+        async def router(state: _GraphState) -> _GraphState:
+            if state["iteration"] >= self._max_iterations:
+                return {**state, "current_node": "__end__"}
+
+            messages = state.get("messages", [])
+            if not messages:
+                first = next(iter(self._nodes), "__end__")
+                return {**state, "current_node": first}
+
+            last = messages[-1].get("content", "")
+            if "FINAL ANSWER:" in last:
+                answer = last.split("FINAL ANSWER:", 1)[1].strip()
+                return {**state, "final_answer": answer, "current_node": "__end__"}
+
+            names = list(self._nodes.keys())
+            current = state.get("current_node", "")
+            if current in names:
+                idx = names.index(current)
+                nxt = names[(idx + 1) % len(names)]
+            else:
+                nxt = names[0] if names else "__end__"
+            return {**state, "current_node": nxt, "iteration": state["iteration"] + 1}
+
+        graph.add_node("router", router)
+
+        for name, cfg in self._nodes.items():
+            sys_prompt = cfg.get("system_prompt", f"You are the {name} agent.")
+
+            async def _agent(
+                state: _GraphState,
+                _name: str = name,
+                _sys: str = sys_prompt,
+            ) -> _GraphState:
+                context_str = "\n".join(
+                    f"{m['role']}: {m['content']}" for m in state.get("messages", [])[-DEFAULT_HISTORY_WINDOW:]
+                )
+                response = await self._llm.complete(
+                    prompt=f"{context_str}\n\nRespond as {_name}.",
+                    system_prompt=_sys,
+                    max_tokens=_AGENT_MAX_TOKENS,
+                    temperature=_AGENT_TEMPERATURE,
+                )
+                msg = {"role": "assistant", "content": f"[{_name}] {response}"}
+                return {**state, "messages": state.get("messages", []) + [msg]}
+
+            graph.add_node(name, _agent)
+
+        graph.add_edge(START, "router")
+
+        def _route(state: _GraphState) -> str:
+            target = state.get("current_node", "__end__")
+            if target == "__end__" or target not in self._nodes:
+                return END
+            return target
+
+        graph.add_conditional_edges("router", _route)
+        for name in self._nodes:
+            graph.add_edge(name, "router")
+
+        compile_kwargs: dict[str, object] = {}
+        if self._checkpointer is not None:
+            compile_kwargs["checkpointer"] = self._checkpointer
+
+        self._compiled = graph.compile(**compile_kwargs)
+        return self._compiled
+
+    @override
+    async def execute(
+        self,
+        *,
+        goal: str,
+        initial_state: dict[str, object] | None = None,
+        config: WorkflowConfig | None = None,
+    ) -> WorkflowResult:
+        cfg = config or WorkflowConfig()
+
+        # Honour per-request max_iterations, falling back to constructor default.
+        effective_max = cfg.max_iterations or self._max_iterations
+        saved = self._max_iterations
+        self._max_iterations = effective_max
+        try:
+            compiled = self._build()
+        finally:
+            self._max_iterations = saved
+
+        start = time.monotonic()
+
+        state: _GraphState = {
+            "messages": [{"role": "user", "content": goal}],
+            "context": initial_state or {},
+            "current_node": "",
+            "iteration": 0,
+            "final_answer": "",
+        }
+
+        run_config: dict[str, object] = {"recursion_limit": cfg.recursion_limit}
+        if cfg.thread_id:
+            run_config["configurable"] = {"thread_id": cfg.thread_id}
+
+        try:
+            result = await compiled.ainvoke(state, config=run_config)
+        except Exception:  # noqa: BLE001 — returns error result, logged
+            logger.exception("Workflow execution failed")
+            elapsed = (time.monotonic() - start) * _MS_PER_SECOND
+            return WorkflowResult(
+                answer="Execution failed.", success=False, error="runtime_error"
+            )
+
+        elapsed = (time.monotonic() - start) * _MS_PER_SECOND
+        answer = result.get("final_answer", "")
+        if not answer and result.get("messages"):
+            answer = result["messages"][-1].get("content", "")
+
+        trace = [
+            {
+                "type": "message",
+                "agent": m.get("role", ""),
+                "input": {},
+                "output": m.get("content", ""),
+                "duration_ms": 0.0,
+                "token_usage": {},
+            }
+            for m in result.get("messages", [])
+        ]
+
+        logger.info("Workflow completed in %.1fms, %d iterations", elapsed, result.get("iteration", 0))
+        return WorkflowResult(
+            answer=answer,
+            final_state=dict(result),
+            trace=trace,
+            total_steps=result.get("iteration", 0),
+        )
+
+    @override
+    async def stream(
+        self,
+        *,
+        goal: str,
+        initial_state: dict[str, object] | None = None,
+        config: WorkflowConfig | None = None,
+    ) -> AsyncIterator[WorkflowStreamEvent]:
+        compiled = self._build()
+        cfg = config or WorkflowConfig()
+
+        state: _GraphState = {
+            "messages": [{"role": "user", "content": goal}],
+            "context": initial_state or {},
+            "current_node": "",
+            "iteration": 0,
+            "final_answer": "",
+        }
+
+        run_config: dict[str, object] = {"recursion_limit": cfg.recursion_limit}
+        step_idx = 0
+
+        async for event in compiled.astream(state, config=run_config):
+            for node_name, node_data in event.items():
+                yield WorkflowStreamEvent(
+                    node=node_name,
+                    event_type="node_output",
+                    data=node_data if isinstance(node_data, dict) else {"output": str(node_data)},
+                    step_index=step_idx,
+                )
+                step_idx += 1
+
+    @override
+    async def resume(
+        self,
+        *,
+        checkpoint_id: str,
+        input_data: dict[str, object] | None = None,
+    ) -> WorkflowResult:
+        compiled = self._build()
+        if self._checkpointer is None:
+            return WorkflowResult(
+                answer="",
+                success=False,
+                error="Checkpointer not configured — cannot resume.",
+            )
+
+        try:
+            result = await compiled.ainvoke(
+                input_data or {},
+                config={"configurable": {"thread_id": checkpoint_id}},
+            )
+        except Exception:  # noqa: BLE001 — returns error result, logged
+            logger.exception("Workflow resume failed")
+            return WorkflowResult(success=False, error="resume_failed")
+
+        answer = result.get("final_answer", "")
+        if not answer and result.get("messages"):
+            answer = result["messages"][-1].get("content", "")
+        return WorkflowResult(answer=answer, final_state=dict(result))
+
+    @override
+    async def get_state(self, *, thread_id: str) -> dict[str, object]:
+        compiled = self._build()
+        if self._checkpointer is None:
+            return {}
+        state = await compiled.aget_state({"configurable": {"thread_id": thread_id}})
+        return dict(state.values) if state else {}

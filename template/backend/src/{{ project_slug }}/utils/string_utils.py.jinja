@@ -5,9 +5,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from {{ project_slug }}.config.constants import DEFAULT_TRUNCATE_LENGTH
-
-__all__ = ["slugify", "truncate"]
+_DEFAULT_TRUNCATE_LENGTH: int = 100
 
 
 def slugify(value: str) -> str:
@@ -25,7 +23,7 @@ def slugify(value: str) -> str:
     return re.sub(r"[-\s]+", "-", cleaned)
 
 
-def truncate(value: str, *, max_length: int = DEFAULT_TRUNCATE_LENGTH, suffix: str = "...") -> str:
+def truncate(value: str, *, max_length: int = _DEFAULT_TRUNCATE_LENGTH, suffix: str = "...") -> str:
     """Truncate string to maximum length with suffix.
 
     Args:

@@ -184,7 +184,7 @@ else {
 try {
 if (Get-Command corepack -ErrorAction SilentlyContinue) {
 corepack enable
-corepack prepare pnpm@latest --activate
+corepack prepare pnpm@10 --activate
 }
 else {
 npm install -g pnpm
@@ -349,6 +349,21 @@ Write-Host "For native Windows, consider Memurai: https://www.memurai.com/"
 Log-Result "Redis" "OK (containerized)"
 }
 {% endif %}
+{% if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
+
+function Install-Neo4j {
+Write-Host ""
+Write-Host "--- Neo4j ---"
+Write-Host "Neo4j is containerized in this project (compose.yml, profile: knowledge-graph)."
+Write-Host ""
+Write-Host "Start with:"
+Write-Host " {{ container_runtime }} compose --profile knowledge-graph up -d neo4j"
+Write-Host ""
+Write-Host "Browser UI: http://localhost:7474"
+Write-Host "Bolt URI: bolt://localhost:7687"
+Log-Result "Neo4j" "OK (containerized)"
+}
+{% endif %}
 {% if cloud_provider == "azure" %}
 
 function Install-AzureCLI {
@@ -457,6 +472,10 @@ Install-Caddy
 {% if use_redis %}
 
 Install-Redis
+{% endif %}
+{% if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
+
+Install-Neo4j
 {% endif %}
 {% if cloud_provider == "azure" %}
 

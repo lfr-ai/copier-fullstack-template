@@ -1,4 +1,10 @@
 
+# Project Setup
+
+> **First time?** Follow [ONBOARDING.md](ONBOARDING.md) to install all prerequisites.
+> **Just want to run it?** See [QUICKSTART.md](QUICKSTART.md).
+
+## Prerequisites
 
 - Python {{ python_version }}+ (managed via UV)
 - Node.js {{ node_version }}+ with pnpm
@@ -52,3 +58,124 @@ cp .env.example .env
 ```
 
 Key variables are documented in `docs/CONFIG.md`.
+{%- if use_ai %}
+
+
+```bash
+task backend:ai:setup
+```
+
+This validates AI dependencies, creates data directories (FAISS index,
+knowledge graph, RAG documents), checks required API keys, and verifies
+the AI container wiring. See `scripts/setup-ai.zsh` for details.
+
+To validate only:
+
+```bash
+task backend:ai:validate
+```
+{%- endif %}
+{%- if use_knowledge_graph %}
+
+## Knowledge Graph Setup
+{% if knowledge_graph_backend == 'neo4j' %}
+
+### Neo4j
+
+The project uses Neo4j 5 as its knowledge graph backend. Start Neo4j
+through the Compose `knowledge-graph` profile:
+
+```bash
+{{ container_runtime }} compose --profile knowledge-graph up -d neo4j
+```
+
+Neo4j exposes:
+
+| Service | URL |
+|---------|-----|
+| Browser UI | `http://localhost:7474` |
+| Bolt protocol | `bolt://localhost:7687` |
+
+Default credentials are `neo4j` / `changeme` (set `NEO4J_AUTH` in
+`compose.yml` or `.env` to change).
+
+Configure the backend connection in `.env`:
+
+```
+{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND=neo4j
+{{ project_slug | upper }}_NEO4J_URI=bolt://localhost:7687
+{{ project_slug | upper }}_NEO4J_USER=neo4j
+{{ project_slug | upper }}_NEO4J_PASSWORD=changeme
+{{ project_slug | upper }}_NEO4J_DATABASE=neo4j
+```
+
+Install Neo4j system-wide (optional — the Compose service is
+sufficient for development):
+
+```bash
+zsh scripts/install/install-neo4j.zsh
+```
+{% elif knowledge_graph_backend == 'rdflib' %}
+
+### RDFLib
+
+The project uses RDFLib as its knowledge graph backend. No external
+services are required — the graph runs in-process. Configure persistence
+in `.env`:
+
+```
+{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND=rdflib
+{{ project_slug | upper }}_KNOWLEDGE_GRAPH_PATH=data/kg/graph.ttl
+```
+{% else %}
+
+### NetworkX (default)
+
+The project uses NetworkX as its knowledge graph backend. No external
+services are required — the graph runs in-process. Configure persistence
+in `.env`:
+
+```
+{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND=networkx
+{{ project_slug | upper }}_KNOWLEDGE_GRAPH_PATH=data/kg/graph.json
+```
+{% endif %}
+
+See `docs/CONFIG.md` for the full list of knowledge graph environment
+variables.
+{%- endif %}
+{%- if use_agents %}
+
+## Workflow Checkpointers
+
+LangGraph workflows use checkpointers for durable execution and
+state persistence. Three backends are supported:
+
+| Backend | Use case | Persistence | Config |
+|---------|----------|-------------|--------|
+| Memory | Development, tests | None (in-process) | Default |
+| SQLite | Local dev, staging | File-based (`.langgraph_checkpoints.db`) | `{{ project_slug | upper }}_CHECKPOINTER_BACKEND=sqlite` |
+| PostgreSQL | Production | Database-backed | `{{ project_slug | upper }}_CHECKPOINTER_BACKEND=postgres` |
+
+SQLite requires no external services. The checkpoint database file is
+created automatically in the project root on first workflow execution.
+
+To inspect the SQLite checkpoint database:
+
+```bash
+sqlite3 .langgraph_checkpoints.db ".tables"
+```
+
+To reset checkpoint state:
+
+```bash
+rm -f .langgraph_checkpoints.db
+```
+
+For production, use the PostgreSQL checkpointer. It reuses the
+application database connection configured via `{{ project_slug | upper }}_DATABASE_URL`.
+
+> SQLite uses WAL mode for better concurrent read performance. Avoid
+> running multiple writer processes against the same SQLite checkpoint
+> file.
+{%- endif %}

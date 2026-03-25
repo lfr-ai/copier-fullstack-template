@@ -1,0 +1,15 @@
+"""Knowledge graph adapters — graph-based knowledge storage and retrieval.
+
+Adapters:
+* 'NetworkXKnowledgeGraph' — in-memory (default, development)
+* 'Neo4jKnowledgeGraph' — production-scale (neo4j_adapter.py)
+* 'RDFLibKnowledgeGraph' — RDF/SPARQL (rdflib_adapter.py)
+"""
+
+from __future__ import annotations
+
+from {{ project_slug }}.ai.knowledge_graph.networkx_adapter import (
+    NetworkXKnowledgeGraph,
+)
+
+__all__ = ["NetworkXKnowledgeGraph"]

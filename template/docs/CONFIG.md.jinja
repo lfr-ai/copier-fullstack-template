@@ -14,6 +14,7 @@ All configuration is loaded from environment variables with the
 | `{{ project_slug | upper }}_LOG_LEVEL` | `str` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 | `{{ project_slug | upper }}_CORS_ALLOWED_ORIGINS` | `list[str]` | `[]` | CORS allowed origins for non-local environments |
 | `{{ project_slug | upper }}_SECRET_KEY` | `str` | *(required)* | Application secret key |
+| `{{ project_slug | upper }}_RATE_LIMIT` | `str` | `60/minute` | Default rate limit (slowapi format: `count/period`) |
 {% if database_backend in ('postgresql', 'azure_postgresql') %}
 
 
@@ -33,9 +34,8 @@ All configuration is loaded from environment variables with the
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_JWT_SECRET` | `str` | *(required)* | JWT signing secret |
-| `{{ project_slug | upper }}_JWT_ALGORITHM` | `str` | `HS256` | JWT signing algorithm |
-| `{{ project_slug | upper }}_ACCESS_TOKEN_EXPIRE_MINUTES` | `int` | `30` | Token expiry in minutes |
+| `{{ project_slug | upper }}_JWT_SECRET_KEY` | `str` | `change-me-jwt-secret` | JWT signing secret key |
+| `{{ project_slug | upper }}_JWT_EXPIRE_MINUTES` | `int` | `30` | Token expiry in minutes |
 {% endif %}
 {% if use_celery %}
 
@@ -43,29 +43,110 @@ All configuration is loaded from environment variables with the
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `{{ project_slug | upper }}_CELERY_BROKER_URL` | `str` | `redis://localhost:6379/1` | Celery broker URL |
-| `{{ project_slug | upper }}_CELERY_RESULT_BACKEND` | `str` | `redis://localhost:6379/1` | Celery result backend URL |
+| `{{ project_slug | upper }}_CELERY_RESULT_BACKEND` | `str` | `redis://localhost:6379/2` | Celery result backend URL |
 {% endif %}
 {% if secret_backend == 'azure_kv' %}
 
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `AZURE_KEY_VAULT_URL` | `str` | *(required)* | Key Vault URL |
+| `{{ project_slug | upper }}_AZURE_KEY_VAULT_URL` | `str` | *(required)* | Key Vault URL |
 | `AZURE_TENANT_ID` | `str` | *(required)* | Entra ID tenant |
 | `AZURE_CLIENT_ID` | `str` | *(required)* | Service principal client ID |
 | `AZURE_CLIENT_SECRET` | `str` | *(required)* | Service principal secret |
 {% endif %}
+{% if use_ai %}
 
----
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_OPENAI_API_KEY` | `str` | `""` | OpenAI API key for LLM and embedding endpoints |
+| `{{ project_slug | upper }}_OPENAI_MODEL` | `str` | `gpt-4o` | Default OpenAI chat model |
+| `{{ project_slug | upper }}_EMBEDDING_MODEL` | `str` | `text-embedding-3-small` | Default embedding model |
+| `{{ project_slug | upper }}_EMBEDDING_DIMENSION` | `int` | `1536` | Embedding vector dimension |
+{% endif %}
+{% if use_azure_openai %}
 
 
-Configuration is resolved in this priority order (highest wins):
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_AZURE_OPENAI_ENDPOINT` | `str` | `""` | Azure OpenAI endpoint URL |
+| `{{ project_slug | upper }}_AZURE_OPENAI_API_KEY` | `str` | `""` | Azure OpenAI API key |
+| `{{ project_slug | upper }}_AZURE_OPENAI_API_VERSION` | `str` | `2025-04-01-preview` | Azure OpenAI API version |
+| `{{ project_slug | upper }}_AZURE_OPENAI_DEPLOYMENT` | `str` | `""` | Azure OpenAI deployment name |
+{% endif %}
+{% if use_faiss %}
 
-1. **Environment variables**  always take precedence
-2. **`.env` file**  loaded automatically in all environments
-3. **Code defaults**  hardcoded fallback values
 
----
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_FAISS_PERSIST_DIR` | `str` | `data/faiss` | Directory for FAISS index persistence |
+{% endif %}
+{% if use_knowledge_graph %}
+
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND` | `str` | `networkx` | Knowledge graph backend: `networkx`, `neo4j`, or `rdflib` |
+| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_PATH` | `str\|None` | `None` | File path for knowledge graph persistence (None = in-memory) |
+| `{{ project_slug | upper }}_NEO4J_URI` | `str` | `bolt://localhost:7687` | Neo4j Bolt connection URI |
+| `{{ project_slug | upper }}_NEO4J_USER` | `str` | `neo4j` | Neo4j username |
+| `{{ project_slug | upper }}_NEO4J_PASSWORD` | `str` | `changeme` | Neo4j password |
+| `{{ project_slug | upper }}_NEO4J_DATABASE` | `str` | `neo4j` | Neo4j database name |
+{% endif %}
+{% if use_mcp %}
+
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_MCP_ENABLED` | `bool` | `false` | Enable MCP (Model Context Protocol) server on `/mcp` |
+| `{{ project_slug | upper }}_MCP_SERVER_NAME` | `str` | `{{ project_name }} MCP` | MCP server display name |
+{% endif %}
+{% if use_anthropic %}
+
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_ANTHROPIC_API_KEY` | `str` | `""` | Anthropic API key for Claude models |
+| `{{ project_slug | upper }}_ANTHROPIC_MODEL` | `str` | `claude-sonnet-4-6` | Default Anthropic model |
+{% endif %}
+{% if use_ai_search %}
+
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_AZURE_AI_SEARCH_ENDPOINT` | `str` | `""` | Azure AI Search endpoint URL |
+| `{{ project_slug | upper }}_AZURE_AI_SEARCH_API_KEY` | `str` | `""` | Azure AI Search API key |
+| `{{ project_slug | upper }}_AZURE_AI_SEARCH_INDEX` | `str` | `{{ project_slug }}-index` | Azure AI Search index name |
+{% endif %}
+{% if use_document_intelligence %}
+
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_AZURE_DOC_INTELLIGENCE_ENDPOINT` | `str` | `""` | Azure Document Intelligence endpoint |
+| `{{ project_slug | upper }}_AZURE_DOC_INTELLIGENCE_API_KEY` | `str` | `""` | Azure Document Intelligence API key |
+{% endif %}
+{% if use_rag %}
+
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_CHUNK_SIZE` | `int` | `512` | Text chunk size for RAG ingestion |
+| `{{ project_slug | upper }}_CHUNK_OVERLAP` | `int` | `64` | Overlap between text chunks |
+| `{{ project_slug | upper }}_RAG_SCORE_THRESHOLD` | `float` | `0.0` | Minimum similarity score for results |
+| `{{ project_slug | upper }}_RAG_RETRIEVAL_STRATEGY` | `str` | `similarity` | Retrieval strategy (similarity, mmr, hybrid) |
+| `{{ project_slug | upper }}_EMBEDDING_BATCH_SIZE` | `int` | `100` | Batch size for embedding operations |
+{% endif %}
+{% if use_agents %}
+
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_AGENT_MAX_STEPS` | `int` | `10` | Maximum steps per agent execution |
+| `{{ project_slug | upper }}_AGENT_DEFAULT_MODEL` | `str` | `gpt-4o` | Default model for agent LLM calls |
+| `{{ project_slug | upper }}_CHECKPOINTER_BACKEND` | `str` | `memory` | LangGraph checkpointer backend: `memory`, `sqlite`, or `postgres` |
+{% endif %}
 
 
 - **Local development**: Store secrets in `.env` (git-ignored)

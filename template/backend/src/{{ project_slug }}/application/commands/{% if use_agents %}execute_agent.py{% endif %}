@@ -1,0 +1,74 @@
+"""Execute agent command — CQRS write operation for agent execution."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Final, override
+
+import structlog
+
+from {{ project_slug }}.application.commands.base import CommandHandler
+from {{ project_slug }}.application.dtos.agent_dto import AgentResultDTO
+from {{ project_slug }}.core.interfaces.agent_orchestrator import AgentOrchestratorPort, AgentState
+from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+_DEFAULT_AGENT_MAX_STEPS: Final[int] = 10
+
+logger = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class ExecuteAgentCommand:
+    """Command to execute an agent task."""
+
+    task: str
+    agent_type: str = "react"
+    max_steps: int = _DEFAULT_AGENT_MAX_STEPS
+    tools: list[str] = field(default_factory=list)
+
+
+class ExecuteAgentHandler(CommandHandler[ExecuteAgentCommand, AgentResultDTO]):
+    """Handles agent task execution through the orchestrator."""
+
+    def __init__(
+        self,
+        *,
+        uow: UnitOfWork,
+        orchestrator: AgentOrchestratorPort,
+    ) -> None:
+        super().__init__(uow=uow)
+        self._orchestrator = orchestrator
+
+    @override
+    async def handle(self, command: ExecuteAgentCommand) -> AgentResultDTO:
+        """Execute an agent task."""
+        logger.info(
+            "Executing agent",
+            agent_type=command.agent_type,
+            task_length=len(command.task),
+        )
+
+        initial_state = AgentState(
+            messages=[{"role": "user", "content": command.task}],
+            context={"agent_type": command.agent_type, "tools": command.tools},
+        )
+
+        result = await self._orchestrator.run(
+            goal=command.task,
+            state=initial_state,
+            config={"max_steps": command.max_steps},
+        )
+
+        logger.info(
+            "Agent execution complete",
+            success=result.success,
+            steps=result.total_steps,
+        )
+
+        return AgentResultDTO(
+            task=command.task,
+            answer=result.answer,
+            steps=result.agent_trace,
+            tool_calls=result.total_steps,
+            success=result.success,
+        )

@@ -1,0 +1,95 @@
+"""Web search tool."""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+import httpx
+
+from {{ project_slug }}.ai.tools.base_tool import BaseTool, ToolResult
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_DEFAULT_TIMEOUT: float = 10.0
+_MAX_RELATED_TOPICS: int = 5
+_DEFAULT_API_URL: str = "https://api.duckduckgo.com/"
+
+
+class WebSearchTool(BaseTool):
+    """Web search tool for agents."""
+
+    __slots__ = ("_api_url", "_timeout")
+
+    def __init__(
+        self,
+        *,
+        api_url: str = _DEFAULT_API_URL,
+        timeout: float = _DEFAULT_TIMEOUT,
+    ) -> None:
+        self._api_url = api_url
+        self._timeout = timeout
+
+    @property
+    @override
+    def name(self) -> str:
+        return "web_search"
+
+    @property
+    @override
+    def description(self) -> str:
+        return "Search the internet for current information about a topic."
+
+    @property
+    @override
+    def parameters_schema(self) -> dict[str, object]:
+        return {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search query"},
+            },
+            "required": ["query"],
+        }
+
+    @override
+    async def execute(self, **kwargs: object) -> ToolResult:
+        """Search the web for the given query.
+
+        Args:
+            **kwargs (object): Must include 'query'.
+
+        Returns:
+            ToolResult: Search results as text.
+        """
+        query = str(kwargs.get("query", ""))
+        if not query:
+            return ToolResult(error="Query parameter is required.")
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.get(
+                    self._api_url,
+                    params={"q": query, "format": "json", "no_html": "1"},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+            # Extract relevant fields
+            abstract = data.get("AbstractText", "")
+            answer = data.get("Answer", "")
+            related = data.get("RelatedTopics", [])
+
+            parts: list[str] = []
+            if abstract:
+                parts.append(f"Summary: {abstract}")
+            if answer:
+                parts.append(f"Answer: {answer}")
+            for topic in related[:_MAX_RELATED_TOPICS]:
+                if isinstance(topic, dict) and "Text" in topic:
+                    parts.append(f"- {topic['Text']}")
+
+            content = "\n".join(parts) if parts else "No results found."
+            logger.info("Web search completed for: %s", query)
+            return ToolResult(content=content, metadata={"query": query})
+        except httpx.HTTPError as exc:
+            logger.warning("Web search failed: %s", exc)
+            return ToolResult(error=f"Search request failed: {exc}")

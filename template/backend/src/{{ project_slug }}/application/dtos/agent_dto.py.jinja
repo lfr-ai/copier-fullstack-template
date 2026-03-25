@@ -1,0 +1,32 @@
+"""Agent-related DTOs."""
+
+from __future__ import annotations
+
+from typing import Annotated
+
+from pydantic import Field
+
+from {{ project_slug }}.application.dtos.base import BaseDTO
+
+_MAX_TASK_LENGTH: int = 8192
+_DEFAULT_MAX_STEPS: int = 10
+_MAX_STEPS_LIMIT: int = 50
+
+
+class AgentTaskDTO(BaseDTO):
+    """Input for an agent execution."""
+
+    task: Annotated[str, Field(min_length=1, max_length=_MAX_TASK_LENGTH, description="Task description")]
+    agent_type: str = "react"
+    max_steps: Annotated[int, Field(ge=1, le=_MAX_STEPS_LIMIT)] = _DEFAULT_MAX_STEPS
+    tools: Annotated[list[str], Field(default_factory=list)]
+
+
+class AgentResultDTO(BaseDTO):
+    """Output from an agent execution."""
+
+    task: str = ""
+    answer: str = ""
+    steps: Annotated[list[dict[str, object]], Field(default_factory=list)]
+    tool_calls: int = 0
+    success: bool = True

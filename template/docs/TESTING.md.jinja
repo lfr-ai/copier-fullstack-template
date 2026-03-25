@@ -1,6 +1,6 @@
 
 
-{{ project_name }} uses a layered testing strategy aligned with the hexagonal
+{{ project_name }} uses a layered testing strategy aligned with the clean / hexagonal
 architecture.
 
 
@@ -19,19 +19,24 @@ backend/tests/
 +-- conftest.py            # Shared fixtures
 +-- factories/             # Test data factories (factory_boy)
 +-- fixtures/              # Reusable fixture data files
-+-- mocks/                 # Reusable mock objects
 +-- utils/                 # Assertion helpers, fixture factories, mock builders
 +-- unit/
 |   +-- core/              # Domain entity and value object tests
 |   +-- application/       # Service and use case tests
 |   +-- adapters/          # Adapter tests (mocked I/O)
 |   +-- ports/             # API route and CLI tests
+{%- if api_style in ('graphql', 'both') %}
+|   |   +-- test_graphql.py   # GraphQL schema, queries, mutations
+{%- endif %}
 |   +-- config/            # Config and settings tests
 |   +-- infrastructure/    # Infrastructure tests
 |   +-- utils/             # Utility function tests
 +-- integration/
 |   +-- test_api.py
 |   +-- test_database.py
+{%- if api_style in ('graphql', 'both') %}
+|   +-- test_graphql_schema.py  # GraphQL schema integrity
+{%- endif %}
 +-- property/
 |   +-- test_value_objects.py
 |   +-- test_generate_registry.py
@@ -75,7 +80,7 @@ from httpx import AsyncClient
 
 @pytest.mark.anyio
 async def test_health_endpoint(client: AsyncClient) -> None:
-    response = await client.get("/api/v1/health")
+    response = await client.get("/health")
 
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
@@ -108,7 +113,7 @@ open htmlcov/index.html
 Run with vitest:
 
 ```bash
-task frontend:test         # Run unit tests
+task frontend:test:unit    # Run unit tests
 task frontend:test:coverage # With coverage
 ```
 
@@ -120,7 +125,7 @@ Run with Playwright:
 
 ```bash
 task test:e2e              # Run E2E tests headless
-task test:e2e:ui           # Run with Playwright UI
+task frontend:test:e2e:ui  # Run with Playwright UI
 ```
 
 E2E tests are in `frontend/tests/e2e/` and run via Playwright.
@@ -168,3 +173,40 @@ task test:performance           # Alias from root
 | Registry    | Fast    | Generator logic    | `registry/tests/`          |
 | Frontend    | Fast    | Components + utils | `frontend/tests/unit/`     |{% if use_playwright %}
 | E2E         | Slowest | Full browser flow  | `frontend/tests/e2e/`      |{% endif %}
+{%- if use_knowledge_graph %}
+
+
+## Knowledge Graph Tests
+
+Knowledge graph adapter tests are in
+`backend/tests/unit/ai/test_knowledge_graph.py`. They cover the
+NetworkX, RDFLib, and external connector adapters using in-process
+backends (no Neo4j service required).
+
+```bash
+task backend:test:unit -- -k test_knowledge_graph
+```
+
+Tests verify:
+
+- Triplet add / bulk-add / query / delete via each adapter
+- Neighbor traversal with depth parameter
+- Entity and triplet count accuracy
+- SPARQL query execution and write-operation rejection (RDFLib)
+- External connector HTTP mocking (Wikidata, DBpedia, ConceptNet)
+{% if knowledge_graph_backend == 'neo4j' %}
+
+**Neo4j integration tests** require a running Neo4j instance. Start one
+with:
+
+```bash
+{{ container_runtime }} compose --profile knowledge-graph up -d neo4j
+```
+
+Then run against the live database:
+
+```bash
+task backend:test:integration -- -k neo4j
+```
+{% endif %}
+{%- endif %}

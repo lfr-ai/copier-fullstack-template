@@ -1,0 +1,32 @@
+"""Agent step entity — traces individual agent execution steps."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+
+from {{ project_slug }}.core.entities.base import generate_id
+
+
+@dataclass(slots=True)
+class AgentStep:
+    """Trace of a single agent execution step.
+
+    Used for observability, debugging, and evaluation of
+    agent behavior in multi-step workflows.
+    """
+
+    id: str = field(default_factory=generate_id)
+    execution_id: str = ""
+    agent_name: str = ""
+    action: str = ""
+    input_text: str = ""
+    output_text: str = ""
+    tool_name: str | None = None
+    tool_input: dict[str, object] = field(default_factory=dict)
+    tool_output: str = ""
+    reasoning: str = ""
+    token_usage: dict[str, int] = field(default_factory=dict)
+    duration_ms: float = 0.0
+    step_index: int = 0
+    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))

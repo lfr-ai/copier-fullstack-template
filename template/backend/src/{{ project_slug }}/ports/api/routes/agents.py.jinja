@@ -1,0 +1,66 @@
+"""Agent API routes — single agent execution and multi-agent orchestration."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException, status
+
+from {{ project_slug }}.ai.models import (
+    AgentRunRequest,
+    AgentRunResponse,
+    OrchestratorRunRequest,
+    OrchestratorRunResponse,
+)
+from {{ project_slug }}.ports.api.dependencies import ContainerDep
+
+router = APIRouter()
+
+
+@router.post(
+    "/run",
+    response_model=AgentRunResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Execute a single AI agent",
+)
+async def run_agent(request: AgentRunRequest, container: ContainerDep) -> AgentRunResponse:
+    """Execute an AI agent with the given goal."""
+    method_name = "tool_calling_agent" if request.agent_type == "tool_calling" else "react_agent"
+    if not hasattr(container, method_name):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=f"Agent type '{request.agent_type}' not configured.",
+        )
+    agent = getattr(container, method_name)()
+
+    result = await agent.run(request.goal)
+    return AgentRunResponse(
+        goal=result.goal,
+        answer=result.answer,
+        steps=result.steps,
+        tool_calls=result.tool_calls,
+        success=result.success,
+    )
+
+
+@router.post(
+    "/orchestrate",
+    response_model=OrchestratorRunResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Run multi-agent orchestration",
+)
+async def orchestrate(request: OrchestratorRunRequest, container: ContainerDep) -> OrchestratorRunResponse:
+    """Execute a multi-agent orchestration workflow."""
+    if not hasattr(container, "langgraph_orchestrator"):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Orchestrator not configured. Set up LangGraph and enable agents.",
+        )
+    orchestrator = container.langgraph_orchestrator()
+
+    result = await orchestrator.run(goal=request.goal)
+
+    return OrchestratorRunResponse(
+        answer=result.answer,
+        total_steps=result.total_steps,
+        agent_trace=result.agent_trace,
+        success=result.success,
+    )

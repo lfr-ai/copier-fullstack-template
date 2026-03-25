@@ -1,0 +1,90 @@
+"""Refinement chain — iterative answer refinement over document chunks."""
+
+from __future__ import annotations
+
+import structlog
+from typing import override
+
+from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_DEFAULT_CHUNK_SIZE: int = 4000
+_DEFAULT_MAX_REFINEMENT_PASSES: int = 10
+_ANSWER_MAX_TOKENS: int = 512
+_INITIAL_TEMPERATURE: float = 0.3
+_REFINE_TEMPERATURE: float = 0.2
+
+
+class RefinementChain(BaseChain):
+    """Iterative refinement chain for long-document QA.
+
+    Processes document chunks sequentially, refining the
+    answer with each new piece of context.
+    """
+
+    __slots__ = ("_chunk_size", "_llm", "_max_iterations")
+
+    def __init__(
+        self,
+        *,
+        llm: LLMPort,
+        chunk_size: int = _DEFAULT_CHUNK_SIZE,
+        max_iterations: int = _DEFAULT_MAX_REFINEMENT_PASSES,
+    ) -> None:
+        self._llm = llm
+        self._chunk_size = chunk_size
+        self._max_iterations = max_iterations
+
+    @override
+    async def run(self, *, input_text: str, **kwargs: object) -> ChainResult:
+        """Refine answer iteratively over chunks.
+
+        'input_text' is the full context (will be chunked) and
+        '**kwargs' must include 'question'.
+        """
+        question = str(kwargs.get("question", input_text))
+
+        chunks = [
+            input_text[i : i + self._chunk_size]
+            for i in range(0, len(input_text), self._chunk_size)
+        ]
+
+        if not chunks:
+            return ChainResult(content="No context provided.", metadata={"iterations": 0})
+
+        # Initial answer from first chunk
+        answer = await self._llm.complete(
+            prompt=(
+                f"Answer the following question based on this context.\n\n"
+                f"Context:\n{chunks[0]}\n\n"
+                f"Question: {question}\n\nAnswer:"
+            ),
+            system_prompt="Answer based only on the provided context.",
+            max_tokens=_ANSWER_MAX_TOKENS,
+            temperature=_INITIAL_TEMPERATURE,
+        )
+
+        # Refine with remaining chunks
+        iterations = 1
+        for chunk in chunks[1 : self._max_iterations]:
+            answer = await self._llm.complete(
+                prompt=(
+                    f"We have an existing answer:\n{answer}\n\n"
+                    f"We have new context that may improve the answer:\n{chunk}\n\n"
+                    f"Given the new context, refine the original answer to better "
+                    f"address: {question}\n\n"
+                    f"If the new context is not useful, return the original answer.\n\n"
+                    f"Refined answer:"
+                ),
+                system_prompt="Refine the answer using new context. Keep it concise and accurate.",
+                max_tokens=_ANSWER_MAX_TOKENS,
+                temperature=_REFINE_TEMPERATURE,
+            )
+            iterations += 1
+
+        logger.info("Refinement complete: %d iterations, %d chunks", iterations, len(chunks))
+        return ChainResult(
+            content=answer,
+            metadata={"iterations": iterations, "chunks": len(chunks)},
+        )

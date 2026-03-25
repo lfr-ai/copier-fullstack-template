@@ -1,5 +1,3 @@
-version: "3"
-
 tasks:
   up:
     desc: "Start all services"
@@ -75,3 +73,39 @@ tasks:
     desc: "Open a shell inside the running app container"
     cmds:
       - {{ container_runtime }} compose exec app /bin/sh
+{%- if container_runtime == "docker" %}
+
+  bake:
+    desc: "Build images with Docker Buildx Bake (default: dev targets)"
+    cmds:
+      - docker buildx bake {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  bake:prod:
+    desc: "Build production images with Docker Buildx Bake"
+    cmds:
+      - docker buildx bake prod
+
+  bake:print:
+    desc: "Preview bake build plan (dry-run)"
+    cmds:
+      - docker buildx bake --print {% raw %}{{.CLI_ARGS | default "prod"}}{% endraw %}
+
+  bake:list:
+    desc: "List available Bake targets and variables"
+    cmds:
+      - docker buildx bake --list=targets
+      - docker buildx bake --list=variables
+
+  bake:check:
+    desc: "Run BuildKit build checks against Containerfiles"
+    cmds:
+      - docker buildx bake --check {% raw %}{{.CLI_ARGS | default "prod"}}{% endraw %}
+
+  bake:clean:
+    desc: "Remove local Bake build cache"
+    cmds:
+      - cmd: rm -rf .bake-cache
+        platforms: [linux, darwin]
+      - cmd: if exist .bake-cache rd /s /q .bake-cache
+        platforms: [windows]
+{%- endif %}

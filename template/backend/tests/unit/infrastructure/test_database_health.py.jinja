@@ -11,7 +11,7 @@ from {{ project_slug }}.infrastructure.database.health import check_database_hea
 
 
 class TestCheckDatabaseHealth:
-    """Test suite for ``check_database_health``."""
+    """Test suite for 'check_database_health'."""
 
     @pytest.mark.asyncio
     async def test_returns_true_when_db_responds(self) -> None:

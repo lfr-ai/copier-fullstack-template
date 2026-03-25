@@ -1,0 +1,61 @@
+"""Web document loader — implements 'DocumentLoaderPort'.
+
+Loads content from web URLs using 'httpx' and extracts text
+using 'beautifulsoup4'.
+
+Add 'beautifulsoup4' and 'httpx' to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import structlog
+from typing import override
+
+from {{ project_slug }}.core.entities.document import Document
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+_HTTP_TIMEOUT_SECONDS: float = 30.0
+
+
+class WebDocumentLoader(DocumentLoaderPort):
+    """Document loader for web URLs."""
+
+    @override
+    async def load(self, source: str) -> list[Document]:
+        try:
+            import httpx
+            from bs4 import BeautifulSoup  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "httpx and beautifulsoup4 are required — pip install httpx beautifulsoup4"
+            raise ImportError(msg) from exc
+
+        async with httpx.AsyncClient(follow_redirects=True, timeout=_HTTP_TIMEOUT_SECONDS) as client:
+            response = await client.get(source)
+            response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+
+        text = soup.get_text(separator="\n", strip=True)
+
+        doc = Document(
+            content=text,
+            source=source,
+            content_type="text/html",
+            metadata={
+                "url": source,
+                "status_code": response.status_code,
+                "content_length": len(text),
+            },
+        )
+        logger.info("Loaded web document from '%s' (%d chars)", source, len(text))
+        return [doc]
+
+    @override
+    async def load_many(self, sources: list[str]) -> list[Document]:
+        results = await asyncio.gather(*(self.load(src) for src in sources))
+        return [doc for docs in results for doc in docs]

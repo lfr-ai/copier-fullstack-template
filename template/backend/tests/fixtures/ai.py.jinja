@@ -1,0 +1,59 @@
+"""AI test fixtures.
+
+Provides mock implementations of AI ports for unit testing.
+"""
+{%- if use_ai %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock
+
+import pytest
+
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStorePort
+
+
+@pytest.fixture
+def mock_llm() -> AsyncMock:
+    """Create a mock LLM port.
+
+    Returns:
+        AsyncMock: Mock LLM that returns a fixed completion.
+    """
+    llm = AsyncMock(spec=LLMPort)
+    llm.complete.return_value = "Mock LLM response"
+    return llm
+
+
+@pytest.fixture
+def mock_embedding() -> AsyncMock:
+    """Create a mock embedding port.
+
+    Returns:
+        AsyncMock: Mock embedding that returns a fixed vector.
+    """
+    emb = AsyncMock(spec=EmbeddingPort)
+    emb.embed_text.return_value = [0.1] * 1536
+    emb.embed_texts.return_value = [[0.1] * 1536]
+    emb.dimension = 1536
+    return emb
+
+
+@pytest.fixture
+def mock_vector_store() -> AsyncMock:
+    """Create a mock vector store port.
+
+    Returns:
+        AsyncMock: Mock vector store with stubbed search results.
+    """
+    store = AsyncMock(spec=VectorStorePort)
+    store.search.return_value = [
+        VectorSearchResult(id="doc-1", score=0.95, metadata={"content": "Test chunk"}),
+    ]
+    store.add_vectors.return_value = None
+    return store
+{%- else %}
+# AI fixtures are only available when use_ai is enabled.
+{%- endif %}

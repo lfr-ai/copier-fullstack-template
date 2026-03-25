@@ -1,0 +1,26 @@
+"""Document-related DTOs."""
+
+from __future__ import annotations
+
+from pydantic import Field
+
+from {{ project_slug }}.application.dtos.base import BaseDTO
+class DocumentDTO(BaseDTO):
+    """DTO representing an ingested document."""
+
+    id: str = ""
+    source: str = ""
+    content_type: str = "text/plain"
+    chunk_count: int = 0
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class DocumentChunkDTO(BaseDTO):
+    """DTO representing a single document chunk."""
+
+    id: str = ""
+    document_id: str = ""
+    content: str = Field(description="Chunk text content")
+    index: int = 0
+    has_embedding: bool = False
+    metadata: dict[str, object] = Field(default_factory=dict)

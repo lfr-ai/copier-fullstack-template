@@ -1,0 +1,22 @@
+"""Chunk metadata value object — immutable metadata for document chunks."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from {{ project_slug }}.core.entities.base import ValueObject
+@dataclass(frozen=True, slots=True)
+class ChunkMetadata(ValueObject):
+    """Immutable metadata attached to a document chunk.
+
+    Carries provenance and structural information
+    from the source document through the RAG pipeline.
+    """
+
+    source: str = ""
+    page_number: int = 0
+    start_index: int = 0
+    end_index: int = 0
+    content_type: str = "text/plain"
+    language: str = "en"
+    extra: dict[str, object] = field(default_factory=dict)

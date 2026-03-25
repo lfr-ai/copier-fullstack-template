@@ -1,77 +1,79 @@
-"""User application service for orchestrating user operations."""
+"""User application service."""
 
 from __future__ import annotations
 
-from {{ project_slug }}.adapters.persistence.repositories.user_repository import UserRepository
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
 from {{ project_slug }}.application.mappers.user_mapper import UserMapper
 from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.entities.user import User
 from {{ project_slug }}.core.events.user_events import UserCreated
 from {{ project_slug }}.core.exceptions.base import NotFoundError
+from {{ project_slug }}.core.interfaces.password_hasher import PasswordHasher
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
-
-__all__ = ["UserService"]
 
 
 class UserService(BaseService):
-    """Application service for user management.
-
-    Orchestrates user creation, retrieval, and lifecycle
-    operations through repository and unit of work patterns.
-
-    Repositories are created from the UoW's active session
-    inside each transactional context to guarantee they share
-    the same database session.
-    """
+    """Application service for user management."""
 
     def __init__(
         self,
         *,
         uow: UnitOfWork,
+        password_hasher: PasswordHasher,
     ) -> None:
-        """Initialize user service.
-
-        Args:
-            uow (UnitOfWork): Unit of work for transactional boundaries.
-        """
         super().__init__(uow=uow)
+        self._password_hasher = password_hasher
 
     async def create_user(self, dto: CreateUserDTO) -> UserDTO:
-        """Create new user from DTO.
+        """Create a new user from a creation DTO.
 
         Args:
-            dto (CreateUserDTO): User creation data transfer object.
+            dto (CreateUserDTO): User creation data.
 
         Returns:
-            UserDTO: Created user as DTO.
+            UserDTO: Persisted user representation.
         """
-        user = User(email=dto.email, display_name=dto.display_name)
+        user = User(
+            email=dto.email,
+            display_name=dto.display_name,
+            password_hash=self._password_hasher.hash(dto.password),
+        )
         user.register_event(UserCreated(user_id=user.id, email=user.email))
 
         async with self._uow as uow:
-            repo = UserRepository(session=uow.session)
-            created = await repo.add(user)
+            created = await uow.users.add(user)
             await uow.commit()
 
-        self._logger.info("Created user %s with email %s", created.id, created.email)
+        self._logger.info("user_created", user_id=created.id, email=created.email)
         return UserMapper.to_dto(created)
 
     async def get_user(self, user_id: str) -> UserDTO:
-        """Retrieve user by identifier.
+        """Retrieve a user by identifier.
 
         Args:
             user_id (str): Unique user identifier.
 
         Returns:
-            UserDTO: User DTO.
+            UserDTO: User representation.
 
         Raises:
             NotFoundError: When user with given ID does not exist.
         """
         async with self._uow as uow:
-            repo = UserRepository(session=uow.session)
-            user = await repo.get_by_id(user_id)
+            user = await uow.users.get_by_id(user_id)
         if user is None:
             raise NotFoundError(entity_type="User", entity_id=user_id)
         return UserMapper.to_dto(user)
+
+    async def get_users_by_ids(self, user_ids: list[str]) -> dict[str, UserDTO]:
+        """Retrieve multiple users by their IDs in a single query.
+
+        Args:
+            user_ids (list[str]): Unique user identifiers.
+
+        Returns:
+            dict[str, UserDTO]: Mapping of user ID to DTO for found users.
+        """
+        async with self._uow as uow:
+            users = await uow.users.get_by_ids(user_ids)
+        return {u.id: UserMapper.to_dto(u) for u in users}

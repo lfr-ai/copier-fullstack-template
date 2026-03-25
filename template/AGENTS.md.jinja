@@ -2,10 +2,39 @@
 This file provides instructions for AI coding agents (GitHub Copilot, Cursor, Cline, OpenCode, etc.)
 working within this codebase.
 
+## Documentation and Code-Example Search Policy
+
+- When you need official library/framework documentation, **use Context7 tools first**.
+- When you are unsure about implementation patterns or want real-world examples,
+    **use `gh_grep` to search public GitHub snippets**.
+- In prompts, explicitly request these tools when relevant:
+    - `use context7`
+    - `use the gh_grep tool`
+- Prefer Context7 for authoritative API/reference answers and `gh_grep` for practical code patterns.
+
+## OpenCode Configuration Layering
+
+This repository uses a **project-only OpenCode policy**.
+
+Treat these as the only valid configuration sources:
+
+1. Project config (`opencode.json` in repo root)
+2. Project `.opencode/` folder (`agents/`, `commands/`, `plugins/`, `skills/`)
+
+Rules for this repository:
+
+- Keep **all behavior and policy** in project `opencode.json` and `.opencode/*`.
+- Do not depend on remote organization defaults or user-global OpenCode config.
+- Any required setting must be explicitly declared in repository-managed files.
+- Do not rely on deprecated config keys if modern alternatives exist.
+- Prefer explicit, least-privilege permissions (`ask`/`deny`) for risky tool usage.
+
 ---
 
 
-This project follows **hexagonal architecture** (ports and adapters) with strict layering:
+This project follows **clean / hexagonal architecture** (ports & adapters) with
+strict layering. The **Dependency Rule** is the fundamental invariant: source-code
+dependencies always point **inward**, never from core toward frameworks/adapters.
 
 ```text
 ┌─────────────────────────────────────────┐
@@ -21,14 +50,28 @@ This project follows **hexagonal architecture** (ports and adapters) with strict
 └─────────────────────────────────────────┘
 ```
 
+### Mapping to Clean Architecture Circles
+
+| Clean Architecture Circle | Project Layer | Directory |
+| --- | --- | --- |
+| Entities | Core | `core/` |
+| Use Cases | Application | `application/` |
+| Interface Adapters | Ports + Adapters | `ports/`, `adapters/` |
+| Frameworks & Drivers | Infrastructure | `infrastructure/` |
+
+### Dependency Rule
 
 **Always inward**: `adapters → ports → application → core`
 
 - **Core** imports NOTHING external. Only `stdlib` and `typing`.
 - **Application** imports from `core` only. No framework imports.
-- **Ports** imports from `application` and `core`. FastAPI/Typer allowed here.
+  - Application services access persistence via **UoW repository properties**
+    (e.g. `uow.users`), NEVER by importing concrete adapter classes.
+- **Ports** imports from `application` and `core`. FastAPI/Typer{% if api_style in ('graphql', 'both') %}/Strawberry{% endif %} allowed here.
 - **Adapters** imports from all inner layers. SQLAlchemy, httpx, redis allowed here.
-- **Infrastructure** provides low-level primitives (DB engines, HTTP clients, security).
+  - Concrete repos are instantiated inside the UoW adapter — only the adapter
+    layer touches concrete repository implementations.
+- **Infrastructure** provides low-level primitives (DB engines, HTTP clients, security, profiling).
 - **Utils** is a shared leaf — `stdlib` + third-party only. NO first-party imports.
 - **Config** is a separate pillar — settings, constants. Not part of the layer stack.
 
@@ -40,7 +83,7 @@ This project follows **hexagonal architecture** (ports and adapters) with strict
 - NO `from __future__ import annotations` omission — it is **required** in every file
 - NO relative imports except within `__init__.py`
 - NO `print()` — use `structlog` or `logging`
-- NO `Any` type — use proper generics or `Unknown`
+- NO `Any` type — use proper generics or `object`
 - NO mutable default arguments
 - NO `assert` for runtime validation
 - NO `eval()`, `exec()`, `__import__()`, or `pickle.loads()` on untrusted input
@@ -75,21 +118,26 @@ class MyStatus(ParseableEnum):
 - Python 3.12+ syntax (`type` statements, `X | Y` unions, `match`)
 - Full type hints on all functions, methods, and class attributes
 - Google-style docstrings on all public modules, classes, functions, methods
-- Line length: 99 characters
-- All `__init__.py` must define `__all__`
+- Line length: 88 characters
+- `__all__` in `__init__.py` where the package exposes a public API
 - Use `pathlib.Path` over `os.path`
 - Use `datetime.UTC` for timezone-aware datetimes
 - Use `decimal.Decimal` for monetary values
 - Use `collections.abc` over `typing` for generic types
 - Context managers for all resource management
 - Exception chaining: `raise NewError(...) from original_error`
-- Constants: `Final` type annotation
+- Constants: plain `UPPER_SNAKE_CASE` assignment (no `Final`)
 
 
 - Strict mode (`strict: true`)
 - No `any` — use `unknown` or proper generics
 - Functional components with typed props
-- Tailwind CSS for styling
+- Tailwind CSS v4 for styling (CSS-first `@theme {}`, `@layer components`)
+- React: TanStack Query for server state, React Router for navigation,
+  ErrorBoundary + Suspense for loading/error states
+- Lit: @lit-labs/router, @lit/context for DI, @lit/task for async data
+- ESLint: import-x (ordering/cycles), jsx-a11y (React), lit/wc (Lit)
+- Vite: vendor-splitting via `manualChunks`, `lightningcss` for CSS
 
 
 - `.zsh` extension with `#!/usr/bin/env zsh`
@@ -107,8 +155,8 @@ backend/src/{{ project_slug }}/
 ├── application/    # Use cases, services, DTOs
 ├── config/         # Settings, logging, constants
 ├── core/           # Pure domain (entities, enums, interfaces, value objects)
-├── infrastructure/ # DB engines, HTTP clients, security primitives
-├── ports/          # API routes, CLI, webhooks, DI container
+├── infrastructure/ # DB engines, HTTP clients, security, profiling (pyinstrument, tracemalloc, SQL hooks)
+├── ports/          # API routes,{% if api_style in ('graphql', 'both') %} GraphQL resolvers,{% endif %} CLI, webhooks, DI container
 └── utils/          # Shared utilities
 
 backend/tests/
@@ -169,7 +217,7 @@ for shared identifiers: service names, ports, route paths, enum values, and fiel
 `generate_registry.py` reads this file and generates:
 
 - **Python constants** → `backend/src/{{ project_slug }}/core/registry_constants.py`
-- **TypeScript constants** → `frontend/src/registryConstants.ts`
+- **TypeScript constants** → `frontend/src/config/registry_constants.ts`
 - **Env ports** → `.env.ports`
 
 
@@ -274,21 +322,21 @@ Located in `.github/agents/`. Invoked via `@AgentName` in Copilot Chat (agent mo
 
 | Agent | File | Invocable | Tools | Purpose |
 |-------|------|-----------|-------|---------|
-| **Coordinator** | `coordinator.agent.md` | ✅ User | agent, read, search, edit, execute, web | Central orchestrator — routes tasks to workers |
-| **Planner** | `planner.agent.md` | ❌ Sub | read, search | Generates structured implementation plans |
-| **Architect** | `architect.agent.md` | ❌ Sub | read, search | Validates hexagonal architecture boundaries |
-| **Implementer** | `implementer.agent.md` | ❌ Sub | read, search, edit, execute | Writes code following project conventions |
-| **Reviewer** | `reviewer.agent.md` | ❌ Sub | read, search | Multi-dimension code quality review |
-| **Tester** | `tester.agent.md` | ❌ Sub | read, search, edit, execute | Generates unit/integration/property/E2E tests |
-| **Security Auditor** | `security-auditor.agent.md` | ❌ Sub | read, search | OWASP/CWE vulnerability scanning |
-| **Doc Writer** | `doc-writer.agent.md` | ❌ Sub | read, search, edit | Documentation: docstrings, ADRs, guides |
-| **TDD** | `tdd.agent.md` | ✅ User | agent, read, search, edit, execute | Red→Green→Refactor TDD orchestrator |
-| **Red** | `red.agent.md` | ❌ Sub | read, search, edit, execute | TDD Red phase — write failing tests |
-| **Green** | `green.agent.md` | ❌ Sub | read, search, edit, execute | TDD Green phase — minimal passing implementation |
-| **Refactor TDD** | `refactor-tdd.agent.md` | ❌ Sub | read, search, edit, execute | TDD Refactor phase — improve code quality |
-| **Thorough Reviewer** | `thorough-reviewer.agent.md` | ✅ User | agent, read, search | Multi-perspective parallel code review |
-| **Deep Thinking** | `deep-thinking.agents.md` | ✅ User | read, search, execute | Complex problem-solving with extended reasoning |
-| **Debug** | `debug.agents.md` | ✅ User | read, search, edit, execute | Systematic 4-phase debugging |
+| **Coordinator** | `coordinator.agent.md` | Yes | agent, read, search, edit, execute, web | Central orchestrator; routes tasks to workers |
+| **Planner** | `planner.agent.md` | No | read, search | Generates structured implementation plans |
+| **Architect** | `architect.agent.md` | No | read, search | Validates clean / hexagonal architecture boundaries |
+| **Implementer** | `implementer.agent.md` | No | read, search, edit, execute | Writes code following project conventions |
+| **Reviewer** | `reviewer.agent.md` | No | read, search | Multi-dimension code quality review |
+| **Tester** | `tester.agent.md` | No | read, search, edit, execute | Generates unit/integration/property/E2E tests |
+| **Security Auditor** | `security-auditor.agent.md` | No | read, search | OWASP/CWE vulnerability scanning |
+| **Doc Writer** | `doc-writer.agent.md` | No | read, search, edit | Documentation: docstrings, ADRs, guides |
+| **TDD** | `tdd.agent.md` | Yes | agent, read, search, edit, execute | Red-Green-Refactor TDD orchestrator |
+| **Red** | `red.agent.md` | No | read, search, edit, execute | TDD Red phase; write failing tests |
+| **Green** | `green.agent.md` | No | read, search, edit, execute | TDD Green phase; minimal passing implementation |
+| **Refactor TDD** | `refactor-tdd.agent.md` | No | read, search, edit, execute | TDD Refactor phase; improve code quality |
+| **Thorough Reviewer** | `thorough-reviewer.agent.md` | Yes | agent, read, search | Multi-perspective parallel code review |
+| **Deep Thinking** | `deep-thinking.agent.md` | Yes | read, search, execute | Complex problem-solving with extended reasoning |
+| **Debug** | `debug.agent.md` | Yes | read, search, edit, execute | Systematic 4-phase debugging |
 
 #### Copilot Handoff Workflow
 
@@ -312,17 +360,22 @@ can approve, redirect, or abort before the next phase begins:
 ### OpenCode Agents
 
 Located in `.opencode/agents/`. Configured in `opencode.json`. Invoked via `@agent` in conversations.
+Use Tab to cycle between primary agents. Use `@agent-name` to invoke subagents.
 
-| Agent | File | Mode | Model | Purpose |
+| Agent | File | Mode | Color | Purpose |
 |-------|------|------|-------|---------|
-| **coordinator** | `agents/coordinator.md` | primary | claude-opus-4-6 | Central orchestrator (default) |
-| **planner** | `agents/planner.md` | subagent | claude-opus-4-6 | Structured planning (read-only) |
-| **architect** | `agents/architect.md` | subagent | claude-opus-4-6 | Architecture validation (read-only) |
-| **implementer** | `agents/implementer.md` | subagent | claude-sonnet-4 | Code writing (full access) |
-| **reviewer** | `agents/reviewer.md` | subagent | claude-opus-4-6 | Code review (read-only) |
-| **tester** | `agents/tester.md` | subagent | claude-sonnet-4 | Test generation (write access) |
-| **security-auditor** | `agents/security-auditor.md` | subagent | claude-opus-4-6 | Security audit (read-only) |
-| **doc-writer** | `agents/doc-writer.md` | subagent | claude-sonnet-4 | Documentation (write, no bash) |
+| **coordinator** | `agents/coordinator.md` | primary | primary | Central orchestrator (default) |
+| **planner** | `agents/planner.md` | subagent | warning | Structured planning (read-only) |
+| **architect** | `agents/architect.md` | subagent | info | Architecture validation (read-only) |
+| **implementer** | `agents/implementer.md` | subagent | success | Code writing |
+| **reviewer** | `agents/reviewer.md` | subagent | accent | Code review (read-only) |
+| **tester** | `agents/tester.md` | subagent | #6366f1 | Test generation |
+| **security-auditor** | `agents/security-auditor.md` | subagent | error | Security audit (read-only) |
+| **doc-writer** | `agents/doc-writer.md` | subagent | secondary | Documentation (write, no bash) |
+| **tdd** | `agents/tdd.md` | primary | #ef4444 | Red→Green→Refactor TDD orchestrator |
+| **debug** | `agents/debug.md` | primary | #f59e0b | Systematic 4-phase debugger |
+| **deep-thinking** | `agents/deep-thinking.md` | primary | #8b5cf6 | Extended reasoning (read-only) |
+| **refactor** | `agents/refactor.md` | subagent | #06b6d4 | Code quality improvement |
 
 ### OpenCode Commands
 
@@ -330,20 +383,104 @@ Located in `.opencode/commands/`. Invoked via `/command` in conversations.
 
 | Command | Agent | Subtask | Purpose |
 |---------|-------|---------|---------|
-| `/plan-feature` | coordinator | ❌ | Plan a new feature (delegates to planner + architect) |
-| `/implement` | coordinator | ❌ | Full implementation workflow (plan → code → test → review) |
-| `/review` | — | ✅ | Parallel multi-agent code review |
-| `/generate-tests` | tester | ✅ | Generate comprehensive test suites |
-| `/security-audit` | security-auditor | ✅ | Run security vulnerability scan |
+| `/plan-feature` | coordinator | No | Plan a new feature (delegates to planner + architect) |
+| `/implement` | coordinator | No | Full implementation workflow (plan -> code -> test -> review) |
+| `/review` | - | Yes | Parallel multi-agent code review |
+| `/generate-tests` | tester | Yes | Generate test suites |
+| `/security-audit` | security-auditor | Yes | Run security vulnerability scan |
+| `/mcp-health` | coordinator | No | Validate MCP servers and Context7/Grep readiness |
+| `/refactor` | refactor | Yes | Refactor code without behavior change |
+| `/debug` | debug | No | Systematic debugging |
+| `/tdd` | tdd | No | Test-driven development cycle |
+| `/lint-fix` | - | Yes | Run all linters and fix issues |
+| `/analyze` | deep-thinking | No | Deep analysis of complex problems |
+| `/changelog` | - | Yes | Generate CHANGELOG entries |
 
 ### OpenCode Skills
 
-Located in `.opencode/skills/`. Auto-discovered by agents when relevant.
+Located in `.opencode/skills/`. Auto-discovered by agents via the `skill` tool.
 
 | Skill | Purpose |
 |-------|---------|
-| `hexagonal-architecture` | Enforces architecture boundaries and layer rules |
+| `hexagonal-architecture` | Enforces clean / hexagonal architecture boundaries, Dependency Rule, and UoW-with-repos pattern |
 | `naming-registry` | Guides registry workflow for code generation |
+| `testing-conventions` | Pytest markers, directory structure, factories, Hypothesis |
+| `python-conventions` | Python 3.12+ coding standards, types, docstrings, logging |
+| `frontend-architecture` | React/Lit/Tailwind v4 patterns, clean data flow, a11y |
+
+### OpenCode Plugins
+
+Local plugins in `.opencode/plugins/` + npm plugins in `opencode.json`.
+
+| Plugin | Type | Purpose |
+|--------|------|---------|
+| `env-protection.ts` | local | Defense-in-depth: blocks reading `.env` files |
+| `compaction-context.js` | local | Injects architecture context into compaction |
+| `session-notification.js` | local | Structured logging for session events |
+| `oh-my-opencode` | npm | Multi-model harness: Sisyphus/Hephaestus/Prometheus/Oracle/Atlas/Momus/Metis agents, background agents, hash-anchored edits, LSP/AST tools, skill-embedded MCPs, Sisyphus Tasks, `ultrawork` |
+| `opencode-agent-skills` | npm | Dynamic skill discovery with context injection, compaction resilience, and optional Superpowers integration |
+| `superpowers` | npm/git | Skills framework (90K+ stars): brainstorming, TDD, debugging, code review, git worktrees, subagent-driven-development |
+| `opencode-dynamic-context-pruning` | npm | Token optimization via obsolete output pruning |
+| `opencode-shell-strategy` | npm | Non-interactive shell safety |
+
+### OpenCode Ecosystem Companion Tools
+
+| Tool | Install | Stars | Purpose |
+|------|---------|-------|---------|
+| **GSD-2** | `npm i -g gsd-pi` | 1.6K+ | Autonomous coding agent (Pi SDK): milestone→slice→task hierarchy, auto mode, cost tracking, git worktree isolation, crash recovery, stuck detection, adaptive replanning, verification commands, auto-report, token optimization (v2.28+) |
+| **OpenAgents Control** | OAC installer | 2.8K+ | Pattern-controlled AI development: ContextScout pattern discovery, approval gates, MVI token efficiency (80% reduction), editable markdown agents, team patterns, ExternalScout live docs, 7+ specialized subagents |
+| **Superpowers** | Plugin (in `opencode.json`) | 90K+ | Agentic skills framework: brainstorming, TDD, subagent-driven-development, code review, git worktrees, writing-plans |
+| **opencode-agent-skills** | Plugin (in `opencode.json`) | — | Dynamic skill discovery, context injection, compaction resilience, Superpowers integration |
+| **oh-my-opencode** | Plugin (in `opencode.json`) | 40K+ | Multi-model harness: Sisyphus/Hephaestus/Prometheus/Oracle/Atlas/Momus/Metis agents, ultrawork, hash-anchored edits, LSP/AST tools, Sisyphus Tasks, background agents |
+
+#### GSD-2 Workflow (when `with_gsd` is enabled)
+
+GSD-2 (v2.28+) structures development into a hierarchy: **Milestone → Slice → Task**.
+The iron rule: a task must fit in one context window. If it can't, it's two tasks.
+
+- **Step mode** (`/gsd`): Executes one unit at a time, pausing between each
+- **Auto mode** (`/gsd auto`): Autonomous — researches, plans, executes, commits, repeats
+- **Quick mode** (`/gsd quick`): Skip planning overhead for small tasks
+- **Discuss** (`/gsd discuss`): Architecture discussions alongside auto mode
+- **Steer** (`/gsd steer`): Hard-steer plan documents during execution
+- **Status** (`/gsd status`): Real-time progress dashboard (Ctrl+Alt+G)
+- **Forensics** (`/gsd forensics`): Post-mortem investigation of auto-mode failures
+- **Keys** (`/gsd keys`): Manage LLM provider keys interactively
+- **Update** (`/gsd update`): Self-update GSD-2 to latest version
+- **Export** (`/gsd export --html --all`): Generate HTML milestone reports
+- **Headless** (`gsd headless <cmd>`): Non-interactive CLI (status, doctor, next, quick, auto)
+
+Verification enforcement: preferences define `verification_commands` that run after
+each task (`task lint`, `task test:unit`, `task typecheck`). On failure,
+`verification_auto_fix` attempts automatic repair up to `verification_max_retries` times.
+
+GSD files live in `.gsd/` (runtime state on disk). See `agent-instructions.md` for project-specific GSD context.
+Config in `.gsd/preferences.md` — manage via `/gsd prefs`. Token optimization via `token_profile: budget|balanced|quality`.
+Per-project MCP servers configurable in `.gsd/mcp.json` (mirrors `opencode.json` MCP config).
+
+#### OpenAgents Control (OAC) Workflow
+
+OAC (v0.7+) extends OpenCode with pattern-controlled AI development.
+Install: `curl -fsSL https://raw.githubusercontent.com/darrenhinde/OpenAgentsControl/main/install.sh | bash -s developer`
+
+**Main Agents**: OpenAgent (general), OpenCoder (production), SystemBuilder (custom AI systems)
+**Subagents**: ContextScout, TaskManager, CoderAgent, TestEngineer, CodeReviewer, BuildAgent, DocWriter, ExternalScout
+**Commands**: `/add-context`, `/commit`, `/test`, `/optimize`, `/context`
+**Workflow**: Discover → Propose → Approve → Execute → Validate → Ship
+
+Key features:
+- **ContextScout**: Discovers relevant patterns from `.opencode/context/` before code generation
+- **Approval gates**: Agents propose plans, you approve before execution
+- **MVI principle**: Minimal Viable Information — 80% token reduction via lazy loading
+- **Team patterns**: Store in `.opencode/context/project/`, commit to repo
+- **Editable agents**: Markdown files you edit directly (`nano .opencode/agent/core/opencoder.md`)
+- **ExternalScout**: Fetches live documentation for external libraries
+- **Context resolution**: Local `.opencode/context/` wins over global `~/.config/opencode/context/`
+
+**Scaffolded context files** (in `.opencode/context/project/`):
+- `coding-standards.md` — Project coding standards for ContextScout
+- `architecture.md` — Architecture overview and key files
+- `workflow-patterns.md` — Development workflow and task runner commands
 
 #### Usage Examples (OpenCode)
 
@@ -353,6 +490,15 @@ Located in `.opencode/skills/`. Auto-discovered by agents when relevant.
 /review
 /generate-tests backend/src/{{ project_slug }}/application/services/
 /security-audit
+/tdd add a discount calculation service
+/debug pytest is failing on test_user_repository
+/refactor backend/src/{{ project_slug }}/application/services/user_service.py
+/analyze should we use CQRS for the reporting module?
+ultrawork — implement complete CRUD for the preferences API
+/init-deep — auto-generate hierarchical AGENTS.md files
+/start-work — Prometheus interview → plan → execute with orchestration
+Configure a Cloudflare Worker script to cache JSON API responses for five minutes. use context7
+What's the right way to set a custom domain in an SST Astro component? use the gh_grep tool
 ```
 {% endif %}
 ### Agent Design Principles
@@ -361,6 +507,6 @@ Located in `.opencode/skills/`. Auto-discovered by agents when relevant.
 2. **Single responsibility**: Each agent has one clear concern
 3. **Structured output**: Agents produce consistent, parseable formats
 4. **Handoff gates**: Human stays in the loop at critical transitions
-5. **Model selection**: Reasoning-heavy tasks use Opus; code generation uses Sonnet
+5. **Model selection**: Use the best available model from your provider; reasoning-heavy tasks benefit from stronger models
 6. **Temperature tuning**: Read-only analysis at 0.1; code generation at 0.2–0.3
 7. **Convention enforcement**: All agents reference this file and project conventions

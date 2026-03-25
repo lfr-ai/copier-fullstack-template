@@ -1,0 +1,14 @@
+"""Text splitter port — abstract interface for document chunking."""
+
+from __future__ import annotations
+
+from typing import Protocol, runtime_checkable
+
+from {{ project_slug }}.core.entities.document import Chunk, Document
+@runtime_checkable
+class TextSplitterPort(Protocol):
+    """Protocol for splitting documents into chunks."""
+
+    def split(self, document: Document) -> list[Chunk]:
+        """Split a document into chunks."""
+        ...

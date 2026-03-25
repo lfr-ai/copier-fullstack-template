@@ -47,3 +47,17 @@ Out of scope:
 - Non-root container images with read-only filesystems.
 - Security headers middleware (CSP, HSTS, X-Frame-Options).
 - Rate limiting on API endpoints.
+{% if use_sftp %}
+
+## SSH / SFTP Hardening
+
+- Ed25519 keys by default; RSA 4096-bit as fallback.
+- Password authentication disabled (`PasswordAuthentication no`).
+- Root login disabled (`PermitRootLogin no`).
+- Maximum three authentication attempts (`MaxAuthTries 3`).
+- TCP / agent / X11 forwarding disabled unless explicitly needed.
+- SFTP users chroot-jailed to their upload directory.
+- Drop-in sshd configuration (`sshd_config.d/`) with syntax validation before reload.
+- Private keys excluded from version control via `.gitignore`.
+- See [SSH/SFTP documentation](docs/SSH_SFTP.md) for full details.
+{% endif %}

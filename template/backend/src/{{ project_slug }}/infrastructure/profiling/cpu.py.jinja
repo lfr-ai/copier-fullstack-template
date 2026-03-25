@@ -1,0 +1,97 @@
+"""CPU profiling via pyinstrument."""
+
+from __future__ import annotations
+import contextlib
+import datetime
+import pathlib
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+import structlog
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class CpuProfileResult:
+    """Result of a CPU profiling session."""
+
+    label: str
+    duration_s: float
+    html_path: pathlib.Path | None
+    console_output: str
+
+
+def _profiles_dir() -> pathlib.Path:
+    """Resolve the profiling output directory from settings."""
+    from {{ project_slug }}.config.settings import get_settings
+
+    settings = get_settings()
+    base = pathlib.Path(getattr(settings, "profiling_dir", "profiles"))
+    out = base / "cpu"
+    out.mkdir(parents=True, exist_ok=True)
+    return out
+
+
+def _timestamp() -> str:
+    return datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S_%f")
+
+
+@contextlib.asynccontextmanager
+async def cpu_profile(
+    *,
+    label: str = "adhoc",
+    interval: float = 0.001,
+    async_mode: str = "enabled",
+) -> AsyncIterator[CpuProfileResult]:
+    """Async context manager that profiles the enclosed block with pyinstrument.
+
+    Valid 'async_mode' values: 'enabled', 'disabled', 'strict'.
+
+    Yields:
+        CpuProfileResult: Populated after the 'with' block exits.
+    """
+    try:
+        from pyinstrument import Profiler
+    except ImportError:
+        logger.warning("pyinstrument not installed — skipping CPU profile", label=label)
+        yield CpuProfileResult(label=label, duration_s=0, html_path=None, console_output="")
+        return
+
+    profiler = Profiler(interval=interval, async_mode=async_mode)
+    profiler.start()
+
+    # Mutable holder so we can populate after yield
+    result = CpuProfileResult(label=label, duration_s=0, html_path=None, console_output="")
+
+    try:
+        yield result
+    finally:
+        profiler.stop()
+
+        session = profiler.last_session
+        duration = session.duration if session else 0.0
+        console = profiler.output_text(unicode=True, color=False)
+
+        html_path: pathlib.Path | None = None
+        try:
+            out_dir = _profiles_dir()
+            filename = f"{_timestamp()}_{label}.html"
+            html_path = out_dir / filename
+            profiler.write_html(html_path)
+            logger.info(
+                "cpu_profile_saved",
+                label=label,
+                duration_s=round(duration, 4),
+                path=str(html_path),
+            )
+        except Exception:  # noqa: BLE001 — top-level error boundary
+            logger.exception("cpu_profile_save_failed", label=label)
+
+        # Replace the frozen dataclass via object.__setattr__
+        object.__setattr__(result, "duration_s", duration)
+        object.__setattr__(result, "html_path", html_path)
+        object.__setattr__(result, "console_output", console)

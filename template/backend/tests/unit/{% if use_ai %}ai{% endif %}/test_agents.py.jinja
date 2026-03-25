@@ -1,0 +1,60 @@
+"""Unit tests for AI agent — ReAct and tool-calling stubs."""
+{%- if use_agents %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock
+
+import pytest
+
+from {{ project_slug }}.ai.agents.base_agent import AgentTool
+from {{ project_slug }}.core.interfaces.llm import LLMPort
+
+
+class TestAgentTool:
+    """Tests for AgentTool."""
+
+    def test_create(self) -> None:
+        tool = AgentTool(name="search", description="Search the web")
+        assert tool.name == "search"
+        assert tool.description == "Search the web"
+
+
+class TestReActAgent:
+    """Tests for ReActAgent."""
+
+    @pytest.fixture
+    def llm(self) -> AsyncMock:
+        mock = AsyncMock(spec=LLMPort)
+        mock.complete.return_value = "Final Answer: 42"
+        return mock
+
+    async def test_run_returns_result(self, llm: AsyncMock) -> None:
+        from {{ project_slug }}.ai.agents.react_agent import ReActAgent
+
+        agent = ReActAgent(llm=llm, tools=[])
+        result = await agent.run("What is the answer?")
+
+        assert result.goal == "What is the answer?"
+        assert result.success
+        assert result.answer
+
+
+class TestToolCallingAgent:
+    """Tests for ToolCallingAgent."""
+
+    @pytest.fixture
+    def llm(self) -> AsyncMock:
+        mock = AsyncMock(spec=LLMPort)
+        mock.complete.return_value = '{"answer": "The answer is 42"}'
+        return mock
+
+    async def test_run_returns_result(self, llm: AsyncMock) -> None:
+        from {{ project_slug }}.ai.agents.tool_calling_agent import ToolCallingAgent
+
+        agent = ToolCallingAgent(llm=llm, tools=[])
+        result = await agent.run("Calculate something")
+
+        assert result.goal == "Calculate something"
+        assert result.success
+{%- endif %}

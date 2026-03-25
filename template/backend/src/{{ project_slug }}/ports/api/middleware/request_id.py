@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Final, override
+from typing import TYPE_CHECKING, override
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
@@ -11,9 +11,8 @@ if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.responses import Response
 
-__all__ = ["RequestIdMiddleware"]
 
-HEADER_REQUEST_ID: Final[str] = "X-Request-ID"
+HEADER_REQUEST_ID = "X-Request-ID"
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
@@ -28,16 +27,17 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: RequestResponseEndpoint,
     ) -> Response:
-        """Process request with request ID injection.
-
-        Args:
-            request (Request): Incoming HTTP request.
-            call_next (RequestResponseEndpoint): Next middleware or route handler.
-
-        Returns:
-            Response: HTTP response with X-Request-ID header.
-        """
-        request_id = request.headers.get(HEADER_REQUEST_ID, str(uuid.uuid4()))
+        """Process request with request ID injection."""
+        raw_id = request.headers.get(HEADER_REQUEST_ID, "")
+        # Validate client-provided ID: accept only UUID-shaped values
+        try:
+            if raw_id:
+                uuid.UUID(raw_id)
+                request_id = raw_id
+            else:
+                request_id = str(uuid.uuid4())
+        except ValueError:
+            request_id = str(uuid.uuid4())
         request.state.request_id = request_id
         response = await call_next(request)
         response.headers[HEADER_REQUEST_ID] = request_id

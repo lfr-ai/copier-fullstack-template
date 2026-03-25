@@ -9,168 +9,168 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from {{ project_slug }}.adapters.storage.azure_blob_storage_adapter import (
-AzureBlobStorageAdapter,
+    AzureBlobStorageAdapter,
 )
 
 if TYPE_CHECKING:
-from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator
 
 
 @pytest.fixture
 def mock_blob_service() -> MagicMock:
-"""Create a mock BlobServiceClient."""
-mock = MagicMock()
-mock.get_container_client.return_value = MagicMock()
-return mock
+    """Create a mock BlobServiceClient."""
+    mock = MagicMock()
+    mock.get_container_client.return_value = MagicMock()
+    return mock
 
 
 @pytest.fixture
 def storage(mock_blob_service: MagicMock) -> AzureBlobStorageAdapter:
-"""Create AzureBlobStorageAdapter backed by a mock client."""
-with patch(
-"{{ project_slug }}.adapters.storage.azure_blob_storage_adapter.BlobServiceClient",
-) as mock_cls:
-mock_cls.from_connection_string.return_value = mock_blob_service
-adapter = AzureBlobStorageAdapter(
-connection_string="DefaultEndpointsProtocol=https;AccountName=test",
-container_name="test-container",
-)
-return adapter
+    """Create AzureBlobStorageAdapter backed by a mock client."""
+    with patch(
+        "{{ project_slug }}.adapters.storage.azure_blob_storage_adapter.BlobServiceClient",
+    ) as mock_cls:
+        mock_cls.from_connection_string.return_value = mock_blob_service
+        adapter = AzureBlobStorageAdapter(
+            connection_string="DefaultEndpointsProtocol=https;AccountName=test",
+            container_name="test-container",
+        )
+    return adapter
 
 
 class TestAzureBlobStorageUpload:
-"""Test suite for Azure Blob upload operation."""
+    """Test suite for Azure Blob upload operation."""
 
-@pytest.mark.asyncio
-async def test_upload_returns_blob_url(
-self,
-storage: AzureBlobStorageAdapter,
-mock_blob_service: MagicMock,
-) -> None:
-"""Verify upload returns a blob URL."""
-import io
+    @pytest.mark.asyncio
+    async def test_upload_returns_blob_url(
+        self,
+        storage: AzureBlobStorageAdapter,
+        mock_blob_service: MagicMock,
+    ) -> None:
+        """Verify upload returns a blob URL."""
+        import io
 
-blob_client = AsyncMock()
-blob_client.url = "https://test.blob.core.windows.net/test-container/docs/file.txt"
-blob_client.upload_blob = AsyncMock()
-mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
-blob_client
-)
+        blob_client = AsyncMock()
+        blob_client.url = "https://test.blob.core.windows.net/test-container/docs/file.txt"
+        blob_client.upload_blob = AsyncMock()
+        mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
+            blob_client
+        )
 
-data = io.BytesIO(b"hello")
-result = await storage.upload(key="docs/file.txt", data=data)
-assert result == blob_client.url
-blob_client.upload_blob.assert_awaited_once()
+        data = io.BytesIO(b"hello")
+        result = await storage.upload(key="docs/file.txt", data=data)
+        assert result == blob_client.url
+        blob_client.upload_blob.assert_awaited_once()
 
-@pytest.mark.asyncio
-async def test_upload_calls_upload_blob_with_overwrite(
-self,
-storage: AzureBlobStorageAdapter,
-mock_blob_service: MagicMock,
-) -> None:
-"""Verify upload passes overwrite=True."""
-import io
+    @pytest.mark.asyncio
+    async def test_upload_calls_upload_blob_with_overwrite(
+        self,
+        storage: AzureBlobStorageAdapter,
+        mock_blob_service: MagicMock,
+    ) -> None:
+        """Verify upload passes overwrite=True."""
+        import io
 
-blob_client = AsyncMock()
-blob_client.url = "https://test.blob.core.windows.net/test-container/key.bin"
-mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
-blob_client
-)
+        blob_client = AsyncMock()
+        blob_client.url = "https://test.blob.core.windows.net/test-container/key.bin"
+        mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
+            blob_client
+        )
 
-data = io.BytesIO(b"payload")
-await storage.upload(key="key.bin", data=data)
-blob_client.upload_blob.assert_awaited_once_with(data, overwrite=True)
+        data = io.BytesIO(b"payload")
+        await storage.upload(key="key.bin", data=data)
+        blob_client.upload_blob.assert_awaited_once_with(data, overwrite=True)
 
 
 class TestAzureBlobStorageDownload:
-"""Test suite for Azure Blob download operation."""
+    """Test suite for Azure Blob download operation."""
 
-@pytest.mark.asyncio
-async def test_download_returns_bytes(
-self,
-storage: AzureBlobStorageAdapter,
-mock_blob_service: MagicMock,
-) -> None:
-"""Verify download returns raw bytes from Azure Blob."""
-stream_mock = AsyncMock()
-stream_mock.readall = AsyncMock(return_value=b"content")
+    @pytest.mark.asyncio
+    async def test_download_returns_bytes(
+        self,
+        storage: AzureBlobStorageAdapter,
+        mock_blob_service: MagicMock,
+    ) -> None:
+        """Verify download returns raw bytes from Azure Blob."""
+        stream_mock = AsyncMock()
+        stream_mock.readall = AsyncMock(return_value=b"content")
 
-blob_client = AsyncMock()
-blob_client.download_blob = AsyncMock(return_value=stream_mock)
-mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
-blob_client
-)
+        blob_client = AsyncMock()
+        blob_client.download_blob = AsyncMock(return_value=stream_mock)
+        mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
+            blob_client
+        )
 
-result = await storage.download("key.txt")
-assert result == b"content"
+        result = await storage.download("key.txt")
+        assert result == b"content"
 
 
 class TestAzureBlobStorageDelete:
-"""Test suite for Azure Blob delete operation."""
+    """Test suite for Azure Blob delete operation."""
 
-@pytest.mark.asyncio
-async def test_delete_calls_delete_blob(
-self,
-storage: AzureBlobStorageAdapter,
-mock_blob_service: MagicMock,
-) -> None:
-"""Verify delete delegates to blob_client.delete_blob."""
-blob_client = AsyncMock()
-mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
-blob_client
-)
+    @pytest.mark.asyncio
+    async def test_delete_calls_delete_blob(
+        self,
+        storage: AzureBlobStorageAdapter,
+        mock_blob_service: MagicMock,
+    ) -> None:
+        """Verify delete delegates to blob_client.delete_blob."""
+        blob_client = AsyncMock()
+        mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
+            blob_client
+        )
 
-await storage.delete("key.txt")
-blob_client.delete_blob.assert_awaited_once()
+        await storage.delete("key.txt")
+        blob_client.delete_blob.assert_awaited_once()
 
 
 class TestAzureBlobStorageExists:
-"""Test suite for Azure Blob exists check."""
+    """Test suite for Azure Blob exists check."""
 
-@pytest.mark.asyncio
-async def test_exists_returns_true_when_present(
-self,
-storage: AzureBlobStorageAdapter,
-mock_blob_service: MagicMock,
-) -> None:
-"""Verify exists returns True for an existing blob."""
-blob_client = AsyncMock()
-blob_client.exists = AsyncMock(return_value=True)
-mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
-blob_client
-)
+    @pytest.mark.asyncio
+    async def test_exists_returns_true_when_present(
+        self,
+        storage: AzureBlobStorageAdapter,
+        mock_blob_service: MagicMock,
+    ) -> None:
+        """Verify exists returns True for an existing blob."""
+        blob_client = AsyncMock()
+        blob_client.exists = AsyncMock(return_value=True)
+        mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
+            blob_client
+        )
 
-result = await storage.exists("key.txt")
-assert result is True
+        result = await storage.exists("key.txt")
+        assert result is True
 
-@pytest.mark.asyncio
-async def test_exists_returns_false_when_missing(
-self,
-storage: AzureBlobStorageAdapter,
-mock_blob_service: MagicMock,
-) -> None:
-"""Verify exists returns False when blob does not exist."""
-blob_client = AsyncMock()
-blob_client.exists = AsyncMock(return_value=False)
-mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
-blob_client
-)
+    @pytest.mark.asyncio
+    async def test_exists_returns_false_when_missing(
+        self,
+        storage: AzureBlobStorageAdapter,
+        mock_blob_service: MagicMock,
+    ) -> None:
+        """Verify exists returns False when blob does not exist."""
+        blob_client = AsyncMock()
+        blob_client.exists = AsyncMock(return_value=False)
+        mock_blob_service.get_container_client.return_value.get_blob_client.return_value = (
+            blob_client
+        )
 
-result = await storage.exists("missing.txt")
-assert result is False
+        result = await storage.exists("missing.txt")
+        assert result is False
 
 
 class TestAzureBlobStorageClose:
-"""Test suite for client lifecycle."""
+    """Test suite for client lifecycle."""
 
-@pytest.mark.asyncio
-async def test_close_closes_underlying_client(
-self,
-storage: AzureBlobStorageAdapter,
-mock_blob_service: MagicMock,
-) -> None:
-"""Verify close delegates to the BlobServiceClient."""
-mock_blob_service.close = AsyncMock()
-await storage.close()
-mock_blob_service.close.assert_awaited_once()
+    @pytest.mark.asyncio
+    async def test_close_closes_underlying_client(
+        self,
+        storage: AzureBlobStorageAdapter,
+        mock_blob_service: MagicMock,
+    ) -> None:
+        """Verify close delegates to the BlobServiceClient."""
+        mock_blob_service.close = AsyncMock()
+        await storage.close()
+        mock_blob_service.close.assert_awaited_once()
 {%- endif %}

@@ -33,7 +33,6 @@
     "streetsidesoftware.code-spell-checker",
     "streetsidesoftware.code-spell-checker-danish",
     "tamasfe.even-better-toml",
-    "teamsdevapp.vscode-ai-foundry",
     "timonwong.shellcheck",
     "tomoki1207.pdf",
     "upstash.context7-mcp",
@@ -52,7 +51,8 @@
     "ms-vscode.azurecli"{% endif %}{% if use_devcontainer %},
     "ms-vscode-remote.remote-containers"{% endif %}{% if use_playwright %},
     "ms-playwright.playwright"{% endif %}{% if database_backend == 'postgresql' %},
-    "ckolkman.vscode-postgres"{% endif %}
+    "ckolkman.vscode-postgres"{% endif %}{% if use_sftp %},
+    "Natizyskunk.sftp"{% endif %}
   ],
   "unwantedRecommendations": []
 }

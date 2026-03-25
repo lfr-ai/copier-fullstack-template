@@ -59,7 +59,7 @@ _FULL_REGISTRY: dict[str, object] = {
             "endpoints": {"list": "", "detail": "/{id}"},
         },
     },
-    "ports": {"BACKEND": 8000, "FRONTEND_DEV": 5173},
+    "ports": {"BACKEND": 8000, "FRONTEND_DEV": 3000},
 }
 
 

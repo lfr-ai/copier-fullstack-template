@@ -7,7 +7,7 @@
 
 
 ```bash
-task install
+task setup
 
 task dev
 ```
@@ -44,9 +44,9 @@ task backend:test       # Run tests via tox
 task frontend:install   # Install npm dependencies
 task frontend:dev       # Start dev server with HMR
 task frontend:build     # Production build
-task frontend:test      # Run unit tests
-task frontend:lint      # Lint with eslint
-task frontend:format    # Format with prettier
+task frontend:test:unit  # Run unit tests
+task frontend:lint       # Lint with eslint
+task frontend:format     # Format with prettier
 ```
 
 
@@ -56,19 +56,139 @@ task docker:down        # Stop all services
 task docker:build       # Build images
 task docker:logs        # View service logs
 ```
+{%- if container_runtime == "docker" %}
+
+#### Docker Buildx Bake
+
+For advanced multi-image builds with caching and parallelism:
+
+```bash
+task docker:bake              # Build dev targets
+task docker:bake:prod         # Build production targets
+task docker:bake:print        # Preview build plan (dry-run)
+task docker:bake:list         # List targets and variables
+task docker:bake:check        # Run BuildKit lint checks
+```
+
+Override variables via environment:
+
+```bash
+TAG=v1.0.0 REGISTRY=ghcr.io/{{ github_username }} docker buildx bake prod
+```
+{%- endif %}
 
 
 ```bash
-task backend:db:upgrade     # Run migrations
-task backend:db:migrate     # Create new migration
-task backend:db:seed        # Seed initial data
+task db:migrate             # Run migrations
+task db:revision            # Create new migration
+task db:seed                # Seed initial data
 ```
+{%- if use_knowledge_graph %}
+
+
+### Knowledge Graph
+{% if knowledge_graph_backend == 'neo4j' %}
+
+Start Neo4j via the Compose `knowledge-graph` profile:
+
+```bash
+{{ container_runtime }} compose --profile knowledge-graph up -d neo4j
+```
+
+Open the Neo4j Browser at `http://localhost:7474` to run Cypher queries
+interactively. The adapter in `backend/src/{{ project_slug }}/ai/knowledge_graph/neo4j_adapter.py`
+uses the async Bolt driver (`neo4j.AsyncGraphDatabase`).
+
+Common Cypher patterns used by the adapter:
+
+```cypher
+-- Add a relationship
+MERGE (s:Entity {name: $subject})
+MERGE (o:Entity {name: $object})
+MERGE (s)-[r:RELATION {type: $predicate}]->(o)
+
+-- Bulk insert via UNWIND
+UNWIND $triplets AS t
+MERGE (s:Entity {name: t.subject})
+MERGE (o:Entity {name: t.object})
+MERGE (s)-[r:RELATION {type: t.predicate}]->(o)
+
+-- Query neighbors by depth
+MATCH (s:Entity {name: $entity})-[r*1..2]-(neighbor:Entity)
+RETURN DISTINCT neighbor.name AS entity
+
+-- Filtered query with parameters
+MATCH (s:Entity)-[r:RELATION]->(o:Entity)
+WHERE s.name = $subject AND r.type = $predicate
+RETURN o.name AS object
+
+-- Count all entities
+MATCH (e:Entity) RETURN count(e) AS cnt
+
+-- Delete all graph data
+MATCH (n) DETACH DELETE n
+```
+
+The adapter uses `:Entity` as the node label and `:RELATION` with a
+`type` property as the edge label. All queries are parameterized to
+prevent injection.
+
+To tear down the graph data without removing the service:
+
+```bash
+{{ container_runtime }} compose --profile knowledge-graph exec neo4j cypher-shell -u neo4j -p changeme "MATCH (n) DETACH DELETE n"
+```
+{% elif knowledge_graph_backend == 'rdflib' %}
+
+The RDFLib backend (`backend/src/{{ project_slug }}/ai/knowledge_graph/rdflib_adapter.py`) stores
+triples in-process. It supports persistence to Turtle (`.ttl`) files
+and read-only SPARQL queries via `sparql_query()`.
+{% else %}
+
+The NetworkX backend (`backend/src/{{ project_slug }}/ai/knowledge_graph/networkx_adapter.py`) stores
+the graph in-process using `networkx.DiGraph`. It supports JSON
+persistence and is the default for local development.
+{% endif %}
+{% if use_external_knowledge_graph %}
+
+External knowledge graph connectors (Wikidata, DBpedia, ConceptNet) are
+in `backend/src/{{ project_slug }}/ai/knowledge_graph/external_connectors.py`. They perform HTTP
+lookups and do not require local services.
+{% endif %}
+{%- endif %}
+{%- if use_agents %}
+
+### Workflow Checkpointers
+
+LangGraph workflows store execution state in a checkpointer. During
+development, the in-memory checkpointer is used by default (no
+persistence across restarts). To test durable workflows locally,
+switch to the SQLite checkpointer:
+
+```bash
+export {{ project_slug | upper }}_CHECKPOINTER_BACKEND=sqlite
+```
+
+The SQLite checkpoint file (`.langgraph_checkpoints.db`) is
+created in the project root. Inspect it with:
+
+```bash
+sqlite3 .langgraph_checkpoints.db ".tables"
+sqlite3 .langgraph_checkpoints.db "SELECT * FROM checkpoints LIMIT 5;"
+```
+
+Reset checkpoint state by deleting the file:
+
+```bash
+rm -f .langgraph_checkpoints.db
+```
+{%- endif %}
 
 
 ```bash
 task test               # Run all tests
 task backend:test       # Backend tests only
-task frontend:test      # Frontend tests only
+task frontend:test:unit # Frontend tests only
 ```
 
 

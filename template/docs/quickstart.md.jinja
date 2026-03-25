@@ -1,4 +1,10 @@
 
+# Quick Start
+
+> **Need full setup?** See [ONBOARDING.md](ONBOARDING.md) for tool installation
+> or [SETUP.md](SETUP.md) for project configuration.
+
+## Prerequisites
 
 - Python {{ python_version }}+
 - [UV](https://docs.astral.sh/uv/) package manager
@@ -12,8 +18,6 @@ git clone <repository-url>
 cd {{ project_slug }}
 
 task backend:dev
-
-task backend:serve
 
 task docker:up
 ```
@@ -40,5 +44,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed overview.
 
 
 Start the server and visit:
+{% if api_style in ('rest', 'both') -%}
 - Swagger UI: http://localhost:8000/api/docs
 - ReDoc: http://localhost:8000/api/redoc
+{% endif -%}
+{% if api_style in ('graphql', 'both') -%}
+- GraphQL Playground: http://localhost:8000/graphql
+{% endif -%}

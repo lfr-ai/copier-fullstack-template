@@ -1,0 +1,160 @@
+"""CrewAI crew factory — assembles agents + tasks into executable crews.
+
+Supports both 'Process.sequential' and 'Process.hierarchical'
+execution, with optional planning, memory, streaming, and custom
+manager agents for HMAS patterns.
+"""
+
+from __future__ import annotations
+
+import structlog
+from dataclasses import dataclass, field
+from enum import StrEnum, auto, unique
+from typing import TYPE_CHECKING
+
+from {{ project_slug }}.ai.crewai.config import (
+    DEFAULT_CREW_MAX_RPM,
+    DEFAULT_CREW_VERBOSE,
+    DEFAULT_MANAGER_MODEL,
+)
+
+if TYPE_CHECKING:
+    from crewai import Agent, Crew, CrewOutput, Task
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@unique
+class CrewProcessType(StrEnum):
+    """Crew execution process type."""
+
+    SEQUENTIAL = auto()
+    HIERARCHICAL = auto()
+
+
+@dataclass(slots=True)
+class CrewSpec:
+    """Specification for building a CrewAI crew.
+
+    Encapsulates all parameters required to assemble a crew,
+    allowing programmatic or config-driven construction.
+    """
+
+    agents: list[Agent] = field(default_factory=list)
+    tasks: list[Task] = field(default_factory=list)
+    process: CrewProcessType = CrewProcessType.SEQUENTIAL
+    verbose: bool = DEFAULT_CREW_VERBOSE
+    memory: bool = True
+    cache: bool = True
+    max_rpm: int = DEFAULT_CREW_MAX_RPM
+    planning: bool = False
+    planning_llm: str | None = None
+    manager_llm: str = DEFAULT_MANAGER_MODEL
+    manager_agent: Agent | None = None
+    embedder: dict[str, object] | None = None
+    output_log_file: str | bool | None = None
+    stream: bool = False
+    knowledge_sources: list[object] = field(default_factory=list)
+
+
+def build_crew(spec: CrewSpec) -> Crew:
+    """Create a fully configured 'crewai.Crew' from a 'CrewSpec'.
+
+    For hierarchical processes, a 'manager_llm' or 'manager_agent'
+    is required. The manager coordinates task delegation and validates
+    outcomes—implementing the HMAS supervisor pattern natively.
+
+    Args:
+        spec (CrewSpec): Crew specification with agents, tasks, and execution strategy.
+
+    Returns:
+        Crew: A configured 'crewai.Crew' ready for kickoff.
+    """
+    from crewai import Crew, Process
+
+    process = (
+        Process.hierarchical
+        if spec.process == CrewProcessType.HIERARCHICAL
+        else Process.sequential
+    )
+
+    kwargs: dict[str, object] = {
+        "agents": spec.agents,
+        "tasks": spec.tasks,
+        "process": process,
+        "verbose": spec.verbose,
+        "memory": spec.memory,
+        "cache": spec.cache,
+        "max_rpm": spec.max_rpm,
+    }
+
+    if spec.planning:
+        kwargs["planning"] = True
+        if spec.planning_llm:
+            kwargs["planning_llm"] = spec.planning_llm
+
+    if process == Process.hierarchical:
+        if spec.manager_agent is not None:
+            kwargs["manager_agent"] = spec.manager_agent
+        else:
+            kwargs["manager_llm"] = spec.manager_llm
+
+    if spec.embedder is not None:
+        kwargs["embedder"] = spec.embedder
+
+    if spec.output_log_file is not None:
+        kwargs["output_log_file"] = spec.output_log_file
+
+    if spec.stream:
+        kwargs["stream"] = True
+
+    if spec.knowledge_sources:
+        kwargs["knowledge_sources"] = spec.knowledge_sources
+
+    crew = Crew(**kwargs)
+
+    logger.info(
+        "crewai_crew_built",
+        agents=len(spec.agents),
+        tasks=len(spec.tasks),
+        process=spec.process.value,
+        planning=spec.planning,
+        memory=spec.memory,
+    )
+    return crew
+
+
+def kickoff_crew(
+    crew: Crew,
+    inputs: dict[str, object] | None = None,
+) -> CrewOutput:
+    """Synchronously kick off a crew and return the result.
+
+    Args:
+        crew (Crew): Assembled 'crewai.Crew' instance.
+        inputs (dict[str, object] | None): Template variables for task descriptions (e.g. '{topic}').
+
+    Returns:
+        CrewOutput: Result with raw, pydantic, and JSON results.
+    """
+    logger.info("crewai_crew_kickoff", inputs=list((inputs or {}).keys()))
+    return crew.kickoff(inputs=inputs or {})
+
+
+async def akickoff_crew(
+    crew: Crew,
+    inputs: dict[str, object] | None = None,
+) -> CrewOutput:
+    """Asynchronously kick off a crew (native async).
+
+    Preferred for high-concurrency FastAPI deployments. Uses CrewAI's
+    native 'akickoff' for true async execution throughout the
+    entire chain.
+
+    Args:
+        crew (Crew): Assembled 'crewai.Crew' instance.
+        inputs (dict[str, object] | None): Template variables for task descriptions.
+
+    Returns:
+        CrewOutput: Result with raw, pydantic, and JSON results.
+    """
+    logger.info("crewai_crew_akickoff", inputs=list((inputs or {}).keys()))
+    return await crew.akickoff(inputs=inputs or {})

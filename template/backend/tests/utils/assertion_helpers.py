@@ -8,13 +8,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Protocol
 
-__all__ = [
-    "assert_dict_subset",
-    "assert_list_equal_unordered",
-    "assert_raises_with_message",
-    "assert_status_ok",
-]
-
 
 class _HasStatusCode(Protocol):
     """Protocol for objects with a numeric status_code attribute."""
@@ -41,7 +34,7 @@ def assert_status_ok(response: _HasStatusCode) -> None:
     """Assert an HTTP response has a 2xx status code.
 
     Args:
-        response (_HasStatusCode): HTTPX or similar response object with ``status_code``.
+        response (_HasStatusCode): HTTPX or similar response object with 'status_code'.
     """
     assert 200 <= response.status_code < 300, (  # noqa: PLR2004
         f"Expected 2xx, got {response.status_code}"
@@ -102,5 +95,5 @@ def assert_raises_with_message(
             raise AssertionError(
                 f"Exception message '{e}' does not contain '{message_substring}'"
             ) from e
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — top-level error boundary
         raise AssertionError(f"Unexpected exception {type(e).__name__}: {e}") from e

@@ -1,0 +1,129 @@
+"""AI-specific enumerations."""
+
+from __future__ import annotations
+
+from enum import unique
+
+from {{ project_slug }}.core.enums.base import ParseableEnum
+
+
+@unique
+class AIProviderType(ParseableEnum):
+    """Supported AI/LLM provider backends."""
+
+    OPENAI = "openai"
+    AZURE_OPENAI = "azure_openai"
+    LANGCHAIN = "langchain"
+    LLAMAINDEX = "llamaindex"
+    GATEWAY = "gateway"
+
+
+@unique
+class EmbeddingProviderType(ParseableEnum):
+    """Supported embedding provider backends."""
+
+    OPENAI = "openai"
+    AZURE_OPENAI = "azure_openai"
+    SENTENCE_TRANSFORMERS = "sentence_transformers"
+
+
+@unique
+class VectorStoreType(ParseableEnum):
+    """Supported vector store backends."""
+
+    FAISS = "faiss"
+    PGVECTOR = "pgvector"
+    MEMORY = "memory"
+    AZURE_AI_SEARCH = "azure_ai_search"
+
+
+@unique
+class ChunkStrategy(ParseableEnum):
+    """Document chunking strategies."""
+
+    FIXED_SIZE = "fixed_size"
+    RECURSIVE = "recursive"
+    SEMANTIC = "semantic"
+    SENTENCE = "sentence"
+
+
+@unique
+class RetrieverStrategy(ParseableEnum):
+    """RAG retrieval strategies."""
+
+    VECTOR = "vector"
+    HYBRID = "hybrid"
+    RERANK = "rerank"
+
+
+@unique
+class KnowledgeGraphBackend(ParseableEnum):
+    """Supported knowledge graph backends."""
+
+    NETWORKX = "networkx"
+    NEO4J = "neo4j"
+    RDFLIB = "rdflib"
+
+
+@unique
+class ExternalKnowledgeGraphSource(ParseableEnum):
+    """Supported external knowledge graph sources."""
+
+    WIKIDATA = "wikidata"
+    DBPEDIA = "dbpedia"
+    CONCEPTNET = "conceptnet"
+
+
+@unique
+class MCPTransport(ParseableEnum):
+    """MCP server transport modes."""
+
+    STREAMABLE_HTTP = "streamable_http"
+    STDIO = "stdio"
+    SSE = "sse"
+
+
+@unique
+class AgentType(ParseableEnum):
+    """Supported agent implementations."""
+
+    REACT = "react"
+    TOOL_CALLING = "tool_calling"
+    LANGGRAPH = "langgraph"
+
+
+@unique
+class OrchestratorType(ParseableEnum):
+    """Supported multi-agent orchestration backends."""
+
+    LANGGRAPH = "langgraph"
+    CUSTOM = "custom"
+
+
+@unique
+class GuardrailMode(ParseableEnum):
+    """Guardrail validation modes."""
+
+    NONE = "none"
+    RULE_BASED = "rule_based"
+    LLM_BASED = "llm_based"
+
+
+@unique
+class DocumentType(ParseableEnum):
+    """Supported document types for ingestion."""
+
+    PDF = "pdf"
+    MARKDOWN = "markdown"
+    HTML = "html"
+    TEXT = "text"
+    DOCX = "docx"
+
+
+@unique
+class ConversationMemoryBackend(ParseableEnum):
+    """Supported conversation memory backends."""
+
+    BUFFER = "buffer"
+    REDIS = "redis"
+    POSTGRES = "postgres"

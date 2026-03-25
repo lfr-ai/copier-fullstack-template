@@ -35,6 +35,7 @@ fi
 # Ensure the using reference points to deploy.bicep
 sed -i "1s|^using '../../main\.bicep'|using '../../deploy.bicep'|" "$bicepparams"
 
+{
 print "==> Deploying ${target_env} environment..."
 
 az deployment sub create \
@@ -44,9 +45,10 @@ az deployment sub create \
 --parameters projectName="$project" env="$target_env" \
 --name "deploy-{{ project_slug | replace("_", "-") }}-${target_env}-$(date +%Y%m%d%H%M%S)" \
 --only-show-errors
-
-# Restore the using reference
+} always {
+# Restore the using reference even on failure
 sed -i "1s|^using '../../deploy\.bicep'|using '../../main.bicep'|" "$bicepparams"
+}
 
 print "==> Deployment complete for ${target_env}"
 }
