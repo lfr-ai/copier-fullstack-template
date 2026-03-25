@@ -32,9 +32,6 @@ DEFAULT_SENTENCE_TRANSFORMER_MODEL = "all-MiniLM-L6-v2"
 DEFAULT_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 """Default cross-encoder model for reranking."""
 
-DEFAULT_AZURE_OPENAI_API_VERSION = "2025-04-01-preview"  # FIXME: unused — wire into Azure adapter or remove
-"""Default Azure OpenAI API version."""
-
 
 DEFAULT_EMBEDDING_DIMENSION = 1536
 """Default vector dimension (OpenAI text-embedding-3-small)."""

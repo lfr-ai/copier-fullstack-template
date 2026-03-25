@@ -6,6 +6,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from {{ project_slug }}.ports.web.view_models.base import BaseViewModel
+
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
@@ -13,7 +15,8 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request) -> HTMLResponse:
     """Render home page."""
+    view_model = BaseViewModel(title="Home")
     return templates.TemplateResponse(
         "pages/home.html.j2",
-        {"request": request, "title": "Home"},
+        {"request": request, **view_model.model_dump()},
     )

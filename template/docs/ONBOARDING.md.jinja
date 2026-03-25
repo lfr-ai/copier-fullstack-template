@@ -5,6 +5,10 @@ Development environment setup for **{{ project_name }}**.
 > **Already have tools installed?** Skip to [SETUP.md](SETUP.md) for project-specific configuration.
 > **Just want to run it?** See [QUICKSTART.md](QUICKSTART.md).
 
+> **Windows users**: Run `.\scripts\install\install-all.ps1` (as Administrator) first
+> to install WSL2, VS Code, and Git. Then open WSL/Ubuntu and follow the Linux
+> instructions below. All development tooling runs inside WSL.
+
 ---
 
 
@@ -22,13 +26,15 @@ Development environment setup for **{{ project_name }}**.
 
 ---
 
+## 1. VS Code
 
 Download and install VS Code from <https://code.visualstudio.com/download>.
 After installation, open the project and install recommended extensions when
-prompted (or run `task setup`).
+prompted.
 
 ---
 
+## 2. Git
 
 Install git following the instructions for your platform.
 
@@ -40,6 +46,7 @@ git --version
 
 ---
 
+## 3. Python and UV
 
 Install UV and Python:
 
@@ -56,6 +63,7 @@ uv python find {{ python_version }}
 
 ---
 
+## 4. Node.js and pnpm
 
 Install Node.js {{ node_version }} and pnpm:
 
@@ -65,7 +73,6 @@ fnm install {{ node_version }}
 fnm use {{ node_version }}
 
 corepack enable
-corepack prepare pnpm@10 --activate
 ```
 
 Verify:
@@ -77,8 +84,12 @@ pnpm --version   # 10.x
 
 ---
 
+## 5. Container Runtime
 
-Install {{ container_runtime }}:
+Install {{ container_runtime }} following the
+[official instructions]({% if container_runtime == 'docker' %}https://docs.docker.com/engine/install/{% else %}https://podman.io/docs/installation{% endif %}).
+
+Verify:
 
 ```zsh
 {{ container_runtime }} --version
@@ -87,6 +98,7 @@ Install {{ container_runtime }}:
 
 ---
 
+## 6. Task Runner
 
 Install [Task](https://taskfile.dev):
 
@@ -102,6 +114,7 @@ task --version
 
 ---
 
+## 7. Clone and Setup
 
 ```zsh
 git clone <REPO_URL> {{ project_slug }}
@@ -111,13 +124,14 @@ task setup
 
 This command will:
 - Create Python virtual environment
-- Install backend dependencies
-- Install frontend dependencies
+- Install backend dependencies (`uv sync`)
+- Install frontend dependencies (`pnpm install`)
+- Set up pre-commit hooks
 - Copy `.env.example` to `.env`
-- Run database migrations
 
 ---
 
+## 8. Start Development
 
 ```zsh
 task dev
@@ -125,7 +139,12 @@ task dev
 
 Visit:
 - Backend API: <http://localhost:8000>
+{%- if api_style in ('rest', 'both') %}
 - API docs: <http://localhost:8000/api/docs>
+{%- endif %}
+{%- if api_style in ('graphql', 'both') %}
+- GraphiQL IDE: <http://localhost:8000/graphql>
+{%- endif %}
 - Frontend: <http://localhost:3000>
 {%- if use_ai %}
 
@@ -172,8 +191,8 @@ For FAISS:
 ```zsh
 # macOS/Linux
 scripts/install/install-faiss.zsh
-# Windows — install via pip
-pip install faiss-cpu
+# Windows — install via uv
+uv pip install faiss-cpu
 ```
 {% endif %}
 {% if use_mcp %}

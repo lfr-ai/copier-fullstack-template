@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
 
 if TYPE_CHECKING:
+    from {{ project_slug }}.core.entities.base import Entity
     from {{ project_slug }}.core.interfaces.user_repository import UserRepositoryPort
 
 
@@ -12,15 +13,21 @@ if TYPE_CHECKING:
 class UnitOfWork(Protocol):
     """Unit of Work protocol for transactional boundaries.
 
-    Provides repository access and transactional commit/rollback.
-    Application services use 'async with uow:' to open a
-    transaction, access 'uow.users' for persistence, and call
-    'await uow.commit()' when ready.
+    Provides repository access, transactional commit/rollback,
+    and domain event collection.  Application services use
+    ``async with uow:`` to open a transaction, access ``uow.users``
+    for persistence, track entities with ``uow.collect_entity()``,
+    and call ``await uow.commit()`` which also dispatches pending
+    domain events.
     """
 
     @property
     def users(self) -> UserRepositoryPort:
         """Access the user repository within the current transaction."""
+        ...
+
+    def collect_entity(self, entity: Entity) -> None:
+        """Track an entity so its domain events are dispatched on commit."""
         ...
 
     async def __aenter__(self) -> Self:
@@ -37,9 +44,18 @@ class UnitOfWork(Protocol):
         ...
 
     async def commit(self) -> None:
-        """Commit current transaction."""
+        """Commit current transaction and dispatch domain events."""
         ...
 
     async def rollback(self) -> None:
         """Rollback current transaction."""
+        ...
+
+    async def check_connection(self) -> bool:
+        """Verify the underlying store is reachable.
+
+        Returns ``True`` if the connection is healthy.
+        Health-check endpoints should call this instead of
+        accessing session internals directly.
+        """
         ...

@@ -1,0 +1,39 @@
+"""User persistence mapper — UserModel ↔ User entity translation."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
+from {{ project_slug }}.core.entities.user import User
+
+
+class UserPersistenceMapper:
+    """Bidirectional mapper between :class:`UserModel` and :class:`User`."""
+
+    def to_entity(self, model: UserModel) -> User:
+        """Map a SQLAlchemy ``UserModel`` to a domain ``User`` entity."""
+        return User(
+            id=model.id,
+            email=model.email,
+            display_name=model.display_name,
+            password_hash=model.password_hash or "",
+            is_active=model.is_active,
+            created_at=model.created_at,
+        )
+
+    def to_model(self, entity: User) -> UserModel:
+        """Map a domain ``User`` entity to a SQLAlchemy ``UserModel``."""
+        return UserModel(
+            id=entity.id,
+            email=entity.email,
+            display_name=entity.display_name,
+            password_hash=entity.password_hash,
+            is_active=entity.is_active,
+        )
+
+    def update_model(self, *, model: UserModel, entity: User) -> UserModel:
+        """Apply domain entity state onto an existing ORM model."""
+        model.email = entity.email
+        model.display_name = entity.display_name
+        model.password_hash = entity.password_hash
+        model.is_active = entity.is_active
+        return model

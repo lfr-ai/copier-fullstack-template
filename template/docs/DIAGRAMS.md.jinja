@@ -1,4 +1,11 @@
 
+# Architecture Diagrams
+
+All diagrams are embedded inline as Mermaid blocks for quick reference.
+Render them in any Markdown viewer with Mermaid support (GitHub, VS Code
+with Markdown Preview Enhanced, etc.).
+
+## Architecture Overview
 
 ```mermaid
 graph TB
@@ -55,6 +62,7 @@ graph TB
 {%- endif %}
 ```
 
+## Hexagonal Architecture (Ports & Adapters)
 
 ```mermaid
 graph LR
@@ -65,7 +73,7 @@ graph LR
     end
 
     subgraph "Application Core"
-        subgraph "Ports In"
+        subgraph "Ports Out (Driven)"
             PI1[Repository Port]
             PI2[Cache Port]
             PI3[EventBus Port]
@@ -115,11 +123,12 @@ graph LR
 {%- endif %}
 ```
 
+## Deployment Topology
 
 ```mermaid
 graph TB
     subgraph "{{ project_name }} Stack"
-        APP[App Service<br/>:8000]
+        APP[Backend<br/>:8000]
         FRONTEND[Frontend Dev Server<br/>:3000]
 {%- if database_backend == 'postgresql' %}
         PG[(PostgreSQL<br/>:5432)]
@@ -148,6 +157,7 @@ graph TB
 {%- endif %}
 ```
 
+## Request Data Flow
 
 ```mermaid
 sequenceDiagram
@@ -166,3 +176,60 @@ sequenceDiagram
     U-->>A: DTO response
     A-->>C: HTTP Response
 ```
+{%- if use_ai %}
+
+## RAG Pipeline Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as /api/v1/ai/rag/query
+    participant RAG as RAGService
+    participant E as EmbeddingPort
+    participant VS as VectorStorePort
+{%- if use_knowledge_graph %}
+    participant KG as KnowledgeGraphPort
+{%- endif %}
+    participant LLM as LLMPort
+
+    C->>API: POST {question, top_k}
+    API->>RAG: query(request)
+    RAG->>E: embed(question)
+    E-->>RAG: vector
+    RAG->>VS: search(vector, top_k)
+    VS-->>RAG: chunks[]
+{%- if use_knowledge_graph %}
+    RAG->>KG: query_triplets(question)
+    KG-->>RAG: triplets[]
+{%- endif %}
+    RAG->>LLM: complete(question + context)
+    LLM-->>RAG: answer
+    RAG-->>API: {answer, sources}
+    API-->>C: 200 OK
+```
+{%- endif %}
+{%- if use_agents %}
+
+## Agent Execution Flow
+
+```mermaid
+graph LR
+    subgraph "Agent Runner"
+        GOAL[Goal] --> PLAN[Plan]
+        PLAN --> EXEC[Execute Tool]
+        EXEC --> OBS[Observe Result]
+        OBS -->|Loop| PLAN
+        OBS -->|Done| ANS[Answer]
+    end
+
+    subgraph "Workflow Engine (LangGraph)"
+        WG[Goal] --> ROUTER[Router]
+        ROUTER --> PLANNER[Planner Agent]
+        PLANNER --> EXECUTOR[Executor Agent]
+        EXECUTOR --> REVIEWER[Reviewer Agent]
+        REVIEWER -->|Needs revision| ROUTER
+        REVIEWER -->|Approved| FINAL[Final Answer]
+        ROUTER -.->|Checkpoint| CP[(Checkpointer)]
+    end
+```
+{%- endif %}

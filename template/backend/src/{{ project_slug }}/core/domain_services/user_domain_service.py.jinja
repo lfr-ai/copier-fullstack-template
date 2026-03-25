@@ -1,0 +1,68 @@
+"""User domain service — business rules that span User entity boundaries."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.core.entities.user import User
+from {{ project_slug }}.core.events.user_events import UserDeactivated
+from {{ project_slug }}.core.exceptions.base import ConflictError, DomainError
+from {{ project_slug }}.core.value_objects.email import Email
+
+
+class UserDomainService:
+    """Domain service for user-related business rules.
+
+    Contains invariant enforcement that doesn't belong inside the
+    ``User`` entity itself — e.g. uniqueness checks that require
+    repository access, or multi-entity coordination.
+
+    Application services delegate to this service for domain logic,
+    keeping the application layer focused on orchestration.
+    """
+
+    @staticmethod
+    def validate_email(email: str) -> Email:
+        """Validate and normalize an email address.
+
+        Returns a verified :class:`Email` value object.
+
+        Raises:
+            ValidationError: If the email format is invalid.
+        """
+        return Email(value=email)
+
+    @staticmethod
+    def ensure_not_duplicate(*, existing_user: User | None, email: str) -> None:
+        """Ensure a user with the given email doesn't already exist.
+
+        Raises:
+            ConflictError: If a user with the email already exists.
+        """
+        if existing_user is not None:
+            raise ConflictError(f"User with email '{email}' already exists")
+
+    @staticmethod
+    def deactivate(user: User, *, reason: str = "") -> User:
+        """Deactivate a user, registering the appropriate domain event.
+
+        Raises:
+            DomainError: If the user is already inactive.
+        """
+        if not user.is_active:
+            raise DomainError("User is already inactive", code="ALREADY_INACTIVE")
+        user.is_active = False
+        user.register_event(
+            UserDeactivated(user_id=user.id, reason=reason),
+        )
+        return user
+
+    @staticmethod
+    def activate(user: User) -> User:
+        """Reactivate an inactive user.
+
+        Raises:
+            DomainError: If the user is already active.
+        """
+        if user.is_active:
+            raise DomainError("User is already active", code="ALREADY_ACTIVE")
+        user.is_active = True
+        return user

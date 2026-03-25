@@ -1,18 +1,20 @@
 
+# Testing
 
 {{ project_name }} uses a layered testing strategy aligned with the clean / hexagonal
 architecture.
 
-
+## Running Tests
 
 Tests run through **tox** with **pytest**:
 
 ```bash
-task backend:test          # Run all tests via tox
+task backend:test          # Run unit + property tests via tox
 task backend:test:unit     # Run unit tests only
 task backend:test:coverage # Run with coverage report
 ```
 
+## Test Directory Structure
 
 ```
 backend/tests/
@@ -44,6 +46,7 @@ backend/tests/
     +-- (benchmarks)
 ```
 
+## Test Commands
 
 ```bash
 task backend:test              # Run all backend tests via tox
@@ -54,6 +57,7 @@ task backend:test:performance  # Performance / benchmark tests
 task backend:test:coverage     # Tests with coverage report
 ```
 
+## Unit Tests
 
 Test domain logic and use cases in isolation:
 
@@ -70,6 +74,7 @@ def test_create_user() -> None:
     assert user.display_name == "Test User"
 ```
 
+## Integration Tests
 
 Test the full HTTP request/response cycle:
 
@@ -86,6 +91,7 @@ async def test_health_endpoint(client: AsyncClient) -> None:
     assert response.json()["status"] == "healthy"
 ```
 
+## Property-Based Tests
 
 Use Hypothesis for property-based testing:
 
@@ -100,12 +106,13 @@ def test_valid_emails_accepted(email_str: str) -> None:
     assert str(email) == email_str.lower().strip()
 ```
 
+## Coverage
 
 Generate HTML coverage report:
 
 ```bash
 task backend:test:coverage
-open htmlcov/index.html
+# Report at backend/htmlcov/index.html
 ```
 
 

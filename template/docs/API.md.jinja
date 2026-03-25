@@ -16,7 +16,21 @@ Authorization: Bearer <token>
 
 ### GET /health
 
-Check application health status.
+Universal liveness probe (always available regardless of API style).
+
+**Response** `200 OK`:
+
+```json
+{
+  "status": "healthy",
+  "version": "0.1.0"
+}
+```
+{% if api_style in ('rest', 'both') %}
+
+### GET /api/v1/health
+
+Application health check (REST API).
 
 **Response** `200 OK`:
 
@@ -28,9 +42,9 @@ Check application health status.
 }
 ```
 
-### GET /health/ready
+### GET /api/v1/health/ready
 
-Readiness check (includes database connectivity).
+Readiness check (includes database and cache connectivity).
 
 **Response** `200 OK`:
 
@@ -98,7 +112,7 @@ Retrieve a user by ID.
 
 ## AI Endpoints
 
-### POST /api/v1/ai/complete
+### POST /api/v1/ai/completions
 
 Generate a text completion using the configured LLM provider.
 
@@ -126,7 +140,7 @@ Generate a text completion using the configured LLM provider.
 
 ## RAG Endpoints
 
-### POST /api/v1/rag/query
+### POST /api/v1/ai/rag/query
 
 Query the knowledge base using retrieval-augmented generation.
 
@@ -154,7 +168,7 @@ Query the knowledge base using retrieval-augmented generation.
 ```
 
 
-### POST /api/v1/rag/ingest
+### POST /api/v1/ai/rag/ingest
 
 Ingest a document into the knowledge base.
 
@@ -177,7 +191,7 @@ Ingest a document into the knowledge base.
 ```
 
 
-### POST /api/v1/rag/search
+### POST /api/v1/ai/search
 
 Execute a semantic similarity search.
 
@@ -206,7 +220,7 @@ Execute a semantic similarity search.
 
 ## Agent Endpoints
 
-### POST /api/v1/agents/execute
+### POST /api/v1/agents/run
 
 Execute a single AI agent (ReAct or tool-calling).
 
@@ -233,16 +247,15 @@ Execute a single AI agent (ReAct or tool-calling).
 }
 ```
 
+### POST /api/v1/agents/orchestrate
 
-### POST /api/v1/agents/workflow
-
-Run a multi-agent workflow via LangGraph.
+Run multi-agent orchestration.
 
 **Request Body**:
 
 ```json
 {
-  "goal": "Analyze this dataset and create a report"
+  "goal": "Coordinate multiple agents to solve a complex task"
 }
 ```
 
@@ -256,6 +269,373 @@ Run a multi-agent workflow via LangGraph.
   "success": true
 }
 ```
+
+## Workflow Endpoints
+
+### POST /api/v1/workflows/execute
+
+Execute a multi-agent workflow via LangGraph.
+
+**Request Body**:
+
+```json
+{
+  "goal": "Analyze this dataset and create a report",
+  "workflow_id": "",
+  "max_iterations": 10,
+  "stream": false
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "workflow_id": "",
+  "goal": "Analyze this dataset and create a report",
+  "answer": "Based on the analysis...",
+  "steps": [...],
+  "total_steps": 5,
+  "success": true
+}
+```
+
+### POST /api/v1/workflows/resume
+
+Resume a paused workflow from a checkpoint.
+
+**Request Body**:
+
+```json
+{
+  "checkpoint_id": "cp-abc123",
+  "input_data": {}
+}
+```
+
+### GET /api/v1/workflows/state/{thread_id}
+
+Retrieve the current state of a workflow by thread ID.
+
+**Response** `200 OK`:
+
+```json
+{
+  "thread_id": "thread-abc123",
+  "state": { ... }
+}
+```
+{% endif %}
+{% if use_ai %}
+
+## Conversation Endpoints
+
+### GET /api/v1/conversations/{session_id}/history
+
+Retrieve conversation history for a session.
+
+**Query Parameters**:
+- `limit` (int, default `50`, max `200`): Maximum messages to return
+
+**Response** `200 OK`:
+
+```json
+{
+  "session_id": "abc-123",
+  "messages": [
+    { "role": "user", "content": "Hello", "timestamp": "2025-01-01T00:00:00Z" },
+    { "role": "assistant", "content": "Hi!", "timestamp": "2025-01-01T00:00:01Z" }
+  ]
+}
+```
+
+### POST /api/v1/conversations/{session_id}/messages
+
+Send a message and receive an AI-generated response.
+
+**Request Body**:
+
+```json
+{
+  "content": "What is our return policy?",
+  "use_rag": true,
+  "top_k": 5
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "user_message": { "role": "user", "content": "What is our return policy?", "timestamp": "..." },
+  "assistant_message": { "role": "assistant", "content": "Our return policy allows...", "timestamp": "..." },
+  "sources": []
+}
+```
+
+### DELETE /api/v1/conversations/{session_id}
+
+Clear all messages in a conversation session.
+
+**Response** `204 No Content`
+{% endif %}
+{% if use_rag %}
+
+## Document Endpoints
+
+### POST /api/v1/documents/ingest
+
+Ingest a document from a file path or URL.
+
+**Query Parameters**:
+- `source` (str): File path or URL to ingest
+
+**Response** `201 Created`:
+
+```json
+{
+  "source": "/path/to/document.pdf",
+  "chunk_count": 24,
+  "success": true
+}
+```
+
+### POST /api/v1/documents/upload
+
+Upload and ingest a file (max 10 MB).
+
+**Request**: `multipart/form-data` with `file` field
+
+**Supported types**: `.txt`, `.md`, `.pdf`, `.csv`, `.json`, `.xml`, `.html`, `.rst`, `.doc`, `.docx`
+
+**Response** `201 Created`:
+
+```json
+{
+  "source": "document.pdf",
+  "chunk_count": 24,
+  "success": true
+}
+```
+{% endif %}
+{% if use_knowledge_graph %}
+
+## Knowledge Graph Endpoints
+
+### POST /api/v1/knowledge-graph/query
+
+Query the knowledge graph for entities and relationships.
+
+**Request Body**:
+
+```json
+{
+  "query": "machine learning",
+  "max_depth": 2,
+  "max_results": 20
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "triplets": [
+    { "subject": "ML", "predicate": "is_a", "object": "AI technique", "metadata": {} }
+  ]
+}
+```
+
+### POST /api/v1/knowledge-graph/extract
+
+Extract knowledge graph triplets from free text using LLM.
+
+**Request Body**:
+
+```json
+{
+  "text": "Python is a programming language created by Guido van Rossum.",
+  "max_triplets": 50
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "triplets": [
+    { "subject": "Python", "predicate": "created_by", "object": "Guido van Rossum", "metadata": {} }
+  ],
+  "source_text_length": 62
+}
+```
+
+### POST /api/v1/knowledge-graph/neighbors
+
+Query an entity's neighbors in the graph.
+
+**Request Body**:
+
+```json
+{
+  "entity": "Python",
+  "depth": 1,
+  "limit": 50
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "entity": "Python",
+  "depth": 1,
+  "neighbors": [...]
+}
+```
+
+### GET /api/v1/knowledge-graph/stats
+
+Return knowledge graph entity and triplet counts.
+
+**Response** `200 OK`:
+
+```json
+{
+  "entity_count": 1500,
+  "triplet_count": 4200,
+  "backend": "neo4j"
+}
+```
+
+### POST /api/v1/knowledge-graph/triplets
+
+Add a triplet to the knowledge graph.
+
+**Request Body**:
+
+```json
+{
+  "subject": "Python",
+  "predicate": "is_a",
+  "object": "programming language"
+}
+```
+{% if use_external_knowledge_graph %}
+
+### POST /api/v1/knowledge-graph/external/lookup
+
+Look up an entity in external knowledge graphs (Wikidata, DBpedia, ConceptNet).
+
+**Request Body**:
+
+```json
+{
+  "entity": "Python",
+  "source": "wikidata",
+  "language": "en",
+  "limit": 10
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "entity": "Python",
+  "source": "wikidata",
+  "results": [ ... ]
+}
+```
+
+### POST /api/v1/knowledge-graph/external/relations
+
+Query relations for an entity from external knowledge graphs.
+
+**Request Body**:
+
+```json
+{
+  "entity_id": "Q28865",
+  "source": "wikidata",
+  "limit": 50
+}
+```
+
+**Response** `200 OK`:
+
+```json
+{
+  "entity_id": "Q28865",
+  "source": "wikidata",
+  "relations": [
+    { "subject": "Python", "predicate": "instance_of", "object": "programming language" }
+  ]
+}
+```
+{% endif %}
+{% endif %}
+{% if use_crewai %}
+
+## CrewAI Endpoints
+
+### GET /api/v1/crewai/templates
+
+List pre-built crew templates.
+
+**Response** `200 OK`:
+
+```json
+[
+  { "name": "research", "description": "Research crew for information gathering" },
+  { "name": "analysis", "description": "Data analysis crew" }
+]
+```
+
+### POST /api/v1/crewai/crews/execute
+
+Execute a pre-built crew template.
+
+**Request Body**:
+
+```json
+{
+  "crew_type": "research",
+  "task": "Find the latest trends in AI",
+  "verbose": false
+}
+```
+
+### POST /api/v1/crewai/crews/custom
+
+Build and execute a custom crew from agent/task specs.
+
+**Request Body**:
+
+```json
+{
+  "agents": [
+    { "role": "Researcher", "goal": "Find relevant data", "backstory": "" }
+  ],
+  "tasks": [
+    { "description": "Research the topic", "expected_output": "Summary report", "agent_index": 0 }
+  ],
+  "process": "sequential"
+}
+```
+
+### POST /api/v1/crewai/orchestrate
+
+Run HMAS hierarchical multi-agent orchestration.
+
+**Request Body**:
+
+```json
+{
+  "goal": "Analyze market trends and create a strategy report"
+}
+```
+{% endif %}
 {% endif %}
 {% if use_mcp %}
 
@@ -267,10 +647,20 @@ It exposes tools, resources, and prompts via the streamable-http transport.
 **Tools available**:
 - `search_documents` — Semantic search across indexed documents
 - `ingest_document` — Ingest a document into the knowledge base
-- `complete` — Generate LLM completions
+- `complete_text` — Generate LLM completions
+- `run_rag_query` — Full RAG pipeline (search + generate answer)
+- `evaluate_output` — Evaluate quality of LLM-generated answers
 {% if use_knowledge_graph %}
-- `query_knowledge_graph` — Query the knowledge graph
+- `query_knowledge_graph` — Query entity relationships
+- `get_knowledge_graph_stats` — Entity and triplet counts
+- `add_knowledge_graph_triplet` — Add a triplet to the graph
 {% endif %}
+{% if use_external_knowledge_graph %}
+- `lookup_external_entity` — Look up entities in Wikidata/DBpedia/ConceptNet
+- `get_external_entity_relations` — Get relations for an external entity
+{% endif %}
+
+**Resources**: `config://ai-settings`, `status://health`
 
 Connect using any MCP-compatible client:
 

@@ -1,0 +1,27 @@
+"""Document repository protocol for domain persistence contracts."""
+
+from __future__ import annotations
+
+from typing import Protocol, runtime_checkable
+
+from {{ project_slug }}.core.entities.document import Document
+from {{ project_slug }}.core.interfaces.repository import Repository
+
+
+@runtime_checkable
+class DocumentRepositoryPort(Repository[Document], Protocol):
+    """Port defining document persistence operations.
+
+    Extends the generic :class:`Repository` with document-specific
+    lookup methods.
+    """
+
+    async def get_by_source(self, *, source: str) -> Document | None:
+        """Retrieve document by source identifier."""
+        ...
+
+    async def list_by_content_type(
+        self, *, content_type: str, offset: int = 0, limit: int = 50
+    ) -> list[Document]:
+        """Retrieve documents filtered by content type."""
+        ...

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum, unique
 
-from {{ project_slug }}.core.entities.base import Entity, generate_id
+from {{ project_slug }}.core.entities.base import AggregateRoot, Entity, generate_id
 from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
 
 
@@ -72,12 +72,12 @@ class WorkflowEdge:
 
 
 @dataclass(slots=True)
-class Workflow(Entity):
-    """Domain entity representing a multi-agent workflow definition.
+class Workflow(AggregateRoot):
+    """Aggregate root representing a multi-agent workflow.
 
     A workflow is a directed graph of agent nodes connected by
-    conditional edges. It can be compiled into a LangGraph
-    StateGraph for execution.
+    conditional edges. It owns its nodes and edges, and can be
+    compiled into a LangGraph StateGraph for execution.
     """
 
     name: str = ""

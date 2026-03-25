@@ -29,11 +29,3 @@ RAG_CONDENSE_PROMPT = (
     "Standalone question:"
 )
 
-RAG_REFINE_PROMPT = (  # FIXME: unused — wire into a refine-chain or remove
-    "We have an existing answer to a question:\n{existing_answer}\n\n"
-    "We have the opportunity to refine the answer with new context:\n{context}\n\n"
-    "Given the new context, refine the original answer to better address "
-    "the question: {question}\n\n"
-    "If the new context isn't useful, return the original answer unchanged.\n\n"
-    "Refined answer:"
-)

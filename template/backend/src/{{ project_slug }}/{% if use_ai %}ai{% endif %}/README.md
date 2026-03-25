@@ -18,9 +18,7 @@ ai/
 │   ├── base_chain.py           # Base chain abstraction
 │   ├── conversational_rag.py   # Conversational RAG chain
 │   ├── langchain_adapter.py    # LangChain → LLMPort bridge
-│   ├── langchain_rag_chain.py  # LangChain RAG chain
 │   ├── llamaindex_adapter.py   # LlamaIndex document loader & chunker
-│   ├── llamaindex_query_engine.py  # LlamaIndex query engine
 │   ├── refinement_chain.py     # Answer refinement chain
 │   └── summarization_chain.py  # Summarization chain
 ├── config.py             # AI settings and defaults
@@ -50,6 +48,7 @@ ai/
 │   ├── server.py               # FastMCP tools, resources, prompts
 │   └── client.py               # MCP client for remote servers
 ├── memory/               # Conversation memory stores
+│   ├── in_memory.py            # In-memory conversation memory
 │   ├── postgres_memory.py      # PostgreSQL-backed memory
 │   └── redis_memory.py         # Redis-backed memory
 ├── models/               # Pydantic request/response models
@@ -57,12 +56,19 @@ ai/
 │   └── structlog_adapter.py    # Structured logging for AI calls
 ├── prompts/              # Prompt template manager
 │   ├── manager.py              # Jinja2-based prompt registry
-│   └── jinja2_templates.py     # Jinja2 prompt templates
+│   ├── jinja2_templates.py     # Jinja2 prompt templates
+│   └── rag_prompts.py          # RAG-specific prompt templates
 ├── rag/                  # RAG pipeline
 │   ├── ingestion.py            # Load → split → embed → store
 │   ├── retrieval.py            # Query → search → generate
 │   ├── rerankers/              # Cross-encoder reranking
-│   └── retrievers/             # Vector, graph, hybrid, ensemble, RRF
+│   │   └── cross_encoder.py      # Cross-encoder reranker
+│   └── retrievers/             # Vector, graph, ensemble, RRF
+│       ├── vector_retriever.py    # Vector similarity retriever
+│       ├── graph_retriever.py     # Knowledge graph retriever
+│       ├── ensemble_retriever.py  # Multi-strategy ensemble
+│       ├── _rrf.py                # Reciprocal Rank Fusion scorer
+│       └── llamaindex_retriever.py  # LlamaIndex retriever (conditional)
 ├── services/             # AI application services
 │   └── __init__.py             # AIService, RAGService
 ├── text_splitter.py      # Recursive character text splitter

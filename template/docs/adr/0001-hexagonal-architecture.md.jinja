@@ -1,13 +1,18 @@
 
+# ADR-0001 — Clean / Hexagonal Architecture
+
+## Status
 
 Accepted
 
+## Context
 
 {{ project_name }} requires a clear separation of concerns to enable
 independent testing, flexible infrastructure swapping, and long-term
 maintainability. The team evaluated layered, hexagonal (ports & adapters),
 and clean architecture patterns.
 
+## Decision
 
 Adopt **clean / hexagonal architecture** (ports & adapters) with the following
 layer structure that maps directly to the project source tree:
@@ -16,7 +21,7 @@ layer structure that maps directly to the project source tree:
   exception hierarchy, interface protocols (ports). ZERO external dependencies.
 - **application/** — Use cases, application services, DTOs, command/query
   handlers, mappers. Imports from `core` only.
-- **ports/** — Driving adapters: API routes (FastAPI), CLI commands (Typer),
+- **ports/** — Driving adapters: API routes (FastAPI), CLI commands (Click),
   web controllers, API schemas, DI container. Framework imports allowed here.
 - **adapters/** — Driven adapters: persistence (SQLAlchemy repositories),
   cache, messaging, email, storage, auth (JWT). Implements core protocols.
@@ -53,7 +58,9 @@ lib/       → Pure utility functions (no side effects)
 config/    → Runtime environment configuration
 ```
 
+## Consequences
 
+### Positive
 
 - Infrastructure can be swapped without changing business logic
 - Domain logic is independently testable with zero framework imports
@@ -61,6 +68,7 @@ config/    → Runtime environment configuration
 - The Dependency Rule is enforced by linting (ruff import checks) and
   validated by the Architect agent during PR planning
 
+### Negative
 
 - More boilerplate for simple CRUD operations
 - Learning curve for developers unfamiliar with the pattern

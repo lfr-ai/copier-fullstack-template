@@ -1,0 +1,30 @@
+"""User-specific business rule specifications."""
+
+from __future__ import annotations
+
+from {{ project_slug }}.core.entities.user import User
+from {{ project_slug }}.core.specifications.base import Specification
+
+
+class IsActiveUser(Specification[User]):
+    """Satisfied when the user account is active."""
+
+    def is_satisfied_by(self, candidate: User) -> bool:
+        return candidate.is_active
+
+
+class HasEmailDomain(Specification[User]):
+    """Satisfied when the user's email belongs to a specific domain."""
+
+    def __init__(self, domain: str) -> None:
+        self._domain = domain.lower()
+
+    def is_satisfied_by(self, candidate: User) -> bool:
+        return candidate.email.lower().endswith(f"@{self._domain}")
+
+
+class HasDisplayName(Specification[User]):
+    """Satisfied when the user has a non-empty display name."""
+
+    def is_satisfied_by(self, candidate: User) -> bool:
+        return bool(candidate.display_name and candidate.display_name.strip())

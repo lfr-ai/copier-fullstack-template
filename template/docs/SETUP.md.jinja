@@ -12,16 +12,12 @@
 - {{ container_runtime | title }} (container engine)
 - VS Code (recommended — open `{{ project_slug }}.code-workspace`)
 
+## Initial Setup
 
 ```bash
-git clone <repository-url>
-cd {{ project_slug }}
-
-task setup
-
-task up
-
-task test
+task setup     # Installs deps, pre-commit hooks, creates .env
+task docker:up # Start all container services
+task test      # Verify everything works
 ```
 
 

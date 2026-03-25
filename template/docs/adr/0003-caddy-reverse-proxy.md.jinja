@@ -1,14 +1,18 @@
 
+# ADR-0003 — Caddy Reverse Proxy
+
+## Status
 
 Accepted
 
+## Context
 
 {{ '%Y-%m-%d' | strftime }}
-
 
 We need a reverse proxy for production deployments that handles TLS termination, compression,
 security headers, and routing between backend API and frontend static assets.
 
+## Decision
 
 Use [Caddy](https://caddyserver.com/) as the reverse proxy with:
 
@@ -19,9 +23,15 @@ Use [Caddy](https://caddyserver.com/) as the reverse proxy with:
 
 Caddy is an optional component, enabled via `use_caddy` copier variable.
 
+## Consequences
 
-- **Positive**: Automatic HTTPS provisioning via ACME
-- **Positive**: Much simpler configuration than Nginx
-- **Positive**: Built-in HTTP/3 support
-- **Negative**: Less community documentation than Nginx
-- **Negative**: Slightly higher memory usage than Nginx
+### Positive
+
+- Automatic HTTPS provisioning via ACME
+- Much simpler configuration than Nginx
+- Built-in HTTP/3 support
+
+### Negative
+
+- Less community documentation than Nginx
+- Slightly higher memory usage than Nginx

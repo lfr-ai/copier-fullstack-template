@@ -1,4 +1,7 @@
 
+# Deployment
+
+## Environments
 
 | Environment | Purpose | Branch |
 |------------|---------|--------|
@@ -8,6 +11,7 @@
 | `prod` | Production | `main` (approved) |
 
 
+## Container Builds
 
 ```bash
 task docker:build          # Build container images
@@ -28,9 +32,19 @@ Bake builds all production images in parallel with SBOM and provenance
 attestations. CI pipelines use GitHub Actions cache for layer reuse.
 {%- endif %}
 
+## Running in Production
+
+Using task commands (recommended):
 
 ```bash
-{{ container_runtime }} compose -f compose.yml up -d
+task docker:prod     # Start with production overrides
+task docker:staging  # Start with staging overrides
+```
+
+Or manually:
+
+```bash
+{{ container_runtime }} compose -f compose.yml -f compose.prod.yml --env-file .env.prod up -d
 ```
 {% if use_caddy %}
 
@@ -50,6 +64,7 @@ Production deployments use Azure Key Vault for secret management:
 3. Secrets are loaded automatically via `DefaultAzureCredential`
 {% endif %}
 
+## Environment Variables
 
 Production environments should configure all variables from `.env.example`
 through the deployment platform's secret management system.
@@ -58,6 +73,7 @@ through the deployment platform's secret management system.
 
 See `docs/CONFIG.md` for the full variable reference.
 
+## Health Checks
 
 The application exposes health endpoints:
 
@@ -102,12 +118,15 @@ Back up the volume before upgrading Neo4j versions:
 {%- endif %}
 
 
+## Database Migrations
+
 Before deploying a new version with schema changes:
 
 ```bash
 task db:migrate            # Apply pending migrations
 ```
 
+## Rollback
 
 To rollback a deployment:
 
@@ -126,12 +145,12 @@ Deploy Azure resources using Bicep:
 az login
 
 az deployment sub create \
-  --location westeurope \
+  --location {{ azure_location }} \
   --template-file infra/deploy.bicep \
   --parameters infra/parameters/dev/deploy.dev.bicepparam
 
 az deployment sub create \
-  --location westeurope \
+  --location {{ azure_location }} \
   --template-file infra/deploy.bicep \
   --parameters infra/parameters/prod/deploy.prod.bicepparam
 ```
