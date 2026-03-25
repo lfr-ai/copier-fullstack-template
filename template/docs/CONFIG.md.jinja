@@ -1,3 +1,4 @@
+# Configuration Reference
 
 All configuration is loaded from environment variables with the
 `{{ project_slug | upper }}_` prefix, powered by
@@ -5,7 +6,7 @@ All configuration is loaded from environment variables with the
 
 ---
 
-
+## Core Settings
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -13,24 +14,34 @@ All configuration is loaded from environment variables with the
 | `{{ project_slug | upper }}_DEBUG` | `bool` | `false` | Enable debug mode |
 | `{{ project_slug | upper }}_LOG_LEVEL` | `str` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 | `{{ project_slug | upper }}_CORS_ALLOWED_ORIGINS` | `list[str]` | `[]` | CORS allowed origins for non-local environments |
-| `{{ project_slug | upper }}_SECRET_KEY` | `str` | *(required)* | Application secret key |
+| `{{ project_slug | upper }}_SECRET_KEY` | `str` | `change-me-in-production` | Application secret key |
 | `{{ project_slug | upper }}_RATE_LIMIT` | `str` | `60/minute` | Default rate limit (slowapi format: `count/period`) |
+| `{{ project_slug | upper }}_PROFILING_ENABLED` | `bool` | `false` | Enable on-demand CPU profiling middleware (`?profile=1` or `?profile=cpu`) |
+| `{{ project_slug | upper }}_PROFILING_SECRET` | `str` | `""` | Shared secret for `X-Profile-Secret` header (required when profiling enabled) |
+| `{{ project_slug | upper }}_PROFILING_DIR` | `str` | `profiles` | Directory for saved profiling reports |
 {% if database_backend in ('postgresql', 'azure_postgresql') %}
 
+## Database
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_DATABASE_URL` | `str` | `postgresql+psycopg://` | Full database connection URL |
+| `{{ project_slug | upper }}_DATABASE_URL` | `str` | {% if database_backend == 'azure_postgresql' %}`""` (empty — configure for your Azure Flexible Server){% else %}`postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}`{% endif %} | Full database connection URL |
+| `{{ project_slug | upper }}_DATABASE_ECHO` | `bool` | `false` | Log all SQL statements (useful for debugging) |
+| `{{ project_slug | upper }}_HOST` | `str` | `0.0.0.0` | Application bind host |
+| `{{ project_slug | upper }}_PORT` | `int` | `8000` | Application bind port |
 {% endif %}
 {% if use_redis %}
 
+## Redis
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `{{ project_slug | upper }}_REDIS_URL` | `str` | `redis://localhost:6379/0` | Redis connection URL |
+| `{{ project_slug | upper }}_REDIS_TTL` | `int` | `3600` | Default cache TTL in seconds |
 {% endif %}
 {% if use_auth %}
 
+## Authentication
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -39,14 +50,25 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_celery %}
 
+## Celery
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `{{ project_slug | upper }}_CELERY_BROKER_URL` | `str` | `redis://localhost:6379/1` | Celery broker URL |
 | `{{ project_slug | upper }}_CELERY_RESULT_BACKEND` | `str` | `redis://localhost:6379/2` | Celery result backend URL |
 {% endif %}
+{% if api_style in ('graphql', 'both') %}
+
+## GraphQL
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_GRAPHQL_MAX_DEPTH` | `int` | `10` | Maximum allowed query nesting depth |
+| `{{ project_slug | upper }}_GRAPHQL_IDE` | `str` | `graphiql` | GraphQL IDE in debug mode (`graphiql`, `apollo-sandbox`, `pathfinder`, or empty) |
+{% endif %}
 {% if secret_backend == 'azure_kv' %}
 
+## Azure Key Vault
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -57,6 +79,7 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_ai %}
 
+## AI / LLM
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -67,6 +90,7 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_azure_openai %}
 
+## Azure OpenAI
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -77,17 +101,27 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_faiss %}
 
+## FAISS
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_FAISS_PERSIST_DIR` | `str` | `data/faiss` | Directory for FAISS index persistence |
+| `{{ project_slug | upper }}_FAISS_PERSIST_DIR` | `str\|None` | `None` | Directory for FAISS index persistence (`None` = in-memory only) |
+{% endif %}
+{% if use_pgvector %}
+
+## pgvector
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_PGVECTOR_TABLE_NAME` | `str` | `vector_embeddings` | PostgreSQL table name for pgvector storage |
 {% endif %}
 {% if use_knowledge_graph %}
 
+## Knowledge Graph
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND` | `str` | `networkx` | Knowledge graph backend: `networkx`, `neo4j`, or `rdflib` |
+| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND` | `str` | `{{ knowledge_graph_backend \| default('networkx') }}` | Knowledge graph backend: `networkx`, `neo4j`, or `rdflib` |
 | `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_PATH` | `str\|None` | `None` | File path for knowledge graph persistence (None = in-memory) |
 | `{{ project_slug | upper }}_NEO4J_URI` | `str` | `bolt://localhost:7687` | Neo4j Bolt connection URI |
 | `{{ project_slug | upper }}_NEO4J_USER` | `str` | `neo4j` | Neo4j username |
@@ -96,6 +130,7 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_mcp %}
 
+## MCP (Model Context Protocol)
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -104,6 +139,7 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_anthropic %}
 
+## Anthropic
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -112,6 +148,7 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_ai_search %}
 
+## Azure AI Search
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -121,6 +158,7 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_document_intelligence %}
 
+## Azure Document Intelligence
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -129,6 +167,7 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_rag %}
 
+## RAG (Retrieval-Augmented Generation)
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -140,6 +179,7 @@ All configuration is loaded from environment variables with the
 {% endif %}
 {% if use_agents %}
 
+## Agents
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -147,7 +187,21 @@ All configuration is loaded from environment variables with the
 | `{{ project_slug | upper }}_AGENT_DEFAULT_MODEL` | `str` | `gpt-4o` | Default model for agent LLM calls |
 | `{{ project_slug | upper }}_CHECKPOINTER_BACKEND` | `str` | `memory` | LangGraph checkpointer backend: `memory`, `sqlite`, or `postgres` |
 {% endif %}
+{% if use_crewai %}
 
+## CrewAI
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{ project_slug | upper }}_CREWAI_DEFAULT_MODEL` | `str` | `gpt-4o` | Default LLM model for CrewAI agents |
+| `{{ project_slug | upper }}_CREWAI_VERBOSE` | `bool` | `false` | Enable verbose CrewAI logging |
+| `{{ project_slug | upper }}_CREWAI_EMBEDDER_PROVIDER` | `str` | `openai` | Embedding provider for CrewAI memory |
+| `{{ project_slug | upper }}_CREWAI_EMBEDDER_MODEL` | `str\|None` | `None` | Override the default embedder model for CrewAI (resolved by provider when `None`) |
+| `{{ project_slug | upper }}_CREWAI_MEMORY_SCORING` | `str` | `default` | Memory scoring preset: `default`, `sprint`, or `knowledge_base` |
+{% endif %}
+
+
+## Secrets Management
 
 - **Local development**: Store secrets in `.env` (git-ignored)
 - **CI/CD**: Use pipeline secrets / protected variables
@@ -161,6 +215,7 @@ All configuration is loaded from environment variables with the
 
 ---
 
+## Local .env File
 
 Copy `.env.example` to `.env` and fill in secret values:
 

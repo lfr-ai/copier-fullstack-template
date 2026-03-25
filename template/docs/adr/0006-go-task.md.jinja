@@ -1,15 +1,19 @@
 
+# ADR-0006 — Go-Task Runner
+
+## Status
 
 Accepted
 
+## Context
 
 {{ '%Y-%m-%d' | strftime }}
-
 
 We need a task runner for common development commands (build, test, lint, deploy).
 Traditional `Makefile` is ubiquitous but has significant pain points: tab-vs-space issues,
 platform inconsistencies, lack of built-in task dependencies, and an obscure syntax.
 
+## Decision
 
 Use [go-task](https://taskfile.dev/) as the project task runner:
 
@@ -19,10 +23,16 @@ Use [go-task](https://taskfile.dev/) as the project task runner:
 - File-based change detection (only run if sources changed)
 - Includes support for splitting tasks across files
 
+## Consequences
 
-- **Positive**: YAML syntax is familiar to most developers
-- **Positive**: Cross-platform without WSL on Windows
-- **Positive**: Built-in `sources`/`generates` for incremental builds
-- **Positive**: Included tasks from separate files (backend.yml, frontend.yml, docker.yml)
-- **Negative**: Less ubiquitous than Make
-- **Negative**: Requires installing `task` binary
+### Positive
+
+- YAML syntax is familiar to most developers
+- Cross-platform (`task` binary runs natively; scripts still require zsh/WSL on Windows)
+- Built-in `sources`/`generates` for incremental builds
+- Included tasks from separate files (backend.yml, frontend.yml, docker.yml)
+
+### Negative
+
+- Less ubiquitous than Make
+- Requires installing `task` binary

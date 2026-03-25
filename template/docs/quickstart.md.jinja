@@ -12,16 +12,20 @@
 - [pnpm](https://pnpm.io/) for frontend
 - {{ container_runtime }} for containers
 
+## Clone and Run
 
 ```bash
 git clone <repository-url>
 cd {{ project_slug }}
 
-task backend:dev
+# Full setup (deps + pre-commit + .env)
+task setup
 
-task docker:up
+# Start development servers
+task dev
 ```
 
+## Common Commands
 
 ```bash
 task backend:test
@@ -39,9 +43,11 @@ task docker:up
 task docker:logs
 ```
 
+## Architecture
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed overview.
 
+## API Endpoints
 
 Start the server and visit:
 {% if api_style in ('rest', 'both') -%}
@@ -49,5 +55,5 @@ Start the server and visit:
 - ReDoc: http://localhost:8000/api/redoc
 {% endif -%}
 {% if api_style in ('graphql', 'both') -%}
-- GraphQL Playground: http://localhost:8000/graphql
+- GraphiQL IDE: http://localhost:8000/graphql
 {% endif -%}

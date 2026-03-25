@@ -7,8 +7,8 @@ import sys
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
 from {{ project_slug }}.adapters.persistence.repositories.user_repository import UserRepository
+from {{ project_slug }}.core.entities.user import User
 
 pytestmark = [
     pytest.mark.asyncio,
@@ -26,34 +26,36 @@ class TestUserRepository:
     async def test_add_and_get_user(self, session: AsyncSession) -> None:
         """Verify user persistence round-trip."""
         repo = UserRepository(session)
-        model = UserModel(
+        user = User(
             email="dbtest@example.com",
             display_name="DB Test User",
             is_active=True,
         )
-        saved = await repo.add(model)
+        saved = await repo.add(user)
         assert saved.id is not None
 
         retrieved = await repo.get_by_id(saved.id)
         assert retrieved is not None
+        assert isinstance(retrieved, User)
         assert retrieved.email == "dbtest@example.com"
 
     async def test_get_by_email(self, session: AsyncSession) -> None:
         """Verify user lookup by email."""
         repo = UserRepository(session)
-        model = UserModel(
+        user = User(
             email="lookup@example.com",
             display_name="Lookup User",
             is_active=True,
         )
-        await repo.add(model)
+        await repo.add(user)
 
-        found = await repo.get_by_email("lookup@example.com")
+        found = await repo.get_by_email(email="lookup@example.com")
         assert found is not None
+        assert isinstance(found, User)
         assert found.display_name == "Lookup User"
 
     async def test_get_by_email_not_found(self, session: AsyncSession) -> None:
         """Verify None returned for nonexistent email."""
         repo = UserRepository(session)
-        result = await repo.get_by_email("nonexistent@example.com")
+        result = await repo.get_by_email(email="nonexistent@example.com")
         assert result is None

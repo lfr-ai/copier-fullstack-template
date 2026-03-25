@@ -1,17 +1,12 @@
 
+# Development Guide
 
-- Python >= {{ python_version }} (managed via UV)
-- Node.js >= {{ node_version }} with pnpm
-- [Task](https://taskfile.dev/) (task runner)
-- {{ container_runtime | title }} and {{ container_runtime | title }} Compose
+> **First-time setup?** See [ONBOARDING.md](ONBOARDING.md) for tool installation
+> and [SETUP.md](SETUP.md) for project configuration.
 
+This guide covers the **daily development workflow** after initial setup.
 
-```bash
-task setup
-
-task dev
-```
-
+## Environment Configuration
 
 Copy `.env.example` to `.env` and configure:
 
@@ -30,6 +25,7 @@ Key variables:
 | `{{ project_slug | upper }}_REDIS_URL` | Redis connection URL | `redis://localhost:6379/0` |
 {% endif %}
 
+## Backend Commands
 
 ```bash
 task backend:install    # Install Python dependencies
@@ -39,9 +35,10 @@ task backend:format     # Format with ruff
 task backend:test       # Run tests via tox
 ```
 
+## Frontend Commands
 
 ```bash
-task frontend:install   # Install npm dependencies
+task frontend:install   # Install pnpm dependencies
 task frontend:dev       # Start dev server with HMR
 task frontend:build     # Production build
 task frontend:test:unit  # Run unit tests
@@ -49,6 +46,7 @@ task frontend:lint       # Lint with eslint
 task frontend:format     # Format with prettier
 ```
 
+## Docker Commands
 
 ```bash
 task docker:up          # Start all services
@@ -77,6 +75,7 @@ TAG=v1.0.0 REGISTRY=ghcr.io/{{ github_username }} docker buildx bake prod
 ```
 {%- endif %}
 
+## Database Commands
 
 ```bash
 task db:migrate             # Run migrations
@@ -160,37 +159,31 @@ lookups and do not require local services.
 
 ### Workflow Checkpointers
 
-LangGraph workflows store execution state in a checkpointer. During
-development, the in-memory checkpointer is used by default (no
+LangGraph workflows store execution state in a checkpointer. See
+[SETUP.md](SETUP.md#workflow-checkpointers) for the full backend comparison table
+(Memory / SQLite / PostgreSQL).
+
+During development, the in-memory checkpointer is used by default (no
 persistence across restarts). To test durable workflows locally,
 switch to the SQLite checkpointer:
 
 ```bash
 export {{ project_slug | upper }}_CHECKPOINTER_BACKEND=sqlite
 ```
-
-The SQLite checkpoint file (`.langgraph_checkpoints.db`) is
-created in the project root. Inspect it with:
-
-```bash
-sqlite3 .langgraph_checkpoints.db ".tables"
-sqlite3 .langgraph_checkpoints.db "SELECT * FROM checkpoints LIMIT 5;"
-```
-
-Reset checkpoint state by deleting the file:
-
-```bash
-rm -f .langgraph_checkpoints.db
-```
 {%- endif %}
 
+## Testing
 
 ```bash
-task test               # Run all tests
+task test               # Run default tests (registry + unit + property + frontend)
 task backend:test       # Backend tests only
 task frontend:test:unit # Frontend tests only
 ```
 
+See [TESTING.md](TESTING.md) for the full testing guide (markers, directories,
+coverage, property-based tests, performance tests).
+
+## Linting and Formatting
 
 ```bash
 task lint               # Lint all code
@@ -198,6 +191,7 @@ task format             # Format all code
 task typecheck          # Run type checking
 ```
 
+## Pre-commit Hooks
 
 Install hooks:
 

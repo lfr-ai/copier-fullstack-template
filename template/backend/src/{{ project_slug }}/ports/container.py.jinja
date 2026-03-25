@@ -17,20 +17,34 @@ if TYPE_CHECKING:
     )
 {% if use_ai %}
     from {{ project_slug }}.ai.services import AIService
+    from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort
     from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
     from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
     from {{ project_slug }}.core.interfaces.evaluator import EvaluatorPort
+    from {{ project_slug }}.core.interfaces.guardrail import GuardrailPort
     from {{ project_slug }}.core.interfaces.llm import LLMPort
+    from {{ project_slug }}.core.interfaces.observability import ObservabilityPort
     from {{ project_slug }}.core.interfaces.prompt_template import PromptTemplatePort
     from {{ project_slug }}.core.interfaces.reranker import RerankerPort
     from {{ project_slug }}.core.interfaces.retriever import RetrieverPort
     from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
     from {{ project_slug }}.core.interfaces.workflow_engine import WorkflowEnginePort
+{%- if use_rag %}
+    from {{ project_slug }}.ai.services import RAGService
+    from {{ project_slug }}.application.services.ingestion_service import IngestionService
+{%- endif %}
 {%- if use_knowledge_graph %}
     from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+    from {{ project_slug }}.application.services.knowledge_graph_service import KnowledgeGraphService
 {%- endif %}
 {%- if use_mcp %}
     from {{ project_slug }}.core.interfaces.mcp_client import MCPClientPort
+    from {{ project_slug }}.core.interfaces.mcp_server import MCPServerPort
+    from {{ project_slug }}.application.services.mcp_service import MCPService
+{%- endif %}
+{%- if use_agents %}
+    from {{ project_slug }}.application.services.agent_service import AgentService
+    from {{ project_slug }}.application.services.workflow_service import WorkflowService
 {%- endif %}
 {%- endif %}
 
@@ -72,7 +86,7 @@ class Container:
                 logger.exception("database_engine_dispose_failed")
 
     def unit_of_work(self) -> SQLAlchemyUnitOfWork:
-        """Create unit of work instance."""
+        """Create unit of work instance with event bus integration."""
         if self._session_factory is None:
             msg = "Database not configured — set database_url in settings."
             raise RuntimeError(msg)
@@ -80,7 +94,10 @@ class Container:
             SQLAlchemyUnitOfWork,
         )
 
-        return SQLAlchemyUnitOfWork(self._session_factory)
+        return SQLAlchemyUnitOfWork(
+            self._session_factory,
+            event_bus=self.event_bus(),
+        )
 
     def cache(self) -> MemoryCacheAdapter:
         """Return singleton cache adapter instance."""
@@ -96,7 +113,7 @@ class Container:
 
     def user_service(self) -> UserService:
         """Create user service with its dependencies."""
-        from {{ project_slug }}.infrastructure.security.hashing import PBKDF2PasswordHasher
+        from {{ project_slug }}.adapters.security.hashing import PBKDF2PasswordHasher
 
         return UserService(
             uow=self.unit_of_work(),
@@ -238,7 +255,7 @@ class Container:
 
         return AIService(llm=self._create_llm())
 {% if use_rag %}
-    def rag_service(self) -> object:
+    def rag_service(self) -> RAGService:
         """Create RAG service with all required adapters."""
         from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
         from {{ project_slug }}.ai.services import RAGService
@@ -261,7 +278,7 @@ class Container:
         )
 {%- endif %}
 {% if use_mcp %}
-    def mcp_server(self) -> object:
+    def mcp_server(self) -> MCPServerPort:
         """Create MCP server instance wired to real adapters."""
         from {{ project_slug }}.ai.mcp.server import create_mcp_server
         from {{ project_slug }}.ai.tools.search_tool import SearchTool
@@ -393,7 +410,7 @@ class Container:
             },
         }
 
-    def workflow_service(self) -> object:
+    def workflow_service(self) -> WorkflowService:
         """Create application-layer workflow orchestration service."""
         from {{ project_slug }}.application.services.workflow_service import WorkflowService
 
@@ -416,7 +433,7 @@ class Container:
 {%- endif %}
 
 {% if use_rag %}
-    def ingestion_application_service(self) -> object:
+    def ingestion_application_service(self) -> IngestionService:
         """Create application-layer document ingestion service."""
         from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
         from {{ project_slug }}.ai.text_splitter import RecursiveTextSplitter
@@ -437,7 +454,7 @@ class Container:
         )
 {%- endif %}
 {% if use_agents %}
-    def agent_application_service(self) -> object:
+    def agent_application_service(self) -> AgentService:
         """Create application-layer agent execution service."""
         from {{ project_slug }}.application.services.agent_service import AgentService
 
@@ -447,7 +464,7 @@ class Container:
         )
 {%- endif %}
 {% if use_mcp %}
-    def mcp_application_service(self) -> object:
+    def mcp_application_service(self) -> MCPService:
         """Create application-layer MCP management service."""
         from {{ project_slug }}.application.services.mcp_service import MCPService
 
@@ -457,7 +474,7 @@ class Container:
         )
 {%- endif %}
 {% if use_knowledge_graph %}
-    def knowledge_graph_application_service(self) -> object:
+    def knowledge_graph_application_service(self) -> KnowledgeGraphService:
         """Create application-layer knowledge graph service."""
         from {{ project_slug }}.application.services.knowledge_graph_service import KnowledgeGraphService
 
@@ -491,7 +508,7 @@ class Container:
 
         return Jinja2PromptTemplate()
 {% if use_knowledge_graph %}
-    def graph_retriever(self) -> object:
+    def graph_retriever(self) -> RetrieverPort:
         """Create a knowledge graph retriever."""
         from {{ project_slug }}.ai.rag.retrievers.graph_retriever import GraphRetriever
 
@@ -557,19 +574,19 @@ class Container:
         return MCPClientAdapter()
 {%- endif %}
 
-    def postgres_memory(self) -> object:
+    def postgres_memory(self) -> ConversationMemoryPort:
         """Create PostgreSQL-backed conversation memory."""
         from {{ project_slug }}.ai.memory.postgres_memory import PostgresConversationMemory
 
         return PostgresConversationMemory(database_url=self._settings.database_url)
 
-    def guardrail(self) -> object:
+    def guardrail(self) -> GuardrailPort:
         """Create AI guardrail adapter."""
         from {{ project_slug }}.ai.guardrails.rule_based import RuleBasedGuardrail
 
         return RuleBasedGuardrail()
 
-    def observability(self) -> object:
+    def observability(self) -> ObservabilityPort:
         """Create AI observability adapter."""
         from {{ project_slug }}.ai.observability.structlog_adapter import StructlogObservability
 

@@ -38,7 +38,7 @@ dependencies always point **inward**, never from core toward frameworks/adapters
 
 ```text
 ┌─────────────────────────────────────────┐
-│  Ports (API routes, CLI, webhooks)      │  ← Framework-specific entry points
+│  Ports (API routes, CLI, web)            │  ← Framework-specific entry points
 ├─────────────────────────────────────────┤
 │  Application (services, commands, DTOs) │  ← Orchestration, use cases
 ├─────────────────────────────────────────┤
@@ -67,7 +67,7 @@ dependencies always point **inward**, never from core toward frameworks/adapters
 - **Application** imports from `core` only. No framework imports.
   - Application services access persistence via **UoW repository properties**
     (e.g. `uow.users`), NEVER by importing concrete adapter classes.
-- **Ports** imports from `application` and `core`. FastAPI/Typer{% if api_style in ('graphql', 'both') %}/Strawberry{% endif %} allowed here.
+- **Ports** imports from `application` and `core`. FastAPI/Click{% if api_style in ('graphql', 'both') %}/Strawberry{% endif %} allowed here.
 - **Adapters** imports from all inner layers. SQLAlchemy, httpx, redis allowed here.
   - Concrete repos are instantiated inside the UoW adapter — only the adapter
     layer touches concrete repository implementations.
@@ -156,7 +156,7 @@ backend/src/{{ project_slug }}/
 ├── config/         # Settings, logging, constants
 ├── core/           # Pure domain (entities, enums, interfaces, value objects)
 ├── infrastructure/ # DB engines, HTTP clients, security, profiling (pyinstrument, tracemalloc, SQL hooks)
-├── ports/          # API routes,{% if api_style in ('graphql', 'both') %} GraphQL resolvers,{% endif %} CLI, webhooks, DI container
+├── ports/          # API routes,{% if api_style in ('graphql', 'both') %} GraphQL resolvers,{% endif %} CLI, web, DI container
 └── utils/          # Shared utilities
 
 backend/tests/
@@ -357,6 +357,7 @@ can approve, redirect, or abort before the next phase begins:
 @Thorough Reviewer Review the changes in the current branch
 ```
 {% if with_opencode %}
+<!-- Canonical source for OpenCode tables: docs/OPENCODE.md -->
 ### OpenCode Agents
 
 Located in `.opencode/agents/`. Configured in `opencode.json`. Invoked via `@agent` in conversations.

@@ -1,3 +1,0 @@
-MISS_FUTURE|C:\Users\LFR\OneDrive - AP Pension\Documents\projects\copier-fullstack-template\template\backend\src\{{ project_slug }}\{% if use_ai %}ai{% endif %}\embeddings\azure_openai_embeddings.py.jinja
-MISS_FUTURE|C:\Users\LFR\OneDrive - AP Pension\Documents\projects\copier-fullstack-template\template\backend\src\{{ project_slug }}\{% if use_ai %}ai{% endif %}\embeddings\openai_embeddings.py.jinja
-MISS_FUTURE|C:\Users\LFR\OneDrive - AP Pension\Documents\projects\copier-fullstack-template\template\backend\src\{{ project_slug }}\{% if use_ai %}ai{% endif %}\llm\azure_openai_adapter.py.jinja

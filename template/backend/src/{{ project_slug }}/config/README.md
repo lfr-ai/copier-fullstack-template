@@ -1,3 +1,5 @@
+# Config
+
 Application settings, dependency-injection container, logging, and constants.
 
 | File           | Purpose                                         |

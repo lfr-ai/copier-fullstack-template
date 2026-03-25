@@ -37,7 +37,7 @@ implementation plans for architectural correctness. You NEVER modify files.
   `frozen=True, slots=True`
 - **application/** → Imports from `core` only. No framework imports. Services
   orchestrate use cases
-- **ports/** → Imports from `application` and `core`. FastAPI/Typer allowed here
+- **ports/** → Imports from `application` and `core`. FastAPI/Click allowed here
 - **adapters/** → Imports from all inner layers. SQLAlchemy, httpx, redis allowed
 - **infrastructure/** → Low-level primitives (DB engines, HTTP clients, security)
 - **utils/** → stdlib + third-party only. NO first-party imports

@@ -69,7 +69,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e dev
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/deploy.azcli -p "{{ project_slug }}" -e dev
+      - cmd: wsl zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e dev
         platforms: [windows]
 
   deploy:test:
@@ -77,7 +77,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e test
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/deploy.azcli -p "{{ project_slug }}" -e test
+      - cmd: wsl zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e test
         platforms: [windows]
 
   deploy:staging:
@@ -86,7 +86,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e staging
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/deploy.azcli -p "{{ project_slug }}" -e staging
+      - cmd: wsl zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e staging
         platforms: [windows]
 
   deploy:prod:
@@ -95,7 +95,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e prod
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/deploy.azcli -p "{{ project_slug }}" -e prod
+      - cmd: wsl zsh infra/scripts/deploy.azcli -p "{{ project_slug }}" -e prod
         platforms: [windows]
 
   # ── Deploy (resource-group-scoped) ───────────────────────────────
@@ -105,7 +105,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-dev-rg" -p "{{ project_slug }}" -e dev
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-dev-rg" -p "{{ project_slug }}" -e dev
+      - cmd: wsl zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-dev-rg" -p "{{ project_slug }}" -e dev
         platforms: [windows]
 
   deploy:rg:test:
@@ -113,7 +113,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-test-rg" -p "{{ project_slug }}" -e test
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-test-rg" -p "{{ project_slug }}" -e test
+      - cmd: wsl zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-test-rg" -p "{{ project_slug }}" -e test
         platforms: [windows]
 
   deploy:rg:staging:
@@ -122,7 +122,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-staging-rg" -p "{{ project_slug }}" -e staging
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-staging-rg" -p "{{ project_slug }}" -e staging
+      - cmd: wsl zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-staging-rg" -p "{{ project_slug }}" -e staging
         platforms: [windows]
 
   deploy:rg:prod:
@@ -131,7 +131,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-prod-rg" -p "{{ project_slug }}" -e prod
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-prod-rg" -p "{{ project_slug }}" -e prod
+      - cmd: wsl zsh infra/scripts/main.azcli -r "{{ project_slug | replace("_", "-") }}-prod-rg" -p "{{ project_slug }}" -e prod
         platforms: [windows]
 
   # ── Resource inspection ──────────────────────────────────────────
@@ -171,7 +171,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/add-kv-secret.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -n "{% raw %}{{.NAME}}{% endraw %}" -s "{% raw %}{{.VALUE}}{% endraw %}"
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/add-kv-secret.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -n "{% raw %}{{.NAME}}{% endraw %}" -s "{% raw %}{{.VALUE}}{% endraw %}"
+      - cmd: wsl zsh infra/scripts/add-kv-secret.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -n "{% raw %}{{.NAME}}{% endraw %}" -s "{% raw %}{{.VALUE}}{% endraw %}"
         platforms: [windows]
 
   kv:add-user:
@@ -187,7 +187,7 @@ tasks:
     cmds:
       - cmd: zsh infra/scripts/add-kv-user.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -u "{% raw %}{{.UPN}}{% endraw %}"
         platforms: [linux, darwin]
-      - cmd: bash infra/scripts/add-kv-user.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -u "{% raw %}{{.UPN}}{% endraw %}"
+      - cmd: wsl zsh infra/scripts/add-kv-user.azcli -v "{% raw %}{{.VAULT}}{% endraw %}" -u "{% raw %}{{.UPN}}{% endraw %}"
         platforms: [windows]
 
   kv:list:

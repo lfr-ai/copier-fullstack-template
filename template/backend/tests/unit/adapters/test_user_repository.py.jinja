@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
 from {{ project_slug }}.adapters.persistence.repositories.user_repository import UserRepository
+from {{ project_slug }}.core.entities.user import User
+
+
+def _make_user_model(**kwargs: object) -> MagicMock:
+    """Create a MagicMock that behaves like a UserModel."""
+    defaults = {
+        "id": "user-123",
+        "email": "user@example.com",
+        "display_name": "Test User",
+        "password_hash": "salt$hash",
+        "is_active": True,
+        "created_at": datetime.now(tz=UTC),
+    }
+    defaults.update(kwargs)
+    model = MagicMock(spec=UserModel)
+    for k, v in defaults.items():
+        setattr(model, k, v)
+    return model
 
 
 @pytest.fixture
@@ -30,19 +50,20 @@ class TestUserRepositoryGetByEmail:
     """Test suite for get_by_email operation."""
 
     @pytest.mark.asyncio
-    async def test_get_by_email_returns_user_when_found(
+    async def test_get_by_email_returns_user_entity_when_found(
         self,
         repository: UserRepository,
         mock_session: AsyncMock,
     ) -> None:
-        """Verify get_by_email returns user model when matched."""
-        expected = MagicMock()
+        """Verify get_by_email returns a domain User entity when matched."""
+        model = _make_user_model(email="user@example.com")
         result_mock = MagicMock()
-        result_mock.scalar_one_or_none.return_value = expected
+        result_mock.scalar_one_or_none.return_value = model
         mock_session.execute.return_value = result_mock
 
-        result = await repository.get_by_email("user@example.com")
-        assert result is expected
+        result = await repository.get_by_email(email="user@example.com")
+        assert isinstance(result, User)
+        assert result.email == "user@example.com"
 
     @pytest.mark.asyncio
     async def test_get_by_email_returns_none_when_missing(
@@ -55,7 +76,7 @@ class TestUserRepositoryGetByEmail:
         result_mock.scalar_one_or_none.return_value = None
         mock_session.execute.return_value = result_mock
 
-        result = await repository.get_by_email("nobody@example.com")
+        result = await repository.get_by_email(email="nobody@example.com")
         assert result is None
 
 
@@ -63,21 +84,26 @@ class TestUserRepositoryGetActiveUsers:
     """Test suite for get_active_users operation."""
 
     @pytest.mark.asyncio
-    async def test_get_active_users_returns_list(
+    async def test_get_active_users_returns_domain_entities(
         self,
         repository: UserRepository,
         mock_session: AsyncMock,
     ) -> None:
-        """Verify get_active_users returns filtered user list."""
-        users = [MagicMock(), MagicMock()]
+        """Verify get_active_users returns a list of User entities."""
+        models = [
+            _make_user_model(id="u1", email="a@example.com"),
+            _make_user_model(id="u2", email="b@example.com"),
+        ]
         scalars_mock = MagicMock()
-        scalars_mock.all.return_value = users
+        scalars_mock.all.return_value = models
         result_mock = MagicMock()
         result_mock.scalars.return_value = scalars_mock
         mock_session.execute.return_value = result_mock
 
         result = await repository.get_active_users(offset=0, limit=10)
-        assert result == users
+        assert len(result) == 2
+        assert all(isinstance(u, User) for u in result)
+        assert result[0].email == "a@example.com"
 
     @pytest.mark.asyncio
     async def test_get_active_users_respects_pagination(

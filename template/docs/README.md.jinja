@@ -1,0 +1,45 @@
+# {{ project_name }} — Documentation
+
+## Tutorials (Learning-oriented)
+
+- [Onboarding](ONBOARDING.md) — First-time setup and project orientation
+- [Quick Start](QUICKSTART.md) — Get up and running in minutes
+
+## How-to Guides (Task-oriented)
+
+- [Setup](SETUP.md) — Project setup and installation
+- [Development](DEVELOPMENT.md) — Day-to-day development workflow
+- [Deployment](DEPLOYMENT.md) — Deploy to staging and production
+- [Release](RELEASE.md) — Cut a new release
+- [Testing](TESTING.md) — Run and write tests
+- [Profiling](PROFILING.md) — Profile performance bottlenecks
+- [VS Code](VSCODE.md) — IDE configuration and extensions
+{%- if with_opencode %}
+- [OpenCode](OPENCODE.md) — OpenCode AI agent workflow
+{%- endif %}
+
+## Reference (Information-oriented)
+
+- [API Reference](API.md) — REST endpoint documentation
+{%- if api_style in ('graphql', 'both') %}
+- [GraphQL](GRAPHQL.md) — GraphQL schema and queries
+{%- endif %}
+- [Configuration](CONFIG.md) — Environment variables and settings
+- [Contributing](CONTRIBUTING.md) — Contribution guidelines
+{%- if use_sftp %}
+- [SSH / SFTP](SSH_SFTP.md) — SSH key management and SFTP transfer
+{%- endif %}
+
+## Explanation (Understanding-oriented)
+
+- [Architecture](ARCHITECTURE.md) — System design and layer structure
+- [Diagrams](DIAGRAMS.md) — Architecture and flow diagrams (Mermaid)
+- [Architecture Decision Records](adr/README.md) — Key design decisions
+
+## Conventions
+
+- [Coding Style](conventions/coding-style.md)
+- [Error Handling](conventions/error-handling.md)
+- [Git Workflow](conventions/git-workflow.md)
+- [Logging](conventions/logging.md)
+- [Naming Conventions](conventions/naming-conventions.md)

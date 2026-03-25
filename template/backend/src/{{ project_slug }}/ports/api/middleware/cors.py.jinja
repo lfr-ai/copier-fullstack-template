@@ -34,6 +34,11 @@ def setup_cors(app: FastAPI) -> None:
     else:
         allowed_origins = settings.cors_allowed_origins
 
+    # Wildcard origin with credentials is invalid per the CORS spec and
+    # rejected by browsers — fall back to an empty list to fail safe.
+    if "*" in allowed_origins:
+        allowed_origins = [o for o in allowed_origins if o != "*"]
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,

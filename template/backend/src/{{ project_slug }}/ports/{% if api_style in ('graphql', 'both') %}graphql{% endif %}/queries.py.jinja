@@ -162,18 +162,17 @@ async def _probe_database() -> DependencyHealthType:
 
     start = time.monotonic()
     try:
-        from sqlalchemy import text
-
         from {{ project_slug }}.ports.container import get_container
 
         container = get_container()
         uow = container.unit_of_work()
         async with uow:
-            await uow.session.execute(text("SELECT 1"))
+            healthy = await uow.check_connection()
         latency = (time.monotonic() - start) * _MS_PER_SECOND
+        status = ServiceStatus.HEALTHY.value if healthy else ServiceStatus.DEGRADED.value
         return DependencyHealthType(
             name="database",
-            status=ServiceStatus.HEALTHY.value,
+            status=status,
             latency_ms=round(latency, 2),
         )
     except Exception as exc:  # noqa: BLE001

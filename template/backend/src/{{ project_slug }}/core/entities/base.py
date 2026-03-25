@@ -66,6 +66,26 @@ class Entity:
         return hash(self.id)
 
 
+@dataclass(slots=True)
+class AggregateRoot(Entity):
+    """Base class for aggregate root entities.
+
+    An aggregate root is the entry point to a consistency
+    boundary.  External code should only interact with the
+    aggregate through this root and never hold references
+    to interior child entities.
+
+    Aggregate roots own domain events: they register events
+    during business operations, and the Unit of Work collects
+    and dispatches them after a successful commit.
+
+    Use ``AggregateRoot`` for entities that:
+    - Are referenced directly by repositories
+    - Enforce transactional invariants over child entities
+    - Serve as the sole entry point for a cluster of objects
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class ValueObject:
     """Base class for immutable value objects.

@@ -39,11 +39,15 @@ export type VitalsReportFn = (metric: Metric) => void;
 export function reportWebVitals(onReport: VitalsReportFn): void {
   if (typeof onReport !== 'function') return;
 
-  void import('web-vitals').then(({ onCLS, onFCP, onINP, onLCP, onTTFB }) => {
-    onCLS(onReport);
-    onFCP(onReport);
-    onINP(onReport);
-    onLCP(onReport);
-    onTTFB(onReport);
-  });
+  void import('web-vitals')
+    .then(({ onCLS, onFCP, onINP, onLCP, onTTFB }) => {
+      onCLS(onReport);
+      onFCP(onReport);
+      onINP(onReport);
+      onLCP(onReport);
+      onTTFB(onReport);
+    })
+    .catch(() => {
+      // web-vitals library failed to load — silently degrade
+    });
 }

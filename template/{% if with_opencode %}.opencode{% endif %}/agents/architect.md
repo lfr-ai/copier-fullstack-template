@@ -47,7 +47,7 @@ properties (`uow.users`) so services access persistence without importing adapte
   implement.
 - **application/** → Imports from `core` only. No framework imports. No adapter imports.
   Services receive UoW via DI; access repos via `uow.<repo>`.
-- **ports/** → Imports from `application` and `core`. FastAPI/Typer allowed. Wires DI
+- **ports/** → Imports from `application` and `core`. FastAPI/Click allowed. Wires DI
   container, resolves concrete adapters.
 - **adapters/** → Imports from all inner layers. SQLAlchemy, httpx, redis allowed.
   Implements core interface protocols. Concrete UoW exposes repos here.

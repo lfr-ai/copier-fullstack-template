@@ -26,7 +26,8 @@ param version string = '17'
 param storageSizeGB int = 32
 
 @description('Administrator login name')
-param administratorLogin string = 'pgadmin'
+@description('Administrator login name (avoid default names in production)')
+param administratorLogin string
 
 @secure()
 @description('Administrator login password')
@@ -47,7 +48,7 @@ param geoRedundantBackup string = 'Disabled'
 
 @description('Public network access')
 @allowed(['Enabled', 'Disabled'])
-param publicNetworkAccess string = 'Enabled'
+param publicNetworkAccess string = 'Disabled'
 
 @description('Tags to apply')
 param tags object = {}
