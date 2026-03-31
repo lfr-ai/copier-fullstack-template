@@ -15,15 +15,9 @@
     <!-- Skip to main content — a11y best practice -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    {%- if frontend_framework == "lit" %}
-    <app-root></app-root>
-    <noscript>This application requires JavaScript to run.</noscript>
-    <script type="module" src="/src/app.ts"></script>
-    {%- elif frontend_framework == "react" %}
     <div id="root"></div>
     <noscript>This application requires JavaScript to run.</noscript>
     <script type="module" src="/src/app.ts"></script>
-    {%- endif %}
   </body>
 
 </html>

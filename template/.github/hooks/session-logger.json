@@ -1,0 +1,94 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/log-session.sh",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\log-session.ps1",
+        "timeout": 5,
+        "env": {
+          "SESSION_LOG_DIR": "logs/copilot/sessions"
+        }
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/log-session.sh",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\log-session.ps1",
+        "timeout": 5,
+        "env": {
+          "SESSION_LOG_DIR": "logs/copilot/sessions"
+        }
+      }
+    ],
+    "PreCompact": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/log-session.sh",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\log-session.ps1",
+        "timeout": 5,
+        "env": {
+          "SESSION_LOG_DIR": "logs/copilot/sessions"
+        }
+      }
+    ],
+    "SubagentStart": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/log-session.sh",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\log-session.ps1",
+        "timeout": 5,
+        "env": {
+          "SESSION_LOG_DIR": "logs/copilot/sessions"
+        }
+      }
+    ],
+    "SubagentStop": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/log-session.sh",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\log-session.ps1",
+        "timeout": 5,
+        "env": {
+          "SESSION_LOG_DIR": "logs/copilot/sessions"
+        }
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/log-session.sh",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\log-session.ps1",
+        "timeout": 5,
+        "env": {
+          "SESSION_LOG_DIR": "logs/copilot/sessions"
+        }
+      }
+    ],
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/log-session.sh",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\log-session.ps1",
+        "timeout": 5,
+        "env": {
+          "SESSION_LOG_DIR": "logs/copilot/sessions",
+          "LOG_LEVEL": "DEBUG"
+        }
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/log-session.sh",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\log-session.ps1",
+        "timeout": 5,
+        "env": {
+          "SESSION_LOG_DIR": "logs/copilot/sessions",
+          "LOG_LEVEL": "DEBUG"
+        }
+      }
+    ]
+  }
+}

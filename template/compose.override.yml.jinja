@@ -17,7 +17,7 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
-    command: ["pnpm", "dev", "--host"]
+    command: ["bun", "dev", "--host"]
 {%- if use_celery %}
 
   worker:

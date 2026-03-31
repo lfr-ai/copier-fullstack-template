@@ -8,19 +8,18 @@ Production-ready project scaffolding for fullstack Python + TypeScript applicati
 
 ### Prerequisites
 
-| Tool                     | Purpose                | Auto-installed?      |
-| ------------------------ | ---------------------- | -------------------- |
-| **Python 3.12+**         | Backend runtime        | Yes (via `uv`)       |
-| **uv**                   | Python package manager | Yes                  |
-| **Node.js 22 LTS**       | Frontend runtime       | Yes (via `fnm`)      |
-| **pnpm**                 | Node package manager   | Yes (via `corepack`) |
-| **Docker** or **Podman** | Container runtime      | Yes                  |
-| **go-task**              | Task runner            | Yes                  |
-| **Git**                  | Version control        | Yes                  |
-| **VS Code**              | Editor                 | Yes                  |
-| **zsh**                  | Shell                  | Yes                  |
-| **pre-commit**           | Git hooks              | Yes (via `uv`)       |
-| **WSL2** (Windows only)  | Linux on Windows       | Yes                  |
+| Tool                     | Purpose                | Auto-installed? |
+| ------------------------ | ---------------------- | --------------- |
+| **Python 3.12+**         | Backend runtime        | Yes (via `uv`)  |
+| **uv**                   | Python package manager | Yes             |
+| **Bun**                  | Frontend runtime & PM  | Yes             |
+| **Docker** or **Podman** | Container runtime      | Yes             |
+| **go-task**              | Task runner            | Yes             |
+| **Git**                  | Version control        | Yes             |
+| **VS Code**              | Editor                 | Yes             |
+| **zsh**                  | Shell                  | Yes             |
+| **pre-commit**           | Git hooks              | Yes (via `uv`)  |
+| **WSL2** (Windows only)  | Linux on Windows       | Yes             |
 
 ### Usage — Local-First (Recommended)
 
@@ -102,9 +101,9 @@ During `copier copy`, you'll be prompted for:
 | **Author email**                | Valid email address                   | —                              |
 | **GitHub username**             | GitHub user or org                    | _(from author)_                |
 | **Python version**              | 3.12, 3.13, 3.14                      | 3.13                           |
-| **Node.js version**             | 20, 22, 24                            | 22                             |
-| **Frontend framework**          | Lit (Web Components), React 19        | Lit                            |
-| **Database**                    | None, PostgreSQL, Azure PostgreSQL    | PostgreSQL                     |
+| **Frontend framework**          | React 19 (Bun + Vite + SWC)           | React                          |
+| **Storybook**                   | Yes / No                              | Yes                            |
+| **Database**                    | None, SQLite, PostgreSQL, Azure PG    | PostgreSQL                     |
 | **API style**                   | REST only, GraphQL only, Both         | REST                           |
 | **GraphQL subscriptions**       | Yes / No (requires GraphQL)           | No                             |
 | **Celery**                      | Yes / No                              | Yes                            |
@@ -130,8 +129,7 @@ During `copier copy`, you'll be prompted for:
 | **Azure AI Search**             | Yes / No (requires Azure + AI)        | No                             |
 | **Azure Document Intelligence** | Yes / No (requires Azure + AI)        | No                             |
 | **SSH / SFTP**                  | Yes / No                              | No                             |
-| **OpenCode**                    | Yes / No                              | No                             |
-| **GSD-2**                       | Yes / No (requires OpenCode)          | No                             |
+| **GSD-2**                       | Yes / No                              | No                             |
 | **Container runtime**           | Docker, Podman                        | Podman                         |
 | **Cloud provider**              | None, Azure                           | None                           |
 | **Azure location**              | Any Azure region (requires Azure)     | swedencentral                  |
@@ -149,7 +147,7 @@ The `scripts/install/install-all.zsh` script installs the **complete development
 1. **Git** — version control with recommended global config
 2. **Zsh** — shell with Oh My Zsh, autosuggestions, syntax highlighting, fzf
 3. **Python** — via `uv` (Astral's fast Python installer and package manager)
-4. **Node.js + pnpm** — via `fnm` (Fast Node Manager) and `corepack`
+4. **Bun** — JavaScript runtime and package manager
 5. **Container engine** — Docker or Podman (based on `copier.yml` choice)
 6. **go-task** — modern task runner (`Taskfile.yml`)
 7. **VS Code** — with all recommended extensions pre-installed
@@ -163,14 +161,14 @@ The `scripts/install/install-all.zsh` script installs the **complete development
 - **FAISS** — _(if enabled)_ system deps + `faiss-cpu` Python package
 - **Neo4j** — _(if knowledge graph + neo4j backend)_ graph database + Python driver
 - **Azure CLI + Bicep** — _(if cloud provider is Azure)_ cloud management tooling
-- **OpenCode + ecosystem** — _(if enabled)_ CLI, GSD, plugins
 
 After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 
-- Prerequisite verification (Git, Task, uv, Node, pnpm, container runtime, and conditional Caddy/Azure CLI)
+- Prerequisite verification (Git, Task, uv, Bun, container runtime, and conditional Caddy/Azure CLI)
 - `.env` creation from `.env.example`
 - `uv sync --all-groups` — install all Python dependencies
-- `pnpm install` — install all frontend dependencies
+- `bun install` — install all frontend dependencies
+- `bunx playwright install --with-deps` — _(if Playwright enabled)_ install browser binaries
 - `pre-commit install` — activate Git hooks (both `pre-commit` and `commit-msg`)
 
 ---
@@ -179,8 +177,10 @@ After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 
 - **Clean / hexagonal (ports-and-adapters) architecture** with the Dependency Rule enforced
 - **FastAPI** backend with Pydantic v2 strict validation and SQLAlchemy 2.0 async
-- **TypeScript frontend** (Lit Web Components or React 19) with Vite, Tailwind CSS v4, Vitest
-- **PostgreSQL** — production-grade database via repository/unit-of-work pattern
+- **TypeScript frontend** (React 19) with Bun, Vite, SWC, Biome, Tailwind CSS v4, Vitest
+- **React Hook Form** + Zod schema validation, React Aria accessible UI primitives
+- **Storybook 9** — _(conditional)_ isolated component development and visual testing
+- **PostgreSQL or SQLite** — production-grade database via repository/unit-of-work pattern
 - **Redis + Celery** — _(conditional)_ async task processing and caching
 - **Caddy** — _(conditional)_ reverse proxy with auto-TLS, compression, security headers
 - **GraphQL** — _(conditional)_ Strawberry GraphQL with DataLoaders, depth limiting, and error masking
@@ -196,7 +196,7 @@ After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 - **DevContainer** — _(conditional)_ reproducible development environments
 - **GitHub Actions CI/CD** — lint, test, build, deploy, CodeQL security scanning
 - **Renovate** for automated dependency updates
-- **Pre-commit hooks** — ruff, ty, prettier, detect-secrets, typos, shellcheck, hadolint, markdownlint
+- **Pre-commit hooks** — ruff, ty, biome, detect-secrets, typos, shellcheck, hadolint, markdownlint
 - **Testing** — pytest (unit, integration, property-based, performance), Vitest, Playwright E2E
 - **Full documentation** — architecture, setup, development, testing, deployment, config, ADRs, conventions
 
@@ -210,8 +210,6 @@ my-project/
 ├── .github/                  # GitHub Actions CI/CD, Dependabot, skills, agents
 │   ├── workflows/            # CI, deploy, CodeQL workflows
 │   └── agents/               # Copilot agent instructions
-├── .gsd/                     # GSD-2 autonomous agent (conditional: with_gsd)
-├── .opencode/                # OpenCode AI agent config (conditional: with_opencode)
 ├── backend/
 │   ├── src/my_project/       # Backend (clean / hexagonal architecture)
 │   │   ├── adapters/         # Outbound: DB repos, cache, email, storage, auth

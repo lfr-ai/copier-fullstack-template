@@ -26,11 +26,11 @@ local missing_count=0
 
 print "=== Checking prerequisites ==="
 
+check_command "curl" "apt-get install -y curl OR brew install curl" || ((missing_count++))
 check_command "git" "https://git-scm.com/downloads" || ((missing_count++))
 check_command "task" "https://taskfile.dev/installation" || ((missing_count++))
 check_command "uv" "curl -LsSf https://astral.sh/uv/install.sh | sh" || ((missing_count++))
-check_command "node" "https://nodejs.org/" || ((missing_count++))
-check_command "pnpm" "corepack enable && corepack prepare pnpm@10 --activate" || ((missing_count++))
+check_command "bun" "curl -fsSL https://bun.sh/install | bash" || ((missing_count++))
 check_command "{{ container_runtime }}" "zsh scripts/install/install-container.zsh" || ((missing_count++))
 {% if use_caddy %}
 check_command "caddy" "zsh scripts/install/install-caddy.zsh" || ((missing_count++))
@@ -62,9 +62,17 @@ print ""
 
 print "=== Installing frontend dependencies ==="
 cd "${PROJECT_ROOT}/frontend"
-pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+bun install --frozen-lockfile 2>/dev/null || bun install
 print "Frontend dependencies installed"
 print ""
+{% if use_playwright %}
+
+print "=== Installing Playwright browsers ==="
+cd "${PROJECT_ROOT}/frontend"
+bunx playwright install --with-deps chromium 2>/dev/null || \
+print "WARNING: Playwright browser install failed — run manually: bunx playwright install --with-deps"
+print ""
+{% endif %}
 
 print "=== Setting up pre-commit hooks ==="
 cd "${PROJECT_ROOT}/backend"
@@ -72,6 +80,12 @@ uv run pre-commit install
 uv run pre-commit install --hook-type commit-msg
 print "Pre-commit hooks installed"
 print ""
+
+# Ensure Copilot agent hook scripts are executable
+if [[ -d "${PROJECT_ROOT}/.github/hooks/scripts" ]]; then
+chmod +x "${PROJECT_ROOT}"/.github/hooks/scripts/*.sh 2>/dev/null || true
+print "Copilot agent hook scripts marked executable"
+fi
 }
 
 setup_environment() {
@@ -97,8 +111,7 @@ print "Git: $(git --version 2>/dev/null || print 'NOT FOUND')"
 print "Task: $(task --version 2>/dev/null || print 'NOT FOUND')"
 print "UV: $(uv --version 2>/dev/null || print 'NOT FOUND')"
 print "Python: $(python3 --version 2>/dev/null || print 'NOT FOUND')"
-print "Node: $(node --version 2>/dev/null || print 'NOT FOUND')"
-print "pnpm: $(pnpm --version 2>/dev/null || print 'NOT FOUND')"
+print "Bun: $(bun --version 2>/dev/null || print 'NOT FOUND')"
 print "Container: $({{ container_runtime }} --version 2>/dev/null || print 'NOT FOUND')"
 {% if use_caddy %}
 print "Caddy: $(caddy version 2>/dev/null || print 'NOT FOUND')"

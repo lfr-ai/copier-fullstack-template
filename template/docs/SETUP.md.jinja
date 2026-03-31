@@ -7,7 +7,7 @@
 ## Prerequisites
 
 - Python {{ python_version }}+ (managed via UV)
-- Node.js {{ node_version }}+ with pnpm
+- Bun (frontend runtime & package manager)
 - [Task](https://taskfile.dev) (task runner)
 - {{ container_runtime | title }} (container engine)
 - VS Code (recommended — open `{{ project_slug }}.code-workspace`)
@@ -42,8 +42,8 @@ uv run pytest
 
 ```bash
 cd frontend
-pnpm install
-pnpm run dev
+bun install
+bun dev
 ```
 
 

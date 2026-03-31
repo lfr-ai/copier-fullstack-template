@@ -18,8 +18,7 @@ Development environment setup for **{{ project_name }}**.
 | zsh | 5.9+ | Default shell |
 | Python | {{ python_version }}+ | Backend runtime |
 | UV | latest | Python package manager |
-| Node.js | {{ node_version }}+ | Frontend runtime |
-| pnpm | 10+ | Node package manager |
+| Bun | latest | Frontend runtime & package manager |
 | {{ container_runtime | capitalize }} | latest | Container runtime |
 | Task | 3+ | Task runner |
 | VS Code | latest | Editor |
@@ -63,23 +62,18 @@ uv python find {{ python_version }}
 
 ---
 
-## 4. Node.js and pnpm
+## 4. Bun
 
-Install Node.js {{ node_version }} and pnpm:
+Install Bun:
 
 ```zsh
-curl -fsSL https://fnm.vercel.app/install | bash
-fnm install {{ node_version }}
-fnm use {{ node_version }}
-
-corepack enable
+curl -fsSL https://bun.sh/install | bash
 ```
 
 Verify:
 
 ```zsh
-node --version   # v{{ node_version }}.x
-pnpm --version   # 10.x
+bun --version
 ```
 
 ---
@@ -125,7 +119,10 @@ task setup
 This command will:
 - Create Python virtual environment
 - Install backend dependencies (`uv sync`)
-- Install frontend dependencies (`pnpm install`)
+- Install frontend dependencies (`bun install`)
+{%- if use_playwright %}
+- Install Playwright browsers (`bunx playwright install --with-deps chromium`)
+{%- endif %}
 - Set up pre-commit hooks
 - Copy `.env.example` to `.env`
 

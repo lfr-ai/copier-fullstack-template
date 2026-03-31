@@ -18,6 +18,8 @@ class TestSettings(BaseAppSettings):
     host: str = "0.0.0.0"  # noqa: S104  – intentional: container networking
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
     database_url: str = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+{%- elif database_backend == 'sqlite' %}
+    database_url: str = "sqlite+aiosqlite:///data/{{ project_slug }}_test.db"
 {%- else %}
     database_url: str = ""
 {%- endif %}

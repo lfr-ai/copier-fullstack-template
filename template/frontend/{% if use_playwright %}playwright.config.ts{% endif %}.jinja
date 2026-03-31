@@ -32,7 +32,7 @@ use: { ...devices["Desktop Chrome"] },
 },
 ],
 webServer: {
-command: `pnpm dev --host 127.0.0.1 --port ${DEV_PORT}`,
+command: `bun dev --host 127.0.0.1 --port ${DEV_PORT}`,
 url: DEV_URL,
 reuseExistingServer: !process.env.CI,
 },

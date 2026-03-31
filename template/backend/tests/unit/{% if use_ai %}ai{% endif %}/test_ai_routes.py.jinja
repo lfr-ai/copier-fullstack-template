@@ -29,7 +29,7 @@ class TestCompletionEndpoint:
         )
         assert response.status_code == 501
 
-    @patch("{{ project_slug }}.ports.container.get_container")
+    @patch("{{ project_slug }}.composition.container.get_container")
     def test_completion_success(self, mock_container, client: TestClient) -> None:
         """Should return completion response when AI service is available."""
         mock_ai = AsyncMock()

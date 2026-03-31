@@ -41,7 +41,17 @@ platform="$(detect_platform)"
 
 case "${platform}" in
 linux|wsl)
+if command -v apt-get &>/dev/null; then
 curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+elif command -v dnf &>/dev/null; then
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+sudo dnf install -y azure-cli
+elif command -v pip3 &>/dev/null; then
+pip3 install azure-cli
+else
+print "Unsupported Linux distro. See https://aka.ms/InstallAzureCli"
+return 1
+fi
 ;;
 macos)
 if command -v brew &>/dev/null; then

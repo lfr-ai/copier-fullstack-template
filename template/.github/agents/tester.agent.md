@@ -1,31 +1,31 @@
 ---
 description:
-  'Generates test suites and runs them. Creates unit, integration, property-based, and
-  performance tests following project testing conventions.'
+    "Generates test suites and runs them. Creates unit, integration, property-based, and
+    performance tests following project testing conventions."
 user-invocable: false
 tools:
-  [
-    read/readFile,
-    read/problems,
-    search/codebase,
-    search/fileSearch,
-    search/textSearch,
-    search/listDirectory,
-    search/changes,
-    search/usages,
-    edit/editFiles,
-    execute/runInTerminal,
-    execute/getTerminalOutput,
-  ]
+    [
+        read/readFile,
+        read/problems,
+        search/codebase,
+        search/fileSearch,
+        search/textSearch,
+        search/listDirectory,
+        search/changes,
+        search/usages,
+        edit/editFiles,
+        execute/runInTerminal,
+        execute/getTerminalOutput,
+    ]
 handoffs:
-  - label: 'Fix Failures'
-    agent: Implementer
-    prompt: 'Fix the test failures identified above.'
-    send: false
-  - label: 'Review Changes'
-    agent: Reviewer
-    prompt: 'Review the tests and implementation for completeness.'
-    send: false
+    - label: "Fix Failures"
+      agent: implementer
+      prompt: "Fix the test failures identified above."
+      send: false
+    - label: "Review Changes"
+      agent: reviewer
+      prompt: "Review the tests and implementation for completeness."
+      send: false
 ---
 
 You are the **Tester** — an agent that generates thorough test suites and runs them to

@@ -111,7 +111,7 @@ set_default_shell() {
     emulate -L zsh
 
     local zsh_path
-    zsh_path="$(which zsh)"
+    zsh_path="$(command -v zsh)"
 
     if [[ "${SHELL}" == "${zsh_path}" ]]; then
         print "Zsh is already the default shell"

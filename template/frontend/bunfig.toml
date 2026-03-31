@@ -1,0 +1,17 @@
+# Bun configuration — https://bun.sh/docs/runtime/bunfig
+
+[install]
+# Use text lockfile (bun.lock) for better git diffs
+saveTextLockfile = true
+
+[run]
+# Use Bun's built-in shell for cross-platform consistency
+shell = "bun"
+# Alias node → bun in spawned processes
+bun = true
+
+[test]
+coverage = false
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage"
+coverageSkipTestFiles = true

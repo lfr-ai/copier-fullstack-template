@@ -63,6 +63,10 @@ class BaseAppSettings(BaseSettings):
         default="",
         description="Azure PostgreSQL Flexible Server connection URL. Set via environment or Key Vault.",
         examples=["postgresql+psycopg://user:pass@myserver.postgres.database.azure.com:5432/{{ project_slug }}?sslmode=require"],
+{%- elif database_backend == "sqlite" %}
+        default="sqlite+aiosqlite:///data/{{ project_slug }}.db",
+        description="SQLite database file URL (async via aiosqlite).",
+        examples=["sqlite+aiosqlite:///data/app.db", "sqlite+aiosqlite:///./data/{{ project_slug }}.db"],
 {%- else %}
         default="",
         description="Database connection URL. Leave empty if no database is configured.",

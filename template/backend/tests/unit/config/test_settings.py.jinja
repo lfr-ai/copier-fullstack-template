@@ -87,6 +87,8 @@ class TestTestSettings:
         settings = TestSettings()
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
         assert "test" in settings.database_url
+{%- elif database_backend == 'sqlite' %}
+        assert "test" in settings.database_url
 {%- else %}
         assert settings.database_url == ""
 {%- endif %}
@@ -142,6 +144,8 @@ class TestBaseAppSettings:
         settings = BaseAppSettings()
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
         assert "postgresql" in settings.database_url
+{%- elif database_backend == 'sqlite' %}
+        assert "sqlite" in settings.database_url
 {%- else %}
         assert settings.database_url == ""
 {%- endif %}

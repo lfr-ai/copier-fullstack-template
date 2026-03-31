@@ -1,28 +1,32 @@
-# GitHub Copilot Skill Packs
+# GitHub Copilot Agent Skills
 
-This folder contains focused skill playbooks for Copilot-driven workflows in this
-repository.
+This folder contains focused agent skills for Copilot-driven workflows in this
+repository. Each skill is a directory containing a `SKILL.md` file following the
+[Agent Skills standard](https://agentskills.io/).
 
 ## Included Skills
 
-- `hexagonal-architecture.md` — enforce clean / hexagonal architecture boundaries,
-  Dependency Rule, and UoW-with-repos pattern
-- `python-conventions.md` — enforce Python standards, typing, logging, and signatures
-- `testing-conventions.md` — apply test structure, markers, and coverage expectations
-- `naming-registry.md` — registry-first workflow for shared constants and CI checks
+| Skill                     | Description                                                                                    |
+| ------------------------- | ---------------------------------------------------------------------------------------------- |
+| `hexagonal-architecture/` | Enforce clean / hexagonal architecture boundaries, Dependency Rule, and UoW-with-repos pattern |
+| `python-conventions/`     | Enforce Python standards, typing, logging, and signatures                                      |
+| `testing-conventions/`    | Apply test structure, markers, and coverage expectations                                       |
+| `naming-registry/`        | Registry-first workflow for shared constants and CI checks                                     |
 
 ## How to Use
 
-When working on a task, load the matching skill first, then apply global rules from:
+Skills are loaded automatically by VS Code when relevant to your task. You can
+also invoke them explicitly as slash commands: type `/` in chat and select a skill.
+
+When working on a task, apply skills in this order:
+
+1. Architecture / Clean Architecture (`hexagonal-architecture`)
+2. Implementation (`python-conventions`)
+3. Registry contract (`naming-registry`)
+4. Verification (`testing-conventions`)
+
+Global rules are loaded from:
 
 - `.github/copilot-instructions.md`
 - `AGENTS.md`
 - `docs/conventions/*.md`
-
-If a task spans multiple domains (for example, feature + tests + registry), apply skills
-in this order:
-
-1. Architecture / Clean Architecture (`hexagonal-architecture.md`)
-2. Implementation (`python-conventions.md`)
-3. Registry contract (`naming-registry.md`)
-4. Verification (`testing-conventions.md`)

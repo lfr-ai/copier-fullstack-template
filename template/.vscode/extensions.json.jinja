@@ -5,13 +5,13 @@
     "charliermarsh.ruff",
     "codezombiech.gitignore",
     "davidanson.vscode-markdownlint",
-    "dbaeumer.vscode-eslint",
+    "biomejs.biome",
     "dvirtz.parquet-viewer",
     "editorconfig.editorconfig",
-    "esbenp.prettier-vscode",
     "exiasr.hadolint",
     "github.copilot-chat",
     "github.remotehub",
+    "TimHeuer.awesome-copilot",
     "ms-python.debugpy",
     "ms-python.python",
     "ms-vscode-remote.remote-ssh",
@@ -24,6 +24,7 @@
     "ms-windows-ai-studio.windows-ai-studio",
     "mtxr.sqltools",
     "mtxr.sqltools-driver-pg",
+    "anseki.vscode-color",
     "naumovs.color-highlight",
     "patricklee.vsnotes",
     "postman.postman-for-vscode",
@@ -51,8 +52,12 @@
     "ms-vscode.azurecli"{% endif %}{% if use_devcontainer %},
     "ms-vscode-remote.remote-containers"{% endif %}{% if use_playwright %},
     "ms-playwright.playwright"{% endif %}{% if database_backend == 'postgresql' %},
-    "ckolkman.vscode-postgres"{% endif %}{% if use_sftp %},
+    "ckolkman.vscode-postgres"{% elif database_backend == 'sqlite' %},
+    "alexcvzz.vscode-sqlite"{% endif %}{% if use_sftp %},
     "Natizyskunk.sftp"{% endif %}
   ],
-  "unwantedRecommendations": []
+  "unwantedRecommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode"
+  ]
 }
