@@ -63,7 +63,14 @@ main() {
         if [[ "${OS}" == "macos" ]]; then
             brew install hadolint >> "${LOG_FILE}" 2>&1
         elif [[ "${OS}" == "linux" ]]; then
-            local HADOLINT_URL="https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64"
+            local ARCH
+            ARCH="$(uname -m)"
+            case "${ARCH}" in
+                x86_64)  ARCH="x86_64" ;;
+                aarch64|arm64) ARCH="arm64" ;;
+                *) fail "Unsupported architecture for hadolint: ${ARCH}"; return 1 ;;
+            esac
+            local HADOLINT_URL="https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-${ARCH}"
             sudo curl -fsSL "${HADOLINT_URL}" -o /usr/local/bin/hadolint >> "${LOG_FILE}" 2>&1
             sudo chmod +x /usr/local/bin/hadolint
         fi
@@ -81,8 +88,14 @@ main() {
         if [[ "${OS}" == "macos" ]]; then
             brew install shellcheck >> "${LOG_FILE}" 2>&1
         elif [[ "${OS}" == "linux" ]]; then
-            sudo apt-get update -qq >> "${LOG_FILE}" 2>&1
-            sudo apt-get install -y -qq shellcheck >> "${LOG_FILE}" 2>&1
+            if command -v apt-get &>/dev/null; then
+                sudo apt-get update -qq >> "${LOG_FILE}" 2>&1
+                sudo apt-get install -y -qq shellcheck >> "${LOG_FILE}" 2>&1
+            elif command -v dnf &>/dev/null; then
+                sudo dnf install -y ShellCheck >> "${LOG_FILE}" 2>&1
+            elif command -v pacman &>/dev/null; then
+                sudo pacman -S --noconfirm shellcheck >> "${LOG_FILE}" 2>&1
+            fi
         fi
         if command -v shellcheck &>/dev/null; then
             success "shellcheck installed successfully"

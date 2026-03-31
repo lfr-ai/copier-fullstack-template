@@ -29,7 +29,9 @@ graph TB
     end
 
     subgraph "Infrastructure Layer"
-{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+{%- if database_backend == 'sqlite' %}
+        DB[(SQLite)]
+{%- elif database_backend in ('postgresql', 'azure_postgresql') %}
         DB[(PostgreSQL)]
 {%- endif %}
         ORM[ORM Models]
@@ -130,7 +132,9 @@ graph TB
     subgraph "{{ project_name }} Stack"
         APP[Backend<br/>:8000]
         FRONTEND[Frontend Dev Server<br/>:3000]
-{%- if database_backend == 'postgresql' %}
+{%- if database_backend == 'sqlite' %}
+        SQLITE[(SQLite<br/>file-based)]
+{%- elif database_backend == 'postgresql' %}
         PG[(PostgreSQL<br/>:5432)]
 {%- endif %}
 {%- if use_redis %}
@@ -142,7 +146,9 @@ graph TB
 {%- endif %}
     end
 
-{%- if database_backend == 'postgresql' %}
+{%- if database_backend == 'sqlite' %}
+    APP --> SQLITE
+{%- elif database_backend == 'postgresql' %}
     APP --> PG
 {%- endif %}
 {%- if use_redis %}
@@ -150,7 +156,9 @@ graph TB
 {%- if use_celery %}
     WORKER --> REDIS
     BEAT --> REDIS
-{%- if database_backend == 'postgresql' %}
+{%- if database_backend == 'sqlite' %}
+    WORKER --> SQLITE
+{%- elif database_backend == 'postgresql' %}
     WORKER --> PG
 {%- endif %}
 {%- endif %}

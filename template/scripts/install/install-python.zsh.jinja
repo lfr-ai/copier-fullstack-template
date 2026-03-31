@@ -4,80 +4,88 @@ setopt PIPE_FAIL ERR_EXIT
 
 
 PYTHON_TARGET_VERSION="${1:-{{ python_version }}}"
-UV_MIN_VERSION="0.5.0"
 
 install_uv() {
-    emulate -L zsh
-    setopt PIPE_FAIL ERR_EXIT
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
 
-    if command -v uv &>/dev/null; then
-        print "UV already installed: $(uv --version)"
-        return 0
-    fi
+if command -v uv &>/dev/null; then
+print "UV already installed: $(uv --version)"
+return 0
+fi
 
-    print "Installing UV package manager..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+print "Installing UV package manager..."
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-    export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
+export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
 
-    if ! command -v uv &>/dev/null; then
-        print "ERROR: UV installation failed"
-        return 1
-    fi
+if ! command -v uv &>/dev/null; then
+print "ERROR: UV installation failed"
+return 1
+fi
 
-    print "UV installed: $(uv --version)"
+print "UV installed: $(uv --version)"
 }
 
 install_python_via_uv() {
-    emulate -L zsh
-    setopt PIPE_FAIL ERR_EXIT
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
 
-    local target_version="${1}"
+local target_version="${1}"
 
-    print "Installing Python ${target_version} via UV..."
-    uv python install "${target_version}"
+print "Installing Python ${target_version} via UV..."
+uv python install "${target_version}"
 
-    local installed_path
-    installed_path="$(uv python find "${target_version}" 2>/dev/null || print '')"
+local installed_path
+installed_path="$(uv python find "${target_version}" 2>/dev/null || print '')"
 
-    if [[ -z "${installed_path}" ]]; then
-        print "ERROR: Python ${target_version} installation failed"
-        return 1
-    fi
+if [[ -z "${installed_path}" ]]; then
+print "ERROR: Python ${target_version} installation failed"
+return 1
+fi
 
-    print "Python ${target_version} installed at: ${installed_path}"
-    "${installed_path}" --version
+print "Python ${target_version} installed at: ${installed_path}"
+"${installed_path}" --version
 }
 
 verify_installation() {
-    emulate -L zsh
+emulate -L zsh
 
-    local target_version="${1}"
+local target_version="${1}"
 
-    print ""
-    print "=== Installation Verification ==="
-    print "UV:     $(uv --version 2>/dev/null || print 'NOT FOUND')"
-    print "Python: $(uv python find "${target_version}" 2>/dev/null || print 'NOT FOUND')"
-    print ""
+print ""
+print "=== Installation Verification ==="
+print "UV: $(uv --version 2>/dev/null || print 'NOT FOUND')"
+print "Python: $(uv python find "${target_version}" 2>/dev/null || print 'NOT FOUND')"
+print ""
+
+if command -v uv &>/dev/null; then
+local zshrc="${HOME}/.zshrc"
+local completion_line='eval "$(uv generate-shell-completion zsh)"'
+if [[ -f "${zshrc}" ]] && ! grep -qF 'uv generate-shell-completion' "${zshrc}"; then
+print "${completion_line}" >> "${zshrc}"
+print "Added uv shell completion to ${zshrc}"
+fi
+fi
 }
 
 main() {
-    emulate -L zsh
-    setopt PIPE_FAIL ERR_EXIT
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
 
-    print "Target Python version: ${PYTHON_TARGET_VERSION}"
-    print ""
+print "Target Python version: ${PYTHON_TARGET_VERSION}"
+print ""
 
-    install_uv
-    install_python_via_uv "${PYTHON_TARGET_VERSION}"
-    verify_installation "${PYTHON_TARGET_VERSION}"
+install_uv
+install_python_via_uv "${PYTHON_TARGET_VERSION}"
+verify_installation "${PYTHON_TARGET_VERSION}"
 
-    print "Python installation complete"
-    print ""
-    print "Quick start:"
-    print "  uv venv                    # Create virtual environment"
-    print "  uv sync                    # Install dependencies from pyproject.toml"
-    print "  uv run python -m pytest    # Run tests"
+print "Python installation complete"
+print ""
+print "Quick start:"
+print " uv venv # Create virtual environment"
+print " uv sync # Install dependencies from pyproject.toml"
+print " uv run python -m pytest # Run tests"
 }
 
 main "$@"

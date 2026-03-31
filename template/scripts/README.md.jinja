@@ -26,7 +26,7 @@ Individual installers under `install/`, called by `install-all.zsh`:
 | `install-git.zsh`        | Git with recommended config         |
 | `install-zsh.zsh`        | Zsh with Oh My Zsh                  |
 | `install-python.zsh`     | Python via uv                       |
-| `install-node.zsh`       | Node.js via fnm + pnpm via corepack |
+| `install-bun.zsh`        | Bun JavaScript runtime              |
 | `install-container.zsh`  | Docker or Podman                    |
 | `install-task.zsh`       | go-task CLI                         |
 | `install-vscode.zsh`     | VS Code with extensions             |
@@ -53,10 +53,6 @@ Individual installers under `install/`, called by `install-all.zsh`:
 {%- endif %}
 {%- if cloud_provider != 'none' %}
 | `install-cloud-cli.zsh`       | Azure CLI + Bicep                   | `cloud_provider != "none"`      |
-{%- endif %}
-{%- if with_opencode %}
-| `install-opencode.zsh`        | OpenCode CLI                        | `with_opencode`                 |
-| `install-opencode-ecosystem.zsh` | GSD, OAC, plugins               | `with_opencode`                 |
 {%- endif %}
 
 **Windows-only (called by `install-all.ps1`):**

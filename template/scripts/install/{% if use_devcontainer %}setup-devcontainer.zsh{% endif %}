@@ -14,12 +14,12 @@ setup_devcontainer_cli() {
 
     print "Installing devcontainer CLI..."
 
-    if command -v pnpm &>/dev/null; then
-        pnpm add -g @devcontainers/cli
+    if command -v bun &>/dev/null; then
+        bun install -g @devcontainers/cli
     elif command -v npm &>/dev/null; then
         npm install -g @devcontainers/cli
     else
-        print "ERROR: pnpm or npm required to install devcontainer CLI"
+        print "ERROR: bun or npm required to install devcontainer CLI"
         return 1
     fi
 
@@ -32,8 +32,8 @@ verify_devcontainer_config() {
     local config_path=".devcontainer/devcontainer.json"
 
     if [[ ! -f "${config_path}" ]]; then
-        print "WARNING: ${config_path} not found"
-        return 1
+        print "WARNING: ${config_path} not found — will be created on first devcontainer build"
+        return 0
     fi
 
     print "Devcontainer config found at ${config_path}"

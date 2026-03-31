@@ -19,6 +19,9 @@ WORKDIR /app
 RUN groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid 1000 --shell /bin/bash appuser && \
     mkdir -p /app/logs && chown appuser:appuser /app/logs
+{%- if database_backend == "sqlite" %} && \
+    mkdir -p /app/data && chown appuser:appuser /app/data
+{%- endif %}
 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src

@@ -20,10 +20,13 @@ install_vscode_linux() {
     if command -v apt-get &>/dev/null; then
         sudo apt-get update -qq
         sudo apt-get install -y -qq wget gpg apt-transport-https
+        local gpg_tmp
+        gpg_tmp="$(mktemp)"
         wget -qO- https://packages.microsoft.com/keys/microsoft.asc \
-            | gpg --dearmor > /tmp/packages.microsoft.gpg
-        sudo install -D -o root -g root -m 644 /tmp/packages.microsoft.gpg \
+            | gpg --dearmor > "${gpg_tmp}"
+        sudo install -D -o root -g root -m 644 "${gpg_tmp}" \
             /etc/apt/keyrings/packages.microsoft.gpg
+        rm -f "${gpg_tmp}"
         print "deb [arch=${arch} signed-by=/etc/apt/keyrings/packages.microsoft.gpg] \
             https://packages.microsoft.com/repos/code stable main" \
             | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
@@ -84,19 +87,26 @@ main() {
     local extensions=(
         ms-python.python
         ms-python.vscode-pylance
+        ms-python.debugpy
         charliermarsh.ruff
         ms-vscode-remote.remote-wsl
         ms-vscode-remote.remote-containers
         ms-azuretools.vscode-containers
+        github.copilot-chat
         eamodio.gitlens
-        dbaeumer.vscode-eslint
-        esbenp.prettier-vscode
+        anseki.vscode-color
+        biomejs.biome
         bradlc.vscode-tailwindcss
-        pkief.material-icon-theme
+        vscode-icons-team.vscode-icons
         tamasfe.even-better-toml
         redhat.vscode-yaml
-        ms-python.debugpy
-        hbenl.vscode-test-explorer
+        samuelcolvin.jinjahtml
+        streetsidesoftware.code-spell-checker
+        editorconfig.editorconfig
+        exiasr.hadolint
+        timonwong.shellcheck
+        davidanson.vscode-markdownlint
+        vitest.explorer
         task.vscode-task
     )
 

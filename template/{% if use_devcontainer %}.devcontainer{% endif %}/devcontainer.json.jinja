@@ -3,7 +3,7 @@
   "dockerComposeFile": "compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
-  "forwardPorts": [8000, 3000{% if use_redis %}, 6379{% endif %}{% if database_backend == "postgresql" %}, 5432{% endif %}],
+  "forwardPorts": [8000, 3000{% if use_redis %}, 6379{% endif %}{% if database_backend == "postgresql" %}, 5432{% endif %}{% if use_storybook %}, 6006{% endif %}],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -13,13 +13,13 @@
         "charliermarsh.ruff",
         "astral-sh.ty",
 
-        // JavaScript / TypeScript
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
+        // JavaScript / TypeScript — Biome (replaces ESLint + Prettier)
+        "biomejs.biome",
         "vitest.explorer",
 
         // Frontend / CSS
         "bradlc.vscode-tailwindcss",
+        "anseki.vscode-color",
         "naumovs.color-highlight",
 
         // Data formats & editors
@@ -50,9 +50,14 @@
         "vscode-icons-team.vscode-icons",
         "wayou.vscode-todo-highlight"{% if database_backend == "postgresql" %},
 
-        // Database
+        // Database (PostgreSQL)
         "mtxr.sqltools",
-        "mtxr.sqltools-driver-pg"{% endif %}{% if use_playwright %},
+        "mtxr.sqltools-driver-pg"{% elif database_backend == "sqlite" %},
+
+        // Database (SQLite)
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-sqlite",
+        "alexcvzz.vscode-sqlite"{% endif %}{% if use_playwright %},
 
         // E2E testing
         "ms-playwright.playwright"{% endif %}
@@ -74,23 +79,28 @@
           }
         },
         "[typescript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
-          "prettier.printWidth": 88
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "biomejs.biome"
         },
         "[javascript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
-          "prettier.printWidth": 88
+          "editor.defaultFormatter": "biomejs.biome"
         },
         "[json]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
-          "prettier.printWidth": 88
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[css]": {
+          "editor.defaultFormatter": "biomejs.biome"
         },
         "[yaml]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
-          "prettier.printWidth": 88
+          "editor.defaultFormatter": "redhat.vscode-yaml"
         },
         "[markdown]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
+          "editor.defaultFormatter": "davidanson.vscode-markdownlint"
         },
         "files.associations": {
           "*.css": "tailwindcss",

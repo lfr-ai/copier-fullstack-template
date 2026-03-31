@@ -56,7 +56,7 @@ async def _check_database() -> DependencyHealth:
     """Probe database connectivity."""
     start = time.monotonic()
     try:
-        from {{ project_slug }}.ports.container import get_container
+        from {{ project_slug }}.composition.container import get_container
 
         container = get_container()
         uow = container.unit_of_work()
@@ -84,7 +84,7 @@ async def _check_cache() -> DependencyHealth:
     """Probe cache connectivity via the DI container."""
     start = time.monotonic()
     try:
-        from {{ project_slug }}.ports.container import get_container
+        from {{ project_slug }}.composition.container import get_container
 
         container = get_container()
         cache = container.cache()

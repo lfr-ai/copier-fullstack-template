@@ -1,34 +1,34 @@
 ---
 description:
-  'Creates structured implementation plans by analyzing requirements and breaking them
-  into discrete, verifiable tasks. Read-only — cannot modify files.'
+    "Creates structured implementation plans by analyzing requirements and breaking them
+    into discrete, verifiable tasks. Read-only — cannot modify files."
 user-invocable: false
 tools:
-  [
-    read/readFile,
-    read/problems,
-    search/codebase,
-    search/fileSearch,
-    search/textSearch,
-    search/listDirectory,
-    search/changes,
-    search/usages,
-    web/fetch,
-    web/githubRepo,
-    context7/get-library-docs,
-    context7/resolve-library-id,
-  ]
+    [
+        read/readFile,
+        read/problems,
+        search/codebase,
+        search/fileSearch,
+        search/textSearch,
+        search/listDirectory,
+        search/changes,
+        search/usages,
+        web/fetch,
+        web/githubRepo,
+        context7/get-library-docs,
+        context7/resolve-library-id,
+    ]
 handoffs:
-  - label: 'Validate with Architect'
-    agent: Architect
-    prompt:
-      'Validate the plan above against architecture patterns and identify reusable
-      components.'
-    send: false
-  - label: 'Begin Implementation'
-    agent: Implementer
-    prompt: 'Implement the plan outlined above.'
-    send: false
+    - label: "Validate with Architect"
+      agent: architect
+      prompt:
+          "Validate the plan above against architecture patterns and identify reusable
+          components."
+      send: false
+    - label: "Begin Implementation"
+      agent: implementer
+      prompt: "Implement the plan outlined above."
+      send: false
 ---
 
 You are the **Planner** — a read-only analysis agent that creates detailed
@@ -60,10 +60,10 @@ Brief description of what will be accomplished.
 ### Tasks
 
 1. **[Layer] Task description** — `path/to/file.py`
-   - What: Specific changes to make
-   - Why: Rationale for the change
-   - Acceptance: How to verify it works
-   - Risk: Low/Medium/High + mitigation
+    - What: Specific changes to make
+    - Why: Rationale for the change
+    - Acceptance: How to verify it works
+    - Risk: Low/Medium/High + mitigation
 
 2. **[Layer] Next task** — `path/to/file.py` ...
 

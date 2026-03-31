@@ -97,7 +97,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 {% endraw %}
-{% if database_backend == "postgresql" or use_redis %}
+{% if database_backend in ("postgresql", "sqlite") or use_redis %}
 {% raw %}
   integration:
     name: Integration Tests
@@ -147,6 +147,10 @@ jobs:
 {% raw %}
       {% endraw %}{{ project_slug | upper }}{% raw %}_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/{% endraw %}{{ project_slug }}_test{% raw %}
 {% endraw %}
+{%- elif database_backend == "sqlite" %}
+{% raw %}
+      {% endraw %}{{ project_slug | upper }}{% raw %}_DATABASE_URL: sqlite+aiosqlite:///data/{% endraw %}{{ project_slug }}_test{% raw %}.db
+{% endraw %}
 {%- endif %}
 {%- if use_redis %}
 {% raw %}
@@ -161,6 +165,14 @@ jobs:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
           enable-cache: true
       - run: uv sync --frozen
+{% endraw %}
+{%- if database_backend == "sqlite" %}
+{% raw %}
+      - name: Create SQLite data directory
+        run: mkdir -p data
+{% endraw %}
+{%- endif %}
+{% raw %}
       - name: Integration tests
         run: uv run pytest tests/integration -v --tb=short
 {% endraw %}
@@ -175,18 +187,13 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "{% endraw %}{{ node_version }}{% raw %}"
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run lint
-      - run: pnpm run typecheck
-      - run: pnpm run test
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test
 
   container:
     name: Container Build & Lint

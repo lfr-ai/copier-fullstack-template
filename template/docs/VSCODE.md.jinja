@@ -13,7 +13,7 @@ Open the multi-root workspace to use the predefined project settings:
 This provides:
 
 - Four workspace folders — Root, Backend (src), Backend (tests), Frontend
-- Language-specific formatters (Ruff → Python, Prettier → JS/TS/JSON/YAML/MD)
+- Language-specific formatters (Ruff → Python, Biome → JS/TS/CSS/JSON)
 - Debug launch configurations for FastAPI, pytest, and the CLI
 - Task definitions for `dev`, `test`, `lint`, and `typecheck`
 - Pre-configured extension recommendations
@@ -28,10 +28,10 @@ This provides:
 | `ms-python.debugpy` | Python debugging |
 | `charliermarsh.ruff` | Python linting & formatting |
 | `astral-sh.ty` | Ty type checker |
-| `dbaeumer.vscode-eslint` | JavaScript/TypeScript linting |
-| `esbenp.prettier-vscode` | Prettier formatter |
+| `biomejs.biome` | JavaScript/TypeScript linting & formatting |
 | `vitest.explorer` | Vitest test runner |
 | `bradlc.vscode-tailwindcss` | Tailwind CSS IntelliSense |
+| `anseki.vscode-color` | Color picker |
 | `naumovs.color-highlight` | Inline colour preview |
 | `tamasfe.even-better-toml` | TOML support |
 | `redhat.vscode-yaml` | YAML support |
@@ -59,8 +59,10 @@ This provides:
 | `ms-playwright.playwright` | `use_playwright = true` |
 | `ms-vscode-remote.remote-containers` | `use_devcontainer = true` |
 | `Natizyskunk.sftp` | `use_sftp = true` |
-| `mtxr.sqltools` | `database_backend = postgresql` |
+| `mtxr.sqltools` | `database_backend = postgresql` or `sqlite` |
 | `mtxr.sqltools-driver-pg` | `database_backend = postgresql` |
+| `mtxr.sqltools-driver-sqlite` | `database_backend = sqlite` |
+| `alexcvzz.vscode-sqlite` | `database_backend = sqlite` |
 | `ms-azuretools.vscode-azure-github-copilot` | `cloud_provider = azure` |
 | `ms-azuretools.vscode-azure-mcp-server` | `cloud_provider = azure` |
 | `ms-azuretools.vscode-azureresourcegroups` | `cloud_provider = azure` |
@@ -196,11 +198,9 @@ the project-specific subset):
 | File | Tool | Purpose |
 | --------------------------------- | -------------- | ---------------------------------- |
 | `.editorconfig` | EditorConfig | Whitespace & encoding conventions |
-| `.prettierrc.json` | Prettier | JS/TS/JSON/YAML/MD formatter rules |
-| `.prettierignore` | Prettier | Paths Prettier should skip |
+| `frontend/biome.json` | Biome | JS/TS/CSS linting & formatting |
 | `.markdownlint-cli2.yaml` | markdownlint | Markdown style rules |
 | `.hadolint.yaml` | Hadolint | Dockerfile linting rules |
 | `backend/pyproject.toml [tool.ruff]` | Ruff | Python linting & formatting |
 | `cspell.json` | cSpell | Spell-check dictionary & ignores |
-| `eslint.config.js` | ESLint | TypeScript linting (frontend/) |
 | `tsconfig.json` | TypeScript | Compiler options (frontend/) |

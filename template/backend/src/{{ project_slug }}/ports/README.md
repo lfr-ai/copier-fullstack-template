@@ -7,8 +7,8 @@ external input and translate it into calls on the Application Core.
 
 > **Naming note:** Despite the directory name `ports/`, the actual _port interfaces_
 > (protocols) live in `core/interfaces/`. This directory holds the driving **adapter**
-> implementations — API controllers, CLI commands, and web controllers — plus the
-> composition root (`container.py`).
+> implementations — API controllers, CLI commands, and web controllers.
+> The composition root lives in `composition/container.py`.
 
 ## Clean Architecture Mapping
 
@@ -19,7 +19,7 @@ external input and translate it into calls on the Application Core.
 | **Controller**             | API route handlers (`ports/api/routes/`), CLI commands (`ports/cli/`), web controllers (`ports/web/controllers/`) |
 | **Presenter / ViewModel**  | API response schemas (`ports/api/schemas/`), web view models (`ports/web/view_models/`)                           |
 | **Gateway**                | Protocol interfaces (`core/interfaces/`) + adapter implementations (`adapters/`)                                  |
-| **Composition Root / DI**  | `ports/container.py`                                                                                              |
+| **Composition Root / DI**  | `composition/container.py`                                                                                        |
 
 ## Packages
 
@@ -36,7 +36,9 @@ external input and translate it into calls on the Application Core.
 | `web/controllers/` | Web page controllers (template rendering)                         |
 | `web/view_models/` | Pydantic view models for template context (**presenter**)         |
 | `web/forms/`       | Form definitions for server-rendered pages (scaffold)             |
-| `container.py`     | Composition root / dependency injection container                 |
+
+> **Note:** The composition root / DI container has been moved to `composition/container.py`
+> to enforce the clean architecture boundary — presentation should not own the wiring.
 
 > **Note:** API versioning is handled via URL prefix (`API_V1_PREFIX = "/api/v1"` in
 > `config/constants.py`), not by directory namespacing.

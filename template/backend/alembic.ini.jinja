@@ -4,6 +4,9 @@ script_location = alembic
 # Placeholder — overridden at runtime by env.py using settings.database_url.
 # Do NOT store real credentials here.
 sqlalchemy.url = driver://user:pass@localhost/dbname
+{%- elif database_backend == "sqlite" %}
+# Placeholder — overridden at runtime by env.py using settings.database_url.
+sqlalchemy.url = sqlite+aiosqlite:///data/{{ project_slug }}.db
 {%- else %}
 # No database backend selected. Set sqlalchemy.url when a database is configured.
 sqlalchemy.url =

@@ -8,6 +8,9 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine as _create_async_engine,
 )
+{%- if database_backend == "sqlite" %}
+from sqlalchemy.pool import StaticPool
+{%- endif %}
 
 
 def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
@@ -20,11 +23,23 @@ def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
     Returns:
         AsyncEngine: Configured async engine instance.
     """
+{%- if database_backend == "sqlite" %}
+    # SQLite does not support connection pooling in the traditional sense.
+    # StaticPool keeps a single connection open for the lifetime of the engine,
+    # which is the recommended approach for async SQLite with aiosqlite.
+    return _create_async_engine(
+        database_url,
+        echo=echo,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+{%- else %}
     return _create_async_engine(
         database_url,
         echo=echo,
         pool_pre_ping=True,
     )
+{%- endif %}
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:

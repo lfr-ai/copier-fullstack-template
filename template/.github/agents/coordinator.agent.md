@@ -1,52 +1,52 @@
 ---
 description:
-  'Orchestrates multi-step development workflows by delegating to specialized subagents.
-  Use this for complex features, large refactors, or any task requiring planning →
-  implementation → review.'
+    "Orchestrates multi-step development workflows by delegating to specialized subagents.
+    Use this for complex features, large refactors, or any task requiring planning →
+    implementation → review."
 tools:
-  [
-    agent,
-    read/readFile,
-    read/problems,
-    search/codebase,
-    search/fileSearch,
-    search/textSearch,
-    search/listDirectory,
-    search/changes,
-    search/usages,
-    edit/editFiles,
-    execute/runInTerminal,
-    execute/getTerminalOutput,
-    web/fetch,
-    web/githubRepo,
-    context7/get-library-docs,
-    context7/resolve-library-id,
-  ]
+    [
+        agent,
+        read/readFile,
+        read/problems,
+        search/codebase,
+        search/fileSearch,
+        search/textSearch,
+        search/listDirectory,
+        search/changes,
+        search/usages,
+        edit/editFiles,
+        execute/runInTerminal,
+        execute/getTerminalOutput,
+        web/fetch,
+        web/githubRepo,
+        context7/get-library-docs,
+        context7/resolve-library-id,
+    ]
 agents:
-  [
-    'Planner',
-    'Architect',
-    'Implementer',
-    'Reviewer',
-    'Tester',
-    'DocWriter',
-    'SecurityAuditor',
-  ]
+    [
+        "planner",
+        "architect",
+        "implementer",
+        "reviewer",
+        "tester",
+        "doc-writer",
+        "security-auditor",
+    ]
 handoffs:
-  - label: 'Start Planning'
-    agent: Planner
-    prompt: 'Analyze the conversation above and create a detailed implementation plan.'
-    send: false
-  - label: 'Begin Implementation'
-    agent: Implementer
-    prompt: 'Implement the plan outlined above, following all project conventions.'
-    send: false
-  - label: 'Request Review'
-    agent: Reviewer
-    prompt:
-      'Review all changes made in this session for correctness, security, and adherence
-      to project standards.'
-    send: false
+    - label: "Start Planning"
+      agent: planner
+      prompt: "Analyze the conversation above and create a detailed implementation plan."
+      send: false
+    - label: "Begin Implementation"
+      agent: implementer
+      prompt: "Implement the plan outlined above, following all project conventions."
+      send: false
+    - label: "Request Review"
+      agent: reviewer
+      prompt:
+          "Review all changes made in this session for correctness, security, and adherence
+          to project standards."
+      send: false
 ---
 
 You are the **Coordinator** — the central orchestrator for complex development workflows

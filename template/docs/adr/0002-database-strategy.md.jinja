@@ -19,6 +19,10 @@ We need a database strategy that supports both production workloads and local/te
 - **Cloud**: Azure Database for PostgreSQL Flexible Server (managed)
 {%- endif %}
 - **Development/Testing**: PostgreSQL via Docker Compose or Azure-hosted instance
+{%- elif database_backend == 'sqlite' %}
+- **Database**: SQLite (file-based, via `aiosqlite` async driver)
+- **Development/Testing**: Local file (`data/{{ project_slug }}.db`)
+- **Migrations**: Alembic with `render_as_batch=True` (required for SQLite ALTER TABLE)
 {%- else %}
 - **No database backend** is currently configured for this project.
 {%- endif %}
@@ -39,6 +43,20 @@ The database backend is selected via a `copier.yml` template variable and enviro
 
 - Requires a running PostgreSQL instance for development (Docker Compose provides this).
 - Some integration tests need a real PostgreSQL container.
+{%- elif database_backend == 'sqlite' %}
+
+### Positive
+
+- Zero-infrastructure setup — no database server to install or manage.
+- Excellent for prototyping, small deployments, and single-tenant applications.
+- Built into Python's stdlib; `aiosqlite` adds async support.
+
+### Negative
+
+- No concurrent write support (WAL mode helps but does not eliminate the limitation).
+- Not suitable for high-concurrency production workloads.
+- Alembic migrations require batch mode (`render_as_batch=True`) for column operations.
+- No native support for advanced types (JSON queries, arrays, full-text search).
 {%- else %}
 
 ### Positive

@@ -75,22 +75,17 @@ python_version:
     - "3.13"
     - "3.14"
 
-node_version:
-  type: str
-  help: "Node.js major version (for frontend tooling)"
-  default: "22"
-  choices:
-    - "20"
-    - "22"
-    - "24"
-
 frontend_framework:
   type: str
-  help: "Frontend framework (Lit or React, both use Vite + TypeScript)"
-  default: "lit"
+  help: "Frontend framework (React only — Bun + Vite + TypeScript)"
+  default: "react"
   choices:
-    Lit (lightweight Web Components + Vite): "lit"
-    React (React 19 + Vite): "react"
+    React (React 19 + Vite + Bun): "react"
+
+use_storybook:
+  type: bool
+  help: "Include Storybook component development environment"
+  default: true
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  Database
@@ -102,6 +97,7 @@ database_backend:
   default: "postgresql"
   choices:
     None (no database): "none"
+    SQLite (file-based, no server): "sqlite"
     PostgreSQL (local container): "postgresql"
     Azure Database for PostgreSQL Flexible Server: "azure_postgresql"
   when: "{{ cloud_provider == 'none' or cloud_provider == 'azure' }}"
@@ -155,16 +151,10 @@ use_devcontainer:
   help: "Include devcontainer configuration"
   default: true
 
-with_opencode:
-  type: bool
-  help: "Include OpenCode AI coding agent configuration (oh-my-opencode, OAC, plugins)"
-  default: false
-
 with_gsd:
   type: bool
-  help: "Include GSD-2 (v2.28+) autonomous coding agent (`gsd-pi`) — milestone-based development with verification"
+  help: "Include GSD-2 configuration (.gsd/ directory with preferences and MCP config)"
   default: false
-  when: "{{ with_opencode }}"
 
 container_runtime:
   type: str
@@ -361,6 +351,8 @@ _message_after_copy: |
     1. cd {{ _copier_conf.dst_path }}
     2. zsh scripts/bootstrap.zsh              # Quick setup (deps + pre-commit)
     3. task dev
+
+  Stack: Python {{ python_version }} + uv | React 19 + Bun + Vite + SWC | Biome | Tailwind CSS v4
 
   On Windows (PowerShell as Admin):
 

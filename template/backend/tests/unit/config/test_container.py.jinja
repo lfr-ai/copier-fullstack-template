@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from unittest.mock import patch, MagicMock
 
-from {{ project_slug }}.ports.container import Container, get_container
+from {{ project_slug }}.composition.container import Container, get_container
 
 TEST_DATABASE_URL = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
 
 _CONTAINER_PATCHES = (
-    "{{ project_slug }}.ports.container.get_settings",
-    "{{ project_slug }}.ports.container.create_session_factory",
-    "{{ project_slug }}.ports.container.create_engine",
+    "{{ project_slug }}.composition.container.get_settings",
+    "{{ project_slug }}.composition.container.create_session_factory",
+    "{{ project_slug }}.composition.container.create_engine",
 )
 
 def _apply_container_patches(func: Callable[..., None]) -> Callable[..., None]:

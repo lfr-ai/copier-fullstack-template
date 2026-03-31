@@ -19,13 +19,13 @@ All configuration is loaded from environment variables with the
 | `{{ project_slug | upper }}_PROFILING_ENABLED` | `bool` | `false` | Enable on-demand CPU profiling middleware (`?profile=1` or `?profile=cpu`) |
 | `{{ project_slug | upper }}_PROFILING_SECRET` | `str` | `""` | Shared secret for `X-Profile-Secret` header (required when profiling enabled) |
 | `{{ project_slug | upper }}_PROFILING_DIR` | `str` | `profiles` | Directory for saved profiling reports |
-{% if database_backend in ('postgresql', 'azure_postgresql') %}
+{% if database_backend != 'none' %}
 
 ## Database
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_DATABASE_URL` | `str` | {% if database_backend == 'azure_postgresql' %}`""` (empty — configure for your Azure Flexible Server){% else %}`postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}`{% endif %} | Full database connection URL |
+| `{{ project_slug | upper }}_DATABASE_URL` | `str` | {% if database_backend == 'azure_postgresql' %}`""` (empty — configure for your Azure Flexible Server){% elif database_backend == 'sqlite' %}`sqlite+aiosqlite:///data/{{ project_slug }}.db`{% else %}`postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}`{% endif %} | Full database connection URL |
 | `{{ project_slug | upper }}_DATABASE_ECHO` | `bool` | `false` | Log all SQL statements (useful for debugging) |
 | `{{ project_slug | upper }}_HOST` | `str` | `0.0.0.0` | Application bind host |
 | `{{ project_slug | upper }}_PORT` | `int` | `8000` | Application bind port |

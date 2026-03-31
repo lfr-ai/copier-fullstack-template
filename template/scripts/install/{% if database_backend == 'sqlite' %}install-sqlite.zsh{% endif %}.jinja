@@ -1,0 +1,157 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+# Install SQLite CLI + development libraries, and the aiosqlite Python driver.
+# SQLite is embedded in Python's stdlib, but the system CLI and dev headers
+# are needed for extensions and the native tools (sqldiff, sqlite3_analyzer).
+# Reference: https://www.sqlite.org/download.html
+
+SQLITE_MIN_VERSION="3.45"
+
+detect_platform() {
+emulate -L zsh
+local os_type
+os_type="$(uname -s)"
+case "${os_type}" in
+Linux)
+if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+print "wsl"
+else
+print "linux"
+fi
+;;
+Darwin) print "macos" ;;
+*) print "unknown" ;;
+esac
+}
+
+check_existing() {
+emulate -L zsh
+if command -v sqlite3 &>/dev/null; then
+local version
+version="$(sqlite3 --version 2>/dev/null | awk '{print $1}')"
+print "SQLite already installed: ${version}"
+return 0
+fi
+return 1
+}
+
+install_sqlite_linux() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "Installing SQLite on Linux..."
+
+if command -v apt-get &>/dev/null; then
+sudo apt-get update -qq
+sudo apt-get install -y sqlite3 libsqlite3-dev
+
+elif command -v dnf &>/dev/null; then
+sudo dnf install -y sqlite sqlite-devel
+
+elif command -v pacman &>/dev/null; then
+sudo pacman -S --noconfirm sqlite
+
+elif command -v apk &>/dev/null; then
+sudo apk add sqlite sqlite-dev
+
+else
+print "No supported package manager found." >&2
+print "Install SQLite manually from https://www.sqlite.org/download.html" >&2
+return 1
+fi
+}
+
+install_sqlite_macos() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "Installing SQLite on macOS..."
+# macOS ships with SQLite, but it may be outdated.
+# Homebrew provides a newer version.
+if command -v brew &>/dev/null; then
+brew install sqlite
+# Homebrew sqlite is keg-only; add to PATH hint.
+print "NOTE: Homebrew SQLite is keg-only. Add to PATH if you need it over the system version:"
+print ' export PATH="$(brew --prefix sqlite)/bin:$PATH"'
+else
+# macOS always has sqlite3 pre-installed
+if command -v sqlite3 &>/dev/null; then
+print "Using macOS built-in SQLite: $(sqlite3 --version)"
+else
+print "No Homebrew and no system sqlite3 found." >&2
+return 1
+fi
+fi
+}
+
+_install_python_driver() {
+emulate -L zsh
+# aiosqlite provides the async dialect for SQLAlchemy
+if command -v uv &>/dev/null; then
+uv pip install --upgrade "aiosqlite>=0.20"
+else
+python3 -m pip install --upgrade "aiosqlite>=0.20"
+fi
+}
+
+_create_data_dir() {
+emulate -L zsh
+# Ensure the data directory exists for the SQLite database file
+local data_dir="data"
+if [[ ! -d "${data_dir}" ]]; then
+mkdir -p "${data_dir}"
+print "Created ${data_dir}/ directory for SQLite database file"
+fi
+}
+
+_verify_installation() {
+emulate -L zsh
+if ! command -v sqlite3 &>/dev/null; then
+print "ERROR: sqlite3 CLI not found after installation" >&2
+return 1
+fi
+
+local version
+version="$(sqlite3 --version 2>/dev/null | awk '{print $1}')"
+print "SQLite ${version} installed successfully"
+
+# Verify Python can import sqlite3 and aiosqlite
+python3 -c "import sqlite3; print(f'Python sqlite3 module: {sqlite3.sqlite_version}')" 2>/dev/null || true
+python3 -c "import aiosqlite; print('aiosqlite driver: OK')" 2>/dev/null || true
+}
+
+main() {
+emulate -L zsh
+setopt PIPE_FAIL ERR_EXIT
+
+print "==== SQLite Installation ===="
+
+local platform
+platform="$(detect_platform)"
+
+if check_existing; then
+print "SQLite CLI is already available."
+else
+case "${platform}" in
+linux|wsl) install_sqlite_linux ;;
+macos) install_sqlite_macos ;;
+*)
+print "Unsupported platform: ${platform}" >&2
+print "Install SQLite from https://www.sqlite.org/download.html" >&2
+return 1
+;;
+esac
+fi
+
+_install_python_driver
+_create_data_dir
+_verify_installation
+
+print ""
+print "SQLite installation complete."
+print "Database file will be at: data/{{ project_slug }}.db"
+}
+
+main "$@"

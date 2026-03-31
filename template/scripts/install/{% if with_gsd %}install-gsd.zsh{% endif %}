@@ -1,0 +1,30 @@
+#!/usr/bin/env zsh
+# Install GSD-2 — AI coding agent CLI
+# Requires Bun (install via install-bun.zsh first)
+emulate -L zsh
+setopt ERR_EXIT PIPE_FAIL
+
+printf '==> Installing GSD-2...\n'
+
+# ── Verify Bun ───────────────────────────────────────────────────
+if ! command -v bun >/dev/null 2>&1; then
+  printf 'ERROR: Bun is required. Run install-bun.zsh first.\n' >&2
+  exit 1
+fi
+
+# ── Install GSD-2 ───────────────────────────────────────────────
+if command -v gsd >/dev/null 2>&1; then
+  printf '  GSD-2 already installed: %s\n' "$(gsd --version 2>/dev/null || echo 'unknown')"
+  printf '  Updating to latest...\n'
+fi
+
+bun install -g gsd-pi@latest
+
+# ── Verify ───────────────────────────────────────────────────────
+if command -v gsd >/dev/null 2>&1; then
+  printf '  GSD-2 installed: %s\n' "$(gsd --version 2>/dev/null || echo 'unknown')"
+else
+  printf 'WARNING: gsd command not found after install. Check PATH.\n' >&2
+fi
+
+printf '==> GSD-2 installation complete.\n'

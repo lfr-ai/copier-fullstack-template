@@ -137,7 +137,7 @@ target "app-prod" {
   }
 }
 
-// ─── Frontend (Vite / {{ frontend_framework | title }}) ──────────────────────
+// ─── Frontend (Vite / React) ──────────────────────
 
 target "frontend-dev" {
   description = "Frontend dev image with HMR"
@@ -167,7 +167,6 @@ target "caddy" {
   dockerfile  = "caddy/Containerfile"
   tags        = image_tags("{{ project_slug }}-caddy")
   args = {
-    NODE_VERSION  = "{{ node_version }}"
     CADDY_VERSION = "2.9"
   }
 }

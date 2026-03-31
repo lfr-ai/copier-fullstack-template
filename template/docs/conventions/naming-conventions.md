@@ -9,7 +9,7 @@
 | React components | `PascalCase.tsx`        | `UserProfile.tsx`                |
 | CSS modules      | `kebab-case.module.css` | `user-profile.module.css`        |
 | Shell scripts    | `kebab-case.zsh`        | `install-python.zsh`             |
-| Config files     | `kebab-case`            | `.prettierrc.json`               |
+| Config files     | `kebab-case`            | `biome.json`                     |
 | Documentation    | `UPPER-CASE.md`         | `ARCHITECTURE.md`                |
 | ADRs             | `NNNN-kebab-case.md`    | `0001-hexagonal-architecture.md` |
 

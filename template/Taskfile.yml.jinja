@@ -181,7 +181,7 @@ tasks:
   lint:markdown:
     desc: "Lint Markdown files"
     cmds:
-      - npx markdownlint-cli2 '**/*.md' '#node_modules'
+      - bunx markdownlint-cli2 '**/*.md' '#node_modules'
 
   lint:spelling:
     desc: "Check spelling with typos"
@@ -196,7 +196,7 @@ tasks:
   lint:duplicates:
     desc: "Detect copy-paste code with jscpd"
     cmds:
-      - npx jscpd --config .jscpd.json .
+      - bunx jscpd --config .jscpd.json .
 
   lint:secrets:
     desc: "Scan for leaked secrets"
@@ -311,7 +311,7 @@ tasks:
         until curl -sf http://{% raw %}{{.OPENAPI_HOST}}{% endraw %}:{% raw %}{{.OPENAPI_PORT}}{% endraw %}/api/openapi.json >/dev/null 2>&1; do
           sleep 0.5
         done
-      - cd frontend && npx openapi-typescript http://{% raw %}{{.OPENAPI_HOST}}{% endraw %}:{% raw %}{{.OPENAPI_PORT}}{% endraw %}/api/openapi.json -o src/types/api.ts
+      - cd frontend && bunx openapi-typescript http://{% raw %}{{.OPENAPI_HOST}}{% endraw %}:{% raw %}{{.OPENAPI_PORT}}{% endraw %}/api/openapi.json -o src/types/api.ts
       - kill %1 2>/dev/null || true
 {%- endif %}
 
@@ -319,7 +319,7 @@ tasks:
     desc: "Run security audits on all dependencies"
     cmds:
       - cd backend && uv run pip-audit 2>/dev/null || echo "pip-audit not installed, skipping"
-      - cd frontend && pnpm audit --audit-level moderate || true
+      - cd frontend && bun pm audit 2>/dev/null || echo "bun audit not available, skipping"
       - cd backend && uv run detect-secrets scan --baseline ../.secrets.baseline
 
   health:
@@ -377,104 +377,6 @@ tasks:
     desc: "Run SSH setup smoke tests"
     cmds:
       - zsh scripts/ssh/test-ssh-setup.zsh
-{% endif %}
-{% if with_opencode %}
-  install:opencode:
-    desc: "Install or update the OpenCode AI coding agent"
-    cmds:
-      - zsh scripts/install/install-opencode.zsh
-
-  install:opencode-ecosystem:
-    desc: "Install all OpenCode ecosystem companions (GSD-2, OAC, plugins)"
-    cmds:
-      - zsh scripts/install/install-opencode-ecosystem.zsh --all
-
-  opencode:health:
-    desc: "Run oh-my-opencode doctor to validate plugin setup"
-    cmds:
-      - bunx oh-my-opencode doctor --verbose
-
-  opencode:init-deep:
-    desc: "Generate hierarchical AGENTS.md files throughout the project"
-    cmds:
-      - echo "Run /init-deep inside an OpenCode session to generate hierarchical AGENTS.md files."
-{% endif %}
-{% if with_gsd %}
-  install:gsd:
-    desc: "Install GSD-2 (Get Shit Done) autonomous coding agent globally"
-    preconditions:
-      - sh: command -v node
-        msg: "Node.js is required. Install via: fnm install {{ node_version }}"
-    cmds:
-      - npm install -g gsd-pi@latest
-
-  gsd:
-    desc: "Start GSD-2 interactive session in the project"
-    cmds:
-      - gsd
-
-  gsd:auto:
-    desc: "Run GSD-2 autonomous mode in headless mode (CI/script friendly)"
-    cmds:
-      - gsd headless --timeout 600000 auto
-
-  gsd:next:
-    desc: "Run one GSD-2 step-mode unit (headless)"
-    cmds:
-      - gsd headless next
-
-  gsd:status:
-    desc: "Show GSD-2 project progress status (JSON)"
-    cmds:
-      - gsd headless --json status
-
-  gsd:doctor:
-    desc: "Run GSD-2 health checks"
-    cmds:
-      - gsd headless doctor
-
-  gsd:quick:
-    desc: "Run a quick GSD-2 task skipping planning overhead"
-    cmds:
-      - gsd headless quick
-
-  gsd:update:
-    desc: "Update GSD-2 to latest version"
-    cmds:
-      - npm install -g gsd-pi@latest
-
-  gsd:keys:
-    desc: "Manage GSD-2 LLM provider keys interactively"
-    cmds:
-      - gsd headless keys
-
-  gsd:export:
-    desc: "Export GSD-2 milestone reports as HTML"
-    cmds:
-      - gsd headless export --html --all
-{% endif %}
-{% if with_opencode %}
-  oac:install:
-    desc: "Install or update OpenAgents Control (OAC)"
-    cmds:
-      - echo "⚠️  Review the script before running — https://github.com/darrenhinde/OpenAgentsControl/blob/main/install.sh"
-      - curl -fsSL https://raw.githubusercontent.com/darrenhinde/OpenAgentsControl/main/install.sh | bash -s developer
-
-  oac:update:
-    desc: "Update OpenAgents Control to latest version"
-    cmds:
-      - echo "⚠️  Review the script before running — https://github.com/darrenhinde/OpenAgentsControl/blob/main/update.sh"
-      - curl -fsSL https://raw.githubusercontent.com/darrenhinde/OpenAgentsControl/main/update.sh | bash
-
-  oac:agent:
-    desc: "Start OAC OpenAgent session"
-    cmds:
-      - opencode --agent OpenAgent
-
-  oac:coder:
-    desc: "Start OAC OpenCoder session (production development)"
-    cmds:
-      - opencode --agent OpenCoder
 {% endif %}
 
   coverage:

@@ -19,12 +19,20 @@ install_task() {
 
     case "${os_type}" in
         Linux)
-            sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
-            export PATH="${HOME}/.local/bin:${PATH}"
+            if command -v apt-get &>/dev/null; then
+                curl -1sLf 'https://dl.cloudsmith.io/public/task/task/setup.deb.sh' | sudo -E bash
+                sudo apt-get install -y -qq task
+            elif command -v dnf &>/dev/null; then
+                curl -1sLf 'https://dl.cloudsmith.io/public/task/task/setup.rpm.sh' | sudo -E bash
+                sudo dnf install -y task
+            else
+                sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+                export PATH="${HOME}/.local/bin:${PATH}"
+            fi
             ;;
         Darwin)
             if command -v brew &>/dev/null; then
-                brew install go-task
+                brew install go-task/tap/go-task
             else
                 sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
             fi
@@ -37,6 +45,13 @@ install_task() {
     esac
 
     print "Task installed: $(task --version)"
+
+    local zshrc="${HOME}/.zshrc"
+    local completion_line='eval "$(task --completion zsh)"'
+    if [[ -f "${zshrc}" ]] && ! grep -qF 'task --completion' "${zshrc}"; then
+        print "${completion_line}" >> "${zshrc}"
+        print "Added Task shell completion to ${zshrc}"
+    fi
 }
 
 main() {

@@ -132,7 +132,7 @@ lychee --config .lychee.toml .
 [testenv:duplicates]
 description = Detect copy-paste code with jscpd
 skip_install = true
-allowlist_externals = npx
+allowlist_externals = bunx
 changedir = {toxinidir}
 commands =
-npx jscpd --config .jscpd.json .
+bunx jscpd --config .jscpd.json .

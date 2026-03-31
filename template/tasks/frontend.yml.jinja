@@ -3,85 +3,85 @@ tasks:
     desc: "Start Vite dev server"
     dir: frontend
     cmds:
-      - pnpm dev
+      - bun run dev
 
   build:
     desc: "Build for production"
     dir: frontend
     cmds:
-      - pnpm build
+      - bun run build
 
   build:staging:
     desc: "Build for staging"
     dir: frontend
     cmds:
-      - pnpm build:staging
+      - bun run build:staging
 
   build:test:
     desc: "Build for test"
     dir: frontend
     cmds:
-      - pnpm build:test
+      - bun run build:test
 
   install:
     desc: "Install frontend dependencies"
     dir: frontend
     cmds:
-      - pnpm install --frozen-lockfile
+      - bun install --frozen-lockfile
 
   test:unit:
     desc: "Run unit tests"
     dir: frontend
     cmds:
-      - pnpm test
+      - bun run test
 
   test:coverage:
     desc: "Run tests with coverage"
     dir: frontend
     cmds:
-      - pnpm test:coverage
+      - bun run test:coverage
 {% if use_playwright %}
   test:e2e:
     desc: "Run E2E tests (headless)"
     dir: frontend
     cmds:
-      - pnpm test:e2e
+      - bun run test:e2e
 
   test:e2e:ui:
     desc: "Run E2E tests with Playwright UI"
     dir: frontend
     cmds:
-      - pnpm exec playwright test --ui
+      - bunx playwright test --ui
 {% endif %}
   lint:
     desc: "Lint frontend code"
     dir: frontend
     cmds:
-      - pnpm lint
+      - bun run lint
 
   format:
     desc: "Format frontend code"
     dir: frontend
     cmds:
-      - pnpm format
+      - bun run format
 
   typecheck:
     desc: "Type check TypeScript"
     dir: frontend
     cmds:
-      - pnpm typecheck
+      - bun run typecheck
 
   clean:
     desc: "Remove build artifacts"
     dir: frontend
     cmds:
-      - rm -rf dist node_modules/.vite coverage playwright-report test-results
+      - rm -rf dist node_modules/.vite coverage playwright-report test-results storybook-static
 
   profile:bundle:
     desc: "Build with bundle analysis (rollup-plugin-visualizer)"
     dir: frontend
     cmds:
-      - ANALYZE=true pnpm build
+      - ANALYZE=true bun run build
       - |
         if [ -f dist/stats.html ]; then
           echo "Bundle analysis: dist/stats.html"
@@ -92,7 +92,7 @@ tasks:
     desc: "Run Lighthouse CI performance audit"
     dir: frontend
     cmds:
-      - pnpm exec lhci autorun --collect.url=http://localhost:3000 --collect.numberOfRuns=3 || true
+      - bunx lhci autorun --collect.url=http://localhost:3000 --collect.numberOfRuns=3 || true
       - echo "See .lighthouseci/ for reports"
 
   profile:lighthouse:ci:
@@ -100,9 +100,22 @@ tasks:
     dir: frontend
     cmds:
       - >-
-        pnpm exec lhci autorun
+        bunx lhci autorun
         --collect.url=http://localhost:3000
         --collect.numberOfRuns=5
         --assert.preset=lighthouse:recommended
         --assert.assertions.categories:performance=off
         || true
+{% if use_storybook %}
+  storybook:
+    desc: "Start Storybook development server"
+    dir: frontend
+    cmds:
+      - bun run storybook
+
+  storybook:build:
+    desc: "Build Storybook static site"
+    dir: frontend
+    cmds:
+      - bun run storybook:build
+{% endif %}

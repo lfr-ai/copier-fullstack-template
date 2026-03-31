@@ -27,7 +27,7 @@ emulate -L zsh
 
 if command -v redis-server &>/dev/null; then
 local version
-version="$(redis-server --version 2>/dev/null | grep -oP 'v=\K[0-9.]+')"
+version="$(redis-server --version 2>/dev/null | sed -n 's/.*v=\([0-9.]*\).*/\1/p')"
 print "Redis already installed: v${version}"
 return 0
 fi
@@ -41,10 +41,12 @@ setopt PIPE_FAIL ERR_EXIT
 print "Installing Redis on Linux..."
 
 if command -v apt-get &>/dev/null; then
-curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
-2>/dev/null || true
-print "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs)
-main" | sudo tee /etc/apt/sources.list.d/redis.list > /dev/null
+sudo mkdir -p /usr/share/keyrings
+curl -fsSL https://packages.redis.io/gpg \
+| sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg 2>/dev/null || true
+echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs)
+main" \
+| sudo tee /etc/apt/sources.list.d/redis.list > /dev/null
 sudo apt-get update
 sudo apt-get install -y redis
 elif command -v dnf &>/dev/null; then

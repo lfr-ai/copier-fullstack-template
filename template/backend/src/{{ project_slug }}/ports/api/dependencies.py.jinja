@@ -13,7 +13,7 @@ from fastapi import Depends, Request
 if TYPE_CHECKING:
     from {{ project_slug }}.application.services.user_service import UserService
     from {{ project_slug }}.config.settings.base import BaseAppSettings
-    from {{ project_slug }}.ports.container import Container
+    from {{ project_slug }}.composition.container import Container
 {%- if use_ai %}
     from {{ project_slug }}.ai.services import AIService
 {%- endif %}
@@ -36,7 +36,7 @@ __all__ = [
 
 def _get_container(request: Request) -> "Container":
     """Retrieve the singleton DI container."""
-    from {{ project_slug }}.ports.container import get_container
+    from {{ project_slug }}.composition.container import get_container
 
     return get_container()
 
@@ -48,7 +48,7 @@ def _get_settings(request: Request) -> "BaseAppSettings":
 
 def _get_user_service(request: Request) -> "UserService":
     """Retrieve a 'UserService' from the DI container."""
-    from {{ project_slug }}.ports.container import get_container
+    from {{ project_slug }}.composition.container import get_container
 
     return get_container().user_service()
 
@@ -61,7 +61,7 @@ UserServiceDep = Annotated["UserService", Depends(_get_user_service)]
 
 def _get_ai_service(request: Request) -> "AIService":
     """Retrieve an 'AIService' from the DI container."""
-    from {{ project_slug }}.ports.container import get_container
+    from {{ project_slug }}.composition.container import get_container
 
     return get_container().ai_service()
 
@@ -73,7 +73,7 @@ AIServiceDep = Annotated["AIService", Depends(_get_ai_service)]
 
 def _get_rag_service(request: Request) -> "RAGService":
     """Retrieve a 'RAGService' from the DI container."""
-    from {{ project_slug }}.ports.container import get_container
+    from {{ project_slug }}.composition.container import get_container
 
     return get_container().rag_service()
 

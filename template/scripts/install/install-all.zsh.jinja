@@ -98,8 +98,8 @@ fi
 json_entries="${json_entries}\"${component}\": \"${status}\""
 done
 
-print "{\"timestamp\": \"${TIMESTAMP}\", \"platform\": \"$(detect_platform)\", \"results\": {${json_entries}}}" >
-"${log_file}"
+print "{\"timestamp\": \"${TIMESTAMP}\", \"platform\": \"$(detect_platform)\", \"results\": {${json_entries}}}" \
+> "${log_file}"
 print "Log saved to ${log_file}"
 }
 
@@ -118,7 +118,7 @@ print "╚═══════════════════════�
 run_installer "Git" "${SCRIPT_DIR}/install-git.zsh"
 run_installer "Zsh" "${SCRIPT_DIR}/install-zsh.zsh"
 run_installer "Python + uv" "${SCRIPT_DIR}/install-python.zsh"
-run_installer "Node.js + pnpm" "${SCRIPT_DIR}/install-node.zsh"
+run_installer "Bun" "${SCRIPT_DIR}/install-bun.zsh"
 run_installer "Container Engine" "${SCRIPT_DIR}/install-container.zsh"
 run_installer "Task CLI" "${SCRIPT_DIR}/install-task.zsh"
 run_installer "VS Code" "${SCRIPT_DIR}/install-vscode.zsh"
@@ -136,19 +136,17 @@ run_installer "Redis" "${SCRIPT_DIR}/install-redis.zsh"
 {% if use_faiss %}
 run_installer "FAISS" "${SCRIPT_DIR}/install-faiss.zsh"
 {% endif %}
+{% if database_backend == 'sqlite' %}
+run_installer "SQLite" "${SCRIPT_DIR}/install-sqlite.zsh"
+{% endif %}
 {% if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
 run_installer "Neo4j" "${SCRIPT_DIR}/install-neo4j.zsh"
 {% endif %}
 {% if cloud_provider != "none" %}
 run_installer "Cloud CLI" "${SCRIPT_DIR}/install-cloud-cli.zsh"
 {% endif %}
-{% if with_opencode %}
-run_installer "OpenCode" "${SCRIPT_DIR}/install-opencode.zsh"
 {% if with_gsd %}
-run_installer "OpenCode Ecosystem (GSD)" "${SCRIPT_DIR}/install-opencode-ecosystem.zsh" --gsd --plugins
-{% else %}
-run_installer "OpenCode Plugins" "${SCRIPT_DIR}/install-opencode-ecosystem.zsh" --plugins
-{% endif %}
+run_installer "GSD-2" "${SCRIPT_DIR}/install-gsd.zsh"
 {% endif %}
 
 print_summary

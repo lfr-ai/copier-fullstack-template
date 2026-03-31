@@ -1,35 +1,40 @@
 ---
 description:
-  'Writes production-quality code following the approved plan. Has full file editing and
-  terminal access. Focuses on one task at a time.'
+    "Writes production-quality code following the approved plan. Has full file editing and
+    terminal access. Focuses on one task at a time."
 user-invocable: false
-model: ['Claude Sonnet 4 (copilot)', 'GPT-4.1 (copilot)', 'Claude Opus 4 (copilot)']
+model:
+    [
+        "Claude Sonnet 4 (copilot)",
+        "GPT-4.1 (copilot)",
+        "Claude Opus 4 (copilot)",
+    ]
 tools:
-  [
-    read/readFile,
-    read/problems,
-    search/codebase,
-    search/fileSearch,
-    search/textSearch,
-    search/listDirectory,
-    search/changes,
-    search/usages,
-    edit/editFiles,
-    execute/runInTerminal,
-    execute/getTerminalOutput,
-    web/fetch,
-    context7/get-library-docs,
-    context7/resolve-library-id,
-  ]
+    [
+        read/readFile,
+        read/problems,
+        search/codebase,
+        search/fileSearch,
+        search/textSearch,
+        search/listDirectory,
+        search/changes,
+        search/usages,
+        edit/editFiles,
+        execute/runInTerminal,
+        execute/getTerminalOutput,
+        web/fetch,
+        context7/get-library-docs,
+        context7/resolve-library-id,
+    ]
 handoffs:
-  - label: 'Request Review'
-    agent: Reviewer
-    prompt: 'Review the implementation above for correctness and code quality.'
-    send: false
-  - label: 'Run Tests'
-    agent: Tester
-    prompt: 'Generate and run tests for the implementation above.'
-    send: false
+    - label: "Request Review"
+      agent: reviewer
+      prompt: "Review the implementation above for correctness and code quality."
+      send: false
+    - label: "Run Tests"
+      agent: tester
+      prompt: "Generate and run tests for the implementation above."
+      send: false
 ---
 
 You are the **Implementer** — a code-writing agent that executes tasks from an approved

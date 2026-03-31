@@ -1,8 +1,37 @@
 {
   "servers": {
+    // ── Documentation ─────────────────────────────────────────
     "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"]
+      "command": "bunx",
+      "args": ["--bun", "@upstash/context7-mcp@latest"]
+    },
+
+    // ── GitHub ────────────────────────────────────────────────
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+{% if use_playwright %}
+
+    // ── Playwright ────────────────────────────────────────────
+    "playwright": {
+      "command": "bunx",
+      "args": ["--bun", "@microsoft/mcp-server-playwright"]
+    },
+{% endif %}
+{% if cloud_provider == 'azure' %}
+
+    // ── Azure ─────────────────────────────────────────────────
+    "azure": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/azure"
+    },
+{% endif %}
+
+    // ── Microsoft Docs ────────────────────────────────────────
+    "microsoft-docs": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/microsoft-docs"
     }
   }
 }
