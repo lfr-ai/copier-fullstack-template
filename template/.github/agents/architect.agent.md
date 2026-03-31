@@ -38,8 +38,9 @@ implementation plans for architectural correctness. You NEVER modify files.
 - **application/** → Imports from `core` only. No framework imports. Services
   orchestrate use cases
 - **ports/** → Imports from `application` and `core`. FastAPI/Click allowed here
-- **adapters/** → Imports from all inner layers. SQLAlchemy, httpx, redis allowed
-- **infrastructure/** → Low-level primitives (DB engines, HTTP clients, security)
+- **adapters/** → Imports from all inner layers. SQLAlchemy, httpx, redis allowed. Includes
+  low-level primitives (DB engines, HTTP clients, persistence, caching, messaging)
+- **composition/** → Dependency injection container. Wires protocols to concrete adapters
 - **utils/** → stdlib + third-party only. NO first-party imports
 - **config/** → Separate pillar. Settings, constants
 

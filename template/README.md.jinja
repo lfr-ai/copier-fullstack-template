@@ -128,7 +128,7 @@ backend/src/{{ project_slug }}/
 │   └── graphql/     # Strawberry GraphQL schema, resolvers, types
 {%- endif %}
 ├── adapters/        # Outbound adapters (DB, cache, messaging)
-├── infrastructure/  # Low-level (database, HTTP, security, profiling, observability)
+├── composition/     # Dependency injection wiring
 ├── config/          # Settings, DI container
 {%- if use_ai %}
 ├── ai/              # LLM/agent tooling

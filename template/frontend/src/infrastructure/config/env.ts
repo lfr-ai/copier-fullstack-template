@@ -48,7 +48,7 @@ function resolveEnvironment(): AppEnvironment {
  *
  * Import this wherever you need environment-aware behaviour:
  * ```ts
- * import { config } from '@/config/env';
+ * import { config } from '@/infrastructure/config/env';
  * if (config.isDev) { ... }
  * ```
  */

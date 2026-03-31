@@ -29,7 +29,8 @@ always point **inward** toward the pure domain core.
 | Application Business Rules | **Application** | `application/` |
 | Interface Adapters (driving) | **Ports** | `ports/` |
 | Interface Adapters (driven) | **Adapters** | `adapters/` |
-| Frameworks & Drivers | **Infrastructure** | `infrastructure/` |
+
+**Note**: In this project, **adapters** serve as the infrastructure layer, containing all framework-specific implementations (DB engines, HTTP clients, security, profiling). There is no separate `infrastructure/` source directory at the top level.
 
 ### Dependency Rule
 
@@ -39,8 +40,6 @@ All dependencies point **inward** toward the domain core:
 ports ──────────┐
                 ├──→ application ──→ core
 adapters ───────┘
-        ↑
-  infrastructure
 ```
 
 - **Ports** (driving/inbound) depend on application services
@@ -132,7 +131,7 @@ The innermost circle contains:
 
 ### Composition Root
 
-The DI container (`ports/container.py`) is the **Composition Root** —
+The DI container (`composition/container.py`) is the **Composition Root** —
 the single place where concrete adapter classes are wired to port
 interfaces. It lives in the outermost layer where all concrete types
 are visible.
@@ -159,7 +158,7 @@ backend/src/{{ project_slug }}/
     graphql/      # Strawberry GraphQL schema, resolvers, types, dataloaders
 {%- endif %}
   config/         # Settings, constants, logging
-  infrastructure/ # Low-level primitives (DB engines, security, scheduling, profiling)
+  composition/    # Composition Root — DI container wiring protocols to adapters
   utils/          # Shared utilities (stdlib + third-party only)
 {%- if use_ai %}
   ai/             # LLM adapters, agents, embeddings, prompt templates
@@ -304,6 +303,10 @@ MCP Server ← FastMCP + streamable-http + structured output (outputSchema)
   ├─ Tools: search_documents, complete_text, run_rag_query, query_knowledge_graph, evaluate_output, ...
   ├─ Resources: config://ai-settings, status://health
   └─ Prompts: rag_query, summarize_document, extract_entities
+```
+{%- endif %}
+
+tities
 ```
 {%- endif %}
 
