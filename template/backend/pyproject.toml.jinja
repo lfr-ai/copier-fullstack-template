@@ -6,7 +6,7 @@ readme = "../README.md"
 license = { text = "{{ license }}" }
 requires-python = ">={{ python_version }}"
 authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
-keywords = ["fastapi", "hexagonal-architecture", "clean-architecture", "fullstack"]
+keywords = ["fastapi", "clean-architecture", "fullstack"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: FastAPI",
@@ -108,7 +108,7 @@ dev = [
 ]
 
 [project.scripts]
-{{ project_slug }} = "{{ project_slug }}.ports.cli.app:main"
+{{ project_slug }} = "{{ project_slug }}.presentation.cli.app:main"
 
 [build-system]
 requires = ["hatchling>=1.27"]

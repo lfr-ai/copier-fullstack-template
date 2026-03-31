@@ -7,8 +7,8 @@ from fastapi import APIRouter
 from starlette import status
 
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
-from {{ project_slug }}.ports.api.dependencies import UserServiceDep
-from {{ project_slug }}.ports.api.schemas.user_schema import CreateUserRequest, UserResponse
+from {{ project_slug }}.presentation.api.dependencies import UserServiceDep
+from {{ project_slug }}.presentation.api.schemas.user_schema import CreateUserRequest, UserResponse
 
 router = APIRouter()
 

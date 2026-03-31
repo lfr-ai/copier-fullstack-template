@@ -4,6 +4,6 @@ setopt PIPE_FAIL ERR_EXIT NO_UNSET
 
 print "Seeding database..."
 
-uv run python -m {{ project_slug }}.ports.cli.app db-seed
+uv run python -m {{ project_slug }}.presentation.cli.app db-seed
 
 print "Database seeded"

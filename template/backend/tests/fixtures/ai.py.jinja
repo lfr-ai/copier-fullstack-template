@@ -1,6 +1,6 @@
 """AI test fixtures.
 
-Provides mock implementations of AI ports for unit testing.
+Provides mock implementations of AI gateways for unit testing.
 """
 {%- if use_ai %}
 
@@ -10,31 +10,31 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
-from {{ project_slug }}.core.interfaces.llm import LLMPort
-from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStorePort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStoreGateway
 
 
 @pytest.fixture
 def mock_llm() -> AsyncMock:
-    """Create a mock LLM port.
+    """Create a mock LLM gateway.
 
     Returns:
         AsyncMock: Mock LLM that returns a fixed completion.
     """
-    llm = AsyncMock(spec=LLMPort)
+    llm = AsyncMock(spec=LLMGateway)
     llm.complete.return_value = "Mock LLM response"
     return llm
 
 
 @pytest.fixture
 def mock_embedding() -> AsyncMock:
-    """Create a mock embedding port.
+    """Create a mock embedding gateway.
 
     Returns:
         AsyncMock: Mock embedding that returns a fixed vector.
     """
-    emb = AsyncMock(spec=EmbeddingPort)
+    emb = AsyncMock(spec=EmbeddingGateway)
     emb.embed_text.return_value = [0.1] * 1536
     emb.embed_texts.return_value = [[0.1] * 1536]
     emb.dimension = 1536
@@ -43,12 +43,12 @@ def mock_embedding() -> AsyncMock:
 
 @pytest.fixture
 def mock_vector_store() -> AsyncMock:
-    """Create a mock vector store port.
+    """Create a mock vector store gateway.
 
     Returns:
         AsyncMock: Mock vector store with stubbed search results.
     """
-    store = AsyncMock(spec=VectorStorePort)
+    store = AsyncMock(spec=VectorStoreGateway)
     store.search.return_value = [
         VectorSearchResult(id="doc-1", score=0.95, metadata={"content": "Test chunk"}),
     ]

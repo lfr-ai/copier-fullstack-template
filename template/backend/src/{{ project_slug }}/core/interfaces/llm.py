@@ -1,4 +1,4 @@
-"""LLM provider port."""
+"""LLM provider gateway."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from {{ project_slug }}.core.value_objects.model_config import (
 
 
 @runtime_checkable
-class LLMPort(Protocol):
-    """Protocol for LLM completion providers."""
+class LLMGateway(Protocol):
+    """Gateway for LLM completion providers."""
 
     @property
     def model(self) -> str:

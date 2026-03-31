@@ -5,8 +5,8 @@ from __future__ import annotations
 import strawberry
 
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
-from {{ project_slug }}.ports.graphql.context import GraphQLContext
-from {{ project_slug }}.ports.graphql.types import (
+from {{ project_slug }}.presentation.graphql.context import GraphQLContext
+from {{ project_slug }}.presentation.graphql.types import (
     CreateUserInput,
     UserType,
 {%- if use_ai %}

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import structlog
 
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 from {{ project_slug }}.ai.config import DEFAULT_MAX_TOKENS, EXTRACTION_INPUT_LIMIT
 
@@ -32,7 +32,7 @@ class LLMEntityExtractor:
 
     __slots__ = ("_llm", "_max_triplets")
 
-    def __init__(self, *, llm: LLMPort, max_triplets_per_chunk: int = _DEFAULT_MAX_TRIPLETS) -> None:
+    def __init__(self, *, llm: LLMGateway, max_triplets_per_chunk: int = _DEFAULT_MAX_TRIPLETS) -> None:
         self._llm = llm
         self._max_triplets = max_triplets_per_chunk
 

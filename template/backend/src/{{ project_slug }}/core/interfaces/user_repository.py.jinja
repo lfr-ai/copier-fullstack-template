@@ -1,4 +1,4 @@
-"""User repository protocol for domain persistence contracts."""
+"""User repository — domain persistence contract for users."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from {{ project_slug }}.core.interfaces.repository import Repository
 
 
 @runtime_checkable
-class UserRepositoryPort(Repository[User], Protocol):
-    """Port defining user persistence operations.
+class UserRepository(Repository[User], Protocol):
+    """Repository defining user persistence operations.
 
     Extends the generic :class:`Repository` with user-specific
     lookup methods.

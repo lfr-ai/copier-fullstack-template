@@ -9,13 +9,13 @@ applyTo: "backend/tests/**/*.py"
 backend/tests/
 ├── conftest.py              # Root fixtures (DB session, engine, app client) — defined ONCE
 ├── unit/                    # Fast, isolated, no I/O
-│   ├── core/                # Entities, VOs, events, errors, ports
+│   ├── core/                # Entities, VOs, events, errors, interfaces
 │   ├── application/         # Services, DTOs, commands, queries, mappers, tasks
-│   ├── adapters/            # Repositories (mocked session), cache, messaging, auth
-│   ├── ports/               # App factories, middleware, error handlers
+│   ├── infrastructure/      # Repositories (mocked session), cache, messaging, auth
+│   ├── presentation/        # App factories, middleware, error handlers
 │   ├── utils/               # Enums, validators, logger, retry, date, string, crypto
 │   └── config/              # Settings, celery config, DI container
-├── integration/             # Real DB, real Redis, real adapters
+├── integration/             # Real DB, real Redis, real infrastructure
 ├── property/                # Hypothesis property-based tests
 ├── performance/             # Benchmarks
 ├── factories/               # Per-entity test data factories
@@ -51,11 +51,11 @@ EVERY source module MUST have corresponding test(s):
 | `application/services/*`          | `unit/application/test_*_service.py`          |
 | `application/dtos/*`              | `unit/application/test_*_dto.py`              |
 | `application/mappers/*`           | `unit/application/test_*_mapper.py`           |
-| `adapters/persistence/repos/*`    | `unit/adapters/test_*_repository.py`          |
-| `adapters/cache/*`                | `unit/adapters/test_*_cache.py`               |
-| `adapters/messaging/*`            | `unit/adapters/test_*_event_bus.py`           |
-| `ports/api/routes/*`              | `integration/test_api_routes.py`              |
-| `ports/api/middleware/*`          | `unit/ports/test_middleware.py`               |
+| `infrastructure/persistence/repos/*` | `unit/infrastructure/test_*_repository.py`  |
+| `infrastructure/cache/*`          | `unit/infrastructure/test_*_cache.py`         |
+| `infrastructure/messaging/*`      | `unit/infrastructure/test_*_event_bus.py`     |
+| `presentation/api/routes/*`       | `integration/test_api_routes.py`              |
+| `presentation/api/middleware/*`   | `unit/presentation/test_middleware.py`         |
 | `utils/*`                          | `unit/utils/test_*.py` (one per util module)  |
 | `config/settings.py`              | `unit/config/test_settings.py`                |
 
@@ -103,7 +103,7 @@ markers = [
 - Prefer `factory_boy` factories over raw fixture data
 
 
-- Mock at the boundary (ports/interfaces), NEVER inside core
+- Mock at the boundary (interfaces), NEVER inside core
 - Prefer dependency injection over monkey-patching
 - Never mock what you don't own — wrap external libraries first
 - ZERO real DB/Redis in unit tests

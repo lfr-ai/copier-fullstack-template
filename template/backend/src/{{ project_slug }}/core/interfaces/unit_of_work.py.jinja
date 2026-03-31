@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
 
 if TYPE_CHECKING:
     from {{ project_slug }}.core.entities.base import Entity
-    from {{ project_slug }}.core.interfaces.user_repository import UserRepositoryPort
+    from {{ project_slug }}.core.interfaces.user_repository import UserRepository
 
 
 @runtime_checkable
@@ -22,7 +22,7 @@ class UnitOfWork(Protocol):
     """
 
     @property
-    def users(self) -> UserRepositoryPort:
+    def users(self) -> UserRepository:
         """Access the user repository within the current transaction."""
         ...
 

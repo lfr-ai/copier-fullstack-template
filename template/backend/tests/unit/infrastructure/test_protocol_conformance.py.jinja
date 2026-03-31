@@ -7,20 +7,20 @@ their corresponding interface protocols using runtime_checkable.
 from __future__ import annotations
 
 
-from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
-from {{ project_slug }}.adapters.messaging.memory_event_bus import MemoryEventBus
-from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import SQLAlchemyUnitOfWork
-from {{ project_slug }}.core.interfaces.cache import CachePort
+from {{ project_slug }}.infrastructure.cache.memory_cache import MemoryCacheAdapter
+from {{ project_slug }}.infrastructure.messaging.memory_event_bus import MemoryEventBus
+from {{ project_slug }}.infrastructure.persistence.unit_of_work.sqlalchemy_uow import SQLAlchemyUnitOfWork
+from {{ project_slug }}.core.interfaces.cache import CacheGateway
 from {{ project_slug }}.core.interfaces.event_bus import EventBus
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
-class TestCachePortConformance:
-    """Verify adapters satisfy CachePort protocol."""
+class TestCacheGatewayConformance:
+    """Verify adapters satisfy CacheGateway protocol."""
 
-    def test_memory_cache_is_cache_port(self) -> None:
-        """Verify MemoryCacheAdapter is an instance of CachePort."""
+    def test_memory_cache_is_cache_gateway(self) -> None:
+        """Verify MemoryCacheAdapter is an instance of CacheGateway."""
         adapter = MemoryCacheAdapter()
-        assert isinstance(adapter, CachePort)
+        assert isinstance(adapter, CacheGateway)
 
 class TestEventBusConformance:
     """Verify adapters satisfy EventBus protocol."""
@@ -43,29 +43,29 @@ class TestUnitOfWorkConformance:
 
 {%- if use_redis %}
 
-class TestRedisCachePortConformance:
-    """Verify RedisCacheAdapter satisfies CachePort protocol."""
+class TestRedisCacheGatewayConformance:
+    """Verify RedisCacheAdapter satisfies CacheGateway protocol."""
 
-    def test_redis_cache_is_cache_port(self) -> None:
-        """Verify RedisCacheAdapter is an instance of CachePort."""
+    def test_redis_cache_is_cache_gateway(self) -> None:
+        """Verify RedisCacheAdapter is an instance of CacheGateway."""
         from unittest.mock import MagicMock
 
-        from {{ project_slug }}.adapters.cache.redis_cache import RedisCacheAdapter
+        from {{ project_slug }}.infrastructure.cache.redis_cache import RedisCacheAdapter
 
         mock_client = MagicMock()
         adapter = RedisCacheAdapter(mock_client)
-        assert isinstance(adapter, CachePort)
+        assert isinstance(adapter, CacheGateway)
 {%- endif %}
 {%- if use_ai %}
 
 
-class TestToolPortConformance:
-    """Verify AI tool adapters satisfy ToolPort protocol."""
+class TestToolGatewayConformance:
+    """Verify AI tool adapters satisfy ToolGateway protocol."""
 
-    def test_base_tool_subclass_is_tool_port(self) -> None:
-        """Verify a BaseTool subclass satisfies ToolPort."""
+    def test_base_tool_subclass_is_tool_gateway(self) -> None:
+        """Verify a BaseTool subclass satisfies ToolGateway."""
         from {{ project_slug }}.ai.tools.base_tool import BaseTool, ToolResult
-        from {{ project_slug }}.core.interfaces.tool import ToolPort
+        from {{ project_slug }}.core.interfaces.tool import ToolGateway
 
         class DummyTool(BaseTool):
             @property
@@ -80,35 +80,35 @@ class TestToolPortConformance:
                 return ToolResult(content="ok")
 
         tool = DummyTool()
-        assert isinstance(tool, ToolPort)
+        assert isinstance(tool, ToolGateway)
 
 
-class TestChainPortConformance:
-    """Verify AI chain adapters satisfy ChainPort protocol."""
+class TestChainGatewayConformance:
+    """Verify AI chain adapters satisfy ChainGateway protocol."""
 
-    def test_base_chain_subclass_is_chain_port(self) -> None:
-        """Verify a BaseChain subclass satisfies ChainPort."""
+    def test_base_chain_subclass_is_chain_gateway(self) -> None:
+        """Verify a BaseChain subclass satisfies ChainGateway."""
         from {{ project_slug }}.ai.chains.base_chain import BaseChain
-        from {{ project_slug }}.core.interfaces.chain import ChainPort
+        from {{ project_slug }}.core.interfaces.chain import ChainGateway
 
         class DummyChain(BaseChain):
             async def run(self, *, input_text: str, **kwargs: object) -> dict[str, str]:
                 return {"content": input_text}
 
         chain = DummyChain()
-        assert isinstance(chain, ChainPort)
+        assert isinstance(chain, ChainGateway)
 
 
-class TestEvaluatorPortConformance:
-    """Verify evaluator adapters satisfy EvaluatorPort protocol."""
+class TestEvaluatorGatewayConformance:
+    """Verify evaluator adapters satisfy EvaluatorGateway protocol."""
 
-    def test_llm_judge_is_evaluator_port(self) -> None:
-        """Verify LLMJudgeEvaluator satisfies EvaluatorPort."""
+    def test_llm_judge_is_evaluator_gateway(self) -> None:
+        """Verify LLMJudgeEvaluator satisfies EvaluatorGateway."""
         from unittest.mock import MagicMock
 
         from {{ project_slug }}.ai.evaluation.llm_judge import LLMJudgeEvaluator
-        from {{ project_slug }}.core.interfaces.evaluator import EvaluatorPort
+        from {{ project_slug }}.core.interfaces.evaluator import EvaluatorGateway
 
         evaluator = LLMJudgeEvaluator(llm=MagicMock())
-        assert isinstance(evaluator, EvaluatorPort)
+        assert isinstance(evaluator, EvaluatorGateway)
 {%- endif %}

@@ -1,3 +1,3 @@
-"""RAG retriever adapters — implements 'RetrieverPort'."""
+"""RAG retriever adapters — implements 'RetrieverGateway'."""
 
 from __future__ import annotations

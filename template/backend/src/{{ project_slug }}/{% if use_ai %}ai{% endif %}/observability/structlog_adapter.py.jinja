@@ -9,14 +9,14 @@ from typing import override
 import structlog
 
 from {{ project_slug }}.config.constants import MS_PER_SECOND
-from {{ project_slug }}.core.interfaces.observability import ObservabilityPort, TraceSpan
+from {{ project_slug }}.core.interfaces.observability import ObservabilityGateway, TraceSpan
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 _MS_PER_SECOND: int = MS_PER_SECOND
 
 
-class StructlogObservability(ObservabilityPort):
+class StructlogObservability(ObservabilityGateway):
     """Structlog-backed AI tracing and telemetry."""
 
     __slots__ = ("_active_traces",)

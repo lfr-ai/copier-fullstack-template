@@ -1,4 +1,4 @@
-"""Workflow repository protocol for domain persistence contracts."""
+"""Workflow repository — domain persistence contract for workflows."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from {{ project_slug }}.core.interfaces.repository import Repository
 
 
 @runtime_checkable
-class WorkflowRepositoryPort(Repository[Workflow], Protocol):
-    """Port defining workflow persistence operations.
+class WorkflowRepository(Repository[Workflow], Protocol):
+    """Repository defining workflow persistence operations.
 
     Extends the generic :class:`Repository` with workflow-specific
     lookup methods.

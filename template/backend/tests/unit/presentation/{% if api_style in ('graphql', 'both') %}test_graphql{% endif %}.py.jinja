@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from {{ project_slug }}.ports.api.app import create_api_app
+from {{ project_slug }}.presentation.api.app import create_api_app
 
 pytestmark = pytest.mark.asyncio
 
@@ -319,7 +319,7 @@ class TestQueryDepthLimiter:
 
     async def test_excessively_deep_query_rejected(self) -> None:
         """Verify queries exceeding max depth limit are rejected."""
-        from {{ project_slug }}.ports.graphql.schema import create_schema
+        from {{ project_slug }}.presentation.graphql.schema import create_schema
 
         schema = create_schema(max_depth=2)
         result = await schema.execute(

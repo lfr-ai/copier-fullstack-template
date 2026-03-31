@@ -8,15 +8,15 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI
 
-from {{ project_slug }}.ports.api.middleware.cors import setup_cors
-from {{ project_slug }}.ports.api.middleware.error_handler import register_error_handlers
-from {{ project_slug }}.ports.api.middleware.profiling import ProfilingMiddleware
-from {{ project_slug }}.ports.api.middleware.rate_limit import configure_rate_limiting
-from {{ project_slug }}.ports.api.middleware.request_id import RequestIdMiddleware
-from {{ project_slug }}.ports.api.middleware.security_headers import SecurityHeadersMiddleware
-from {{ project_slug }}.ports.api.middleware.timing import TimingMiddleware
+from {{ project_slug }}.presentation.api.middleware.cors import setup_cors
+from {{ project_slug }}.presentation.api.middleware.error_handler import register_error_handlers
+from {{ project_slug }}.presentation.api.middleware.profiling import ProfilingMiddleware
+from {{ project_slug }}.presentation.api.middleware.rate_limit import configure_rate_limiting
+from {{ project_slug }}.presentation.api.middleware.request_id import RequestIdMiddleware
+from {{ project_slug }}.presentation.api.middleware.security_headers import SecurityHeadersMiddleware
+from {{ project_slug }}.presentation.api.middleware.timing import TimingMiddleware
 {%- if api_style in ('rest', 'both') %}
-from {{ project_slug }}.ports.api.router import api_router
+from {{ project_slug }}.presentation.api.router import api_router
 {%- endif %}
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -123,9 +123,9 @@ def _mount_graphql(app: FastAPI, *, debug: bool = False) -> None:
     error logging, optional 'orjson' acceleration, and the
     'QueryDepthLimiter' schema extension for abuse prevention.
     """
-    from {{ project_slug }}.ports.graphql.context import get_graphql_context
-    from {{ project_slug }}.ports.graphql.router import ProductionGraphQLRouter
-    from {{ project_slug }}.ports.graphql.schema import create_schema
+    from {{ project_slug }}.presentation.graphql.context import get_graphql_context
+    from {{ project_slug }}.presentation.graphql.router import ProductionGraphQLRouter
+    from {{ project_slug }}.presentation.graphql.schema import create_schema
 
     settings = app.state.settings
     gql_schema = create_schema(max_depth=settings.graphql_max_depth)

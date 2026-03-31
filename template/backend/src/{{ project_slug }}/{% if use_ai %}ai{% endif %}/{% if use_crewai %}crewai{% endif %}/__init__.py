@@ -14,7 +14,7 @@ multi-agent systems (HMAS) with:
 * **Tools** — bridge application callables to CrewAI tool protocol
 * **YAML Config** — declarative agent/task definitions via YAML
 
-Integrates cleanly with the existing hexagonal architecture:
+Integrates cleanly with the existing Clean Architecture:
   'core/interfaces' → 'ai/crewai' → 'application/services'
 """
 

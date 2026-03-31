@@ -14,7 +14,7 @@ from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 from {{ project_slug }}.core.interfaces.workflow_engine import (
     WorkflowConfig,
-    WorkflowEnginePort,
+    WorkflowEngineGateway,
 )
 
 
@@ -29,7 +29,7 @@ class WorkflowService(BaseService):
         self,
         *,
         uow: UnitOfWork,
-        engine: WorkflowEnginePort,
+        engine: WorkflowEngineGateway,
     ) -> None:
         super().__init__(uow=uow)
         self._engine = engine

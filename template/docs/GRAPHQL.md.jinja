@@ -16,12 +16,12 @@ task dev
 
 ## Architecture
 
-The GraphQL layer follows the same **hexagonal / clean architecture**
+The GraphQL layer follows the same **Clean Architecture**
 used by the REST routes. Resolvers are thin — they delegate to the
 **application service** layer and return Strawberry types.
 
 ```
-ports/graphql/
+presentation/graphql/
 ├── __init__.py          # Package marker
 ├── context.py           # GraphQLContext (DI, auth, request)
 ├── dataloaders.py       # DataLoader factories (N+1 prevention)
@@ -186,7 +186,7 @@ for batching database queries. Create new loaders following the existing
 ```bash
 # Run GraphQL-specific tests (from backend/ directory)
 cd backend
-uv run pytest tests/unit/ports/test_graphql.py -v
+uv run pytest tests/unit/presentation/test_graphql.py -v
 
 # Run schema integrity tests (from backend/ directory)
 uv run pytest tests/integration/test_graphql_schema.py -v

@@ -1,4 +1,4 @@
-"""Sentence-transformers embedding adapter — implements 'EmbeddingPort'.
+"""Sentence-transformers embedding adapter — implements 'EmbeddingGateway'.
 
 Uses local sentence-transformer models for embedding generation,
 running entirely on CPU without external API calls.
@@ -13,10 +13,10 @@ import structlog
 from typing import override
 
 from {{ project_slug }}.ai.config import DEFAULT_SENTENCE_TRANSFORMER_MODEL
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-class SentenceTransformerEmbeddingAdapter(EmbeddingPort):
+class SentenceTransformerEmbeddingAdapter(EmbeddingGateway):
     """Embedding adapter backed by sentence-transformers (local inference)."""
 
     __slots__ = ("_dimension", "_model", "_model_name")

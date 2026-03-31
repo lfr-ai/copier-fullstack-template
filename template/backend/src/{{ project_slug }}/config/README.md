@@ -1,6 +1,6 @@
 # Config
 
-Application settings, dependency-injection container, logging, and constants.
+Application settings, logging, and constants.
 
 | File           | Purpose                                         |
 | -------------- | ----------------------------------------------- |

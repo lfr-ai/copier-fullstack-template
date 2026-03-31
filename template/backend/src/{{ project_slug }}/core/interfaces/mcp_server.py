@@ -1,4 +1,4 @@
-"""MCP server port — abstract interface for Model Context Protocol server lifecycle."""
+"""MCP server gateway — abstract interface for Model Context Protocol server lifecycle."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class MCPServerPort(Protocol):
-    """Protocol for managing an MCP server instance."""
+class MCPServerGateway(Protocol):
+    """Gateway for managing an MCP server instance."""
 
     def create_app(self) -> object:
         """Create and return an ASGI-mountable MCP application.

@@ -1,8 +1,7 @@
 
 # Testing
 
-{{ project_name }} uses a layered testing strategy aligned with the clean / hexagonal
-architecture.
+{{ project_name }} uses a layered testing strategy aligned with Clean Architecture.
 
 ## Running Tests
 
@@ -25,8 +24,8 @@ backend/tests/
 +-- unit/
 |   +-- core/              # Domain entity and value object tests
 |   +-- application/       # Service and use case tests
-|   +-- adapters/          # Adapter tests (mocked I/O)
-|   +-- ports/             # API route and CLI tests
+|   +-- infrastructure/    # Infrastructure tests (mocked I/O)
+|   +-- presentation/      # API route and CLI tests
 {%- if api_style in ('graphql', 'both') %}
 |   |   +-- test_graphql.py   # GraphQL schema, queries, mutations
 {%- endif %}

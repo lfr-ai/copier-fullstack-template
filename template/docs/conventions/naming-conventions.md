@@ -3,7 +3,7 @@
 | Context          | Convention              | Example                          |
 | ---------------- | ----------------------- | -------------------------------- |
 | Python modules   | `snake_case.py`         | `user_service.py`                |
-| Python packages  | `snake_case/`           | `adapters/`                      |
+| Python packages  | `snake_case/`           | `infrastructure/`                |
 | TypeScript files | `kebab-case.ts`         | `web-vitals.ts`                  |
 | React hooks      | `camelCase.ts`          | `useMediaQuery.ts`               |
 | React components | `PascalCase.tsx`        | `UserProfile.tsx`                |
@@ -11,7 +11,7 @@
 | Shell scripts    | `kebab-case.zsh`        | `install-python.zsh`             |
 | Config files     | `kebab-case`            | `biome.json`                     |
 | Documentation    | `UPPER-CASE.md`         | `ARCHITECTURE.md`                |
-| ADRs             | `NNNN-kebab-case.md`    | `0001-hexagonal-architecture.md` |
+| ADRs             | `NNNN-kebab-case.md`    | `0001-clean-architecture.md` |
 
 | Context      | Convention                              | Example                                 |
 | ------------ | --------------------------------------- | --------------------------------------- |

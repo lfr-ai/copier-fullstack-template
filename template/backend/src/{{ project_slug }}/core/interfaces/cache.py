@@ -1,4 +1,4 @@
-"""Cache protocol for abstracted caching operations."""
+"""Cache gateway for abstracted caching operations."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class CachePort(Protocol):
-    """Protocol for cache operations."""
+class CacheGateway(Protocol):
+    """Gateway for cache operations."""
 
     async def get(self, key: str) -> str | None:
         """Retrieve cached value by key."""

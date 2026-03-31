@@ -244,7 +244,7 @@
         "request": "launch",
         "module": "uvicorn",
         "args": [
-          "{{ project_slug }}.ports.api.app:create_api_app",
+          "{{ project_slug }}.presentation.api.app:create_api_app",
           "--factory",
           "--reload",
           "--port",
@@ -268,7 +268,7 @@
         "name": "Backend: CLI",
         "type": "debugpy",
         "request": "launch",
-        "module": "{{ project_slug }}.ports.cli.app",
+        "module": "{{ project_slug }}.presentation.cli.app",
         "args": [],
         "justMyCode": true
       }

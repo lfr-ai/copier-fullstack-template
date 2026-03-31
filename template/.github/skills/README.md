@@ -8,7 +8,7 @@ repository. Each skill is a directory containing a `SKILL.md` file following the
 
 | Skill                     | Description                                                                                    |
 | ------------------------- | ---------------------------------------------------------------------------------------------- |
-| `hexagonal-architecture/` | Enforce clean / hexagonal architecture boundaries, Dependency Rule, and UoW-with-repos pattern |
+| `clean-architecture/`     | Enforce Clean Architecture boundaries, Dependency Rule, and UoW-with-repos pattern             |
 | `python-conventions/`     | Enforce Python standards, typing, logging, and signatures                                      |
 | `testing-conventions/`    | Apply test structure, markers, and coverage expectations                                       |
 | `naming-registry/`        | Registry-first workflow for shared constants and CI checks                                     |
@@ -20,7 +20,7 @@ also invoke them explicitly as slash commands: type `/` in chat and select a ski
 
 When working on a task, apply skills in this order:
 
-1. Architecture / Clean Architecture (`hexagonal-architecture`)
+1. Architecture / Clean Architecture (`clean-architecture`)
 2. Implementation (`python-conventions`)
 3. Registry contract (`naming-registry`)
 4. Verification (`testing-conventions`)

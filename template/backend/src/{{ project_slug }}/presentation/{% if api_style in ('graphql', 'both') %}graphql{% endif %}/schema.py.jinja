@@ -10,10 +10,10 @@ from __future__ import annotations
 import strawberry
 from strawberry.extensions import QueryDepthLimiter
 
-from {{ project_slug }}.ports.graphql.mutations import Mutation
-from {{ project_slug }}.ports.graphql.queries import Query
+from {{ project_slug }}.presentation.graphql.mutations import Mutation
+from {{ project_slug }}.presentation.graphql.queries import Query
 {%- if use_graphql_subscriptions %}
-from {{ project_slug }}.ports.graphql.subscriptions import Subscription
+from {{ project_slug }}.presentation.graphql.subscriptions import Subscription
 {%- endif %}
 
 _DEFAULT_MAX_QUERY_DEPTH: int = 10

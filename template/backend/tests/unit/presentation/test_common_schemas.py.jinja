@@ -6,10 +6,10 @@ import pytest
 from pydantic import ValidationError
 
 from {{ project_slug }}.core.enums import ServiceStatus, SortOrder
-from {{ project_slug }}.ports.api.schemas.error_response import ErrorDetail, ErrorResponse
-from {{ project_slug }}.ports.api.schemas.health import DependencyHealth, HealthResponse
-from {{ project_slug }}.ports.api.schemas.pagination import PaginatedResponse, PaginationParams
-from {{ project_slug }}.ports.api.schemas.sorting import SortParams
+from {{ project_slug }}.presentation.api.schemas.error_response import ErrorDetail, ErrorResponse
+from {{ project_slug }}.presentation.api.schemas.health import DependencyHealth, HealthResponse
+from {{ project_slug }}.presentation.api.schemas.pagination import PaginatedResponse, PaginationParams
+from {{ project_slug }}.presentation.api.schemas.sorting import SortParams
 
 
 class TestDependencyHealth:

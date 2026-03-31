@@ -1,4 +1,4 @@
-"""Prompt template port — abstract interface for structured prompt management.
+"""Prompt template gateway — abstract interface for structured prompt management.
 
 Concrete adapters may use LangChain's 'ChatPromptTemplate',
 LlamaIndex's prompt system, or simple f-string templates.
@@ -10,8 +10,8 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class PromptTemplatePort(Protocol):
-    """Protocol for managing and rendering structured prompt templates."""
+class PromptTemplateGateway(Protocol):
+    """Gateway for managing and rendering structured prompt templates."""
 
     def render(
         self,

@@ -29,7 +29,7 @@ When asked to review code, run these subagents **in parallel**:
    docstring quality, adherence to Google-style docstrings
 3. **Security reviewer**: Input validation, injection risks, data exposure,
    authentication flaws, dependency vulnerabilities (see OWASP Top 10)
-4. **Architecture reviewer**: Clean / hexagonal architecture boundary compliance,
+4. **Architecture reviewer**: Clean Architecture boundary compliance,
    Dependency Rule, dependency direction, interface segregation, design consistency,
    layer violations
 5. **Performance reviewer**: N+1 queries, missing indices, inappropriate data

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Self
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from {{ project_slug }}.adapters.persistence.repositories.user_repository import UserRepository
+from {{ project_slug }}.infrastructure.persistence.repositories.user_repository import UserRepository
 from {{ project_slug }}.core.entities.base import Entity
 
 if TYPE_CHECKING:

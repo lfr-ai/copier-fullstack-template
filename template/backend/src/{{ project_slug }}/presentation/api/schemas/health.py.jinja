@@ -7,7 +7,7 @@ from typing import Annotated
 from pydantic import Field
 
 from {{ project_slug }}.core.enums import ServiceStatus
-from {{ project_slug }}.ports.api.schemas.base import BaseSchema
+from {{ project_slug }}.presentation.api.schemas.base import BaseSchema
 class DependencyHealth(BaseSchema):
     """Health info for a single dependency (database, cache, etc.)."""
 

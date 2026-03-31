@@ -15,21 +15,19 @@ working within this codebase.
 ---
 
 
-This project follows **clean / hexagonal architecture** (ports & adapters) with
+This project follows **Clean Architecture** with
 strict layering. The **Dependency Rule** is the fundamental invariant: source-code
-dependencies always point **inward**, never from core toward frameworks/adapters.
+dependencies always point **inward**, never from core toward frameworks/infrastructure.
 
 ```text
 ┌─────────────────────────────────────────┐
-│  Ports (API routes, CLI, web)            │  ← Framework-specific entry points
+│  Presentation (API routes, CLI, web)     │  ← Framework-specific entry points
 ├─────────────────────────────────────────┤
 │  Application (services, commands, DTOs) │  ← Orchestration, use cases
 ├─────────────────────────────────────────┤
 │  Core (entities, value objects, events) │  ← Pure domain, ZERO framework imports
 ├─────────────────────────────────────────┤
-│  Adapters (DB, cache, HTTP, email)      │  ← External integration implementations
-├─────────────────────────────────────────┤
-│  Infrastructure (engines, clients)      │  ← Low-level technical concerns
+│  Infrastructure (DB, cache, HTTP, email)│  ← External integration implementations
 └─────────────────────────────────────────┘
 ```
 
@@ -39,27 +37,26 @@ dependencies always point **inward**, never from core toward frameworks/adapters
 | --- | --- | --- |
 | Entities | Core | `core/` |
 | Use Cases | Application | `application/` |
-| Interface Adapters | Ports + Adapters | `ports/`, `adapters/` |
-| Frameworks & Drivers | Infrastructure | `infrastructure/` |
+| Interface Adapters (inbound) | Presentation | `presentation/` |
+| Frameworks & Drivers (outbound) | Infrastructure | `infrastructure/` |
 
-### Dependency Rule
+### The Dependency Rule
 
-**Always inward**: `adapters → ports → application → core`
+**Always inward**: `presentation/infrastructure → application → core`
 
 - **Core** imports NOTHING external. Only `stdlib` and `typing`.
 - **Application** imports from `core` only. No framework imports.
   - Application services access persistence via **UoW repository properties**
-    (e.g. `uow.users`), NEVER by importing concrete adapter classes.
-- **Ports** imports from `application` and `core`. FastAPI/Click{% if api_style in ('graphql', 'both') %}/Strawberry{% endif %} allowed here.
-- **Adapters** imports from all inner layers. SQLAlchemy, httpx, redis allowed here.
-  - Concrete repos are instantiated inside the UoW adapter — only the adapter
+    (e.g. `uow.users`), NEVER by importing concrete infrastructure classes.
+- **Presentation** imports from `application` and `core`. FastAPI/Click{% if api_style in ('graphql', 'both') %}/Strawberry{% endif %} allowed here.
+- **Infrastructure** imports from all inner layers. SQLAlchemy, httpx, redis allowed here.
+  - Concrete repos are instantiated inside the UoW — only the infrastructure
     layer touches concrete repository implementations.
-- **Infrastructure** provides low-level primitives (DB engines, HTTP clients, security, profiling).
 - **Utils** is a shared leaf — `stdlib` + third-party only. NO first-party imports.
 - **Config** is a separate pillar — settings, constants. Not part of the layer stack.
 
 
-- NO business logic in adapters, ports, infrastructure, or middleware
+- NO business logic in infrastructure, presentation, or middleware
 - NO ORM models in core — core uses pure dataclasses (`frozen=True`, `slots=True`)
 - NO Pydantic models in core — Pydantic is a port/adapter concern
 - NO circular dependencies between any modules
@@ -136,25 +133,28 @@ class MyStatus(ParseableEnum):
 
 ```text
 backend/src/{{ project_slug }}/
-├── adapters/       # External integrations (DB repos, cache, HTTP clients)
-├── ai/             # LLM/agent tooling
-├── application/    # Use cases, services, DTOs
-├── config/         # Settings, logging, constants
 ├── core/           # Pure domain (entities, enums, interfaces, value objects)
-├── infrastructure/ # DB engines, HTTP clients, security, profiling (pyinstrument, tracemalloc, SQL hooks)
-├── ports/          # API routes,{% if api_style in ('graphql', 'both') %} GraphQL resolvers,{% endif %} CLI, web, DI container
+├── application/    # Use cases, services, DTOs
+├── presentation/   # API routes,{% if api_style in ('graphql', 'both') %} GraphQL resolvers,{% endif %} CLI, web controllers
+├── infrastructure/ # DB repos, cache, HTTP clients, auth, profiling
+├── composition/    # Dependency injection wiring
+├── config/         # Settings, logging, constants
+{%- if use_ai %}
+├── ai/             # AI vertical: LLM, agents, RAG, MCP
+{%- endif %}
 └── utils/          # Shared utilities
 
 backend/tests/
 ├── conftest.py             # Root-level shared fixtures (engine, session, client)
 ├── unit/                   # Pure logic, no I/O — mirrors src/ structure
-│   ├── adapters/
-│   ├── ai/
-│   ├── application/
-│   ├── config/
 │   ├── core/               # Includes test_registry_constants.py
+│   ├── application/
 │   ├── infrastructure/
-│   ├── ports/
+│   ├── presentation/
+│   ├── config/
+{%- if use_ai %}
+│   ├── ai/
+{%- endif %}
 │   └── utils/
 ├── integration/            # Tests with real DB / external services
 ├── property/               # Hypothesis property-based tests (incl. test_generate_registry.py)
@@ -308,39 +308,32 @@ Located in `.github/agents/`. Invoked via `@AgentName` in Copilot Chat (agent mo
 
 | Agent | File | Invocable | Tools | Purpose |
 |-------|------|-----------|-------|---------|
-| **Coordinator** | `coordinator.agent.md` | Yes | agent, read, search, edit, execute, web | Central orchestrator; routes tasks to workers |
-| **Planner** | `planner.agent.md` | No | read, search | Generates structured implementation plans |
-| **Architect** | `architect.agent.md` | No | read, search | Validates clean / hexagonal architecture boundaries |
-| **Implementer** | `implementer.agent.md` | No | read, search, edit, execute | Writes code following project conventions |
-| **Reviewer** | `reviewer.agent.md` | No | read, search | Multi-dimension code quality review |
-| **Tester** | `tester.agent.md` | No | read, search, edit, execute | Generates unit/integration/property/E2E tests |
-| **Security Auditor** | `security-auditor.agent.md` | No | read, search | OWASP/CWE vulnerability scanning |
-| **Doc Writer** | `doc-writer.agent.md` | No | read, search, edit | Documentation: docstrings, ADRs, guides |
-| **TDD** | `tdd.agent.md` | Yes | agent, read, search, edit, execute | Red-Green-Refactor TDD orchestrator |
-| **Red** | `red.agent.md` | No | read, search, edit, execute | TDD Red phase; write failing tests |
-| **Green** | `green.agent.md` | No | read, search, edit, execute | TDD Green phase; minimal passing implementation |
-| **Refactor TDD** | `refactor-tdd.agent.md` | No | read, search, edit, execute | TDD Refactor phase; improve code quality |
+| **Coordinator** | `coordinator.agent.md` | Yes | agent, read, search, edit, execute, web | Central orchestrator; routes tasks to specialized agents with inlined phase guidance (planning, implementation, review, testing, documentation) |
+| **TDD** | `tdd.agent.md` | Yes | agent, read, search, edit, execute | Red-Green-Refactor TDD orchestrator with inlined red/green/refactor phase guidance |
 | **Thorough Reviewer** | `thorough-reviewer.agent.md` | Yes | agent, read, search | Multi-perspective parallel code review |
 | **Deep Thinking** | `deep-thinking.agent.md` | Yes | read, search, execute | Complex problem-solving with extended reasoning |
 | **Debug** | `debug.agent.md` | Yes | read, search, edit, execute | Systematic 4-phase debugging |
+| **Security Auditor** | `security-auditor.agent.md` | No | read, search | OWASP/CWE vulnerability scanning |
 
 #### Copilot Handoff Workflow
 
-The coordinator supports **handoffs** — structured transition points where the human
-can approve, redirect, or abort before the next phase begins:
+The coordinator includes inlined phase guidance (formerly separate planner, architect,
+implementer, reviewer, tester, doc-writer agents) and supports **handoffs** — structured
+transition points where the human can approve, redirect, or abort:
 
-1. **Discovery** → handoff → **Planning** (Planner + Architect)
-2. **Planning** → handoff → **Implementation** (Implementer)
-3. **Implementation** → handoff → **Review** (Reviewer + Security Auditor)
-4. **Review** → handoff → **Testing** (Tester)
-5. **Testing** → handoff → **Documentation** (Doc Writer)
+1. **Discovery** → handoff → **Planning** (coordinator: planning phase)
+2. **Planning** → handoff → **Implementation** (coordinator: implementation phase)
+3. **Implementation** → handoff → **Review** (coordinator: review phase + security auditor)
+4. **Review** → handoff → **Testing** (coordinator: testing phase)
+5. **Testing** → handoff → **Documentation** (coordinator: documentation phase)
 
 #### Usage Examples (Copilot)
 
 ```
 @Coordinator Implement a new user preferences feature with API endpoint and frontend form
 @TDD Add a discount calculation service using test-driven development
-@Thorough Reviewer Review the changes in the current branch
+@Thorough-Reviewer Review the changes in the current branch
+@Debug Investigate the intermittent database connection timeout
 ```
 ### Agent Design Principles
 
@@ -454,7 +447,7 @@ is a directory under `.github/skills/` containing a `SKILL.md` file following th
 
 | Skill | Directory | Scope |
 |-------|-----------|-------|
-| **Hexagonal Architecture** | `hexagonal-architecture/` | Ports & adapters boundaries, dependency rules |
+| **Clean Architecture** | `clean-architecture/` | Layer boundaries, dependency rules, pattern conventions |
 | **Python Conventions** | `python-conventions/` | Naming, typing, Pydantic, async patterns |
 | **Testing Conventions** | `testing-conventions/` | Pytest fixtures, factories, assertions, coverage |
 | **Naming Registry** | `naming-registry/` | Canonical names for modules, classes, variables |
@@ -468,12 +461,7 @@ Invoke via `/` slash command in chat, or Command Palette → **Chat: Run Prompt 
 
 | Prompt | File | Purpose |
 |--------|------|---------|
-| **Architecture** | `architecture.prompt.md` | Architecture review and design decisions |
 | **Conventional Commit** | `conventional-commit.prompt.md` | Generate commit messages following Conventional Commits |
-| **Debug** | `debug.prompt.md` | Systematic debugging session |
-| **Refactor** | `refactor.prompt.md` | Code refactoring with quality checks |
-| **Review** | `review.prompt.md` | Multi-dimension code review |
-| **Test** | `test.prompt.md` | Test generation and coverage analysis |
 
 ---
 

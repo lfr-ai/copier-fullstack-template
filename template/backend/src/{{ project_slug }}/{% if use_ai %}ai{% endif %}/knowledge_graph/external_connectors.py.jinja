@@ -10,7 +10,7 @@ from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_ENTITY_LOOKUP_LIMIT,
     DEFAULT_RELATION_LIMIT,
     DEFAULT_SPARQL_TIMEOUT_SECONDS,
-    ExternalKnowledgeGraphPort,
+    ExternalKnowledgeGraphGateway,
 )
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -52,7 +52,7 @@ class _SPARQLMixin:
         ]
 
 
-class WikidataKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphPort):
+class WikidataKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphGateway):
     """Query Wikidata via its public SPARQL endpoint.
 
     Wikidata is a free, collaborative, multilingual knowledge base with
@@ -149,7 +149,7 @@ class WikidataKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphPort):
     # _run_sparql inherited from _SPARQLMixin
 
 
-class DBpediaKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphPort):
+class DBpediaKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphGateway):
     """Query DBpedia via its public SPARQL endpoint.
 
     DBpedia extracts structured information from Wikipedia, making it
@@ -249,7 +249,7 @@ class DBpediaKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphPort):
     # _run_sparql inherited from _SPARQLMixin
 
 
-class ConceptNetKnowledgeGraph(ExternalKnowledgeGraphPort):
+class ConceptNetKnowledgeGraph(ExternalKnowledgeGraphGateway):
     """Query ConceptNet via its REST API.
 
     ConceptNet is a multilingual knowledge graph connecting words and

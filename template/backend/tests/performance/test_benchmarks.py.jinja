@@ -1,0 +1,144 @@
+"""Benchmark tests using pytest-benchmark.
+
+This test demonstrates the benchmark marker pattern:
+- Uses pytest-benchmark fixture for performance testing
+- Measures execution time and provides statistics
+- Useful for detecting performance regressions
+- Shows both simple and pedantic benchmark modes
+
+Run with::
+
+    uv run pytest tests/performance/ -m benchmark --benchmark-enable
+    uv run pytest tests/performance/ -m benchmark --benchmark-compare
+    uv run tox -e performance
+
+Note: Benchmarks are disabled by default. Use --benchmark-enable to run them.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.core.entities.base import DomainEvent, Entity
+
+
+@pytest.mark.benchmark
+@pytest.mark.performance
+class TestEntityBenchmarks:
+    """Benchmark entity creation and operations.
+
+    The performance/ conftest auto-applies @pytest.mark.performance.
+    Explicit @pytest.mark.benchmark is added for benchmark-specific filtering.
+    """
+
+    def test_benchmark_entity_creation(self, benchmark) -> None:
+        """Benchmark Entity instantiation.
+
+        Arrange: Define entity creation function
+        Act: Benchmark it
+        Assert: Entity created successfully
+        """
+        # Arrange & Act
+        result = benchmark(Entity)
+
+        # Assert
+        assert result.id is not None
+
+    def test_benchmark_entity_with_id(self, benchmark) -> None:
+        """Benchmark Entity creation with explicit ID.
+
+        Demonstrates benchmarking with arguments.
+        """
+        # Arrange & Act
+        result = benchmark(Entity, id="test-id-123")
+
+        # Assert
+        assert result.id == "test-id-123"
+
+    def test_benchmark_entity_event_registration(self, benchmark) -> None:
+        """Benchmark event registration on entity.
+
+        Arrange: Create entity and event
+        Act: Benchmark registration
+        Assert: Event registered
+        """
+        # Arrange
+        entity = Entity()
+        event = DomainEvent()
+
+        def register_event() -> None:
+            entity.register_event(event)
+
+        # Act
+        benchmark(register_event)
+
+        # Assert - Event should be registered
+        events = entity.collect_events()
+        assert len(events) > 0
+
+    def test_benchmark_pedantic_domain_event(self, benchmark) -> None:
+        """Benchmark DomainEvent creation using pedantic mode.
+
+        Pedantic mode provides more control over benchmark execution:
+        - Runs multiple iterations with setup/teardown isolation
+        - Provides more accurate statistics
+        - Useful for benchmarks with side effects
+
+        Arrange: None needed
+        Act: Use benchmark.pedantic with callable
+        Assert: Event created with all required fields
+        """
+        # Act - Use pedantic mode for precise measurement
+        result = benchmark.pedantic(
+            DomainEvent,
+            iterations=100,
+            rounds=10,
+        )
+
+        # Assert
+        assert result.event_id is not None
+        assert result.occurred_at is not None
+
+
+@pytest.mark.benchmark
+@pytest.mark.performance
+class TestDomainEventBenchmarks:
+    """Benchmark domain event creation."""
+
+    def test_benchmark_event_creation_batch(self, benchmark) -> None:
+        """Benchmark creating multiple events.
+
+        Demonstrates benchmarking operations that create collections.
+        """
+        # Arrange
+        def create_events() -> list[DomainEvent]:
+            return [DomainEvent() for _ in range(100)]
+
+        # Act
+        result = benchmark(create_events)
+
+        # Assert
+        assert len(result) == 100
+        # Verify all events have unique IDs
+        event_ids = [event.event_id for event in result]
+        assert len(set(event_ids)) == 100
+
+    def test_benchmark_event_equality(self, benchmark) -> None:
+        """Benchmark event equality comparison.
+
+        Arrange: Create two events
+        Act: Benchmark equality check
+        Assert: Comparison works
+        """
+        # Arrange
+        event_a = DomainEvent()
+        event_b = DomainEvent()
+
+        def compare_events() -> bool:
+            return event_a == event_b
+
+        # Act
+        result = benchmark(compare_events)
+
+        # Assert - Events should not be equal (different IDs)
+        assert result is False

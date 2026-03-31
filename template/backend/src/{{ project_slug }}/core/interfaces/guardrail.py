@@ -1,4 +1,4 @@
-"""Guardrail port — abstract interface for AI safety guardrails.
+"""Guardrail gateway — abstract interface for AI safety guardrails.
 
 Concrete adapters may use NeMo Guardrails, custom rule-based
 validators, or LLM-based content moderation.
@@ -21,8 +21,8 @@ class GuardrailResult:
 
 
 @runtime_checkable
-class GuardrailPort(Protocol):
-    """Protocol for AI input/output safety validation."""
+class GuardrailGateway(Protocol):
+    """Gateway for AI input/output safety validation."""
 
     async def validate_input(
         self,

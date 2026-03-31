@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from {{ project_slug }}.application.dtos.mcp_dto import MCPToolCallDTO, MCPToolResultDTO
 from {{ project_slug }}.application.services.base import BaseService
-from {{ project_slug }}.core.interfaces.mcp_server import MCPServerPort
+from {{ project_slug }}.core.interfaces.mcp_server import MCPServerGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 class MCPService(BaseService):
     """Application-level MCP orchestration.
@@ -17,7 +17,7 @@ class MCPService(BaseService):
         self,
         *,
         uow: UnitOfWork,
-        mcp_server: MCPServerPort,
+        mcp_server: MCPServerGateway,
     ) -> None:
         super().__init__(uow=uow)
         self._mcp_server = mcp_server
@@ -26,7 +26,7 @@ class MCPService(BaseService):
         """Return the ASGI-mountable MCP application.
 
         Uses 'streamable_http_app()' (MCP SDK >= 1.x) with fallback
-        to 'create_app()' for 'MCPServerPort' implementations.
+        to 'create_app()' for 'MCPServerGateway' implementations.
         """
         server = self._mcp_server
         if hasattr(server, "streamable_http_app"):

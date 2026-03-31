@@ -10,12 +10,12 @@ import pytest
 from {{ project_slug }}.ai.chains.base_chain import ChainResult
 from {{ project_slug }}.ai.chains.refinement_chain import RefinementChain
 from {{ project_slug }}.ai.chains.summarization_chain import SummarizationChain
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 
 @pytest.fixture
 def llm() -> AsyncMock:
-    mock = AsyncMock(spec=LLMPort)
+    mock = AsyncMock(spec=LLMGateway)
     mock.complete.return_value = "Mock response"
     return mock
 
