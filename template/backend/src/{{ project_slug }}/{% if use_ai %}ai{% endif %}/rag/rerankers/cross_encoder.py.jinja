@@ -1,4 +1,4 @@
-"""Cross-encoder reranker adapter — implements 'RerankerPort'.
+"""Cross-encoder reranker adapter — implements 'RerankerGateway'.
 
 Uses 'sentence-transformers' cross-encoder models to rerank
 retrieval results by computing pairwise relevance scores.
@@ -12,10 +12,10 @@ import structlog
 from typing import override
 
 from {{ project_slug }}.ai.config import DEFAULT_CROSS_ENCODER_MODEL
-from {{ project_slug }}.core.interfaces.reranker import RankedResult, RerankerPort, _DEFAULT_RERANK_TOP_K
+from {{ project_slug }}.core.interfaces.reranker import RankedResult, RerankerGateway, _DEFAULT_RERANK_TOP_K
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-class CrossEncoderReranker(RerankerPort):
+class CrossEncoderReranker(RerankerGateway):
     """Reranker backed by a cross-encoder model.
 
     Cross-encoders jointly encode query-document pairs for

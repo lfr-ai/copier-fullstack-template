@@ -10,7 +10,7 @@ from fastapi import APIRouter
 
 from {{ project_slug }}.config.constants import MS_PER_SECOND
 from {{ project_slug }}.core.enums import ServiceStatus
-from {{ project_slug }}.ports.api.schemas.health import DependencyHealth, HealthResponse
+from {{ project_slug }}.presentation.api.schemas.health import DependencyHealth, HealthResponse
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 

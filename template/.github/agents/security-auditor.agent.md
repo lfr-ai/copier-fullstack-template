@@ -30,7 +30,7 @@ vulnerabilities and risks. You NEVER modify files.
 ### 1. Input Validation
 
 - Are all user inputs validated before processing?
-- Are Pydantic models used for request validation in `ports/`?
+- Are Pydantic models used for request validation in `presentation/`?
 - Are string lengths, numeric bounds, and patterns enforced?
 - Is there protection against oversized payloads?
 

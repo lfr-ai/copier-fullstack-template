@@ -14,7 +14,7 @@ from typing import override
 
 from {{ project_slug }}.ai.agents.base_agent import AgentResult, AgentTool, BaseAgent
 from {{ project_slug }}.ai.config import DEFAULT_AGENT_MAX_STEPS
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _STEP_MAX_TOKENS: int = 1024
@@ -35,7 +35,7 @@ class ToolCallingAgent(BaseAgent):
     def __init__(
         self,
         *,
-        llm: LLMPort,
+        llm: LLMGateway,
         tools: list[AgentTool] | None = None,
         executors: dict[str, ToolExecutor] | None = None,
         max_steps: int = DEFAULT_AGENT_MAX_STEPS,

@@ -1,4 +1,4 @@
-"""Password hashing port for domain-layer abstraction."""
+"""Password hashing protocol for domain-layer abstraction."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class PasswordHasher(Protocol):
-    """Port defining password hashing operations.
+    """Protocol defining password hashing operations.
 
     Allows the application layer to hash and verify passwords
     without depending on a concrete infrastructure implementation.

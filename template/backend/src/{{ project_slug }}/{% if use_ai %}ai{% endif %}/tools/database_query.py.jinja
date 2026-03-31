@@ -8,7 +8,7 @@ from typing import override
 
 from {{ project_slug }}.ai.config import EVAL_MAX_TOKENS
 from {{ project_slug }}.ai.tools.base_tool import BaseTool, ToolResult
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _FORBIDDEN_PATTERNS: re.Pattern[str] = re.compile(
@@ -29,7 +29,7 @@ class DatabaseQueryTool(BaseTool):
     def __init__(
         self,
         *,
-        llm: LLMPort,
+        llm: LLMGateway,
         database_url: str,
         schema_description: str = "",
     ) -> None:

@@ -10,7 +10,7 @@ from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_LIMIT,
     DEFAULT_RELATION_LIMIT,
 )
-from {{ project_slug }}.ports.api.dependencies import ContainerDep
+from {{ project_slug }}.presentation.api.dependencies import ContainerDep
 
 router = APIRouter()
 

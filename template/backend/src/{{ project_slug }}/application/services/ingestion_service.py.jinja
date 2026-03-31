@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from {{ project_slug }}.application.dtos.ingestion_dto import IngestionRequestDTO, IngestionResultDTO
 from {{ project_slug }}.application.services.base import BaseService
-from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
-from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
-from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
-from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 _MIN_TRIPLET_TOKENS: int = 3
 """Minimum whitespace-separated tokens for heuristic triplet extraction."""
@@ -25,11 +25,11 @@ class IngestionService(BaseService):
         self,
         *,
         uow: UnitOfWork,
-        loader: DocumentLoaderPort,
-        splitter: TextSplitterPort,
-        embedding: EmbeddingPort,
-        vector_store: VectorStorePort,
-        knowledge_graph: KnowledgeGraphPort | None = None,
+        loader: DocumentLoaderGateway,
+        splitter: TextSplitterGateway,
+        embedding: EmbeddingGateway,
+        vector_store: VectorStoreGateway,
+        knowledge_graph: KnowledgeGraphGateway | None = None,
     ) -> None:
         super().__init__(uow=uow)
         self._loader = loader

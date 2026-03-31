@@ -1,12 +1,11 @@
-
 # Architecture
 
-This project follows **clean / hexagonal architecture** (ports & adapters).
+This project follows **Clean Architecture** as described by Robert C. Martin (Uncle Bob).
 The Dependency Rule is the fundamental invariant: source-code dependencies
 always point **inward** toward the pure domain core.
 
 ```
-                  Ports (Driving)
+              Presentation (Inbound)
    API/REST     Web          CLI
 
             Application Layer
@@ -16,7 +15,7 @@ always point **inward** toward the pure domain core.
     Entities  Value Objects  Events
     Interfaces  Enums  Exceptions
 
-            Adapters (Driven)
+         Infrastructure (Outbound)
     Persistence  Cache  Messaging
     Auth  External Services
 ```
@@ -27,59 +26,58 @@ always point **inward** toward the pure domain core.
 |--------------------------|---------------|-----------|
 | Enterprise Business Rules | **Core** | `core/` |
 | Application Business Rules | **Application** | `application/` |
-| Interface Adapters (driving) | **Ports** | `ports/` |
-| Interface Adapters (driven) | **Adapters** | `adapters/` |
+| Interface Adapters (inbound) | **Presentation** | `presentation/` |
+| Frameworks & Drivers (outbound) | **Infrastructure** | `infrastructure/` |
 
-**Note**: In this project, **adapters** serve as the infrastructure layer, containing all framework-specific implementations (DB engines, HTTP clients, security, profiling). There is no separate `infrastructure/` source directory at the top level.
-
-### Dependency Rule
+### The Dependency Rule
 
 All dependencies point **inward** toward the domain core:
 
 ```text
-ports ──────────┐
-                ├──→ application ──→ core
-adapters ───────┘
+presentation ───────┐
+                    ├──→ application ──→ core
+infrastructure ─────┘
 ```
 
-- **Ports** (driving/inbound) depend on application services
-- **Adapters** (driven/outbound) implement core protocols
-- **Ports and adapters never depend on each other**
+- **Presentation** (inbound) depends on application services
+- **Infrastructure** (outbound) implements core protocols
+- **Presentation and Infrastructure never depend on each other**
 
 Application services depend on **core protocols** (e.g. `UnitOfWork`,
-`UserRepositoryPort`) — never on concrete adapter classes. The Unit
+`UserRepository`) — never on concrete infrastructure classes. The Unit
 of Work exposes typed repository properties so services access
-persistence without importing adapter modules.
+persistence without importing infrastructure modules.
 
 ## Clean Architecture Concepts
 
 This section maps each concept from Uncle Bob's Clean Architecture
 and Herberto Graça's Explicit Architecture to the project structure.
 
-### Ports (Interfaces)
+### Interface Protocols
 
-Ports are the **contracts** that define how the application core
+Interface protocols are the **contracts** that define how the application core
 communicates with the outside world. They are Protocol classes defined
 in `core/interfaces/` — the innermost circle.
 
-- **Driven / Output Ports**: `Repository`, `UnitOfWork`, `CachePort`,
-  `EventBus`, `StoragePort`, `EmailPort`, `PasswordHasher`, and all
-  AI-related ports. Adapters in `adapters/` implement these.
-- **Driving / Input Ports**: The Application Services themselves
-  (`application/services/`) act as the input ports — they define what
+- **Infrastructure / Outbound Protocols**: `Repository`, `UnitOfWork`,
+  `CacheGateway`, `EventBus`, `StorageGateway`, `EmailGateway`,
+  `PasswordHasher`, and all AI-related gateways. Implementations in
+  `infrastructure/` fulfil these.
+- **Presentation / Inbound Protocols**: The Application Services themselves
+  (`application/services/`) act as the inbound interface — they define what
   the outside world can do with the system. Controllers call them.
 
-### Controllers (Driving / Primary Adapters)
+### Controllers (Presentation / Inbound)
 
 Controllers translate external input into calls on the Application Core.
 
-| Delivery Mechanism | Location                    | Role                                |
-| ------------------ | --------------------------- | ----------------------------------- |
-| REST API           | `ports/api/routes/`         | Receive HTTP, call services         |
-| CLI                | `ports/cli/`                | Parse arguments, call services      |
-| Web (HTML)         | `ports/web/controllers/`    | Handle web requests, render pages   |
+| Delivery Mechanism | Location                           | Role                                |
+| ------------------ | ---------------------------------- | ----------------------------------- |
+| REST API           | `presentation/api/routes/`         | Receive HTTP, call services         |
+| CLI                | `presentation/cli/`                | Parse arguments, call services      |
+| Web (HTML)         | `presentation/web/controllers/`    | Handle web requests, render pages   |
 {%- if api_style in ('graphql', 'both') %}
-| GraphQL            | `ports/graphql/queries.py`  | Resolve fields, call services       |
+| GraphQL            | `presentation/graphql/queries.py`  | Resolve fields, call services       |
 {%- endif %}
 
 ### Presenters & ViewModels
@@ -88,8 +86,8 @@ In Uncle Bob's model, a Presenter takes use-case output and formats
 it for the View. This project implements this pragmatically:
 
 - **REST API**: Route handlers map DTOs → Pydantic **response schemas**
-  (`ports/api/schemas/`). The schema IS the presentation format.
-- **Web HTML**: Controllers build **ViewModels** (`ports/web/view_models/`)
+  (`presentation/api/schemas/`). The schema IS the presentation format.
+- **Web HTML**: Controllers build **ViewModels** (`presentation/web/view_models/`)
   that carry pre-formatted template context.
 - **Application Mappers**: `application/mappers/` convert domain entities
   into DTOs — the output boundary of the use-case layer.
@@ -97,12 +95,12 @@ it for the View. This project implements this pragmatically:
 ### Gateways
 
 In Clean Architecture a gateway is an interface to an external system.
-This project implements gateways as output port + adapter pairs:
+This project implements gateways as protocol + implementation pairs:
 
-- **Port (contract)**: `core/interfaces/` e.g. `StoragePort`,
-  `EmailPort`, `KnowledgeGraphPort`, `MCPClientPort`
-- **Adapter (implementation)**: `adapters/` e.g. `adapters/storage/`,
-  `adapters/email/`, `adapters/external/`
+- **Protocol (contract)**: `core/interfaces/` e.g. `StorageGateway`,
+  `EmailGateway`, `KnowledgeGraphGateway`, `MCPClientGateway`
+- **Implementation**: `infrastructure/` e.g. `infrastructure/storage/`,
+  `infrastructure/email/`, `infrastructure/external/`
 
 ### Use Cases (Application Services & Command/Query Handlers)
 
@@ -132,13 +130,12 @@ The innermost circle contains:
 ### Composition Root
 
 The DI container (`composition/container.py`) is the **Composition Root** —
-the single place where concrete adapter classes are wired to port
-interfaces. It lives in the outermost layer where all concrete types
+the single place where concrete infrastructure classes are wired to core
+protocols. It lives in the outermost layer where all concrete types
 are visible.
 
 
-- **Dependency Inversion**: Core domain has no external dependencies; adapters implement core protocols
-- **Port Interfaces**: Defined in core, implemented in adapters
+- **Dependency Inversion**: Core domain has no external dependencies; infrastructure implements core protocols
 - **Factory Pattern**: Application and API created via factory functions
 - **CQRS-Lite**: Separate command and query handlers
 - **Repository Pattern**: Data access abstracted behind core interface protocols
@@ -150,37 +147,37 @@ are visible.
 
 ```
 backend/src/{{ project_slug }}/
-  core/           # Domain logic, entities, enums, interfaces (ports), value objects
-  application/    # Use cases, services, DTOs, commands, queries, mappers
-  adapters/       # Driven: DB repos, cache, email, storage, auth adapters
-  ports/          # Driving: API routes, Web controllers, CLI, schemas, DI container
+  core/            # Domain logic, entities, enums, interfaces, value objects
+  application/     # Use cases, services, DTOs, commands, queries, mappers
+  infrastructure/  # Frameworks & Drivers: DB repos, cache, email, storage, auth
+  presentation/    # Interface Adapters: API routes, Web controllers, CLI, schemas
 {%- if api_style in ('graphql', 'both') %}
-    graphql/      # Strawberry GraphQL schema, resolvers, types, dataloaders
+    graphql/       # Strawberry GraphQL schema, resolvers, types, dataloaders
 {%- endif %}
-  config/         # Settings, constants, logging
-  composition/    # Composition Root — DI container wiring protocols to adapters
-  utils/          # Shared utilities (stdlib + third-party only)
+  config/          # Settings, constants, logging
+  composition/     # Composition Root — DI container wiring protocols to implementations
+  utils/           # Shared utilities (stdlib + third-party only)
 {%- if use_ai %}
-  ai/             # LLM adapters, agents, embeddings, prompt templates
+  ai/              # AI vertical module — LLM, agents, embeddings, RAG, MCP
 {%- endif %}
 ```
 
 
-1. Request enters via **Port** (API route,{% if api_style in ('graphql', 'both') %} GraphQL resolver,{% endif %} CLI command, web controller)
-2. Port resolves dependencies via **DI Container**
+1. Request enters via **Presentation** (API route,{% if api_style in ('graphql', 'both') %} GraphQL resolver,{% endif %} CLI command, web controller)
+2. Presentation resolves dependencies via **DI Container**
 3. Container injects **Application Service** with UoW (carrying repos)
 4. Service uses **Core Domain** entities and interface protocols
-5. **Adapters** fulfil interface contracts for persistence, cache, events
+5. **Infrastructure** fulfils interface contracts for persistence, cache, events
 6. Response flows back through the same path — DTOs at the boundary
 {%- if api_style in ('graphql', 'both') %}
 
 ## GraphQL Layer
 
 The GraphQL endpoint is powered by [Strawberry](https://strawberry.rocks/)
-and follows the same hexagonal architecture as REST routes.
+and follows the same Clean Architecture as REST routes.
 
 ```
-ports/graphql/
+presentation/graphql/
   context.py       # GraphQLContext — BaseContext subclass with DI access
   dataloaders.py   # Per-request DataLoaders for N+1 prevention
   extensions.py    # Schema extensions (QueryDepthLimiter)
@@ -224,9 +221,9 @@ See `config/settings/` for details.
 
 ## AI Module Architecture
 
-The `ai/` directory implements a secondary **hexagonal layer** specifically for
-AI/ML functionality.  It follows the same ports & adapters pattern: core
-interfaces live in `core/interfaces/` and concrete adapters live in `ai/`.
+The `ai/` directory implements a **vertical module** specifically for
+AI/ML functionality. It follows the same protocol-based pattern: core
+interfaces live in `core/interfaces/` and concrete implementations live in `ai/`.
 
 ```
 ai/
@@ -255,32 +252,32 @@ ai/
                    #   checkpointers.py — PostgreSQL (prod) / SQLite (staging) / memory (dev)
 ```
 
-### AI Core Interfaces (Ports)
+### AI Core Interfaces
 
-| Port | Protocol | Purpose |
-|------|----------|---------|
-| `LLMPort` | `core/interfaces/llm.py` | Text completion and streaming |
-| `EmbeddingPort` | `core/interfaces/embedding.py` | Text → vector embedding |
-| `VectorStorePort` | `core/interfaces/vector_store.py` | Vector CRUD and similarity search |
-| `DocumentLoaderPort` | `core/interfaces/document_loader.py` | Load documents from sources |
-| `TextSplitterPort` | `core/interfaces/text_splitter.py` | Split documents into chunks |
-| `KnowledgeGraphPort` | `core/interfaces/knowledge_graph.py` | Entity/relation CRUD |
-| `SPARQLQueryPort` | `core/interfaces/knowledge_graph.py` | SPARQL query execution (RDFLib) |
-| `ExternalKnowledgeGraphPort` | `core/interfaces/knowledge_graph.py` | External KG lookup (Wikidata, DBpedia, ConceptNet) |
-| `RetrieverPort` | `core/interfaces/retriever.py` | High-level retrieval abstraction |
-| `ConversationMemoryPort` | `core/interfaces/conversation_memory.py` | Conversation history |
-| `MCPServerPort` | `core/interfaces/mcp_server.py` | MCP server lifecycle + streamable-http |
-| `MCPClientPort` | `core/interfaces/mcp_client.py` | MCP client operations (streamable-http) |
-| `AgentRegistryPort` | `core/interfaces/agent_registry.py` | HMAS agent discovery + routing |
-| `AgentOrchestratorPort` | `core/interfaces/agent_orchestrator.py` | Multi-agent plan/execute |
-| `WorkflowEnginePort` | `core/interfaces/workflow_engine.py` | Stateful agent graph execution (LangGraph) |
-| `ToolPort` | `core/interfaces/tool.py` | Agent-callable tool abstraction |
-| `ChainPort` | `core/interfaces/chain.py` | LLM chain composition (batch + streaming) |
-| `EvaluatorPort` | `core/interfaces/evaluator.py` | LLM output quality evaluation (LLM-as-judge) |
-| `RerankerPort` | `core/interfaces/reranker.py` | Search result reranking |
-| `PromptTemplatePort` | `core/interfaces/prompt_template.py` | Structured prompt management (Jinja2) |
-| `GuardrailPort` | `core/interfaces/guardrail.py` | Input/output safety validation |
-| `ObservabilityPort` | `core/interfaces/observability.py` | AI tracing and telemetry |
+| Gateway | Protocol | Purpose |
+|---------|----------|---------|
+| `LLMGateway` | `core/interfaces/llm.py` | Text completion and streaming |
+| `EmbeddingGateway` | `core/interfaces/embedding.py` | Text → vector embedding |
+| `VectorStoreGateway` | `core/interfaces/vector_store.py` | Vector CRUD and similarity search |
+| `DocumentLoaderGateway` | `core/interfaces/document_loader.py` | Load documents from sources |
+| `TextSplitterGateway` | `core/interfaces/text_splitter.py` | Split documents into chunks |
+| `KnowledgeGraphGateway` | `core/interfaces/knowledge_graph.py` | Entity/relation CRUD |
+| `SPARQLQueryGateway` | `core/interfaces/knowledge_graph.py` | SPARQL query execution (RDFLib) |
+| `ExternalKnowledgeGraphGateway` | `core/interfaces/knowledge_graph.py` | External KG lookup (Wikidata, DBpedia, ConceptNet) |
+| `RetrieverGateway` | `core/interfaces/retriever.py` | High-level retrieval abstraction |
+| `ConversationMemoryGateway` | `core/interfaces/conversation_memory.py` | Conversation history |
+| `MCPServerGateway` | `core/interfaces/mcp_server.py` | MCP server lifecycle + streamable-http |
+| `MCPClientGateway` | `core/interfaces/mcp_client.py` | MCP client operations (streamable-http) |
+| `AgentRegistryGateway` | `core/interfaces/agent_registry.py` | HMAS agent discovery + routing |
+| `AgentOrchestratorGateway` | `core/interfaces/agent_orchestrator.py` | Multi-agent plan/execute |
+| `WorkflowEngineGateway` | `core/interfaces/workflow_engine.py` | Stateful agent graph execution (LangGraph) |
+| `ToolGateway` | `core/interfaces/tool.py` | Agent-callable tool abstraction |
+| `ChainGateway` | `core/interfaces/chain.py` | LLM chain composition (batch + streaming) |
+| `EvaluatorGateway` | `core/interfaces/evaluator.py` | LLM output quality evaluation (LLM-as-judge) |
+| `RerankerGateway` | `core/interfaces/reranker.py` | Search result reranking |
+| `PromptTemplateGateway` | `core/interfaces/prompt_template.py` | Structured prompt management (Jinja2) |
+| `GuardrailGateway` | `core/interfaces/guardrail.py` | Input/output safety validation |
+| `ObservabilityGateway` | `core/interfaces/observability.py` | AI tracing and telemetry |
 
 ### AI Data Flow
 
@@ -305,8 +302,3 @@ MCP Server ← FastMCP + streamable-http + structured output (outputSchema)
   └─ Prompts: rag_query, summarize_document, extract_entities
 ```
 {%- endif %}
-
-tities
-```
-{%- endif %}
-

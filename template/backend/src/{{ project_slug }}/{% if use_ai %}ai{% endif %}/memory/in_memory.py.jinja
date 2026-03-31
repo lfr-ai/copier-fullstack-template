@@ -1,4 +1,4 @@
-"""In-memory conversation memory adapter — implements 'ConversationMemoryPort'.
+"""In-memory conversation memory adapter — implements 'ConversationMemoryGateway'.
 
 Suitable for development and testing. For production, use
 Redis- or PostgreSQL-backed implementations.
@@ -10,12 +10,12 @@ import structlog
 from collections import defaultdict
 
 from {{ project_slug }}.ai.config import DEFAULT_CONVERSATION_LIMIT
-from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort, Message
+from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryGateway, Message
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
-class InMemoryConversationMemory(ConversationMemoryPort):
+class InMemoryConversationMemory(ConversationMemoryGateway):
     """In-memory conversation history store."""
 
     __slots__ = ("_store",)

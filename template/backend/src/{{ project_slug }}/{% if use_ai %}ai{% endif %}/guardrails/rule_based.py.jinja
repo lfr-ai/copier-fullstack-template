@@ -6,14 +6,14 @@ import structlog
 import re
 from typing import override
 
-from {{ project_slug }}.core.interfaces.guardrail import GuardrailPort, GuardrailResult
+from {{ project_slug }}.core.interfaces.guardrail import GuardrailGateway, GuardrailResult
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _DEFAULT_MAX_INPUT_LENGTH: int = 32_000
 _DEFAULT_MAX_OUTPUT_LENGTH: int = 64_000
 
 
-class RuleBasedGuardrail(GuardrailPort):
+class RuleBasedGuardrail(GuardrailGateway):
     """Configurable rule-based input/output guardrail.
 
     Checks for:

@@ -8,7 +8,7 @@ from typing import Final, override
 import structlog
 
 from {{ project_slug }}.application.queries.base import QueryHandler
-from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
 
 logger = structlog.get_logger(__name__)
 
@@ -37,7 +37,7 @@ class KnowledgeGraphQuery:
 class KnowledgeGraphQueryHandler(QueryHandler[KnowledgeGraphQuery, KnowledgeGraphQueryResult]):
     """Handles knowledge graph neighborhood queries."""
 
-    def __init__(self, *, knowledge_graph: KnowledgeGraphPort) -> None:
+    def __init__(self, *, knowledge_graph: KnowledgeGraphGateway) -> None:
         self._kg = knowledge_graph
 
     @override

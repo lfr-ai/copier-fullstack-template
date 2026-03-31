@@ -1,4 +1,4 @@
-"""Chain port — abstract interface for LLM chain compositions.
+"""Chain gateway — abstract interface for LLM chain compositions.
 
 Chains compose multiple LLM calls, retrieval operations, or
 tool invocations into multi-step pipelines. Concrete adapters
@@ -12,8 +12,8 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class ChainPort(Protocol):
-    """Protocol for LLM chain compositions.
+class ChainGateway(Protocol):
+    """Gateway for LLM chain compositions.
 
     Supports both batch and streaming execution modes.
     """

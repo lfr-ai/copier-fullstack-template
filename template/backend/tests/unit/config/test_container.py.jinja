@@ -53,7 +53,7 @@ class TestContainer:
         mock_settings: MagicMock,
     ) -> None:
         """Verify unit_of_work() returns SQLAlchemyUnitOfWork."""
-        from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import (
+        from {{ project_slug }}.infrastructure.persistence.unit_of_work.sqlalchemy_uow import (
             SQLAlchemyUnitOfWork,
         )
 
@@ -70,7 +70,7 @@ class TestContainer:
         mock_settings: MagicMock,
     ) -> None:
         """Verify cache() returns MemoryCacheAdapter."""
-        from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
+        from {{ project_slug }}.infrastructure.cache.memory_cache import MemoryCacheAdapter
 
         _configure_mock_settings(mock_settings)
         container = Container()
@@ -85,7 +85,7 @@ class TestContainer:
         mock_settings: MagicMock,
     ) -> None:
         """Verify event_bus() returns MemoryEventBus."""
-        from {{ project_slug }}.adapters.messaging.memory_event_bus import MemoryEventBus
+        from {{ project_slug }}.infrastructure.messaging.memory_event_bus import MemoryEventBus
 
         _configure_mock_settings(mock_settings)
         container = Container()

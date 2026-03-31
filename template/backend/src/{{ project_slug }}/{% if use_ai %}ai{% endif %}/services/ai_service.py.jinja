@@ -5,7 +5,7 @@ from __future__ import annotations
 import structlog
 
 from {{ project_slug }}.ai.models import CompletionRequest, CompletionResponse
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -13,7 +13,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class AIService:
     """High-level AI orchestration service for completions."""
 
-    def __init__(self, *, llm: LLMPort) -> None:
+    def __init__(self, *, llm: LLMGateway) -> None:
         self._llm = llm
 
     async def complete(self, request: CompletionRequest) -> CompletionResponse:

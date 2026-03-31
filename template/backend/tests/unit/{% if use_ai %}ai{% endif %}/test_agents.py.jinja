@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from {{ project_slug }}.ai.agents.base_agent import AgentTool
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 
 class TestAgentTool:
@@ -25,7 +25,7 @@ class TestReActAgent:
 
     @pytest.fixture
     def llm(self) -> AsyncMock:
-        mock = AsyncMock(spec=LLMPort)
+        mock = AsyncMock(spec=LLMGateway)
         mock.complete.return_value = "Final Answer: 42"
         return mock
 
@@ -45,7 +45,7 @@ class TestToolCallingAgent:
 
     @pytest.fixture
     def llm(self) -> AsyncMock:
-        mock = AsyncMock(spec=LLMPort)
+        mock = AsyncMock(spec=LLMGateway)
         mock.complete.return_value = '{"answer": "The answer is 42"}'
         return mock
 

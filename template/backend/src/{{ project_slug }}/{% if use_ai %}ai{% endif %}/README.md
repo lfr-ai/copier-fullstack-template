@@ -1,8 +1,8 @@
 # AI Module — LLM, RAG, Embeddings, Knowledge Graphs & MCP
 
-Full AI/ML integration layer following clean architecture principles. All components
-depend on domain ports (protocols) — concrete adapters are injected at the composition
-root. LiteLLM is the universal LLM and embedding backend; the model string prefix routes
+Full AI/ML integration layer following Clean Architecture principles. All components
+depend on domain interfaces (protocols) — concrete implementations are injected at the
+composition root. LiteLLM is the universal LLM and embedding backend; the model string prefix routes
 to the correct provider (OpenAI, Azure OpenAI, Anthropic, etc.) automatically.
 
 ## Architecture
@@ -17,33 +17,33 @@ ai/
 ├── chains/               # LangChain & LlamaIndex adapters
 │   ├── base_chain.py           # Base chain abstraction
 │   ├── conversational_rag.py   # Conversational RAG chain
-│   ├── langchain_adapter.py    # LangChain → LLMPort bridge
+│   ├── langchain_adapter.py    # LangChain → LLMGateway bridge
 │   ├── llamaindex_adapter.py   # LlamaIndex document loader & chunker
 │   ├── refinement_chain.py     # Answer refinement chain
 │   └── summarization_chain.py  # Summarization chain
 ├── config.py             # AI settings and defaults
 ├── document_loaders/     # File & web document loaders
 │   ├── azure_doc_intelligence_loader.py  # Azure Document Intelligence
-│   ├── file_loader.py          # PDF, DOCX, text → DocumentLoaderPort
+│   ├── file_loader.py          # PDF, DOCX, text → DocumentLoaderGateway
 │   └── web_loader.py           # URL-based document loading
 ├── embeddings/           # Text embedding adapters
-│   ├── litellm_embeddings.py          # LiteLLM → EmbeddingPort (universal)
+│   ├── litellm_embeddings.py          # LiteLLM → EmbeddingGateway (universal)
 │   └── sentence_transformer_embeddings.py  # Local models
 ├── evaluation/           # LLM-based evaluation
 │   └── llm_judge.py            # LLM judge evaluator
 ├── guardrails/           # Content safety
 │   └── rule_based.py           # Rule-based guardrail (PII, injection)
 ├── knowledge_graph/      # Graph-based knowledge storage
-│   ├── __init__.py             # NetworkX → KnowledgeGraphPort
-│   ├── neo4j_adapter.py        # Neo4j → KnowledgeGraphPort
-│   ├── rdflib_adapter.py       # RDFLib/SPARQL → KnowledgeGraphPort
+│   ├── __init__.py             # NetworkX → KnowledgeGraphGateway
+│   ├── neo4j_adapter.py        # Neo4j → KnowledgeGraphGateway
+│   ├── rdflib_adapter.py       # RDFLib/SPARQL → KnowledgeGraphGateway
 │   ├── llm_extractor.py        # LLM-based entity/relation extraction
 │   └── external_connectors.py  # Wikidata, DBpedia, ConceptNet
 ├── llm/                  # LLM provider adapters
-│   ├── base_llm_adapter.py     # Abstract base (conforms to LLMPort)
-│   ├── litellm_adapter.py      # LiteLLM → LLMPort (universal backend)
+│   ├── base_llm_adapter.py     # Abstract base (conforms to LLMGateway)
+│   ├── litellm_adapter.py      # LiteLLM → LLMGateway (universal backend)
 │   ├── gateway.py              # Multi-provider gateway with failover
-│   └── anthropic_adapter.py    # Anthropic Claude → LLMPort (via LiteLLM)
+│   └── anthropic_adapter.py    # Anthropic Claude → LLMGateway (via LiteLLM)
 ├── mcp/                  # Model Context Protocol server & client
 │   ├── server.py               # FastMCP tools, resources, prompts
 │   └── client.py               # MCP client for remote servers
@@ -80,33 +80,33 @@ ai/
 │   ├── search_tool.py          # Semantic search tool
 │   └── web_search.py           # Web search tool
 ├── vector_stores/        # Vector store adapters
-│   ├── azure_ai_search_store.py  # Azure AI Search → VectorStorePort
-│   ├── faiss_store.py          # FAISS → VectorStorePort
-│   └── pgvector_store.py       # pgvector → VectorStorePort
+│   ├── azure_ai_search_store.py  # Azure AI Search → VectorStoreGateway
+│   ├── faiss_store.py          # FAISS → VectorStoreGateway
+│   └── pgvector_store.py       # pgvector → VectorStoreGateway
 ├── workflows/            # LangGraph workflow engine
 │   ├── checkpointers.py        # SQLite/memory/postgres checkpointers
 │   └── langgraph_engine.py     # LangGraph workflow engine
 └── __init__.py
 ```
 
-## Domain Ports (core/interfaces/)
+## Domain Interfaces (core/interfaces/)
 
-| Port                         | File                                     | Purpose                                            |
+| Interface                    | File                                     | Purpose                                            |
 | ---------------------------- | ---------------------------------------- | -------------------------------------------------- |
-| `LLMPort`                    | `core/interfaces/llm.py`                 | LLM completion & streaming                         |
-| `EmbeddingPort`              | `core/interfaces/embedding.py`           | Text → vector embeddings                           |
-| `VectorStorePort`            | `core/interfaces/vector_store.py`        | Similarity search & storage                        |
-| `RetrieverPort`              | `core/interfaces/retriever.py`           | Unified document retrieval                         |
-| `DocumentLoaderPort`         | `core/interfaces/document_loader.py`     | Document ingestion                                 |
-| `TextSplitterPort`           | `core/interfaces/text_splitter.py`       | Document chunking                                  |
-| `ConversationMemoryPort`     | `core/interfaces/conversation_memory.py` | Chat history storage                               |
-| `KnowledgeGraphPort`         | `core/interfaces/knowledge_graph.py`     | Graph CRUD & traversal                             |
-| `SPARQLQueryPort`            | `core/interfaces/knowledge_graph.py`     | SPARQL query execution (RDFLib)                    |
-| `ExternalKnowledgeGraphPort` | `core/interfaces/knowledge_graph.py`     | External KG lookup (Wikidata, DBpedia, ConceptNet) |
-| `MCPServerPort`              | `core/interfaces/mcp_server.py`          | MCP server lifecycle                               |
-| `AgentOrchestratorPort`      | `core/interfaces/agent_orchestrator.py`  | Multi-agent orchestration                          |
-| `GuardrailPort`              | `core/interfaces/guardrail.py`           | Content safety / guardrails                        |
-| `RerankerPort`               | `core/interfaces/reranker.py`            | Search result reranking                            |
+| `LLMGateway`                 | `core/interfaces/llm.py`                 | LLM completion & streaming                         |
+| `EmbeddingGateway`           | `core/interfaces/embedding.py`           | Text → vector embeddings                           |
+| `VectorStoreGateway`         | `core/interfaces/vector_store.py`        | Similarity search & storage                        |
+| `RetrieverGateway`           | `core/interfaces/retriever.py`           | Unified document retrieval                         |
+| `DocumentLoaderGateway`      | `core/interfaces/document_loader.py`     | Document ingestion                                 |
+| `TextSplitterGateway`        | `core/interfaces/text_splitter.py`       | Document chunking                                  |
+| `ConversationMemoryGateway`  | `core/interfaces/conversation_memory.py` | Chat history storage                               |
+| `KnowledgeGraphGateway`      | `core/interfaces/knowledge_graph.py`     | Graph CRUD & traversal                             |
+| `SPARQLQueryGateway`         | `core/interfaces/knowledge_graph.py`     | SPARQL query execution (RDFLib)                    |
+| `ExternalKnowledgeGraphGateway` | `core/interfaces/knowledge_graph.py`  | External KG lookup (Wikidata, DBpedia, ConceptNet) |
+| `MCPServerGateway`           | `core/interfaces/mcp_server.py`          | MCP server lifecycle                               |
+| `AgentOrchestratorGateway`   | `core/interfaces/agent_orchestrator.py`  | Multi-agent orchestration                          |
+| `GuardrailGateway`           | `core/interfaces/guardrail.py`           | Content safety / guardrails                        |
+| `RerankerGateway`            | `core/interfaces/reranker.py`            | Search result reranking                            |
 
 ## Application Services
 

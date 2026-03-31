@@ -9,10 +9,10 @@ import structlog
 from dataclasses import dataclass, field
 
 from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT, DEFAULT_SIMILARITY_TOP_K
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
-from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
-from {{ project_slug }}.core.interfaces.llm import LLMPort
-from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStorePort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _DEFAULT_GRAPH_ENRICHMENT_DEPTH: int = 1
@@ -43,10 +43,10 @@ class RetrievalPipeline:
     def __init__(
         self,
         *,
-        llm: LLMPort,
-        embedding: EmbeddingPort,
-        vector_store: VectorStorePort,
-        knowledge_graph: KnowledgeGraphPort | None = None,
+        llm: LLMGateway,
+        embedding: EmbeddingGateway,
+        vector_store: VectorStoreGateway,
+        knowledge_graph: KnowledgeGraphGateway | None = None,
     ) -> None:
         self._llm = llm
         self._embedding = embedding

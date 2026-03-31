@@ -1,4 +1,4 @@
-"""Evaluator port — abstract interface for LLM output evaluation.
+"""Evaluator gateway — abstract interface for LLM output evaluation.
 
 Supports automated quality assessment of LLM outputs using
 rubric-based scoring, LLM-as-judge patterns, and custom metrics.
@@ -38,8 +38,8 @@ class EvalSuite:
 
 
 @runtime_checkable
-class EvaluatorPort(Protocol):
-    """Protocol for LLM output evaluators.
+class EvaluatorGateway(Protocol):
+    """Gateway for LLM output evaluators.
 
     Evaluators assess the quality of LLM-generated outputs
     against expected criteria (relevance, faithfulness,

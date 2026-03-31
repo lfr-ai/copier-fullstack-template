@@ -1,4 +1,4 @@
-"""LlamaIndex retriever adapter — bridges LlamaIndex query engines to 'RetrieverPort'.
+"""LlamaIndex retriever adapter — bridges LlamaIndex query engines to 'RetrieverGateway'.
 
 Uses LlamaIndex's 'VectorStoreIndex' to build a query engine
 and maps results to the core 'RetrievedContext' data class.
@@ -11,22 +11,22 @@ from __future__ import annotations
 import structlog
 from typing import override
 
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
 from {{ project_slug }}.core.interfaces.retriever import (
     _DEFAULT_RETRIEVAL_TOP_K,
     RetrievedContext,
-    RetrieverPort,
+    RetrieverGateway,
 )
-from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
-class LlamaIndexRetrieverAdapter(RetrieverPort):
+class LlamaIndexRetrieverAdapter(RetrieverGateway):
     """Retriever backed by LlamaIndex's query engine.
 
     Wraps a LlamaIndex 'VectorStoreIndex' and provides the
-    standard 'RetrieverPort' interface for the application layer.
+    standard 'RetrieverGateway' interface for the application layer.
     """
 
     __slots__ = ("_embedding", "_index", "_vector_store")
@@ -34,8 +34,8 @@ class LlamaIndexRetrieverAdapter(RetrieverPort):
     def __init__(
         self,
         *,
-        embedding: EmbeddingPort,
-        vector_store: VectorStorePort,
+        embedding: EmbeddingGateway,
+        vector_store: VectorStoreGateway,
     ) -> None:
         self._embedding = embedding
         self._vector_store = vector_store

@@ -1,4 +1,4 @@
-"""Redis-backed conversation memory adapter — implements 'ConversationMemoryPort'.
+"""Redis-backed conversation memory adapter — implements 'ConversationMemoryGateway'.
 
 Uses Redis sorted sets for efficient time-ordered message storage
 with automatic TTL-based expiration.
@@ -13,10 +13,10 @@ import structlog
 import time
 
 from {{ project_slug }}.ai.config import DEFAULT_CONVERSATION_LIMIT, DEFAULT_CONVERSATION_TTL
-from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort, Message
+from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryGateway, Message
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-class RedisConversationMemory(ConversationMemoryPort):
+class RedisConversationMemory(ConversationMemoryGateway):
     """Redis-backed conversation history store with TTL support."""
 
     __slots__ = ("_prefix", "_redis", "_ttl")

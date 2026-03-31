@@ -109,10 +109,10 @@ def create_mcp_server(
         stateless (bool): If True, run in stateless HTTP mode (recommended for production).
         search_tool (object | None): Optional 'SearchTool' instance for document search.
         ingest_tool (object | None): Optional 'IngestTool' instance for document ingestion.
-        llm (object | None): Optional 'LLMPort' instance for completions.
-        knowledge_graph (object | None): Optional 'KnowledgeGraphPort' instance for graph queries.
-        external_knowledge_graph (object | None): Optional 'ExternalKnowledgeGraphPort' for Wikidata/DBpedia.
-        evaluator (object | None): Optional 'EvaluatorPort' instance for LLM output evaluation.
+        llm (object | None): Optional 'LLMGateway' instance for completions.
+        knowledge_graph (object | None): Optional 'KnowledgeGraphGateway' instance for graph queries.
+        external_knowledge_graph (object | None): Optional 'ExternalKnowledgeGraphGateway' for Wikidata/DBpedia.
+        evaluator (object | None): Optional 'EvaluatorGateway' instance for LLM output evaluation.
 
     Returns:
         object: Configured server with tools and resources registered.
@@ -227,7 +227,7 @@ def _register_tools(
         return KGNeighborOutput(
             entity=entity,
             depth=depth,
-            message="KnowledgeGraphPort not configured. Pass knowledge_graph to create_mcp_server().",
+            message="KnowledgeGraphGateway not configured. Pass knowledge_graph to create_mcp_server().",
         )
 
     @mcp.tool(output_model=CompletionOutput)
@@ -259,7 +259,7 @@ def _register_tools(
         return CompletionOutput(
             prompt_length=len(prompt),
             content="",
-            message="LLMPort not configured. Pass llm to create_mcp_server().",
+            message="LLMGateway not configured. Pass llm to create_mcp_server().",
         )
 
     @mcp.tool(output_model=RAGOutput)
@@ -316,7 +316,7 @@ def _register_tools(
         return {
             "entity": entity,
             "results": [],
-            "message": "ExternalKnowledgeGraphPort not configured.",
+            "message": "ExternalKnowledgeGraphGateway not configured.",
         }
 
     @mcp.tool()
@@ -336,7 +336,7 @@ def _register_tools(
         return {
             "entity_id": entity_id,
             "relations": [],
-            "message": "ExternalKnowledgeGraphPort not configured.",
+            "message": "ExternalKnowledgeGraphGateway not configured.",
         }
 
     @mcp.tool()
@@ -354,7 +354,7 @@ def _register_tools(
                 "triplet_count": triplet_count,
                 "backend": type(knowledge_graph).__name__,
             }
-        return {"message": "KnowledgeGraphPort not configured."}
+        return {"message": "KnowledgeGraphGateway not configured."}
 
     @mcp.tool(output_model=TripletOutput)
     async def add_knowledge_graph_triplet(subject: str, predicate: str, obj: str) -> TripletOutput:
@@ -371,7 +371,7 @@ def _register_tools(
         if knowledge_graph is not None:
             await knowledge_graph.add_triplet(subject=subject, predicate=predicate, obj=obj)
             return TripletOutput(status="added", triplet=[subject, predicate, obj])
-        return TripletOutput(status="error", message="KnowledgeGraphPort not configured.")
+        return TripletOutput(status="error", message="KnowledgeGraphGateway not configured.")
 
     @mcp.tool(output_model=EvalOutput)
     async def evaluate_output(
@@ -410,7 +410,7 @@ def _register_tools(
             metric=metric,
             score=0.0,
             passed=False,
-            message="EvaluatorPort not configured. Pass evaluator to create_mcp_server().",
+            message="EvaluatorGateway not configured. Pass evaluator to create_mcp_server().",
         )
 
 

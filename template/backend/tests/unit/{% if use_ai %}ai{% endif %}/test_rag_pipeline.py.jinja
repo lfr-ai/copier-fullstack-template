@@ -14,7 +14,7 @@ from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult
 
 @pytest.fixture
 def mock_loader() -> AsyncMock:
-    """Mock DocumentLoaderPort."""
+    """Mock DocumentLoaderGateway."""
     loader = AsyncMock()
     loader.load.return_value = [
         Document(content="Test document content.", source="test.txt"),
@@ -24,7 +24,7 @@ def mock_loader() -> AsyncMock:
 
 @pytest.fixture
 def mock_splitter() -> MagicMock:
-    """Mock TextSplitterPort."""
+    """Mock TextSplitterGateway."""
     splitter = MagicMock()
 
     def split_fn(doc: Document) -> list[Chunk]:
@@ -39,7 +39,7 @@ def mock_splitter() -> MagicMock:
 
 @pytest.fixture
 def mock_embedding() -> AsyncMock:
-    """Mock EmbeddingPort."""
+    """Mock EmbeddingGateway."""
     embedding = AsyncMock()
     embedding.embed_texts.return_value = [[0.1] * 8, [0.2] * 8]
     embedding.embed_text.return_value = [0.1] * 8
@@ -49,7 +49,7 @@ def mock_embedding() -> AsyncMock:
 
 @pytest.fixture
 def mock_vector_store() -> AsyncMock:
-    """Mock VectorStorePort."""
+    """Mock VectorStoreGateway."""
     store = AsyncMock()
     store.add_vectors.return_value = None
     store.search.return_value = [
@@ -60,7 +60,7 @@ def mock_vector_store() -> AsyncMock:
 
 @pytest.fixture
 def mock_llm() -> AsyncMock:
-    """Mock LLMPort."""
+    """Mock LLMGateway."""
     llm = AsyncMock()
     llm.complete.return_value = "Generated answer based on context."
     return llm

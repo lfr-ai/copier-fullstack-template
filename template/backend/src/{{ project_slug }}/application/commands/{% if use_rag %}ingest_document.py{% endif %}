@@ -9,11 +9,11 @@ import structlog
 
 from {{ project_slug }}.application.commands.base import CommandHandler
 from {{ project_slug }}.application.dtos.ingestion_dto import IngestionRequestDTO, IngestionResultDTO
-from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
-from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
-from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 _DEFAULT_CHUNK_SIZE: Final[int] = 512
 _DEFAULT_CHUNK_OVERLAP: Final[int] = 64
@@ -38,10 +38,10 @@ class IngestDocumentHandler(CommandHandler[IngestDocumentCommand, IngestionResul
         self,
         *,
         uow: UnitOfWork,
-        loader: DocumentLoaderPort,
-        splitter: TextSplitterPort,
-        embedding: EmbeddingPort,
-        vector_store: VectorStorePort,
+        loader: DocumentLoaderGateway,
+        splitter: TextSplitterGateway,
+        embedding: EmbeddingGateway,
+        vector_store: VectorStoreGateway,
     ) -> None:
         super().__init__(uow=uow)
         self._loader = loader

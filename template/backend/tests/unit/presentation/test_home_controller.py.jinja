@@ -11,14 +11,14 @@ class TestHomeController:
 
     def test_router_has_root_route(self) -> None:
         """Verify router registers GET / endpoint."""
-        from {{ project_slug }}.ports.web.controllers.home import router
+        from {{ project_slug }}.presentation.web.controllers.home import router
 
         routes = [r.path for r in router.routes]
         assert "/" in routes
 
     def test_home_route_returns_html(self) -> None:
         """Verify home route is configured for HTML response."""
-        from {{ project_slug }}.ports.web.controllers.home import router
+        from {{ project_slug }}.presentation.web.controllers.home import router
 
         for route in router.routes:
             if getattr(route, "path", None) == "/":
@@ -32,10 +32,10 @@ class TestHomeController:
     async def test_home_calls_template_response(self) -> None:
         """Verify home controller calls TemplateResponse with correct context."""
         with patch(
-            "{{ project_slug }}.ports.web.controllers.home.templates"
+            "{{ project_slug }}.presentation.web.controllers.home.templates"
         ) as mock_templates:
             mock_templates.TemplateResponse.return_value = MagicMock()
-            from {{ project_slug }}.ports.web.controllers.home import home
+            from {{ project_slug }}.presentation.web.controllers.home import home
 
             mock_request = MagicMock()
             await home(mock_request)

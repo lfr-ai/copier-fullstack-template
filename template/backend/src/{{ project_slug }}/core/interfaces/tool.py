@@ -1,4 +1,4 @@
-"""Tool port — abstract interface for agent-callable tools.
+"""Tool gateway — abstract interface for agent-callable tools.
 
 Concrete adapters implement specific tools (web search, code execution,
 database query, etc.) that agents can invoke during planning/execution.
@@ -10,8 +10,8 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class ToolPort(Protocol):
-    """Protocol for agent-callable tools.
+class ToolGateway(Protocol):
+    """Gateway for agent-callable tools.
 
     Each tool exposes a name, description, and parameter schema
     so agents can decide when and how to invoke it.

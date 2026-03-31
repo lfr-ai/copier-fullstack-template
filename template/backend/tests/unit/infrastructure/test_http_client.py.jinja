@@ -8,7 +8,7 @@ import pytest
 import httpx
 import respx
 
-from {{ project_slug }}.adapters.external.http_client import HTTPClientAdapter
+from {{ project_slug }}.infrastructure.external.http_client import HTTPClientAdapter
 
 @pytest.mark.asyncio
 class TestHTTPClientAdapter:

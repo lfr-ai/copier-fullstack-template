@@ -3,7 +3,7 @@
 Use cases, services, commands, queries, DTOs, and mappers.
 
 This layer corresponds to the **Application Business Rules** circle in Clean
-Architecture. Services here act as **Input Ports** — they define what the outside world
+Architecture. Services here define **Use Cases** — they specify what the outside world
 can do with the system.
 
 **Rules:**
@@ -21,5 +21,5 @@ can do with the system.
 | `queries/`  | Read operations (CQRS query side)                               |
 | `dtos/`     | Data Transfer Objects (input/output boundary)                   |
 | `mappers/`  | Entity → DTO mappers (output boundary / presenter data shaping) |
-| `services/` | Application services (use-case orchestrators / input ports)     |
+| `services/` | Application services (use-case orchestrators)                   |
 | `tasks/`    | Background/async task definitions                               |

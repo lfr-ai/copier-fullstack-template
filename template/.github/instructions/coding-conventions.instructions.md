@@ -102,7 +102,7 @@ except Exception as e:
 - Exceptions logged BEFORE re-raising
 - Error messages: `%s` formatting, NOT f-strings
 - Domain exceptions at domain/application boundaries
-- HTTP exceptions ONLY in `ports/api/`
+- HTTP exceptions ONLY in `presentation/api/`
 - `raise ... from None` ONLY with explicit justification comment
 
 ```zsh
@@ -138,7 +138,7 @@ When `*` is required:
 - ANY boolean flag parameter
 - ANY optional/config param (timeout, retries, limit, offset, ttl, mode)
 - ALL factory functions (`create_*`, `build_*`, `make_*`)
-- ALL public API functions in `ports/`
+- ALL public API functions in `presentation/`
 - ALL service methods in `application/services/`
 - ALL utility functions in `utils/`
 

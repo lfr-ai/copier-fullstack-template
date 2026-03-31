@@ -5,8 +5,8 @@ from __future__ import annotations
 import structlog
 
 from {{ project_slug }}.ai.config import DEFAULT_SIMILARITY_TOP_K
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
-from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class SearchTool:
@@ -20,8 +20,8 @@ class SearchTool:
     def __init__(
         self,
         *,
-        embedding: EmbeddingPort,
-        vector_store: VectorStorePort,
+        embedding: EmbeddingGateway,
+        vector_store: VectorStoreGateway,
     ) -> None:
         self._embedding = embedding
         self._vector_store = vector_store

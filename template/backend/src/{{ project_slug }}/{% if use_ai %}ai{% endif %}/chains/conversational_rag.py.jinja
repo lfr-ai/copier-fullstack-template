@@ -10,9 +10,9 @@ import structlog
 from typing import override
 
 from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
-from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort
-from {{ project_slug }}.core.interfaces.llm import LLMPort
-from {{ project_slug }}.core.interfaces.retriever import RetrieverPort
+from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryGateway
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.retriever import RetrieverGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _HISTORY_LIMIT: int = 10
@@ -36,9 +36,9 @@ class ConversationalRAGChain(BaseChain):
     def __init__(
         self,
         *,
-        llm: LLMPort,
-        retriever: RetrieverPort,
-        memory: ConversationMemoryPort,
+        llm: LLMGateway,
+        retriever: RetrieverGateway,
+        memory: ConversationMemoryGateway,
     ) -> None:
         self._llm = llm
         self._retriever = retriever

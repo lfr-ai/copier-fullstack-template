@@ -14,7 +14,7 @@ from {{ project_slug }}.ai.models import (
     VectorSearchRequest,
     VectorSearchResponse,
 )
-from {{ project_slug }}.ports.api.dependencies import AIServiceDep, RAGServiceDep
+from {{ project_slug }}.presentation.api.dependencies import AIServiceDep, RAGServiceDep
 
 router = APIRouter()
 

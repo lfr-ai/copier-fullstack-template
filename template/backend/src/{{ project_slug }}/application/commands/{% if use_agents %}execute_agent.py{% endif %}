@@ -9,7 +9,7 @@ import structlog
 
 from {{ project_slug }}.application.commands.base import CommandHandler
 from {{ project_slug }}.application.dtos.agent_dto import AgentResultDTO
-from {{ project_slug }}.core.interfaces.agent_orchestrator import AgentOrchestratorPort, AgentState
+from {{ project_slug }}.core.interfaces.agent_orchestrator import AgentOrchestratorGateway, AgentState
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
 _DEFAULT_AGENT_MAX_STEPS: Final[int] = 10
@@ -34,7 +34,7 @@ class ExecuteAgentHandler(CommandHandler[ExecuteAgentCommand, AgentResultDTO]):
         self,
         *,
         uow: UnitOfWork,
-        orchestrator: AgentOrchestratorPort,
+        orchestrator: AgentOrchestratorGateway,
     ) -> None:
         super().__init__(uow=uow)
         self._orchestrator = orchestrator

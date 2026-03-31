@@ -1,4 +1,4 @@
-"""MCP client port — abstract interface for connecting to external MCP servers.
+"""MCP client gateway — abstract interface for connecting to external MCP servers.
 
 Concrete adapters use the official MCP Python SDK to communicate
 via streamable-http, stdio, or SSE transports.
@@ -10,8 +10,8 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class MCPClientPort(Protocol):
-    """Protocol for MCP client operations against external servers."""
+class MCPClientGateway(Protocol):
+    """Gateway for MCP client operations against external servers."""
 
     async def connect(
         self, *, server_url: str, transport: str = "streamable-http"

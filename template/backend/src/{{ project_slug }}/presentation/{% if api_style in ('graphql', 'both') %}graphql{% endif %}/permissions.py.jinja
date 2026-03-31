@@ -12,7 +12,7 @@ import structlog
 from strawberry.permission import BasePermission
 from strawberry.types import Info
 
-from {{ project_slug }}.ports.graphql.context import GraphQLContext
+from {{ project_slug }}.presentation.graphql.context import GraphQLContext
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -43,7 +43,7 @@ class IsAuthenticated(BasePermission):
         token = auth_header.removeprefix("Bearer ").strip()
         try:
             # FIXME: imports concrete adapter directly — should inject via DI container
-            from {{ project_slug }}.adapters.auth.jwt_adapter import JWTAdapter
+            from {{ project_slug }}.infrastructure.auth.jwt_adapter import JWTAdapter
 
             jwt = JWTAdapter(secret_key=info.context.settings.jwt_secret_key)
             payload = jwt.decode_token(token)

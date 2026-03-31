@@ -1,4 +1,4 @@
-"""LangGraph multi-agent orchestrator — implements 'AgentOrchestratorPort'.
+"""LangGraph multi-agent orchestrator — implements 'AgentOrchestratorGateway'.
 
 Uses LangGraph's 'StateGraph' for stateful, durable multi-agent
 workflows with human-in-the-loop support. Supports dynamic tool
@@ -14,11 +14,11 @@ from collections.abc import AsyncIterator
 from typing import override
 
 from {{ project_slug }}.core.interfaces.agent_orchestrator import (
-    AgentOrchestratorPort,
+    AgentOrchestratorGateway,
     AgentState,
     OrchestratorResult,
 )
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 from {{ project_slug }}.ai.config import DEFAULT_HISTORY_WINDOW, RECURSION_LIMIT_MULTIPLIER
 from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
@@ -28,7 +28,7 @@ _AGENT_MAX_TOKENS: int = 2048
 _AGENT_TEMPERATURE: float = 0.3
 
 
-class LangGraphOrchestrator(AgentOrchestratorPort):
+class LangGraphOrchestrator(AgentOrchestratorGateway):
     """Multi-agent orchestrator backed by LangGraph StateGraph.
 
     Builds a graph of specialized agent nodes that collaborate
@@ -44,7 +44,7 @@ class LangGraphOrchestrator(AgentOrchestratorPort):
     def __init__(
         self,
         *,
-        llm: LLMPort,
+        llm: LLMGateway,
         agents: dict[str, dict[str, object]] | None = None,
         tools: list[object] | None = None,
         max_iterations: int = DEFAULT_MAX_ITERATIONS,

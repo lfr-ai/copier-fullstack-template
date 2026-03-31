@@ -5,10 +5,10 @@ from __future__ import annotations
 import structlog
 
 from {{ project_slug }}.core.entities.document import Chunk, Document
-from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
-from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
-from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
+from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class IngestionPipeline:
@@ -26,10 +26,10 @@ class IngestionPipeline:
     def __init__(
         self,
         *,
-        loader: DocumentLoaderPort,
-        splitter: TextSplitterPort,
-        embedding: EmbeddingPort,
-        vector_store: VectorStorePort,
+        loader: DocumentLoaderGateway,
+        splitter: TextSplitterGateway,
+        embedding: EmbeddingGateway,
+        vector_store: VectorStoreGateway,
     ) -> None:
         self._loader = loader
         self._splitter = splitter

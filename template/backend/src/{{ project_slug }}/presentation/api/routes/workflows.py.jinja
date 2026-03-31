@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
-from {{ project_slug }}.ports.api.dependencies import ContainerDep
+from {{ project_slug }}.presentation.api.dependencies import ContainerDep
 
 router = APIRouter()
 
