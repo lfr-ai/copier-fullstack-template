@@ -1,54 +1,58 @@
-{%- if with_gsd %}
----
-version: 1
-models:
-  research: claude-sonnet-4-6
-  planning:
-    model: claude-opus-4-6
-    fallbacks:
-      - openrouter/z-ai/glm-5
-      - openrouter/minimax/minimax-m2.5
-  execution: claude-sonnet-4-6
-  completion: claude-sonnet-4-6
-skill_discovery: suggest
-auto_supervisor:
-  soft_timeout_minutes: 40
-  idle_timeout_minutes: 10
-  hard_timeout_minutes: 120
-budget_ceiling: 100.00
-unique_milestone_ids: true
-token_profile: balanced
-uat_dispatch: true
-skill_staleness_days: 60
-verification_commands:
-  - task lint
-  - task test:unit
-  - task typecheck
-verification_auto_fix: true
-verification_max_retries: 2
-auto_report: true
-git:
-  isolation: worktree
-  manage_gitignore: false
----
+# GSD-2 Preferences
 
-GSD-2 (v2.28+) preferences for {{ project_name }}.
-Managed interactively via `/gsd prefs`.
+## Project Overview
 
-Key settings:
-- `models.*` — Per-phase model selection (string or {model, fallbacks} for automatic failover)
-- `skill_discovery` — auto / suggest / off
-- `auto_supervisor.*` — Timeout thresholds for auto mode
-- `budget_ceiling` — USD ceiling; auto mode pauses when reached
-- `token_profile` — budget / balanced / quality (coordinated token optimization)
-- `unique_milestone_ids` — Unique names to avoid team clashes (e.g. M001-abc123)
-- `git.isolation` — worktree (default) or none
-- `git.manage_gitignore` — false to skip auto-managing .gitignore
-- `skill_staleness_days` — Skills unused for N days get deprioritized (0 = disabled)
-- `verification_commands` — Commands run after each task to verify correctness
-- `verification_auto_fix` — Auto-fix lint/format issues on verification failure
-- `verification_max_retries` — Max retries before escalating verification failure
-- `auto_report` — Generate HTML reports after milestones (`/gsd export --html --all`)
+- **Name**: {{ project_name }}
+- **Type**: Fullstack Python + TypeScript application
+- **Backend**: Python {{ python_version }}+ / FastAPI / SQLAlchemy 2.0+ / clean-hexagonal architecture
+- **Frontend**: TypeScript / Vite / React 19 / Tailwind CSS v4
+- **Package Managers**: UV (Python), Bun (frontend)
+- **Container Runtime**: {{ container_runtime }}
 
-Docs: https://github.com/gsd-build/GSD-2/blob/main/docs/configuration.md
-{%- endif %}
+## Architecture
+
+Clean / hexagonal architecture with strict Dependency Rule:
+- `core/` → Pure domain (entities, enums, interfaces) — ZERO external deps
+- `application/` → Use cases, services, DTOs — imports from core only
+- `adapters/` → DB repos, cache, HTTP clients — implements core interfaces
+- `ports/` → API routes, CLI — FastAPI/Click allowed
+- `config/` → Settings, DI container
+- `utils/` → Shared helpers — stdlib + third-party only
+
+Dependency direction: `adapters → ports → application → core`
+
+## Conventions
+
+- Python: type hints everywhere, Google-style docstrings, keyword-only args (`*`),
+  `from __future__ import annotations`, no `Any` type, structured logging with structlog
+- TypeScript: strict mode, no `any`, Tailwind CSS v4
+- Shell: `.zsh` extension, `emulate -L zsh`, `setopt ERR_EXIT PIPE_FAIL`
+- Constants: plain `UPPER_SNAKE_CASE` (no `Final` annotation)
+- Enums: `StrEnum` + `@unique` + `auto()`
+
+## Verification Commands
+
+```
+task test              # Run ALL tests
+task test:unit         # Backend unit tests
+task test:integration  # Integration tests
+task test:coverage     # Tests with coverage report
+task lint              # All linters
+task format            # Format all code
+task typecheck         # Type checking
+task registry:check    # Verify generated constants are up to date
+```
+
+## Model Preferences
+
+- Default: Claude Sonnet 4
+- Complex reasoning: Claude Opus 4
+- Quick edits: Claude Haiku
+
+## Behavior
+
+- Always run `task lint` after editing Python files
+- Always run `task registry:check` after changing naming_registry.json
+- Never use `print()` — use structured logging
+- Never hardcode field/column names — use registry constants
+- Never use raw SQL — use SQLAlchemy ORM

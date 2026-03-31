@@ -1,4 +1,4 @@
-{%- if database_backend == "postgresql" or use_redis or use_celery %}
+{%- if database_backend in ("postgresql", "sqlite") or use_redis or use_celery %}
 
 services:
   app:
@@ -8,6 +8,8 @@ services:
       {{ project_slug | upper }}_LOG_LEVEL: WARNING
 {%- if database_backend == "postgresql" %}
       {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://postgres:test-password@db:5432/{{ project_slug }}_test
+{%- elif database_backend == "sqlite" %}
+      {{ project_slug | upper }}_DATABASE_URL: sqlite+aiosqlite:///data/{{ project_slug }}_test.db
 {%- endif %}
 {%- if use_celery %}
       {{ project_slug | upper }}_CELERY_TASK_ALWAYS_EAGER: "true"
@@ -21,6 +23,8 @@ services:
       {{ project_slug | upper }}_LOG_LEVEL: WARNING
 {%- if database_backend == "postgresql" %}
       {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://postgres:test-password@db:5432/{{ project_slug }}_test
+{%- elif database_backend == "sqlite" %}
+      {{ project_slug | upper }}_DATABASE_URL: sqlite+aiosqlite:///data/{{ project_slug }}_test.db
 {%- endif %}
       {{ project_slug | upper }}_CELERY_TASK_ALWAYS_EAGER: "true"
 {%- endif %}

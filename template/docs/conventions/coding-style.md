@@ -60,10 +60,10 @@ def create_user(email: str, name: str) -> User:
 - **Strict mode**: `strict: true` in `tsconfig.json`
 - **No `any`**: use `unknown` or proper generics
 - **Indent**: 2 spaces
-- **Quotes**: single quotes (via Prettier)
-- **Semicolons**: yes (via Prettier)
-- **Formatter**: Prettier
-- **Linter**: ESLint
+- **Quotes**: single quotes (via Biome)
+- **Semicolons**: yes (via Biome)
+- **Formatter**: Biome
+- **Linter**: Biome
 
 ---
 

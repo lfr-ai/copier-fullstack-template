@@ -10,8 +10,7 @@
 | Python | {{ python_version }}+ | Backend runtime | Yes (via `uv`) |
 | [uv](https://docs.astral.sh/uv/) | latest | Python package manager | Yes |
 | [go-task](https://taskfile.dev/) | 3.x | Task runner | Yes |
-| Node.js | {{ node_version }} LTS | Frontend runtime | Yes (via `fnm`) |
-| [pnpm](https://pnpm.io/) | 10 | Node package manager | Yes (via `corepack`) |
+| [Bun](https://bun.sh/) | latest | Frontend runtime & package manager | Yes |
 | {{ container_runtime | capitalize }} | latest | Container runtime | Yes |
 | [pre-commit](https://pre-commit.com/) | latest | Git hooks | Yes (via `uv`) |
 {% if use_caddy -%}
@@ -30,7 +29,7 @@
 ## Quick Install
 
 ```bash
-zsh scripts/install/install-all.zsh   # installs Python, uv, Node, pnpm, Docker, etc.
+zsh scripts/install/install-all.zsh   # installs Python, uv, Bun, Docker, etc.
 zsh scripts/bootstrap.zsh             # installs deps, pre-commit, creates .env
 task dev                               # start development
 ```
@@ -95,6 +94,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed overview.
 |-------|---------|----------|
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
 | Application DB | PostgreSQL | Primary relational storage |
+{%- elif database_backend == 'sqlite' %}
+| Application DB | SQLite | File-based relational storage (via `aiosqlite`) |
 {%- endif %}
 {%- if use_pgvector %}
 | Vector store | pgvector | Embedding similarity search |
@@ -167,33 +168,6 @@ task backend:profile:cpu       # CPU flame chart
 task backend:profile:memory    # Memory snapshot
 task backend:profile:report    # Open latest HTML report
 ```
-
-{% if with_opencode %}
-## OpenCode
-
-This project includes an OpenCode-first AI workflow with project-scoped
-agents, commands, skills, and plugins.
-
-| Config | Path |
-|--------|------|
-| Project config | `opencode.json` |
-| oh-my-opencode | `.opencode/oh-my-opencode.jsonc` |
-| Agents / commands / skills | `.opencode/` |
-
-**Bundled plugins**: `oh-my-opencode`, `opencode-agent-skills`, `superpowers`,
-`opencode-dynamic-context-pruning`, `opencode-shell-strategy`
-
-**Quick commands**: `/plan-feature`, `/implement`, `/review`, `/tdd`,
-`/debug`, `/refactor`, `/security-audit`, `/mcp-health`
-{% if with_gsd %}
-
-**GSD-2** (`gsd-pi`): Autonomous milestone-based development.
-Run `task gsd` or `gsd` to start. Config in `.gsd/preferences.md`.
-{% endif %}
-
-See [docs/OPENCODE.md](docs/OPENCODE.md) for the full setup, verification,
-and troubleshooting guide.
-{% endif %}
 
 ## License
 

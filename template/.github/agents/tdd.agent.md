@@ -1,25 +1,25 @@
 ---
 description:
-  'Implements features using strict test-driven development: Red (write failing tests) →
-  Green (make tests pass) → Refactor (improve code quality).'
+    "Implements features using strict test-driven development: Red (write failing tests) →
+    Green (make tests pass) → Refactor (improve code quality)."
 tools:
-  [
-    agent,
-    read/readFile,
-    read/problems,
-    search/codebase,
-    search/fileSearch,
-    search/textSearch,
-    search/listDirectory,
-    search/changes,
-    search/usages,
-    edit/editFiles,
-    execute/runInTerminal,
-    execute/getTerminalOutput,
-    context7/get-library-docs,
-    context7/resolve-library-id,
-  ]
-agents: ['Red', 'Green', 'Refactor']
+    [
+        agent,
+        read/readFile,
+        read/problems,
+        search/codebase,
+        search/fileSearch,
+        search/textSearch,
+        search/listDirectory,
+        search/changes,
+        search/usages,
+        edit/editFiles,
+        execute/runInTerminal,
+        execute/getTerminalOutput,
+        context7/get-library-docs,
+        context7/resolve-library-id,
+    ]
+agents: ["red", "green", "refactor-tdd"]
 ---
 
 You are the **TDD** agent — you implement features using strict test-driven development.

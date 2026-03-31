@@ -23,26 +23,15 @@
     "isolatedModules": true,
     "noEmit": true,
     "sourceMap": true,
-{%- if frontend_framework == "react" %}
 
-    /* ── React JSX transform ───────────────────────────── */
+    /* ── React JSX transform (SWC-compatible) ──────────── */
     "jsx": "react-jsx",
-{%- endif %}
-{%- if frontend_framework == "lit" %}
-
-    /* ── Lit standard TC39 decorators (TS 5.x+) ────────── */
-    "useDefineForClassFields": false,
-{%- endif %}
 
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-{%- if frontend_framework == "react" %}
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-{%- else %}
-  "include": ["src/**/*.ts"],
-{%- endif %}
   "exclude": ["node_modules", "dist"]
 }

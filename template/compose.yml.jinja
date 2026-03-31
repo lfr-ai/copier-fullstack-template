@@ -5,6 +5,8 @@ x-common-env: &common-env
 {%- elif database_backend == "azure_postgresql" %}
   # When using Azure PostgreSQL, set the connection string via .env or environment variable.
   # {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://user:pass@your-server.postgres.database.azure.com:5432/{{ project_slug }}?sslmode=require
+{%- elif database_backend == "sqlite" %}
+  {{ project_slug | upper }}_DATABASE_URL: sqlite+aiosqlite:///data/{{ project_slug }}.db
 {%- endif %}
   {{ project_slug | upper }}_SECRET_KEY: ${{{ project_slug | upper }}_SECRET_KEY:-change-me-in-production}
 {%- if use_redis %}
@@ -44,6 +46,9 @@ services:
       <<: *common-env
     volumes:
       - ./logs:/app/logs
+{%- if database_backend == "sqlite" %}
+      - sqlite-data:/app/data
+{%- endif %}
 {%- if use_faiss %}
       - faiss-data:/app/data/faiss
 {%- endif %}
@@ -165,6 +170,10 @@ services:
     environment:
       <<: *common-env
     command: ["celery", "-A", "{{ project_slug }}.config.celery:celery_app", "worker", "--loglevel=info"]
+{%- if database_backend == "sqlite" %}
+    volumes:
+      - sqlite-data:/app/data
+{%- endif %}
 {%- if use_redis or database_backend == "postgresql" %}
     depends_on:
 {%- if use_redis %}
@@ -247,6 +256,10 @@ services:
       <<: *common-env
       {{ project_slug | upper }}_MCP_ENABLED: "true"
     command: ["python", "-m", "{{ project_slug }}.ai.mcp.server"]
+{%- if database_backend == "sqlite" %}
+    volumes:
+      - sqlite-data:/app/data
+{%- endif %}
 {%- if use_redis or database_backend == "postgresql" %}
     depends_on:
 {%- if use_redis %}
@@ -276,6 +289,8 @@ volumes:
 {%- endif %}
 {%- if database_backend == "postgresql" %}
   postgres-data:
+{%- elif database_backend == "sqlite" %}
+  sqlite-data:
 {%- endif %}
 {%- if use_caddy %}
   caddy_data:

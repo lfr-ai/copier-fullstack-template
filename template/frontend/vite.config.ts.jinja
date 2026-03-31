@@ -2,9 +2,7 @@ import { defineConfig } from 'vite';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import tailwindcss from '@tailwindcss/vite';
-{%- if frontend_framework == "react" %}
-import react from '@vitejs/plugin-react';
-{%- endif %}
+import react from '@vitejs/plugin-react-swc';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -12,9 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
 plugins: [
 tailwindcss(),
-{%- if frontend_framework == "react" %}
 react(),
-{%- endif %}
 // Bundle analysis — activate with ANALYZE=true environment variable
 ...(process.env.ANALYZE === 'true'
 ? [
@@ -40,12 +36,9 @@ main: resolve(__dirname, 'index.html'),
 },
 output: {
 manualChunks: {
-{%- if frontend_framework == "react" %}
 'react-vendor': ['react', 'react-dom', 'react-router'],
 'query-vendor': ['@tanstack/react-query'],
-{%- elif frontend_framework == "lit" %}
-'lit-vendor': ['lit', '@lit-labs/router', '@lit/context', '@lit/task'],
-{%- endif %}
+'form-vendor': ['react-hook-form', '@hookform/resolvers'],
 'validation': ['zod'],
 },
 },

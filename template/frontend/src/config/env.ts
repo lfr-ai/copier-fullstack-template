@@ -9,7 +9,7 @@
  */
 
 /** Supported deployment environments. */
-export type AppEnvironment = 'local' | 'dev' | 'test' | 'staging' | 'prod';
+export type AppEnvironment = "local" | "dev" | "test" | "staging" | "prod";
 
 /** Typed environment configuration object. */
 export interface AppConfig {
@@ -28,19 +28,21 @@ export interface AppConfig {
 }
 
 function resolveEnvironment(): AppEnvironment {
-  const raw = import.meta.env.VITE_ENVIRONMENT ?? 'local';
+  const raw = import.meta.env.VITE_ENVIRONMENT ?? "local";
   const allowed: ReadonlySet<AppEnvironment> = new Set([
-    'local',
-    'dev',
-    'test',
-    'staging',
-    'prod',
+    "local",
+    "dev",
+    "test",
+    "staging",
+    "prod",
   ]);
   if (allowed.has(raw as AppEnvironment)) {
     return raw as AppEnvironment;
   }
-  console.warn(`[config] Unknown VITE_ENVIRONMENT "${raw}", falling back to "local".`);
-  return 'local';
+  console.warn(
+    `[config] Unknown VITE_ENVIRONMENT "${raw}", falling back to "local".`,
+  );
+  return "local";
 }
 
 /**
@@ -54,9 +56,9 @@ function resolveEnvironment(): AppEnvironment {
  */
 export const config: AppConfig = Object.freeze({
   environment: resolveEnvironment(),
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
-  graphqlUrl: import.meta.env.VITE_GRAPHQL_URL ?? '/graphql',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? "/api/v1",
+  graphqlUrl: import.meta.env.VITE_GRAPHQL_URL ?? "/graphql",
   isProd: import.meta.env.PROD,
   isDev: import.meta.env.DEV,
-  appVersion: import.meta.env.VITE_APP_VERSION ?? '0.0.0-dev',
+  appVersion: import.meta.env.VITE_APP_VERSION ?? "0.0.0-dev",
 });

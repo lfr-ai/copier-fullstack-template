@@ -1,23 +1,36 @@
 ---
 description: Coding conventions and guidelines
-applyTo: "**/*.py, **/*.ts, **/*.js, **/*.css, **/*.zsh, **/*.azcli"
+applyTo: "**"
 ---
 
 
 
 This document defines coding standards, conventions, and best practices for this codebase
 
-## Skill Packs (`.github/skills/`)
+## Agent Skills (`.github/skills/`)
 
-Use the skill files in `.github/skills/` as task-specific playbooks:
+Use the agent skills in `.github/skills/` as task-specific playbooks. Each skill is
+a directory containing a `SKILL.md` file:
 
-- `hexagonal-architecture.md` for clean / hexagonal architecture boundary and Dependency Rule checks
-- `python-conventions.md` for Python code quality and typing standards
-- `testing-conventions.md` for test strategy, markers, and coverage gates
-- `naming-registry.md` for registry-first constant/code generation workflow
+- `hexagonal-architecture/` for clean / hexagonal architecture boundary and Dependency Rule checks
+- `python-conventions/` for Python code quality and typing standards
+- `testing-conventions/` for test strategy, markers, and coverage gates
+- `naming-registry/` for registry-first constant/code generation workflow
 
 When a task clearly matches one of those domains, apply that skill guidance first,
 then apply the general conventions in this file.
+
+## Scoped Instructions (`.github/instructions/`)
+
+File-scoped instructions auto-load for matching globs:
+
+- `architecture.instructions.md` — clean / hexagonal architecture for `backend/**/*.py`
+- `coding-conventions.instructions.md` — Python conventions for `**/*.py`
+- `frontend.instructions.md` — TypeScript, component, and Vite patterns for `frontend/**`
+- `security.instructions.md` — security rules for all source code
+- `shell.instructions.md` — zsh scripting and Azure CLI patterns for `**/*.zsh`, `scripts/**`
+- `testing.instructions.md` — test structure and markers for `backend/tests/**/*.py`
+- `scaffolding.instructions.md` — Copier template conventions for `**/*.jinja`
 
 Apply principles from PEP 20 (The Zen of Python) throughout:
 
@@ -248,9 +261,11 @@ This project follows clean / hexagonal architecture (ports & adapters). The Depe
 - For composite indices, use the `__table_args__` class attribute
 - Avoid over-indexing; each index adds overhead to write operations
 {% if database_backend == "postgresql" %}
-
-
 - Use PostgreSQL native enums with `sqlalchemy.dialects.postgresql.ENUM`
+{% elif database_backend == "sqlite" %}
+- Use `String` or `Enum` types (SQLite has no native enum support)
+- Always use Alembic batch mode (`render_as_batch=True`) — ALTER TABLE is limited in SQLite
+- Avoid advanced PostgreSQL-specific types; prefer portable SQLAlchemy types
 {% endif %}
 
 
@@ -362,12 +377,13 @@ This project follows clean / hexagonal architecture (ports & adapters). The Depe
 
 
 - Use TypeScript for type safety when possible
-- Use Vite for build tooling and hot module replacement
+- Use Vite with SWC for build tooling and hot module replacement
+- Use Biome for linting, formatting, and import organization
 
 
-- Use `pnpm` for package management (faster and more efficient than npm)
-- Install packages with: `pnpm install`
-- Add dependencies with: `pnpm add <package>`
+- Use `bun` for package management and JavaScript runtime
+- Install packages with: `bun install`
+- Add dependencies with: `bun add <package>`
 
 ---
 

@@ -24,6 +24,8 @@ pytest_plugins = [
 
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
 TEST_DATABASE_URL = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+{%- elif database_backend == 'sqlite' %}
+TEST_DATABASE_URL = "sqlite+aiosqlite:///data/{{ project_slug }}_test.db"
 {%- else %}
 TEST_DATABASE_URL = ""
 {%- endif %}

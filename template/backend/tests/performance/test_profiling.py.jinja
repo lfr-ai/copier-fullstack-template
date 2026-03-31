@@ -21,7 +21,7 @@ class TestCpuProfiling:
     """CPU profiling via pyinstrument."""
 
     async def test_cpu_profile_context_manager(self) -> None:
-        from {{ project_slug }}.infrastructure.profiling.cpu import cpu_profile
+        from {{ project_slug }}.adapters.profiling.cpu import cpu_profile
 
         async with cpu_profile(label="test_basic") as result:
             total = sum(range(100_000))
@@ -34,7 +34,7 @@ class TestCpuProfiling:
     async def test_cpu_profile_saves_html(self, tmp_path: object) -> None:
         import os
 
-        from {{ project_slug }}.infrastructure.profiling.cpu import cpu_profile
+        from {{ project_slug }}.adapters.profiling.cpu import cpu_profile
 
         os.environ["{{ project_slug | upper }}_PROFILING_DIR"] = str(tmp_path)
         try:
@@ -52,7 +52,7 @@ class TestMemoryProfiling:
     """Memory profiling via tracemalloc."""
 
     async def test_memory_snapshot_captures_allocations(self) -> None:
-        from {{ project_slug }}.infrastructure.profiling.memory import memory_snapshot
+        from {{ project_slug }}.adapters.profiling.memory import memory_snapshot
 
         async with memory_snapshot(label="test_alloc") as result:
             data = [bytearray(1024) for _ in range(100)]
@@ -62,7 +62,7 @@ class TestMemoryProfiling:
         assert result.label == "test_alloc"
 
     async def test_memory_comparison(self) -> None:
-        from {{ project_slug }}.infrastructure.profiling.memory import (
+        from {{ project_slug }}.adapters.profiling.memory import (
             memory_compare,
             take_snapshot,
         )
@@ -81,7 +81,7 @@ class TestSqlProfiling:
     """SQL query profiling via SQLAlchemy events."""
 
     async def test_sql_profile_context_manager(self) -> None:
-        from {{ project_slug }}.infrastructure.profiling.sql import sql_profile
+        from {{ project_slug }}.adapters.profiling.sql import sql_profile
 
         mock_engine = MagicMock()
         mock_engine.sync_engine = MagicMock()

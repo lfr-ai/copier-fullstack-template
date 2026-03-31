@@ -151,50 +151,25 @@ Log-Result "uv" "FAILED"
 }
 }
 
-function Install-NodePnpm {
+function Install-Bun {
 Write-Host ""
-Write-Host "--- Node.js {{ node_version }} + pnpm ---"
-if (Get-Command node -ErrorAction SilentlyContinue) {
-Write-Host "Node.js already installed: $(node --version)"
-Log-Result "Node.js" "OK (existing)"
+Write-Host "--- Bun ---"
+if (Get-Command bun -ErrorAction SilentlyContinue) {
+Write-Host "Bun already installed: $(bun --version)"
+Log-Result "Bun" "OK (existing)"
+return
 }
-else {
 try {
-if (Get-Command winget -ErrorAction SilentlyContinue) {
-winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements
-}
-else {
-Write-Host "Download Node.js {{ node_version }} LTS from https://nodejs.org/"
-}
+Write-Host "Installing Bun..."
+irm bun.sh/install.ps1 | iex
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
-[System.Environment]::GetEnvironmentVariable("Path", "User")
-Log-Result "Node.js" "OK"
+[System.Environment]::GetEnvironmentVariable("Path", "User") +
+";$env:USERPROFILE\.bun\bin"
+Log-Result "Bun" "OK"
 }
 catch {
-Write-Warning "Node.js installation failed: $_"
-Log-Result "Node.js" "FAILED"
-}
-}
-
-if (Get-Command pnpm -ErrorAction SilentlyContinue) {
-Write-Host "pnpm already installed: $(pnpm --version)"
-Log-Result "pnpm" "OK (existing)"
-}
-else {
-try {
-if (Get-Command corepack -ErrorAction SilentlyContinue) {
-corepack enable
-corepack prepare pnpm@10 --activate
-}
-else {
-npm install -g pnpm
-}
-Log-Result "pnpm" "OK"
-}
-catch {
-Write-Warning "pnpm installation failed: $_"
-Log-Result "pnpm" "FAILED"
-}
+Write-Warning "Bun installation failed: $_"
+Log-Result "Bun" "FAILED"
 }
 }
 
@@ -349,6 +324,22 @@ Write-Host "For native Windows, consider Memurai: https://www.memurai.com/"
 Log-Result "Redis" "OK (containerized)"
 }
 {% endif %}
+{% if database_backend == 'sqlite' %}
+
+function Install-SQLite {
+Write-Host ""
+Write-Host "--- SQLite ---"
+Write-Host "SQLite is built into Python's stdlib. The aiosqlite async driver will"
+Write-Host "be installed automatically by 'uv sync' when setting up the project."
+Write-Host ""
+Write-Host "For the native sqlite3 CLI on Windows, install via winget or scoop:"
+Write-Host " winget install --id Mozilla.SQLite -e"
+Write-Host " scoop install sqlite"
+Write-Host ""
+Write-Host "Database file: data/{{ project_slug }}.db"
+Log-Result "SQLite" "OK (built-in)"
+}
+{% endif %}
 {% if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
 
 function Install-Neo4j {
@@ -397,36 +388,6 @@ Log-Result "Azure CLI" "FAILED"
 }
 {% endif %}
 
-function Install-OpenCode {
-Write-Host ""
-Write-Host "--- OpenCode (AI coding assistant) ---"
-if (Get-Command opencode -ErrorAction SilentlyContinue) {
-Write-Host "OpenCode already installed"
-Log-Result "OpenCode" "OK (existing)"
-return
-}
-try {
-if (Get-Command npm -ErrorAction SilentlyContinue) {
-npm i -g opencode-ai
-}
-elseif (Get-Command scoop -ErrorAction SilentlyContinue) {
-scoop install opencode
-}
-else {
-Write-Host "Install via: npm i -g opencode-ai OR scoop install opencode"
-Log-Result "OpenCode" "SKIPPED (no npm/scoop)"
-return
-}
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
-[System.Environment]::GetEnvironmentVariable("Path", "User")
-Log-Result "OpenCode" "OK"
-}
-catch {
-Write-Warning "OpenCode installation failed: $_"
-Log-Result "OpenCode" "FAILED"
-}
-}
-
 function Print-Summary {
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════╗"
@@ -444,7 +405,7 @@ Write-Host ""
 Write-Host "╔══════════════════════════════════════════════════════╗"
 Write-Host "║ Windows Development Environment — Full Setup ║"
 Write-Host "║ Project: {{ project_name }} ║"
-Write-Host "║ Python {{ python_version }} | Node {{ node_version }} | {{ container_runtime | capitalize }} ║"
+Write-Host "║ Python {{ python_version }} | Bun | {{ container_runtime | capitalize }} ║"
 Write-Host "╚══════════════════════════════════════════════════════╝"
 Write-Host ""
 
@@ -460,7 +421,7 @@ Install-WSL2
 Install-VSCode
 Install-Python
 Install-UV
-Install-NodePnpm
+Install-Bun
 Install-ContainerRuntime
 Install-GoTask
 Install-Hadolint
@@ -473,6 +434,10 @@ Install-Caddy
 
 Install-Redis
 {% endif %}
+{% if database_backend == 'sqlite' %}
+
+Install-SQLite
+{% endif %}
 {% if use_knowledge_graph and knowledge_graph_backend == 'neo4j' %}
 
 Install-Neo4j
@@ -481,8 +446,6 @@ Install-Neo4j
 
 Install-AzureCLI
 {% endif %}
-
-Install-OpenCode
 
 Print-Summary
 

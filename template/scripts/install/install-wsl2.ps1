@@ -11,10 +11,26 @@ function Test-WSLInstalled {
     }
 }
 
+function Test-WindowsVersion {
+    $os = Get-CimInstance Win32_OperatingSystem
+    $build = [int]$os.BuildNumber
+    if ($build -lt 19041) {
+        Write-Warning "WSL2 requires Windows 10 version 2004 (build 19041) or later."
+        Write-Warning "Current build: $build"
+        return $false
+    }
+    return $true
+}
+
 function Install-WSL2 {
     if (Test-WSLInstalled) {
         Write-Host "WSL2 is already installed"
         wsl --version
+        return
+    }
+
+    if (-not (Test-WindowsVersion)) {
+        Write-Warning "Cannot install WSL2 on this Windows version."
         return
     }
 
@@ -36,7 +52,9 @@ function Install-WSL2 {
 
     $restart = Read-Host "Restart now? (Y/n)"
     if ($restart -ne "n") {
-        Restart-Computer -Force
+        Write-Host "Restarting in 10 seconds. Save your work!"
+        Start-Sleep -Seconds 10
+        Restart-Computer
     }
 }
 

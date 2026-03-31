@@ -37,7 +37,7 @@ class GraphQLContext(BaseContext):
     @cached_property
     def _container(self) -> object:
         """Lazily import and return the singleton DI container."""
-        from {{ project_slug }}.ports.container import get_container
+        from {{ project_slug }}.composition.container import get_container
 
         return get_container()
 

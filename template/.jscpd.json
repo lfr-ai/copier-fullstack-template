@@ -15,7 +15,7 @@
     "*.lock",
     "*.min.js",
     "*.min.css",
-    "pnpm-lock.yaml",
+    "bun.lock",
     "uv.lock",
     "package-lock.json",
     "alembic/versions",

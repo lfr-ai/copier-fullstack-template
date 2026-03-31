@@ -3,8 +3,6 @@ emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT
 
 
-CADDY_MIN_VERSION="2.9"
-
 detect_platform() {
     emulate -L zsh
 
@@ -46,10 +44,12 @@ install_caddy_linux() {
         sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
         curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null || true
         curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list > /dev/null
+        sudo chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+        sudo chmod o+r /etc/apt/sources.list.d/caddy-stable.list
         sudo apt-get update
         sudo apt-get install -y caddy
     elif command -v dnf &>/dev/null; then
-        sudo dnf install -y 'dnf-command(copr)' 2>/dev/null || true
+        sudo dnf install -y dnf-plugins-core 2>/dev/null || sudo dnf install -y dnf5-plugins 2>/dev/null || true
         sudo dnf copr enable -y @caddy/caddy
         sudo dnf install -y caddy
     elif command -v yum &>/dev/null; then
@@ -86,9 +86,11 @@ install_caddy_binary() {
     local dest="/usr/local/bin/caddy"
 
     print "Downloading Caddy binary..."
-    curl -fsSL "${url}" -o /tmp/caddy
-    chmod +x /tmp/caddy
-    sudo mv /tmp/caddy "${dest}"
+    local tmp_bin
+    tmp_bin="$(mktemp)"
+    curl -fsSL "${url}" -o "${tmp_bin}"
+    chmod +x "${tmp_bin}"
+    sudo mv "${tmp_bin}" "${dest}"
     print "Caddy binary installed to ${dest}"
 }
 
