@@ -45,7 +45,6 @@ backend/src/{{ project_slug }}/
 │   └── external/             # httpx clients, third-party API adapters
 │
 ├── ports/                    # Presentation layer (OUTERMOST)
-│   ├── container.py          # DI composition root — wires protocols → adapters
 │   ├── api/                  # FastAPI REST
 │   │   ├── app.py            # create_api_app() -> FastAPI
 │   │   ├── dependencies.py   # ALL Depends() — DI wiring
@@ -58,13 +57,18 @@ backend/src/{{ project_slug }}/
 │   └── cli/                  # Click CLI
 │       └── app.py            # cli() -> click.Group
 │
+├── composition/              # Dependency injection wiring
+│   └── container.py          # DI composition root — wires protocols → adapters
+│
 ├── config/                   # Settings, logging{% if use_celery %}, Celery{% endif %}
 
 │   ├── settings/             # Environment-specific settings (base, dev, prod, etc.)
 │   └── logging.py            # Structured logging configuration
 │
-├── infrastructure/           # Cross-cutting infrastructure concerns
-│   └── profiling/            # CPU, memory, SQL profiling
+├── ai/                       # AI integration vertical (CONDITIONAL — only if use_ai)
+│   ├── prompts/              # Prompt templates and chains
+│   ├── agents/               # AI agent definitions
+│   └── tools/                # AI tool integrations
 │
 └── utils/                    # Framework-agnostic, pure functions, stdlib ONLY
     ├── logger_factory.py     # Structured logging setup
@@ -81,12 +85,17 @@ utils/ ← (all layers may import; utils imports from NO project layer)
 
 | Layer            | May Import From                                              | NEVER Imports From                     |
 | ---------------- | ------------------------------------------------------------ | -------------------------------------- |
-| **core/**        | stdlib, utils/                                               | application/, adapters/, ports/, config/ |
-| **application/** | core/ (protocols + base classes), utils/                     | adapters/, ports/, config/             |
-| **adapters/**    | core/ (protocols), application/ (DTOs, mappers), utils/, libs | ports/                                 |
-| **ports/**       | application/ (services, DTOs), config/, utils/               | core/ (directly), adapters/ (use DI)   |
-| **config/**      | utils/, external libs                                        | core/, application/, adapters/, ports/ |
+| **core/**        | stdlib, utils/                                               | application/, adapters/, ports/, config/, ai/ |
+| **application/** | core/ (protocols + base classes), ai/ (services, models — vertical), utils/ | adapters/, ports/, config/             |
+| **adapters/**    | core/ (protocols), application/ (DTOs, mappers), utils/, libs | ports/, ai/                            |
+| **ports/**       | application/ (services, DTOs), core/ (exceptions, enums, constants, interfaces), config/, utils/, ai/ (models, services — vertical per ADR) | adapters/ (use DI)                     |
+| **config/**      | core/enums/ (Environment), utils/, external libs             | application/, adapters/, ports/, ai/   |
+| **ai/**          | core/, application/, utils/, external AI libs (langchain, openai) | ports/, config/, adapters/             |
 | **utils/**       | stdlib ONLY                                                  | ALL other project layers               |
+
+**Note on ai/ vertical module:** Per decision D002, `ai/` is a separate top-level vertical module, not a hexagonal layer. Standard inner/outer layer restrictions don't apply to it. Both `application/` and `ports/` may import ai/ models and services. The ai/ module itself must not import from `ports/`, `config/`, or `adapters/`.
+
+**Known exception:** `ports/graphql/permissions.py.jinja` directly imports `JWTAdapter` from `adapters/` due to missing auth interface and DI wiring infrastructure. This is a documented FIXME pending proper auth DI implementation.
 
 
 | Concern                                  | ONLY In                 |
@@ -123,7 +132,7 @@ ALL entry points use factory functions — no global mutable state:
 {%- endif %}
 
 
-- `ports/container.py` wires port protocols to concrete adapters
+- `composition/container.py` wires port protocols to concrete adapters
 - Constructor injection via typed parameters
 - No service locator pattern, no global mutable state
 - Routes NEVER instantiate dependencies — use `ports/api/dependencies.py`

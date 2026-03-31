@@ -25,8 +25,11 @@ layer structure that maps directly to the project source tree:
   web controllers, API schemas, DI container. Framework imports allowed here.
 - **adapters/** — Driven adapters: persistence (SQLAlchemy repositories),
   cache, messaging, email, storage, auth (JWT). Implements core protocols.
-- **infrastructure/** — Low-level technical primitives: DB engines, HTTP
-  clients, security hashing, scheduling.
+  Contains all infrastructure concerns: DB engines, HTTP clients, security
+  hashing, scheduling, profiling.
+- **composition/** — Composition Root: DI container wiring protocols to
+  concrete adapter implementations. The single place where all dependencies
+  are assembled.
 - **config/** — Separate pillar: pydantic-settings, logging, constants.
 - **utils/** — Shared leaf: stdlib + third-party only, no first-party imports.
 

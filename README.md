@@ -215,9 +215,9 @@ my-project/
 │   │   ├── adapters/         # Outbound: DB repos, cache, email, storage, auth
 │   │   ├── ai/               # LLM/agent tooling (conditional: use_ai)
 │   │   ├── application/      # Use cases, services, DTOs, commands, queries
-│   │   ├── config/           # Settings, constants, logging, DI container
+│   │   ├── config/           # Settings, constants, logging
+│   │   ├── composition/      # DI container, dependency wiring (Composition Root)
 │   │   ├── core/             # Pure domain (entities, enums, interfaces, value objects)
-│   │   ├── infrastructure/   # DB engines, HTTP clients, security, profiling
 │   │   ├── ports/            # Inbound: API routes, CLI, web
 │   │   │   ├── api/middleware/ # CORS, auth, rate limiting, error handling
 │   │   │   └── graphql/      # Strawberry schema (conditional: graphql/both)
