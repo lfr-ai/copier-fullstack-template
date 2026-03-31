@@ -103,9 +103,9 @@ Brief description of what will be accomplished.
 ```
 core/        → Pure domain (entities, enums, value objects, interfaces) — NO external deps
 application/ → Use cases, services, DTOs, commands — imports from core only
-adapters/    → DB repos, cache, HTTP clients — implements core interfaces
-ports/       → API routes, CLI, webhooks, DI — FastAPI/Click allowed
-infrastructure/ → DB engines, HTTP clients, security primitives
+adapters/    → DB repos, cache, HTTP clients, low-level primitives — implements core interfaces
+ports/       → API routes, CLI, webhooks — FastAPI/Click allowed
+composition/ → DI container — wires protocols to concrete adapters
 utils/       → Shared utilities — stdlib + third-party only
 config/      → Settings, constants — separate pillar
 ```
