@@ -1,4 +1,4 @@
-"""Conversation memory port."""
+"""Conversation memory gateway."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ _DEFAULT_MESSAGE_LIMIT: int = 50
 
 
 @runtime_checkable
-class ConversationMemoryPort(Protocol):
-    """Protocol for conversation history storage and retrieval."""
+class ConversationMemoryGateway(Protocol):
+    """Gateway for conversation history storage and retrieval."""
 
     async def add_message(
         self,

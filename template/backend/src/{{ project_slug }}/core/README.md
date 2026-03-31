@@ -10,8 +10,8 @@ Pure domain logic — **no framework dependencies**.
 - Aggregate roots (`AggregateRoot`) extend `Entity` and mark the consistency boundary
   for a cluster of objects. Repositories only reference aggregate roots.
 - Value objects are immutable (`frozen=True, slots=True`).
-- Interfaces (protocols) define contracts for adapters — these are the **ports** in
-  Ports & Adapters terminology.
+- Interfaces (protocols) define contracts for infrastructure implementations — these are the **gateways and repositories** in
+  Clean Architecture terminology.
 - Domain services contain cross-entity business rules that don't belong in a single
   entity.
 - Specifications encapsulate reusable business predicates.
@@ -25,7 +25,7 @@ Pure domain logic — **no framework dependencies**.
 | `enums/`           | Domain enumerations                                             |
 | `events/`          | Domain events                                                   |
 | `exceptions/`      | Domain-specific exception hierarchy                             |
-| `interfaces/`      | Port protocols — contracts for driven adapters and repositories |
+| `interfaces/`      | Gateway and repository protocols — contracts for infrastructure |
 | `specifications/`  | Composable business rule predicates (Specification pattern)     |
 | `value_objects/`   | Immutable value types (Email, EmbeddingConfig)                  |
 | `types.py`         | NewType aliases for domain IDs                                  |

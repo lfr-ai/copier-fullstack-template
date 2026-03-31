@@ -12,7 +12,7 @@ from collections.abc import Callable, Coroutine
 from typing import override
 
 from {{ project_slug }}.ai.agents.base_agent import AgentResult, BaseAgent
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 ToolExecutor = Callable[..., Coroutine[object, object, object]]
@@ -43,7 +43,7 @@ class ReActAgent(BaseAgent):
     def __init__(
         self,
         *,
-        llm: LLMPort,
+        llm: LLMGateway,
         executors: dict[str, ToolExecutor] | None = None,
         **kwargs: object,
     ) -> None:

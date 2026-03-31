@@ -3,7 +3,7 @@ tasks:
     desc: "Start FastAPI development server"
     dir: backend
     cmds:
-      - uv run uvicorn {{ project_slug }}.ports.api.app:create_api_app --factory --reload --port 8000
+      - uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --reload --port 8000
 
   build:
     desc: "Build Python package"
@@ -106,7 +106,7 @@ tasks:
         uv run python -m pyinstrument
         -r html
         -o profiles/cpu/startup_$(date +%Y%m%d_%H%M%S).html
-        -m uvicorn {{ project_slug }}.ports.api.app:create_api_app
+        -m uvicorn {{ project_slug }}.presentation.api.app:create_api_app
         --factory --host 127.0.0.1 --port 8000 --timeout-keep-alive 2
         {% raw %}{{.CLI_ARGS}}{% endraw %}
 
@@ -119,7 +119,7 @@ tasks:
         uv run python -X tracemalloc=25 -c "
         import tracemalloc, datetime;
         tracemalloc.start(25);
-        from {{ project_slug }}.ports.api.app import create_api_app;
+        from {{ project_slug }}.presentation.api.app import create_api_app;
         app = create_api_app();
         snap = tracemalloc.take_snapshot();
         ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S');

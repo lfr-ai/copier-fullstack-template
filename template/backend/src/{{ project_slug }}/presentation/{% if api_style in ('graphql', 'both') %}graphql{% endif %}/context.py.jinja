@@ -11,7 +11,7 @@ from strawberry.fastapi import BaseContext
 if TYPE_CHECKING:
     from {{ project_slug }}.application.services.user_service import UserService
     from {{ project_slug }}.config.settings.base import BaseAppSettings
-    from {{ project_slug }}.ports.graphql.types import UserType
+    from {{ project_slug }}.presentation.graphql.types import UserType
 {%- if use_ai %}
     from {{ project_slug }}.ai.services import AIService
 {%- endif %}
@@ -49,7 +49,7 @@ class GraphQLContext(BaseContext):
     @cached_property
     def user_loader(self) -> DataLoader[str, UserType]:
         """Per-request DataLoader for batching user lookups."""
-        from {{ project_slug }}.ports.graphql.dataloaders import create_user_loader
+        from {{ project_slug }}.presentation.graphql.dataloaders import create_user_loader
 
         return create_user_loader()
 {%- if use_ai %}

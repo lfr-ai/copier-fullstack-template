@@ -4,22 +4,22 @@
 
 - **Name**: {{ project_name }}
 - **Type**: Fullstack Python + TypeScript application
-- **Backend**: Python {{ python_version }}+ / FastAPI / SQLAlchemy 2.0+ / clean-hexagonal architecture
+- **Backend**: Python {{ python_version }}+ / FastAPI / SQLAlchemy 2.0+ / Clean Architecture
 - **Frontend**: TypeScript / Vite / React 19 / Tailwind CSS v4
 - **Package Managers**: UV (Python), Bun (frontend)
 - **Container Runtime**: {{ container_runtime }}
 
 ## Architecture
 
-Clean / hexagonal architecture with strict Dependency Rule:
+Clean Architecture with strict Dependency Rule:
 - `core/` → Pure domain (entities, enums, interfaces) — ZERO external deps
 - `application/` → Use cases, services, DTOs — imports from core only
-- `adapters/` → DB repos, cache, HTTP clients — implements core interfaces
-- `ports/` → API routes, CLI — FastAPI/Click allowed
+- `infrastructure/` → DB repos, cache, HTTP clients — implements core interfaces
+- `presentation/` → API routes, CLI — FastAPI/Click allowed
 - `config/` → Settings, DI container
 - `utils/` → Shared helpers — stdlib + third-party only
 
-Dependency direction: `adapters → ports → application → core`
+Dependency direction: `infrastructure → presentation → application → core`
 
 ## Conventions
 
@@ -56,3 +56,12 @@ task registry:check    # Verify generated constants are up to date
 - Never use `print()` — use structured logging
 - Never hardcode field/column names — use registry constants
 - Never use raw SQL — use SQLAlchemy ORM
+
+## Agent Integration
+
+GSD shares the same conventions as the GitHub Copilot agents in `.github/agents/`:
+- **Skills**: `.github/skills/` (clean-architecture, python-conventions, testing-conventions, naming-registry)
+- **Instructions**: `.github/instructions/` (architecture, coding, frontend, security, shell, testing, scaffolding)
+- **Hooks**: `.github/hooks/` (tool-guardian, session-logger, secrets-scanner, auto-format, license-checker, context-saver)
+
+Both GSD and Copilot agents follow the same Clean Architecture rules and coding conventions.

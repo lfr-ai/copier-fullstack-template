@@ -55,31 +55,31 @@ graph TB
     ENT --> EVT
     REPO --> ORM
     ORM --> DB
-    SVC -.->|Port| REPO
+    SVC -.->|Interface| REPO
 {%- if use_redis %}
-    SVC -.->|Port| CACHE
+    SVC -.->|Interface| CACHE
 {%- endif %}
 {%- if use_celery %}
-    SVC -.->|Port| QUEUE
+    SVC -.->|Interface| QUEUE
 {%- endif %}
 ```
 
-## Hexagonal Architecture (Ports & Adapters)
+## Clean Architecture Layers
 
 ```mermaid
 graph LR
-    subgraph "Driving Adapters (Left)"
+    subgraph "Presentation (Inbound)"
         HTTP[HTTP API]
         CLI_A[CLI]
         EVENTS_IN[Event Handlers]
     end
 
     subgraph "Application Core"
-        subgraph "Ports Out (Driven)"
-            PI1[Repository Port]
-            PI2[Cache Port]
-            PI3[EventBus Port]
-            PI4[UoW Port]
+        subgraph "Interfaces (Outbound)"
+            PI1[Repository]
+            PI2[CacheGateway]
+            PI3[EventBus]
+            PI4[UnitOfWork]
         end
 
         subgraph "Domain"
@@ -94,7 +94,7 @@ graph LR
         end
     end
 
-    subgraph "Driven Adapters (Right)"
+    subgraph "Infrastructure (Outbound)"
         DB_A[(Database)]
 {%- if use_redis %}
         REDIS_A[(Redis)]
@@ -177,7 +177,7 @@ sequenceDiagram
 
     C->>A: HTTP Request
     A->>U: Execute command/query
-    U->>R: Access data (via port)
+    U->>R: Access data (via interface)
     R->>D: SQL query
     D-->>R: Result set
     R-->>U: Domain entity
@@ -193,12 +193,12 @@ sequenceDiagram
     participant C as Client
     participant API as /api/v1/ai/rag/query
     participant RAG as RAGService
-    participant E as EmbeddingPort
-    participant VS as VectorStorePort
+    participant E as EmbeddingGateway
+    participant VS as VectorStoreGateway
 {%- if use_knowledge_graph %}
-    participant KG as KnowledgeGraphPort
+    participant KG as KnowledgeGraphGateway
 {%- endif %}
-    participant LLM as LLMPort
+    participant LLM as LLMGateway
 
     C->>API: POST {question, top_k}
     API->>RAG: query(request)

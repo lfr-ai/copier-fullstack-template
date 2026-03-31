@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
+from {{ project_slug }}.infrastructure.cache.memory_cache import MemoryCacheAdapter
 
 pytestmark = pytest.mark.asyncio
 
@@ -33,7 +33,7 @@ class TestMemoryCacheGet:
     async def test_get_returns_none_for_expired_key(self, cache: MemoryCacheAdapter) -> None:
         """Verify get returns None after TTL expires and evicts entry."""
         await cache.set(key="expiring", value="data", ttl_seconds=1)
-        with patch("{{ project_slug }}.adapters.cache.memory_cache.time") as mock_time:
+        with patch("{{ project_slug }}.infrastructure.cache.memory_cache.time") as mock_time:
             mock_time.monotonic.return_value = time.monotonic() + 2
             result = await cache.get("expiring")
         assert result is None
@@ -96,6 +96,6 @@ class TestMemoryCacheExists:
     async def test_exists_returns_false_for_expired_key(self, cache: MemoryCacheAdapter) -> None:
         """Verify exists returns False after key expires."""
         await cache.set(key="expiring", value="data", ttl_seconds=1)
-        with patch("{{ project_slug }}.adapters.cache.memory_cache.time") as mock_time:
+        with patch("{{ project_slug }}.infrastructure.cache.memory_cache.time") as mock_time:
             mock_time.monotonic.return_value = time.monotonic() + 2
             assert await cache.exists("expiring") is False

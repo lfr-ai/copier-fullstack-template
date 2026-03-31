@@ -1,4 +1,4 @@
-"""Workflow engine port."""
+"""Workflow engine gateway."""
 
 from __future__ import annotations
 
@@ -54,8 +54,8 @@ class WorkflowStreamEvent:
 
 
 @runtime_checkable
-class WorkflowEnginePort(Protocol):
-    """Protocol for workflow engines that execute agent graphs.
+class WorkflowEngineGateway(Protocol):
+    """Gateway for workflow engines that execute agent graphs.
 
     Supports both batch and streaming execution modes,
     with optional checkpointing for durable execution.

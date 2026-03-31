@@ -9,11 +9,11 @@ from typing import Annotated, TypedDict, override
 
 from {{ project_slug }}.ai.config import DEFAULT_HISTORY_WINDOW
 from {{ project_slug }}.config.constants import MS_PER_SECOND
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 from {{ project_slug }}.core.interfaces.workflow_engine import (
     DEFAULT_MAX_ITERATIONS,
     WorkflowConfig,
-    WorkflowEnginePort,
+    WorkflowEngineGateway,
     WorkflowResult,
     WorkflowStreamEvent,
 )
@@ -34,7 +34,7 @@ class _GraphState(TypedDict):
     final_answer: str
 
 
-class LangGraphWorkflowEngine(WorkflowEnginePort):
+class LangGraphWorkflowEngine(WorkflowEngineGateway):
     """LangGraph-backed workflow engine with durable execution.
 
     Features:
@@ -49,7 +49,7 @@ class LangGraphWorkflowEngine(WorkflowEnginePort):
     def __init__(
         self,
         *,
-        llm: LLMPort,
+        llm: LLMGateway,
         nodes: dict[str, dict[str, object]] | None = None,
         max_iterations: int = DEFAULT_MAX_ITERATIONS,
         checkpointer: object | None = None,

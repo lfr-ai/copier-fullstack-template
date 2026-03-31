@@ -1,0 +1,141 @@
+"""Slow integration test example.
+
+This test demonstrates the slow marker pattern:
+- Tests that take > 1 second to run
+- Excluded from default pytest runs
+- Must be explicitly enabled with `pytest -m slow`
+- Useful for long-running integration scenarios
+
+Run with::
+
+    uv run pytest -m slow -v
+    uv run pytest tests/integration/ -m "integration and slow"
+
+Note: By default, slow tests are excluded. The pyproject.toml addopts includes
+`-m "not slow"` to skip them in regular test runs.
+"""
+
+from __future__ import annotations
+
+import asyncio
+
+import pytest
+
+from {{ project_slug }}.infrastructure.persistence.repositories.user_repository import UserRepository
+from tests.factories.user_factory import create_user_dto
+
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.asyncio
+class TestSlowOperations:
+    """Slow-running integration tests.
+
+    These tests simulate operations that take significant time:
+    - Batch processing
+    - Large dataset operations
+    - Simulated network delays
+    - Resource-intensive operations
+
+    The integration/ conftest auto-applies @pytest.mark.integration.
+    We explicitly add @pytest.mark.slow to exclude from default runs.
+    """
+
+    async def test_slow_bulk_user_creation(
+        self,
+        user_repository: UserRepository,
+    ) -> None:
+        """Simulate slow bulk user creation operation.
+
+        Arrange: Prepare batch of users to create
+        Act: Create users with simulated delay
+        Assert: All users created successfully
+
+        This test simulates a slow operation that would be excluded
+        from regular test runs to keep CI/CD pipelines fast.
+        """
+        # Arrange
+        user_count = 10
+
+        # Act - Simulate slow bulk operation
+        created_users = []
+        for i in range(user_count):
+            user_dto = create_user_dto(display_name=f"Bulk User {i}")
+            user = await user_repository.create(user_dto)
+            created_users.append(user)
+
+            # Simulate slow processing (e.g., external API call, heavy computation)
+            await asyncio.sleep(0.1)  # 100ms per user = 1 second total
+
+        # Assert
+        assert len(created_users) == user_count
+        for user in created_users:
+            assert user.id is not None
+
+    async def test_slow_database_query_simulation(
+        self,
+        user_repository: UserRepository,
+    ) -> None:
+        """Simulate slow database query with large result set.
+
+        Arrange: Create test data
+        Act: Query with simulated delay
+        Assert: Results retrieved correctly
+
+        Real-world examples:
+        - Full table scans
+        - Complex joins
+        - Large result sets
+        - Reports and analytics queries
+        """
+        # Arrange - Create test users
+        for i in range(5):
+            await user_repository.create(
+                create_user_dto(display_name=f"Query Test User {i}")
+            )
+
+        # Act - Simulate slow query operation
+        await asyncio.sleep(1.0)  # Simulate 1-second query time
+        users = await user_repository.list_all()
+
+        # Assert
+        assert len(users) >= 5
+
+    async def test_slow_batch_processing(
+        self,
+        user_repository: UserRepository,
+    ) -> None:
+        """Simulate slow batch processing operation.
+
+        Arrange: Create users to process
+        Act: Simulate batch updates with delays
+        Assert: All updates applied
+
+        Real-world examples:
+        - Batch email sending
+        - Report generation
+        - Data export operations
+        - Scheduled maintenance tasks
+        """
+        # Arrange - Create users
+        users = []
+        for i in range(3):
+            user = await user_repository.create(
+                create_user_dto(display_name=f"Batch User {i}")
+            )
+            users.append(user)
+
+        # Act - Simulate slow batch processing
+        for user in users:
+            # Simulate processing delay (e.g., external API call)
+            await asyncio.sleep(0.5)  # 500ms per item
+
+            # Update user
+            user.display_name = f"Processed {user.display_name}"
+            await user_repository.update(user)
+
+        # Assert - Verify all updates
+        for user in users:
+            updated = await user_repository.get_by_id(user.id)
+            assert updated is not None
+            assert updated.display_name.startswith("Processed")

@@ -1,4 +1,4 @@
-"""Email port — contract for sending email messages."""
+"""Email gateway — contract for sending email messages."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class EmailPort(Protocol):
-    """Port for sending email messages.
+class EmailGateway(Protocol):
+    """Gateway for sending email messages.
 
-    Adapters must implement this protocol to integrate with
+    Adapters must implement this gateway to integrate with
     an email delivery backend (SMTP, SendGrid, Azure Communication
     Services, etc.).
     """

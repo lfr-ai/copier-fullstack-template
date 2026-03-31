@@ -1,4 +1,4 @@
-"""Vector store port — abstract interface for similarity search backends.
+"""Vector store gateway — abstract interface for similarity search backends.
 
 Concrete adapters: FAISS, Azure AI Search, Chroma, Pinecone, etc.
 """
@@ -12,8 +12,8 @@ DEFAULT_SEARCH_TOP_K = 10
 
 
 @runtime_checkable
-class VectorStorePort(Protocol):
-    """Protocol for vector-based similarity search and storage."""
+class VectorStoreGateway(Protocol):
+    """Gateway for vector-based similarity search and storage."""
 
     async def add_vectors(
         self,

@@ -10,13 +10,13 @@ from typing import override
 
 from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
 from {{ project_slug }}.core.entities.document import Chunk, Document
-from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-class LlamaIndexDocumentLoader(DocumentLoaderPort):
+class LlamaIndexDocumentLoader(DocumentLoaderGateway):
     """Document loader backed by LlamaIndex's 'SimpleDirectoryReader'.
 
-    Implements 'DocumentLoaderPort' for file-based ingestion.
+    Implements 'DocumentLoaderGateway' for file-based ingestion.
     """
 
     @override

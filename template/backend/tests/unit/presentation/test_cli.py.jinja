@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 from click.testing import CliRunner
 
-from {{ project_slug }}.ports.cli.app import cli
+from {{ project_slug }}.presentation.cli.app import cli
 
 @pytest.fixture
 def runner() -> CliRunner:
@@ -31,7 +31,7 @@ class TestCLI:
 class TestDBUpgradeCommand:
     """Test suite for db-upgrade CLI command."""
 
-    @patch("{{ project_slug }}.ports.cli.app.alembic_main")
+    @patch("{{ project_slug }}.presentation.cli.app.alembic_main")
     def test_db_upgrade_runs_alembic(
         self,
         mock_alembic: MagicMock,
@@ -43,7 +43,7 @@ class TestDBUpgradeCommand:
         mock_alembic.assert_called_once_with(argv=["upgrade", "head"])
         assert "complete" in result.output.lower()
 
-    @patch("{{ project_slug }}.ports.cli.app.alembic_main", side_effect=SystemExit(1))
+    @patch("{{ project_slug }}.presentation.cli.app.alembic_main", side_effect=SystemExit(1))
     def test_db_upgrade_handles_failure(
         self,
         mock_alembic: MagicMock,
@@ -56,7 +56,7 @@ class TestDBUpgradeCommand:
 class TestDBSeedCommand:
     """Test suite for db-seed CLI command."""
 
-    @patch("{{ project_slug }}.ports.cli.app._SEED_PATH")
+    @patch("{{ project_slug }}.presentation.cli.app._SEED_PATH")
     def test_db_seed_missing_file(
         self,
         mock_path: MagicMock,
@@ -68,7 +68,7 @@ class TestDBSeedCommand:
         assert result.exit_code != 0
 
     @patch("builtins.open")
-    @patch("{{ project_slug }}.ports.cli.app._SEED_PATH")
+    @patch("{{ project_slug }}.presentation.cli.app._SEED_PATH")
     def test_db_seed_loads_data(
         self,
         mock_path: MagicMock,
@@ -91,7 +91,7 @@ class TestDBSeedCommand:
 class TestServeCommand:
     """Test suite for serve CLI command."""
 
-    @patch("{{ project_slug }}.ports.cli.app.uvicorn")
+    @patch("{{ project_slug }}.presentation.cli.app.uvicorn")
     def test_serve_calls_uvicorn(
         self,
         mock_uvicorn: MagicMock,
@@ -101,14 +101,14 @@ class TestServeCommand:
         result = runner.invoke(cli, ["serve", "--host", "0.0.0.0", "--port", "9000"])
         assert result.exit_code == 0
         mock_uvicorn.run.assert_called_once_with(
-            "{{ project_slug }}.ports.api.app:create_api_app",
+            "{{ project_slug }}.presentation.api.app:create_api_app",
             host="0.0.0.0",
             port=9000,
             factory=True,
             reload=True,
         )
 
-    @patch("{{ project_slug }}.ports.cli.app.uvicorn")
+    @patch("{{ project_slug }}.presentation.cli.app.uvicorn")
     def test_serve_default_host_port(
         self,
         mock_uvicorn: MagicMock,
@@ -118,7 +118,7 @@ class TestServeCommand:
         result = runner.invoke(cli, ["serve"])
         assert result.exit_code == 0
         mock_uvicorn.run.assert_called_once_with(
-            "{{ project_slug }}.ports.api.app:create_api_app",
+            "{{ project_slug }}.presentation.api.app:create_api_app",
             host="127.0.0.1",
             port=8000,
             factory=True,

@@ -1,4 +1,4 @@
-"""Reranker port — abstract interface for search result reranking.
+"""Reranker gateway — abstract interface for search result reranking.
 
 Concrete adapters may use Cohere, Cross-Encoder models, LLM-based
 reranking, or reciprocal rank fusion strategies.
@@ -24,8 +24,8 @@ class RankedResult:
 
 
 @runtime_checkable
-class RerankerPort(Protocol):
-    """Protocol for reranking search results by relevance."""
+class RerankerGateway(Protocol):
+    """Gateway for reranking search results by relevance."""
 
     async def rerank(
         self,

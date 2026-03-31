@@ -6,7 +6,7 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from {{ project_slug }}.adapters.persistence.orm.base import ORMBase
+from {{ project_slug }}.infrastructure.persistence.orm.base import ORMBase
 from {{ project_slug }}.core.constants import DEFAULT_LIST_LIMIT
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)

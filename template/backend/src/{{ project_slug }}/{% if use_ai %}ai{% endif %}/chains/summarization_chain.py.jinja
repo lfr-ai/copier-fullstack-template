@@ -6,7 +6,7 @@ import structlog
 from typing import override
 
 from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _DEFAULT_CHUNK_SIZE: int = 4000
@@ -23,13 +23,13 @@ class SummarizationChain(BaseChain):
     all summaries into a final consolidated summary.
 
     Args:
-        llm (LLMPort): LLM port for generation.
+        llm (LLMGateway): LLM port for generation.
         chunk_size (int): Maximum characters per chunk for map step.
     """
 
     __slots__ = ("_chunk_size", "_llm")
 
-    def __init__(self, *, llm: LLMPort, chunk_size: int = _DEFAULT_CHUNK_SIZE) -> None:
+    def __init__(self, *, llm: LLMGateway, chunk_size: int = _DEFAULT_CHUNK_SIZE) -> None:
         self._llm = llm
         self._chunk_size = chunk_size
 

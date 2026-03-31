@@ -20,10 +20,10 @@ import structlog
 from typing import override
 
 from {{ project_slug }}.ai.config import DEFAULT_EMBEDDING_DIMENSION, DEFAULT_EMBEDDING_MODEL
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-class LiteLLMEmbeddingAdapter(EmbeddingPort):
+class LiteLLMEmbeddingAdapter(EmbeddingGateway):
     """Universal embedding adapter backed by LiteLLM.
 
     Provider-specific API keys are read from environment variables

@@ -8,8 +8,8 @@ For full agent documentation, see `AGENTS.md`.
 
 ### Architecture
 
-Clean / hexagonal architecture — Dependency Rule is the fundamental invariant.
-Dependencies always point inward: `adapters → ports → application → core`.
+Clean Architecture — Dependency Rule is the fundamental invariant.
+Dependencies always point inward: `infrastructure → presentation → application → core`.
 
 ### Key Commands
 
@@ -26,7 +26,7 @@ Dependencies always point inward: `adapters → ports → application → core`.
 
 - Read `AGENTS.md` for full project conventions
 - Read `.github/copilot-instructions.md` for coding standards
-- Follow clean / hexagonal architecture boundaries
+- Follow Clean Architecture boundaries
 - Use `task` commands (not raw pytest/ruff/etc.)
 - Never use `print()` — use structured logging
 - Never hardcode constants — use naming registry

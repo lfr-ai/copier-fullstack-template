@@ -1,0 +1,137 @@
+"""Unit test example demonstrating Entity behavior.
+
+This test demonstrates the unit marker pattern:
+- Tests pure domain logic without external dependencies
+- Uses AAA (Arrange/Act/Assert) pattern
+- Runs fast (< 100ms per test)
+- Can run in parallel with other unit tests
+
+Run with::
+
+    uv run pytest tests/unit/ -v
+    uv run pytest tests/unit/ -m unit
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.core.entities.base import DomainEvent, Entity, ValueObject
+from tests.utils.assertion_helpers import assert_dict_subset
+
+
+class TestEntity:
+    """Unit tests for Entity base class.
+
+    The unit/ conftest auto-applies @pytest.mark.unit to all tests in this directory.
+    """
+
+    def test_entity_equality_by_id(self) -> None:
+        """Verify entities are compared by ID, not by reference.
+
+        Arrange: Create two entities with the same ID
+        Act: Compare them for equality
+        Assert: They are equal despite being different objects
+        """
+        # Arrange
+        entity_a = Entity(id="same-id")
+        entity_b = Entity(id="same-id")
+
+        # Act & Assert
+        assert entity_a == entity_b
+        assert hash(entity_a) == hash(entity_b)
+
+    def test_entity_collects_events(self) -> None:
+        """Verify entity event registration and collection.
+
+        Arrange: Create entity and events
+        Act: Register events then collect them
+        Assert: Events are returned and cleared
+        """
+        # Arrange
+        entity = Entity()
+        event_1 = DomainEvent()
+        event_2 = DomainEvent()
+
+        # Act
+        entity.register_event(event_1)
+        entity.register_event(event_2)
+        collected = entity.collect_events()
+
+        # Assert
+        assert len(collected) == 2
+        assert event_1 in collected
+        assert event_2 in collected
+
+        # Verify collection clears the event list
+        second_collect = entity.collect_events()
+        assert len(second_collect) == 0
+
+    def test_entity_as_dict_subset(self) -> None:
+        """Demonstrate assert_dict_subset usage with entity data.
+
+        Arrange: Create entity with known ID
+        Act: Convert to dict representation
+        Assert: Expected keys present using subset assertion
+        """
+        # Arrange
+        entity = Entity(id="test-123")
+        entity_dict = {"id": entity.id, "type": "Entity", "events_count": 0}
+
+        # Act & Assert - verify expected keys exist
+        expected = {"id": "test-123", "type": "Entity"}
+        assert_dict_subset(expected, entity_dict)
+
+
+class TestDomainEvent:
+    """Unit tests for DomainEvent base class."""
+
+    def test_event_has_unique_id_and_timestamp(self) -> None:
+        """Verify each event gets unique ID and timestamp.
+
+        Arrange: Create two events
+        Act: Inspect their attributes
+        Assert: IDs differ, timestamps exist and are UTC
+        """
+        # Arrange & Act
+        event_a = DomainEvent()
+        event_b = DomainEvent()
+
+        # Assert
+        assert event_a.event_id != event_b.event_id
+        assert event_a.occurred_at is not None
+        assert event_b.occurred_at is not None
+        # Verify timezone-aware UTC
+        assert event_a.occurred_at.tzinfo is not None
+
+    def test_event_is_immutable(self) -> None:
+        """Verify DomainEvent is frozen (immutable).
+
+        Arrange: Create event
+        Act: Attempt to mutate event_id
+        Assert: AttributeError raised
+        """
+        # Arrange
+        event = DomainEvent()
+
+        # Act & Assert
+        with pytest.raises(AttributeError):
+            event.event_id = "mutated"  # type: ignore[misc]
+
+
+class TestValueObject:
+    """Unit tests for ValueObject base class."""
+
+    def test_value_object_is_frozen(self) -> None:
+        """Verify ValueObject is immutable.
+
+        Arrange: Create value object
+        Act: Attempt to add attribute
+        Assert: Mutation rejected
+        """
+        # Arrange
+        vo = ValueObject()
+
+        # Act & Assert
+        with pytest.raises(AttributeError):
+            vo.__dict__["new_field"] = "value"  # type: ignore[index]

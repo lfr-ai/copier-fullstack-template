@@ -1,8 +1,8 @@
-"""Recursive character text splitter — implements 'TextSplitterPort'.
+"""Recursive character text splitter — implements 'TextSplitterGateway'.
 
 Zero-dependency text splitter that recursively splits
 text by a hierarchy of separators. Compatible with the core
-'TextSplitterPort' protocol.
+'TextSplitterGateway' protocol.
 """
 
 from __future__ import annotations
@@ -11,11 +11,11 @@ from typing import override
 
 from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
 from {{ project_slug }}.core.entities.document import Chunk, Document
-from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
 _SEPARATORS: list[str] = ["\n\n", "\n", ". ", " ", ""]
 
 
-class RecursiveTextSplitter(TextSplitterPort):
+class RecursiveTextSplitter(TextSplitterGateway):
     """Recursive character-based text splitter.
 
     Splits text by trying separators in order of preference,

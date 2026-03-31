@@ -1,4 +1,4 @@
-"""Knowledge graph port — abstract interface for graph-based knowledge storage.
+"""Knowledge graph gateway — abstract interface for graph-based knowledge storage.
 
 Concrete adapters may use NetworkX, Neo4j, RDFLib, or external knowledge
 graphs (Wikidata, DBpedia) via SPARQL.
@@ -25,8 +25,8 @@ DEFAULT_RELATION_LIMIT = 50
 
 
 @runtime_checkable
-class KnowledgeGraphPort(Protocol):
-    """Protocol for knowledge graph CRUD and traversal."""
+class KnowledgeGraphGateway(Protocol):
+    """Gateway for knowledge graph CRUD and traversal."""
 
     async def add_triplet(
         self,
@@ -80,8 +80,8 @@ class KnowledgeGraphPort(Protocol):
 
 
 @runtime_checkable
-class SPARQLQueryPort(Protocol):
-    """Protocol for SPARQL-capable knowledge graph stores (RDFLib, remote endpoints)."""
+class SPARQLQueryGateway(Protocol):
+    """Gateway for SPARQL-capable knowledge graph stores (RDFLib, remote endpoints)."""
 
     async def sparql_query(
         self,
@@ -94,8 +94,8 @@ class SPARQLQueryPort(Protocol):
 
 
 @runtime_checkable
-class ExternalKnowledgeGraphPort(Protocol):
-    """Protocol for querying established external knowledge graphs.
+class ExternalKnowledgeGraphGateway(Protocol):
+    """Gateway for querying established external knowledge graphs.
 
     Supports lookup-oriented operations against Wikidata, DBpedia,
     ConceptNet, and similar public knowledge bases.

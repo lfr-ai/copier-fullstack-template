@@ -1,4 +1,4 @@
-"""NetworkX knowledge graph adapter — implements 'KnowledgeGraphPort'.
+"""NetworkX knowledge graph adapter — implements 'KnowledgeGraphGateway'.
 
 Uses an in-memory NetworkX directed graph for relationship storage
 and traversal. Suitable for moderate-scale graphs; for production
@@ -15,13 +15,13 @@ from typing import override
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_DEPTH,
     DEFAULT_NEIGHBOR_LIMIT,
-    KnowledgeGraphPort,
+    KnowledgeGraphGateway,
 )
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
-class NetworkXKnowledgeGraph(KnowledgeGraphPort):
+class NetworkXKnowledgeGraph(KnowledgeGraphGateway):
     """In-memory knowledge graph backed by NetworkX."""
 
     __slots__ = ("_graph",)

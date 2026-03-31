@@ -6,40 +6,40 @@ import structlog
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from {{ project_slug }}.adapters.cache.memory_cache import MemoryCacheAdapter
-from {{ project_slug }}.adapters.messaging.memory_event_bus import MemoryEventBus
+from {{ project_slug }}.infrastructure.cache.memory_cache import MemoryCacheAdapter
+from {{ project_slug }}.infrastructure.messaging.memory_event_bus import MemoryEventBus
 from {{ project_slug }}.application.services.user_service import UserService
 from {{ project_slug }}.config.settings import get_settings
 
 if TYPE_CHECKING:
-    from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import (
+    from {{ project_slug }}.infrastructure.persistence.unit_of_work.sqlalchemy_uow import (
         SQLAlchemyUnitOfWork,
     )
 {% if use_ai %}
     from {{ project_slug }}.ai.services import AIService
-    from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort
-    from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
-    from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
-    from {{ project_slug }}.core.interfaces.evaluator import EvaluatorPort
-    from {{ project_slug }}.core.interfaces.guardrail import GuardrailPort
-    from {{ project_slug }}.core.interfaces.llm import LLMPort
-    from {{ project_slug }}.core.interfaces.observability import ObservabilityPort
-    from {{ project_slug }}.core.interfaces.prompt_template import PromptTemplatePort
-    from {{ project_slug }}.core.interfaces.reranker import RerankerPort
-    from {{ project_slug }}.core.interfaces.retriever import RetrieverPort
-    from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
-    from {{ project_slug }}.core.interfaces.workflow_engine import WorkflowEnginePort
+    from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryGateway
+    from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
+    from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+    from {{ project_slug }}.core.interfaces.evaluator import EvaluatorGateway
+    from {{ project_slug }}.core.interfaces.guardrail import GuardrailGateway
+    from {{ project_slug }}.core.interfaces.llm import LLMGateway
+    from {{ project_slug }}.core.interfaces.observability import ObservabilityGateway
+    from {{ project_slug }}.core.interfaces.prompt_template import PromptTemplateGateway
+    from {{ project_slug }}.core.interfaces.reranker import RerankerGateway
+    from {{ project_slug }}.core.interfaces.retriever import RetrieverGateway
+    from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
+    from {{ project_slug }}.core.interfaces.workflow_engine import WorkflowEngineGateway
 {%- if use_rag %}
     from {{ project_slug }}.ai.services import RAGService
     from {{ project_slug }}.application.services.ingestion_service import IngestionService
 {%- endif %}
 {%- if use_knowledge_graph %}
-    from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+    from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
     from {{ project_slug }}.application.services.knowledge_graph_service import KnowledgeGraphService
 {%- endif %}
 {%- if use_mcp %}
-    from {{ project_slug }}.core.interfaces.mcp_client import MCPClientPort
-    from {{ project_slug }}.core.interfaces.mcp_server import MCPServerPort
+    from {{ project_slug }}.core.interfaces.mcp_client import MCPClientGateway
+    from {{ project_slug }}.core.interfaces.mcp_server import MCPServerGateway
     from {{ project_slug }}.application.services.mcp_service import MCPService
 {%- endif %}
 {%- if use_agents %}
@@ -65,7 +65,7 @@ class Container:
         self._cache: MemoryCacheAdapter | None = None
         self._event_bus: MemoryEventBus | None = None
         if self._settings.database_url:
-            from {{ project_slug }}.adapters.persistence.session import (
+            from {{ project_slug }}.infrastructure.persistence.session import (
                 create_engine,
                 create_session_factory,
             )
@@ -90,7 +90,7 @@ class Container:
         if self._session_factory is None:
             msg = "Database not configured — set database_url in settings."
             raise RuntimeError(msg)
-        from {{ project_slug }}.adapters.persistence.unit_of_work.sqlalchemy_uow import (
+        from {{ project_slug }}.infrastructure.persistence.unit_of_work.sqlalchemy_uow import (
             SQLAlchemyUnitOfWork,
         )
 
@@ -113,7 +113,7 @@ class Container:
 
     def user_service(self) -> UserService:
         """Create user service with its dependencies."""
-        from {{ project_slug }}.adapters.security.hashing import PBKDF2PasswordHasher
+        from {{ project_slug }}.infrastructure.security.hashing import PBKDF2PasswordHasher
 
         return UserService(
             uow=self.unit_of_work(),
@@ -131,7 +131,7 @@ class Container:
             raise AttributeError(msg)
         return key
 
-    def _create_llm(self) -> LLMPort:
+    def _create_llm(self) -> LLMGateway:
         """Create LLM adapter based on configuration.
 
         Uses :class:`LiteLLMAdapter` as the universal backend — the model
@@ -154,7 +154,7 @@ class Container:
         model = getattr(self._settings, "openai_model", "gpt-4o")
         return LiteLLMAdapter(model=model, api_key=self._get_openai_key())
 
-    def _create_embedding(self) -> EmbeddingPort:
+    def _create_embedding(self) -> EmbeddingGateway:
         """Create embedding adapter based on configuration.
 
         Uses :class:`LiteLLMEmbeddingAdapter` as the universal backend.
@@ -181,7 +181,7 @@ class Container:
             dimension=dim,
         )
 
-    def _create_vector_store(self) -> VectorStorePort:
+    def _create_vector_store(self) -> VectorStoreGateway:
         """Create vector store adapter based on configuration."""
         dim = getattr(self._settings, "embedding_dimension", 1536)
 {%- if use_ai_search %}
@@ -218,7 +218,7 @@ class Container:
         return FaissVectorStore(dimension=dim)
 {%- endif %}
 
-    def _create_loader(self) -> DocumentLoaderPort:
+    def _create_loader(self) -> DocumentLoaderGateway:
         """Create document loader adapter based on configuration."""
 {%- if use_document_intelligence %}
         endpoint = getattr(self._settings, "azure_doc_intelligence_endpoint", "")
@@ -238,7 +238,7 @@ class Container:
         return FileDocumentLoader()
 {%- endif %}
 
-    def _create_evaluator(self, llm: LLMPort | None = None) -> EvaluatorPort | None:
+    def _create_evaluator(self, llm: LLMGateway | None = None) -> EvaluatorGateway | None:
         """Create LLM evaluator if an LLM is available."""
         if llm is None:
             return None
@@ -278,7 +278,7 @@ class Container:
         )
 {%- endif %}
 {% if use_mcp %}
-    def mcp_server(self) -> MCPServerPort:
+    def mcp_server(self) -> MCPServerGateway:
         """Create MCP server instance wired to real adapters."""
         from {{ project_slug }}.ai.mcp.server import create_mcp_server
         from {{ project_slug }}.ai.tools.search_tool import SearchTool
@@ -350,7 +350,7 @@ class Container:
 
         return LangGraphOrchestrator(llm=self._create_llm())
 
-    def workflow_engine(self) -> WorkflowEnginePort:
+    def workflow_engine(self) -> WorkflowEngineGateway:
         """Create a LangGraph workflow engine with durable execution support.
 
         Uses PostgreSQL checkpointing when a database is configured,
@@ -420,7 +420,7 @@ class Container:
         )
 {%- endif %}
 {% if use_anthropic %}
-    def anthropic_llm(self) -> LLMPort:
+    def anthropic_llm(self) -> LLMGateway:
         """Create Anthropic Claude LLM adapter."""
         from {{ project_slug }}.ai.llm.anthropic_adapter import AnthropicAdapter
 
@@ -485,7 +485,7 @@ class Container:
         )
 {%- endif %}
 
-    def ensemble_retriever(self) -> RetrieverPort:
+    def ensemble_retriever(self) -> RetrieverGateway:
         """Create an ensemble retriever combining multiple retrieval strategies."""
         from {{ project_slug }}.ai.rag.retrievers.ensemble_retriever import EnsembleRetriever
         from {{ project_slug }}.ai.rag.retrievers.vector_retriever import VectorRetriever
@@ -496,25 +496,25 @@ class Container:
         )
         return EnsembleRetriever(retrievers=[(vector_retriever, 1.0)])
 
-    def reranker(self) -> RerankerPort:
+    def reranker(self) -> RerankerGateway:
         """Create a cross-encoder reranker for search result reranking."""
         from {{ project_slug }}.ai.rag.rerankers.cross_encoder import CrossEncoderReranker
 
         return CrossEncoderReranker()
 
-    def prompt_template(self) -> PromptTemplatePort:
+    def prompt_template(self) -> PromptTemplateGateway:
         """Create a Jinja2-based prompt template manager."""
         from {{ project_slug }}.ai.prompts.jinja2_templates import Jinja2PromptTemplate
 
         return Jinja2PromptTemplate()
 {% if use_knowledge_graph %}
-    def graph_retriever(self) -> RetrieverPort:
+    def graph_retriever(self) -> RetrieverGateway:
         """Create a knowledge graph retriever."""
         from {{ project_slug }}.ai.rag.retrievers.graph_retriever import GraphRetriever
 
         return GraphRetriever(knowledge_graph=self.knowledge_graph(), llm=self._create_llm())
 
-    def knowledge_graph(self) -> KnowledgeGraphPort:
+    def knowledge_graph(self) -> KnowledgeGraphGateway:
         """Return a configured knowledge graph adapter."""
         return self._create_knowledge_graph()
 
@@ -524,7 +524,7 @@ class Container:
 
         return LLMEntityExtractor(llm=self._create_llm())
 
-    def _create_knowledge_graph(self) -> KnowledgeGraphPort:
+    def _create_knowledge_graph(self) -> KnowledgeGraphGateway:
         """Create a knowledge graph based on configured backend."""
         backend = getattr(self._settings, "knowledge_graph_backend", "networkx")
         kg_path = getattr(self._settings, "knowledge_graph_path", None)
@@ -567,32 +567,32 @@ class Container:
 {%- endif %}
 {%- endif %}
 {% if use_mcp %}
-    def mcp_client(self) -> MCPClientPort:
+    def mcp_client(self) -> MCPClientGateway:
         """Create MCP client for connecting to external MCP servers."""
         from {{ project_slug }}.ai.mcp.client import MCPClientAdapter
 
         return MCPClientAdapter()
 {%- endif %}
 
-    def postgres_memory(self) -> ConversationMemoryPort:
+    def postgres_memory(self) -> ConversationMemoryGateway:
         """Create PostgreSQL-backed conversation memory."""
         from {{ project_slug }}.ai.memory.postgres_memory import PostgresConversationMemory
 
         return PostgresConversationMemory(database_url=self._settings.database_url)
 
-    def guardrail(self) -> GuardrailPort:
+    def guardrail(self) -> GuardrailGateway:
         """Create AI guardrail adapter."""
         from {{ project_slug }}.ai.guardrails.rule_based import RuleBasedGuardrail
 
         return RuleBasedGuardrail()
 
-    def observability(self) -> ObservabilityPort:
+    def observability(self) -> ObservabilityGateway:
         """Create AI observability adapter."""
         from {{ project_slug }}.ai.observability.structlog_adapter import StructlogObservability
 
         return StructlogObservability()
 
-    def llm_gateway(self) -> LLMPort:
+    def llm_gateway(self) -> LLMGateway:
         """Create multi-provider LLM gateway with failover.
 
         Registers all configured LLM providers so the gateway can

@@ -14,12 +14,12 @@ from {{ project_slug }}.ai.models import (
 )
 from {{ project_slug }}.ai.rag.ingestion import IngestionPipeline
 from {{ project_slug }}.ai.rag.retrieval import RetrievalPipeline
-from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingPort
-from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
-from {{ project_slug }}.core.interfaces.llm import LLMPort
-from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterPort
-from {{ project_slug }}.core.interfaces.vector_store import VectorStorePort
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
+from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -30,12 +30,12 @@ class RAGService:
     def __init__(
         self,
         *,
-        llm: LLMPort,
-        embedding: EmbeddingPort,
-        vector_store: VectorStorePort,
-        loader: DocumentLoaderPort,
-        splitter: TextSplitterPort,
-        knowledge_graph: KnowledgeGraphPort | None = None,
+        llm: LLMGateway,
+        embedding: EmbeddingGateway,
+        vector_store: VectorStoreGateway,
+        loader: DocumentLoaderGateway,
+        splitter: TextSplitterGateway,
+        knowledge_graph: KnowledgeGraphGateway | None = None,
     ) -> None:
         self._ingestion = IngestionPipeline(
             loader=loader,

@@ -1,4 +1,4 @@
-"""Embedding port."""
+"""Embedding gateway."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class EmbeddingPort(Protocol):
-    """Protocol for text-to-vector embedding providers."""
+class EmbeddingGateway(Protocol):
+    """Gateway for text-to-vector embedding providers."""
 
     @property
     def model(self) -> str:

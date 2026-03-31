@@ -8,7 +8,7 @@ from typing import override
 import structlog
 
 from {{ project_slug }}.application.commands.base import CommandHandler
-from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
 logger = structlog.get_logger(__name__)
@@ -28,7 +28,7 @@ class BuildKnowledgeGraphHandler(CommandHandler[BuildKnowledgeGraphCommand, int]
         self,
         *,
         uow: UnitOfWork,
-        knowledge_graph: KnowledgeGraphPort,
+        knowledge_graph: KnowledgeGraphGateway,
     ) -> None:
         super().__init__(uow=uow)
         self._kg = knowledge_graph

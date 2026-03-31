@@ -69,7 +69,7 @@ def serve(host: str, port: int) -> None:
         port (int): Server bind port.
     """
     uvicorn.run(
-        "{{ project_slug }}.ports.api.app:create_api_app",
+        "{{ project_slug }}.presentation.api.app:create_api_app",
         host=host,
         port=port,
         factory=True,

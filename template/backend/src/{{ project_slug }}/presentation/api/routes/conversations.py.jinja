@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from {{ project_slug }}.ports.api.dependencies import AIServiceDep, ContainerDep
+from {{ project_slug }}.presentation.api.dependencies import AIServiceDep, ContainerDep
 
 router = APIRouter()
 

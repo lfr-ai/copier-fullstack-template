@@ -4,18 +4,21 @@
 ## Structure
 ```
 backend/src/{{ project_slug }}/
-├── adapters/       # External integrations (DB repos, cache, HTTP clients)
-├── application/    # Use cases, services, DTOs
-├── config/         # Settings, logging, constants
 ├── core/           # Pure domain (entities, enums, interfaces, value objects)
-├── infrastructure/ # DB engines, HTTP clients, security, profiling
-├── ports/          # API routes, CLI, webhooks, DI container
+├── application/    # Use cases, services, DTOs
+├── presentation/   # API routes, CLI, web controllers
+├── infrastructure/ # DB repos, cache, HTTP clients, auth, profiling
+├── composition/    # Dependency injection wiring
+├── config/         # Settings, logging, constants
+{%- if use_ai %}
+├── ai/             # AI vertical: LLM, agents, RAG, MCP
+{%- endif %}
 └── utils/          # Shared utilities
 ```
 
 ## Dependency Rule
-`adapters → ports → application → core`
-Application services access repos via UoW properties (`uow.users`), never by importing concrete adapters.
+`presentation/infrastructure → application → core`
+Application services access repos via UoW properties (`uow.users`), never by importing concrete infrastructure.
 
 ## Key Files
 - `registry/naming_registry.json` — Single source of truth for shared identifiers

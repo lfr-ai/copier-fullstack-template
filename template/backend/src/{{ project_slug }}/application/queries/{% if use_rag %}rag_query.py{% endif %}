@@ -9,8 +9,8 @@ import structlog
 
 from {{ project_slug }}.application.dtos.rag_dto import RAGResponseDTO, SourceDTO
 from {{ project_slug }}.application.queries.base import QueryHandler
-from {{ project_slug }}.core.interfaces.llm import LLMPort
-from {{ project_slug }}.core.interfaces.retriever import RetrieverPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.retriever import RetrieverGateway
 
 logger = structlog.get_logger(__name__)
 
@@ -32,7 +32,7 @@ class RAGQuery:
 class RAGQueryHandler(QueryHandler[RAGQuery, RAGResponseDTO]):
     """Handles RAG queries by retrieving context and generating answers."""
 
-    def __init__(self, *, retriever: RetrieverPort, llm: LLMPort) -> None:
+    def __init__(self, *, retriever: RetrieverGateway, llm: LLMGateway) -> None:
         self._retriever = retriever
         self._llm = llm
 

@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from {{ project_slug }}.adapters.auth.jwt_adapter import ALGORITHM, JWTAdapter, TokenPayload
+from {{ project_slug }}.infrastructure.auth.jwt_adapter import ALGORITHM, JWTAdapter, TokenPayload
 
 pytestmark = pytest.mark.unit
 

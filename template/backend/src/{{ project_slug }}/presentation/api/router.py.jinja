@@ -4,22 +4,22 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from {{ project_slug }}.ports.api.routes import health, users
+from {{ project_slug }}.presentation.api.routes import health, users
 {%- if use_ai %}
-from {{ project_slug }}.ports.api.routes import ai as ai_routes
-from {{ project_slug }}.ports.api.routes import conversations as conv_routes
+from {{ project_slug }}.presentation.api.routes import ai as ai_routes
+from {{ project_slug }}.presentation.api.routes import conversations as conv_routes
 {%- if use_rag %}
-from {{ project_slug }}.ports.api.routes import documents as doc_routes
+from {{ project_slug }}.presentation.api.routes import documents as doc_routes
 {%- endif %}
 {%- if use_knowledge_graph %}
-from {{ project_slug }}.ports.api.routes import knowledge_graph as kg_routes
+from {{ project_slug }}.presentation.api.routes import knowledge_graph as kg_routes
 {%- endif %}
 {%- if use_agents %}
-from {{ project_slug }}.ports.api.routes import agents as agent_routes
-from {{ project_slug }}.ports.api.routes import workflows as workflow_routes
+from {{ project_slug }}.presentation.api.routes import agents as agent_routes
+from {{ project_slug }}.presentation.api.routes import workflows as workflow_routes
 {%- endif %}
 {%- if use_crewai %}
-from {{ project_slug }}.ports.api.routes import crewai as crewai_routes
+from {{ project_slug }}.presentation.api.routes import crewai as crewai_routes
 {%- endif %}
 {%- endif %}
 

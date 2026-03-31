@@ -1,0 +1,105 @@
+# ADR-0001 — Clean Architecture
+
+## Status
+
+Accepted
+
+## Context
+
+{{ project_name }} requires a clear separation of concerns to enable
+independent testing, flexible infrastructure swapping, and long-term
+maintainability. The team evaluated layered architecture, the ports & adapters
+pattern, and Clean Architecture.
+
+## Decision
+
+Adopt **Clean Architecture** as described by Robert C. Martin (Uncle Bob)
+with the following layer structure that maps directly to the project source tree:
+
+- **core/** — Enterprise Business Rules: entities, value objects, domain events,
+  enums, exception hierarchy, interface protocols (Repository, Gateway). ZERO
+  external dependencies.
+- **application/** — Application Business Rules: use cases, application services,
+  DTOs, command/query handlers, mappers. Imports from `core` only.
+- **presentation/** — Interface Adapters (inbound): API routes (FastAPI),
+  CLI commands (Click), web controllers, API schemas. Framework
+  imports allowed here.
+- **infrastructure/** — Frameworks & Drivers (outbound): persistence
+  (SQLAlchemy repositories), cache, messaging, email, storage, auth (JWT).
+  Implements core protocols. Contains all infrastructure concerns: DB engines,
+  HTTP clients, security hashing, scheduling, profiling.
+- **composition/** — Composition Root: DI container wiring protocols to
+  concrete infrastructure implementations. The single place where all
+  dependencies are assembled.
+- **config/** — Separate pillar: pydantic-settings, logging, constants.
+- **utils/** — Shared leaf: stdlib + third-party only, no first-party imports.
+
+### The Dependency Rule
+
+Dependencies **always** point inward toward the Enterprise Business Rules:
+
+```text
+presentation ───────┐
+                    ├──→ application ──→ core
+infrastructure ─────┘
+```
+
+- **Core** never imports from outer layers.
+- **Application services** depend on **core protocols** (Repository, Gateway),
+  never on concrete infrastructure classes (Dependency Inversion Principle).
+- The Unit of Work protocol exposes typed repository properties so that
+  services access persistence through the UoW without importing infrastructure.
+
+### Mapping to Clean Architecture Circles
+
+| Uncle Bob's Circle | Project Layer | Directory |
+|-------------------|---------------|-----------|
+| Enterprise Business Rules | Core | `core/` |
+| Application Business Rules | Application | `application/` |
+| Interface Adapters (inbound) | Presentation | `presentation/` |
+| Frameworks & Drivers (outbound) | Infrastructure | `infrastructure/` |
+
+### Protocol Naming Conventions (D008)
+
+Following Clean Architecture pattern terminology:
+
+- **Repository**: Persistence contracts (e.g., `UserRepository`, `UnitOfWork`)
+  — abstract database access
+- **Gateway**: External system boundaries (e.g., `CacheGateway`, `EmailGateway`,
+  `LLMGateway`, `StorageGateway`) — abstract third-party integrations
+
+The core layer defines these protocols; the infrastructure layer implements them.
+
+### Frontend Separation (when applicable)
+
+```text
+domain/        → Domain models, Zod schemas + TypeScript types
+application/   → Shared hooks, state stores
+infrastructure/→ HTTP clients, browser APIs, environment config
+presentation/  → Components, pages, features, styles, templates
+lib/           → Pure utility functions (no side effects)
+router/        → Route definitions
+```
+
+## Consequences
+
+### Positive
+
+- Infrastructure can be swapped without changing business logic
+- Domain logic is independently testable with zero framework imports
+- Clear dependency boundaries prevent accidental coupling
+- The Dependency Rule is enforced by linting (ruff import checks) and
+  validated by the Architect agent during PR planning
+- Protocol naming clearly signals architectural intent (Repository vs Gateway)
+
+### Negative
+
+- More boilerplate for simple CRUD operations
+- Learning curve for developers unfamiliar with the pattern
+- Discipline required to maintain the Dependency Rule — use the
+  `clean-architecture` skill and Architect agent to audit
+
+## References
+
+- [The Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) — Robert C. Martin
+- [Clean Architecture Book](https://www.amazon.com/Clean-Architecture-Craftsmans-Software-Structure/dp/0134494164) — Robert C. Martin

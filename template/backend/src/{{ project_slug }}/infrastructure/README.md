@@ -1,18 +1,17 @@
-# Adapters
+# Infrastructure Layer (Frameworks & Drivers)
 
-External integrations and outbound port implementations (**driven / secondary
-adapters**).
+External integrations and implementations of output port interfaces.
 
-In Clean Architecture terminology, adapters in this directory are **Gateways**: they
-implement the output port interfaces defined in `core/interfaces/` to connect the
-Application Core to external tools (database, cache, email, etc.).
+In Clean Architecture terminology, this layer contains **Gateways** and **Framework
+implementations**: they implement the output port interfaces defined in `core/interfaces/`
+to connect the Application Core to external tools (database, cache, email, storage, etc.).
 
 **Rules:**
 
 - No business logic — only translation between external systems and internal interfaces.
-- Each adapter implements an interface (protocol) defined in `core/interfaces/`.
-- Adapters may depend on third-party libraries (SQLAlchemy, Redis, httpx, etc.).
-- Dependency direction: adapters → core (never the reverse).
+- Each implementation provides an interface (protocol) defined in `core/interfaces/`.
+- May depend on third-party libraries (SQLAlchemy, Redis, httpx, etc.).
+- Dependency direction: infrastructure → core (never the reverse).
 
 | Package        | Purpose                                         |
 | -------------- | ----------------------------------------------- |

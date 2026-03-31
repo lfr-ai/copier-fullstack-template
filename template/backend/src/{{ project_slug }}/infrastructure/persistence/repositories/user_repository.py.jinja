@@ -10,11 +10,11 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from {{ project_slug }}.adapters.persistence.mappers.user_mapper import (
+from {{ project_slug }}.infrastructure.persistence.mappers.user_mapper import (
     UserPersistenceMapper,
 )
-from {{ project_slug }}.adapters.persistence.orm.user_model import UserModel
-from {{ project_slug }}.adapters.persistence.repositories.base import SQLAlchemyRepository
+from {{ project_slug }}.infrastructure.persistence.orm.user_model import UserModel
+from {{ project_slug }}.infrastructure.persistence.repositories.base import SQLAlchemyRepository
 from {{ project_slug }}.core.constants import DEFAULT_LIST_LIMIT
 from {{ project_slug }}.core.entities.user import User
 

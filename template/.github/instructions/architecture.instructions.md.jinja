@@ -1,5 +1,5 @@
 ---
-description: Clean / hexagonal architecture enforcement and Dependency Rule
+description: Clean Architecture enforcement and Dependency Rule
 applyTo: "backend/**/*.py"
 ---
 
@@ -20,7 +20,7 @@ backend/src/{{ project_slug }}/
 │   ├── events/               # Domain events (frozen=True, slots=True)
 │   ├── enums/                # Domain enums (StrEnum + @unique + auto())
 │   ├── exceptions/           # DomainError hierarchy (NotFound, Conflict, Validation, Authorization)
-│   ├── interfaces/           # Port protocols: Repository[T], CachePort, EventBus, UnitOfWork, etc.
+│   ├── interfaces/           # Protocols: Repository[T], CacheGateway, EventBus, UnitOfWork, etc.
 │   └── specifications/       # Domain specification objects
 │
 ├── application/              # Use cases, orchestration, DTOs
@@ -31,20 +31,20 @@ backend/src/{{ project_slug }}/
 │   ├── mappers/              # Entity ↔ DTO mapping functions
 │   └── tasks/                # Async task definitions (Celery signatures)
 │
-├── adapters/                 # Concrete port implementations
+├── infrastructure/           # Concrete gateway/repository implementations
 │   ├── persistence/          # DB: ORM models, repos, UoW, session
 │   │   ├── orm/              # SQLAlchemy 2.0+ (Mapped[] + mapped_column())
 │   │   ├── repositories/     # Concrete repo implementations (base.py + per-entity)
 │   │   ├── unit_of_work/     # SQLAlchemy UoW
 │   │   └── session.py        # Async engine + session factory (single definition)
-│   ├── cache/                # Redis + in-memory (implement CachePort)
+│   ├── cache/                # Redis + in-memory (implement CacheGateway)
 │   ├── messaging/            # Event bus (implement EventBus)
-│   ├── auth/                 # JWT / auth adapters
-│   ├── email/                # SMTP + console email adapters
-│   ├── storage/              # Local + Azure Blob storage adapters
-│   └── external/             # httpx clients, third-party API adapters
+│   ├── auth/                 # JWT / auth infrastructure
+│   ├── email/                # SMTP + console email infrastructure
+│   ├── storage/              # Local + Azure Blob storage infrastructure
+│   └── external/             # httpx clients, third-party API infrastructure
 │
-├── ports/                    # Presentation layer (OUTERMOST)
+├── presentation/             # Presentation layer (OUTERMOST)
 │   ├── api/                  # FastAPI REST
 │   │   ├── app.py            # create_api_app() -> FastAPI
 │   │   ├── dependencies.py   # ALL Depends() — DI wiring
@@ -53,7 +53,7 @@ backend/src/{{ project_slug }}/
 │   │   └── schemas/          # Request/response Pydantic schemas
 │   ├── graphql/              # Strawberry GraphQL (conditional)
 │   ├── web/                  # Jinja2 web UI
-│   │   └── controllers/      # Call application services, never adapters
+│   │   └── controllers/      # Call application services, never infrastructure
 │   └── cli/                  # Click CLI
 │       └── app.py            # cli() -> click.Group
 │
@@ -77,62 +77,62 @@ backend/src/{{ project_slug }}/
 
 
 ```
-core/ ← application/ ← adapters/
-                      ← ports/
+core/ ← application/ ← infrastructure/
+                      ← presentation/
                       ← config/
 utils/ ← (all layers may import; utils imports from NO project layer)
 ```
 
-| Layer            | May Import From                                              | NEVER Imports From                     |
-| ---------------- | ------------------------------------------------------------ | -------------------------------------- |
-| **core/**        | stdlib, utils/                                               | application/, adapters/, ports/, config/, ai/ |
-| **application/** | core/ (protocols + base classes), ai/ (services, models — vertical), utils/ | adapters/, ports/, config/             |
-| **adapters/**    | core/ (protocols), application/ (DTOs, mappers), utils/, libs | ports/, ai/                            |
-| **ports/**       | application/ (services, DTOs), core/ (exceptions, enums, constants, interfaces), config/, utils/, ai/ (models, services — vertical per ADR) | adapters/ (use DI)                     |
-| **config/**      | core/enums/ (Environment), utils/, external libs             | application/, adapters/, ports/, ai/   |
-| **ai/**          | core/, application/, utils/, external AI libs (langchain, openai) | ports/, config/, adapters/             |
-| **utils/**       | stdlib ONLY                                                  | ALL other project layers               |
+| Layer                              | May Import From                                              | NEVER Imports From                     |
+| ---------------------------------- | ------------------------------------------------------------ | -------------------------------------- |
+| **Core (core/)**                   | stdlib, utils/                                               | application/, infrastructure/, presentation/, config/, ai/ |
+| **Application (application/)**     | core/ (protocols + base classes), ai/ (services, models — vertical), utils/ | infrastructure/, presentation/, config/             |
+| **Infrastructure (infrastructure/)**     | core/ (protocols), application/ (DTOs, mappers), utils/, libs | presentation/, ai/                            |
+| **Presentation (presentation/)**          | application/ (services, DTOs), core/ (exceptions, enums, constants, interfaces), config/, utils/, ai/ (models, services — vertical per ADR) | infrastructure/ (use DI)                     |
+| **config/**                        | core/enums/ (Environment), utils/, external libs             | application/, infrastructure/, presentation/, ai/   |
+| **ai/**                            | core/, application/, utils/, external AI libs (langchain, openai) | presentation/, config/, infrastructure/             |
+| **utils/**                         | stdlib ONLY                                                  | ALL other project layers               |
 
-**Note on ai/ vertical module:** Per decision D002, `ai/` is a separate top-level vertical module, not a hexagonal layer. Standard inner/outer layer restrictions don't apply to it. Both `application/` and `ports/` may import ai/ models and services. The ai/ module itself must not import from `ports/`, `config/`, or `adapters/`.
+**Note on ai/ vertical module:** Per decision D002, `ai/` is a separate top-level vertical module, not a Clean Architecture layer. Standard inner/outer layer restrictions don't apply to it. Both `application/` and `presentation/` may import ai/ models and services. The ai/ module itself must not import from `presentation/`, `config/`, or `infrastructure/`.
 
-**Known exception:** `ports/graphql/permissions.py.jinja` directly imports `JWTAdapter` from `adapters/` due to missing auth interface and DI wiring infrastructure. This is a documented FIXME pending proper auth DI implementation.
+**Known exception:** `presentation/graphql/permissions.py.jinja` directly imports `JWTAdapter` from `infrastructure/` (Presentation importing from Infrastructure) due to missing auth interface and DI wiring infrastructure. This is a documented FIXME pending proper auth DI implementation.
 
 
 | Concern                                  | ONLY In                 |
 | ---------------------------------------- | ----------------------- |
-| HTTP status codes, request/response      | `ports/api/`            |
-| CLI exit codes, terminal output          | `ports/cli/`            |
-| HTML rendering, form handling            | `ports/web/`            |
+| HTTP status codes, request/response      | `presentation/api/`            |
+| CLI exit codes, terminal output          | `presentation/cli/`            |
+| HTML rendering, form handling            | `presentation/web/`            |
 | Business rules, domain invariants        | `core/`                 |
 | Use case orchestration, DTO mapping      | `application/`          |
-| Database queries, ORM, SQL, sessions     | `adapters/persistence/` |
-| Cache get/set/delete                     | `adapters/cache/`       |
-| Event publish/subscribe                  | `adapters/messaging/`   |
+| Database queries, ORM, SQL, sessions     | `infrastructure/persistence/` |
+| Cache get/set/delete                     | `infrastructure/cache/`       |
+| Event publish/subscribe                  | `infrastructure/messaging/`   |
 | Environment variables, settings          | `config/settings.py`    |
 | Pure, framework-agnostic helpers         | `utils/`                |
 
 
 ```python
 from {{ project_slug }}.core.entities.user import User
-from {{ project_slug }}.core.interfaces.cache import CachePort
+from {{ project_slug }}.core.interfaces.cache import CacheGateway
 from {{ project_slug }}.application.services.user_service import UserService
 
-from {{ project_slug }}.adapters.persistence import UserRepository  # core → adapter
-from {{ project_slug }}.ports.api.routes import router              # core → port
+from {{ project_slug }}.infrastructure.persistence import UserRepository  # core → infrastructure
+from {{ project_slug }}.presentation.api.routes import router              # core → presentation
 ```
 
 
 ALL entry points use factory functions — no global mutable state:
 
-- `create_api_app() -> FastAPI` in `ports/api/app.py`
-- `create_web_app() -> FastAPI` in `ports/web/app.py`
-- `cli() -> click.Group` in `ports/cli/app.py`
+- `create_api_app() -> FastAPI` in `presentation/api/app.py`
+- `create_web_app() -> FastAPI` in `presentation/web/app.py`
+- `cli() -> click.Group` in `presentation/cli/app.py`
 {%- if use_celery %}
 - `create_celery_app() -> Celery` in `config/celery.py`
 {%- endif %}
 
 
-- `composition/container.py` wires port protocols to concrete adapters
+- `composition/container.py` wires gateway/repository protocols to concrete implementations
 - Constructor injection via typed parameters
 - No service locator pattern, no global mutable state
-- Routes NEVER instantiate dependencies — use `ports/api/dependencies.py`
+- Routes NEVER instantiate dependencies — use `presentation/api/dependencies.py`

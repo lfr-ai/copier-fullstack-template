@@ -1,4 +1,4 @@
-"""Neo4j knowledge graph adapter — implements 'KnowledgeGraphPort'.
+"""Neo4j knowledge graph adapter — implements 'KnowledgeGraphGateway'.
 
 Production-grade graph store backed by Neo4j for relationship storage,
 traversal, and Cypher-based queries. Suitable for large-scale knowledge
@@ -14,14 +14,14 @@ from typing import override
 
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_LIMIT,
-    KnowledgeGraphPort,
+    KnowledgeGraphGateway,
 )
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _MAX_QUERY_RESULTS: int = 1000
 
 
-class Neo4jKnowledgeGraph(KnowledgeGraphPort):
+class Neo4jKnowledgeGraph(KnowledgeGraphGateway):
     """Neo4j-backed knowledge graph with Cypher query support."""
 
     __slots__ = ("_database", "_driver")

@@ -15,7 +15,7 @@ CACHE_KEY_PREFIX: Final[str] = "app:cache"
 
 
 class RedisCacheAdapter:
-    """Redis-backed cache adapter implementing CachePort.
+    """Redis-backed cache adapter implementing CacheGateway.
 
     Provides get/set/delete/exists with structured key
     prefixing and configurable TTL.

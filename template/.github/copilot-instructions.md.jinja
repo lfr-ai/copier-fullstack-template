@@ -12,7 +12,7 @@ This document defines coding standards, conventions, and best practices for this
 Use the agent skills in `.github/skills/` as task-specific playbooks. Each skill is
 a directory containing a `SKILL.md` file:
 
-- `hexagonal-architecture/` for clean / hexagonal architecture boundary and Dependency Rule checks
+- `clean-architecture/` for Clean Architecture boundary and Dependency Rule checks
 - `python-conventions/` for Python code quality and typing standards
 - `testing-conventions/` for test strategy, markers, and coverage gates
 - `naming-registry/` for registry-first constant/code generation workflow
@@ -24,7 +24,7 @@ then apply the general conventions in this file.
 
 File-scoped instructions auto-load for matching globs:
 
-- `architecture.instructions.md` — clean / hexagonal architecture for `backend/**/*.py`
+- `architecture.instructions.md` — Clean Architecture for `backend/**/*.py`
 - `coding-conventions.instructions.md` — Python conventions for `**/*.py`
 - `frontend.instructions.md` — TypeScript, component, and Vite patterns for `frontend/**`
 - `security.instructions.md` — security rules for all source code
@@ -56,12 +56,12 @@ Apply principles from PEP 20 (The Zen of Python) throughout:
 ---
 
 
-This project follows clean / hexagonal architecture (ports & adapters). The Dependency Rule is the fundamental invariant.
+This project follows Clean Architecture. The Dependency Rule is the fundamental invariant.
 
 - **core/**: Domain entities, value objects, interfaces, events (no external deps)
 - **application/**: Use cases, services, DTOs, commands, queries
-- **adapters/**: Infrastructure implementations (DB, cache, messaging)
-- **ports/**: Entry points (API, web, CLI)
+- **infrastructure/**: Infrastructure implementations (DB, cache, messaging)
+- **presentation/**: Entry points (API, web, CLI)
 - **config/**: Settings, DI container
 - **utils/**: Shared utilities
 

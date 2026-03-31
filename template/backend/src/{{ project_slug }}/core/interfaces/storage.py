@@ -1,4 +1,4 @@
-"""Storage port — contract for binary object storage."""
+"""Storage gateway — contract for binary object storage."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ if TYPE_CHECKING:
 
 
 @runtime_checkable
-class StoragePort(Protocol):
-    """Port for binary object storage operations.
+class StorageGateway(Protocol):
+    """Gateway for binary object storage operations.
 
-    Adapters must implement this protocol to integrate with a
+    Adapters must implement this gateway to integrate with a
     storage backend (local filesystem, Azure Blob Storage, etc.).
     """
 

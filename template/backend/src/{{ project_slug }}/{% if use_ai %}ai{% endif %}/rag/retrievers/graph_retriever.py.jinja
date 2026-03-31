@@ -6,9 +6,9 @@ import structlog
 from typing import override
 
 from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
-from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphPort
-from {{ project_slug }}.core.interfaces.llm import LLMPort
-from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverPort
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _ENTITY_EXTRACTION_MAX_TOKENS: int = 128
@@ -18,15 +18,15 @@ _BASE_DECAY_SCORE: float = 1.0
 _RANK_OFFSET: int = 1
 
 
-class GraphRetriever(RetrieverPort):
+class GraphRetriever(RetrieverGateway):
     """Retriever that traverses a knowledge graph for context.
 
     Extracts entities from the query using the LLM, then
     traverses the graph to find relevant neighbors.
 
     Args:
-        knowledge_graph (KnowledgeGraphPort): Knowledge graph port implementation.
-        llm (LLMPort): LLM for entity extraction from queries.
+        knowledge_graph (KnowledgeGraphGateway): Knowledge graph port implementation.
+        llm (LLMGateway): LLM for entity extraction from queries.
         depth (int): Graph traversal depth.
     """
 
@@ -35,8 +35,8 @@ class GraphRetriever(RetrieverPort):
     def __init__(
         self,
         *,
-        knowledge_graph: KnowledgeGraphPort,
-        llm: LLMPort,
+        knowledge_graph: KnowledgeGraphGateway,
+        llm: LLMGateway,
         depth: int = _DEFAULT_GRAPH_DEPTH,
     ) -> None:
         self._kg = knowledge_graph

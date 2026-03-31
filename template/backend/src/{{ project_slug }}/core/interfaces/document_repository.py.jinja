@@ -1,4 +1,4 @@
-"""Document repository protocol for domain persistence contracts."""
+"""Document repository — domain persistence contract for documents."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from {{ project_slug }}.core.interfaces.repository import Repository
 
 
 @runtime_checkable
-class DocumentRepositoryPort(Repository[Document], Protocol):
-    """Port defining document persistence operations.
+class DocumentRepository(Repository[Document], Protocol):
+    """Repository defining document persistence operations.
 
     Extends the generic :class:`Repository` with document-specific
     lookup methods.

@@ -11,9 +11,9 @@ from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_DEPTH,
     DEFAULT_NEIGHBOR_LIMIT,
-    KnowledgeGraphPort,
+    KnowledgeGraphGateway,
 )
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
 _EXTRACTION_MAX_TOKENS: int = 1024
@@ -60,8 +60,8 @@ class KnowledgeGraphService(BaseService):
         self,
         *,
         uow: UnitOfWork,
-        knowledge_graph: KnowledgeGraphPort,
-        llm: LLMPort | None = None,
+        knowledge_graph: KnowledgeGraphGateway,
+        llm: LLMGateway | None = None,
     ) -> None:
         super().__init__(uow=uow)
         self._kg = knowledge_graph

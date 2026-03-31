@@ -15,7 +15,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class SmtpEmailAdapter:
     """Send email via SMTP.
 
-    This adapter implements the 'EmailPort' protocol defined in
+    This adapter implements the 'EmailGateway' protocol defined in
     'core/interfaces/email.py' and delegates to an SMTP server
     for actual delivery.
 

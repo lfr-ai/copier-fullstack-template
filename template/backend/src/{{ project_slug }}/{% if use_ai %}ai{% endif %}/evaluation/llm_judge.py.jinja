@@ -6,7 +6,7 @@ import json
 import structlog
 
 from {{ project_slug }}.core.interfaces.evaluator import EvalResult, EvalSuite
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 from {{ project_slug }}.ai.config import EVAL_MAX_TOKENS
 
@@ -31,7 +31,7 @@ class LLMJudgeEvaluator:
     def __init__(
         self,
         *,
-        llm: LLMPort,
+        llm: LLMGateway,
         metric: str = "relevance",
         threshold: float = _DEFAULT_THRESHOLD,
     ) -> None:

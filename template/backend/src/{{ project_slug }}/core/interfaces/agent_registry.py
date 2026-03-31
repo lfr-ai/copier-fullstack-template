@@ -1,4 +1,4 @@
-"""Agent registry port — abstract interface for agent discovery and management."""
+"""Agent registry gateway — abstract interface for agent discovery and management."""
 
 from __future__ import annotations
 
@@ -21,8 +21,8 @@ class RegisteredAgent:
 
 
 @runtime_checkable
-class AgentRegistryPort(Protocol):
-    """Protocol for discovering, registering, and managing agents."""
+class AgentRegistryGateway(Protocol):
+    """Gateway for discovering, registering, and managing agents."""
 
     async def register(self, agent: RegisteredAgent) -> None:
         """Register an agent in the registry.

@@ -1,25 +1,25 @@
-# Ports
+# Presentation Layer (Interface Adapters)
 
-Primary (driving) adapters that expose application use-cases to the outside world.
+Controllers and interfaces that expose application use-cases to the outside world.
 
-In Ports & Adapters / Hexagonal terminology these are **driving adapters**: they receive
-external input and translate it into calls on the Application Core.
+In Clean Architecture terminology, this layer contains **Interface Adapters**: they receive
+external input (HTTP requests, CLI commands, GraphQL queries) and translate it into calls
+on the Application Core, then transform the results back into external formats.
 
-> **Naming note:** Despite the directory name `ports/`, the actual _port interfaces_
-> (protocols) live in `core/interfaces/`. This directory holds the driving **adapter**
-> implementations — API controllers, CLI commands, and web controllers.
-> The composition root lives in `composition/container.py`.
+> **Naming note:** The actual _gateway and repository interfaces_ (protocols) live in `core/interfaces/`.
+> This directory holds the **controller** implementations — API controllers, CLI commands,
+> GraphQL resolvers, and web controllers. The composition root lives in `composition/container.py`.
 
 ## Clean Architecture Mapping
 
-| Clean Architecture Concept | Location in This Project                                                                                          |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Input Port**             | Application services / command handlers (`application/`)                                                          |
-| **Output Port**            | Protocol interfaces (`core/interfaces/`)                                                                          |
-| **Controller**             | API route handlers (`ports/api/routes/`), CLI commands (`ports/cli/`), web controllers (`ports/web/controllers/`) |
-| **Presenter / ViewModel**  | API response schemas (`ports/api/schemas/`), web view models (`ports/web/view_models/`)                           |
-| **Gateway**                | Protocol interfaces (`core/interfaces/`) + adapter implementations (`adapters/`)                                  |
-| **Composition Root / DI**  | `composition/container.py`                                                                                        |
+| Clean Architecture Concept | Location in This Project                                                                                                           |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Input (Use Case)**       | Application services / command handlers (`application/`)                                                                           |
+| **Output (Gateway)**       | Protocol interfaces (`core/interfaces/`)                                                                                           |
+| **Controller**             | API route handlers (`presentation/api/routes/`), CLI commands (`presentation/cli/`), web controllers (`presentation/web/controllers/`) |
+| **Presenter / ViewModel**  | API response schemas (`presentation/api/schemas/`), web view models (`presentation/web/view_models/`)                              |
+| **Gateway**                | Protocol interfaces (`core/interfaces/`) + adapter implementations (`infrastructure/`)                                             |
+| **Composition Root / DI**  | `composition/container.py`                                                                                                         |
 
 ## Packages
 

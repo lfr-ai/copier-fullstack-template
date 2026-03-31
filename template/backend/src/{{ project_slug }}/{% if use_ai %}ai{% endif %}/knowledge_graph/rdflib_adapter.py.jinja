@@ -1,4 +1,4 @@
-"""RDFLib knowledge graph adapter — implements 'KnowledgeGraphPort' and 'SPARQLQueryPort'.
+"""RDFLib knowledge graph adapter — implements 'KnowledgeGraphGateway' and 'SPARQLQueryGateway'.
 
 Uses RDFLib for RDF graph storage with full SPARQL 1.1 query support.
 Suitable for standards-based knowledge representation using RDF triples
@@ -15,15 +15,15 @@ from typing import override
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_LIMIT,
     DEFAULT_SPARQL_TIMEOUT_SECONDS,
-    KnowledgeGraphPort,
-    SPARQLQueryPort,
+    KnowledgeGraphGateway,
+    SPARQLQueryGateway,
 )
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _ENTITY_NS = "http://example.org/entity/"
 _REL_NS = "http://example.org/relation/"
 
 
-class RDFLibKnowledgeGraph(KnowledgeGraphPort, SPARQLQueryPort):
+class RDFLibKnowledgeGraph(KnowledgeGraphGateway, SPARQLQueryGateway):
     """RDF knowledge graph backed by RDFLib with SPARQL support."""
 
     __slots__ = ("_graph", "_entity_ns", "_rel_ns")

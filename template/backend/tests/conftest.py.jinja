@@ -11,8 +11,8 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from {{ project_slug }}.adapters.persistence.orm.base import ORMBase
-from {{ project_slug }}.ports.api.app import create_api_app
+from {{ project_slug }}.infrastructure.persistence.orm.base import ORMBase
+from {{ project_slug }}.presentation.api.app import create_api_app
 
 pytest_plugins = [
     "tests.fixtures.cache",

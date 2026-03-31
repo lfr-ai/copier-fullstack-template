@@ -1,0 +1,163 @@
+"""Integration test example demonstrating repository CRUD operations.
+
+This test demonstrates the integration marker pattern:
+- Tests interaction with real database (SQLite in-memory for tests)
+- Uses async/await with pytest-asyncio
+- Requires database fixtures (session, repositories)
+- Tests full round-trip persistence
+
+Run with::
+
+    uv run pytest tests/integration/ -v
+    uv run pytest tests/integration/ -m integration
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
+from {{ project_slug }}.infrastructure.persistence.repositories.user_repository import UserRepository
+from tests.factories.user_factory import create_user_dto
+
+
+class TestUserRepository:
+    """Integration tests for UserRepository.
+
+    The integration/ conftest auto-applies @pytest.mark.integration to all tests
+    in this directory.
+
+    These tests verify:
+    - Async repository CRUD operations
+    - Database round-trip persistence
+    - Query functionality
+    """
+
+    @pytest.mark.asyncio
+    async def test_create_and_retrieve_user(
+        self,
+        user_repository: UserRepository,
+    ) -> None:
+        """Verify user creation and retrieval round-trip.
+
+        Arrange: Create user DTO with test data
+        Act: Save user and retrieve by ID
+        Assert: Retrieved user matches saved data
+        """
+        # Arrange
+        user_dto = create_user_dto(
+            email="integration@example.com",
+            display_name="Integration User",
+        )
+
+        # Act - Create user
+        created_user = await user_repository.create(user_dto)
+        assert created_user.id is not None
+
+        # Act - Retrieve user
+        retrieved_user = await user_repository.get_by_id(created_user.id)
+
+        # Assert
+        assert retrieved_user is not None
+        assert retrieved_user.id == created_user.id
+        assert retrieved_user.email == "integration@example.com"
+        assert retrieved_user.display_name == "Integration User"
+
+    @pytest.mark.asyncio
+    async def test_list_users(
+        self,
+        user_repository: UserRepository,
+    ) -> None:
+        """Verify listing multiple users.
+
+        Arrange: Create multiple users
+        Act: List all users
+        Assert: All created users present in list
+        """
+        # Arrange - Create multiple users
+        user_1 = await user_repository.create(
+            create_user_dto(display_name="User One")
+        )
+        user_2 = await user_repository.create(
+            create_user_dto(display_name="User Two")
+        )
+
+        # Act
+        all_users = await user_repository.list_all()
+
+        # Assert
+        assert len(all_users) >= 2
+        user_ids = [user.id for user in all_users]
+        assert user_1.id in user_ids
+        assert user_2.id in user_ids
+
+    @pytest.mark.asyncio
+    async def test_update_user(
+        self,
+        user_repository: UserRepository,
+    ) -> None:
+        """Verify user update persistence.
+
+        Arrange: Create user
+        Act: Update user display name
+        Assert: Updated value persisted
+        """
+        # Arrange
+        user_dto = create_user_dto(display_name="Original Name")
+        user = await user_repository.create(user_dto)
+
+        # Act - Update display name
+        user.display_name = "Updated Name"
+        await user_repository.update(user)
+
+        # Assert - Retrieve and verify update
+        updated_user = await user_repository.get_by_id(user.id)
+        assert updated_user is not None
+        assert updated_user.display_name == "Updated Name"
+
+    @pytest.mark.asyncio
+    async def test_delete_user(
+        self,
+        user_repository: UserRepository,
+    ) -> None:
+        """Verify user deletion.
+
+        Arrange: Create user
+        Act: Delete user
+        Assert: User no longer retrievable
+        """
+        # Arrange
+        user_dto = create_user_dto()
+        user = await user_repository.create(user_dto)
+        user_id = user.id
+
+        # Act
+        await user_repository.delete(user_id)
+
+        # Assert - User should not be found
+        deleted_user = await user_repository.get_by_id(user_id)
+        assert deleted_user is None
+
+    @pytest.mark.asyncio
+    async def test_get_by_email(
+        self,
+        user_repository: UserRepository,
+    ) -> None:
+        """Verify user lookup by email.
+
+        Arrange: Create user with known email
+        Act: Query by email
+        Assert: Correct user returned
+        """
+        # Arrange
+        unique_email = "unique_lookup@example.com"
+        user_dto = create_user_dto(email=unique_email)
+        created_user = await user_repository.create(user_dto)
+
+        # Act
+        found_user = await user_repository.get_by_email(unique_email)
+
+        # Assert
+        assert found_user is not None
+        assert found_user.id == created_user.id
+        assert found_user.email == unique_email

@@ -8,7 +8,7 @@ from typing import override
 
 from {{ project_slug }}.ai.config import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from {{ project_slug }}.ai.llm.base_llm_adapter import BaseLLMAdapter
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class AIGateway(BaseLLMAdapter):
@@ -25,7 +25,7 @@ class AIGateway(BaseLLMAdapter):
     def __init__(
         self,
         *,
-        providers: dict[str, LLMPort],
+        providers: dict[str, LLMGateway],
         default_provider: str | None = None,
     ) -> None:
         if not providers:

@@ -37,7 +37,7 @@ from enum import StrEnum, auto, unique
 from typing import TYPE_CHECKING
 
 from {{ project_slug }}.ai.crewai.config import HMAS_MAX_DEPTH
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 _LOG_TRUNCATE_LEN: int = 200
 
@@ -100,7 +100,7 @@ class CrewAIHMASSupervisor:
 
     Args:
         crews (dict[str, Crew] | None): Named crew instances available for delegation.
-        llm (LLMPort | None): LLM adapter for planning and aggregation.
+        llm (LLMGateway | None): LLM adapter for planning and aggregation.
         max_depth (int): Maximum nesting depth for recursive delegation.
     """
 
@@ -108,7 +108,7 @@ class CrewAIHMASSupervisor:
         self,
         *,
         crews: dict[str, Crew] | None = None,
-        llm: LLMPort | None = None,
+        llm: LLMGateway | None = None,
         max_depth: int = HMAS_MAX_DEPTH,
     ) -> None:
         self._crews = crews or {}

@@ -1,4 +1,4 @@
-"""Observability port — abstract interface for AI tracing and telemetry.
+"""Observability gateway — abstract interface for AI tracing and telemetry.
 
 Concrete adapters may use LangSmith, OpenTelemetry, Phoenix (Arize),
 or custom tracing backends.
@@ -24,8 +24,8 @@ class TraceSpan:
 
 
 @runtime_checkable
-class ObservabilityPort(Protocol):
-    """Protocol for AI execution tracing and telemetry."""
+class ObservabilityGateway(Protocol):
+    """Gateway for AI execution tracing and telemetry."""
 
     async def start_trace(
         self,

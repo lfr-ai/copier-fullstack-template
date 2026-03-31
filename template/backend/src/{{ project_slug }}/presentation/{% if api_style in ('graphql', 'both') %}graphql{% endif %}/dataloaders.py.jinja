@@ -13,7 +13,7 @@ import strawberry
 from strawberry.dataloader import DataLoader
 
 if TYPE_CHECKING:
-    from {{ project_slug }}.ports.graphql.types import UserType
+    from {{ project_slug }}.presentation.graphql.types import UserType
 
 
 async def _load_users_batch(keys: list[str]) -> list[UserType | ValueError]:
@@ -24,7 +24,7 @@ async def _load_users_batch(keys: list[str]) -> list[UserType | ValueError]:
     can surface per-key errors without failing the entire batch.
     """
     from {{ project_slug }}.composition.container import get_container
-    from {{ project_slug }}.ports.graphql.types import UserType
+    from {{ project_slug }}.presentation.graphql.types import UserType
 
     container = get_container()
     service = container.user_service()

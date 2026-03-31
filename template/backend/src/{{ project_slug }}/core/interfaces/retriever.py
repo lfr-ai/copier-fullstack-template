@@ -1,4 +1,4 @@
-"""Retriever port — abstract interface for RAG retrieval strategies.
+"""Retriever gateway — abstract interface for RAG retrieval strategies.
 
 Concrete adapters may implement simple vector search, hybrid search
 (vector + keyword), or re-ranking strategies.
@@ -23,8 +23,8 @@ class RetrievedContext:
 
 
 @runtime_checkable
-class RetrieverPort(Protocol):
-    """Protocol for retrieving relevant context for a query."""
+class RetrieverGateway(Protocol):
+    """Gateway for retrieving relevant context for a query."""
 
     async def retrieve(
         self,

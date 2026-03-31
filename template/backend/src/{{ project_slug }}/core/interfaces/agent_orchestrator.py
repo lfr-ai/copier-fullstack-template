@@ -1,4 +1,4 @@
-"""Agent orchestrator port — abstract interface for multi-agent workflow engines.
+"""Agent orchestrator gateway — abstract interface for multi-agent workflow engines.
 
 Concrete adapters may use LangGraph, CrewAI,
 AutoGen, or custom orchestration implementations.
@@ -33,8 +33,8 @@ class OrchestratorResult:
 
 
 @runtime_checkable
-class AgentOrchestratorPort(Protocol):
-    """Protocol for multi-agent workflow orchestration.
+class AgentOrchestratorGateway(Protocol):
+    """Gateway for multi-agent workflow orchestration.
 
     Adapters implement stateful, graph-based agent pipelines
     with durable execution, human-in-the-loop, and memory.

@@ -6,7 +6,7 @@ import structlog
 from typing import override
 
 from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
-from {{ project_slug }}.core.interfaces.llm import LLMPort
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _DEFAULT_CHUNK_SIZE: int = 4000
@@ -28,7 +28,7 @@ class RefinementChain(BaseChain):
     def __init__(
         self,
         *,
-        llm: LLMPort,
+        llm: LLMGateway,
         chunk_size: int = _DEFAULT_CHUNK_SIZE,
         max_iterations: int = _DEFAULT_MAX_REFINEMENT_PASSES,
     ) -> None:

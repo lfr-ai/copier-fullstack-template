@@ -16,7 +16,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class AzureBlobStorageAdapter:
 """Upload, download, and manage files in Azure Blob Storage.
 
-Implements the 'StoragePort' protocol defined in
+Implements the 'StorageGateway' protocol defined in
 'core/interfaces/storage.py'.
 
 Requires 'azure-storage-blob' — already declared as a conditional

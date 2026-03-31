@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from {{ project_slug }}.adapters.storage.azure_blob_storage_adapter import (
+from {{ project_slug }}.infrastructure.storage.azure_blob_storage_adapter import (
     AzureBlobStorageAdapter,
 )
 
@@ -28,7 +28,7 @@ def mock_blob_service() -> MagicMock:
 def storage(mock_blob_service: MagicMock) -> AzureBlobStorageAdapter:
     """Create AzureBlobStorageAdapter backed by a mock client."""
     with patch(
-        "{{ project_slug }}.adapters.storage.azure_blob_storage_adapter.BlobServiceClient",
+        "{{ project_slug }}.infrastructure.storage.azure_blob_storage_adapter.BlobServiceClient",
     ) as mock_cls:
         mock_cls.from_connection_string.return_value = mock_blob_service
         adapter = AzureBlobStorageAdapter(

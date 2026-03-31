@@ -13,6 +13,6 @@ Pure-Python helper functions with **no framework or ORM dependencies**.
 | `string_utils.py`     | Slug, truncation, and string manipulation          |
 | `timing.py`           | Wall-clock timing context manager                  |
 
-- No imports from `adapters/`, `ports/`, or `infrastructure/`.
+- No imports from `core/`, `application/`, `infrastructure/`, `presentation/`, or `config/`.
 - Functions should be stateless and side-effect-free where possible.
 - Keep modules focused: one concern per file.

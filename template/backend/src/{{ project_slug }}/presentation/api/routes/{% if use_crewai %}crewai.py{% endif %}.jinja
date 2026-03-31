@@ -12,7 +12,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from {{ project_slug }}.ports.api.dependencies import ContainerDep
+from {{ project_slug }}.presentation.api.dependencies import ContainerDep
 
 router = APIRouter()
 

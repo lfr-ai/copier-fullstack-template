@@ -7,8 +7,8 @@ from collections.abc import AsyncGenerator
 
 import strawberry
 
-from {{ project_slug }}.ports.graphql.context import GraphQLContext
-from {{ project_slug }}.ports.graphql.types import HealthType
+from {{ project_slug }}.presentation.graphql.context import GraphQLContext
+from {{ project_slug }}.presentation.graphql.types import HealthType
 
 _DEFAULT_HEARTBEAT_INTERVAL: int = 10
 _MIN_INTERVAL: int = 1

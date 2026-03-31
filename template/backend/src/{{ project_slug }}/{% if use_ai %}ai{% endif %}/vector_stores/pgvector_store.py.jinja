@@ -1,4 +1,4 @@
-"""pgvector vector store adapter — implements 'VectorStorePort'.
+"""pgvector vector store adapter — implements 'VectorStoreGateway'.
 
 Uses PostgreSQL with the pgvector extension for dense vector storage
 and similarity search via SQLAlchemy async.
@@ -12,13 +12,13 @@ import structlog
 import re
 
 from {{ project_slug }}.ai.config import DEFAULT_SEARCH_TOP_K
-from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStorePort
+from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _VALID_IDENTIFIER: re.Pattern[str] = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,62}$")
 
 
-class PgvectorStore(VectorStorePort):
+class PgvectorStore(VectorStoreGateway):
     """PostgreSQL + pgvector backed vector store.
 
     Stores vectors in a dedicated table with HNSW indexing for

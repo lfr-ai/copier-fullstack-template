@@ -20,17 +20,17 @@ measurable overhead when off.
 ### File Layout
 
 ```
-adapters/profiling/
+infrastructure/profiling/
 ├── __init__.py        ← Barrel exports (cpu_profile, memory_snapshot, sql_profile)
 ├── cpu.py             ← pyinstrument wrapper
 ├── memory.py          ← tracemalloc wrapper
 └── sql.py             ← SQLAlchemy event hooks
 
-ports/api/middleware/
+presentation/api/middleware/
 ├── profiling.py       ← On-demand per-request CPU profiling (?profile=1 or ?profile=cpu)
 └── timing.py          ← Server-Timing header + request duration logging
 
-frontend/src/lib/profiling/
+frontend/src/infrastructure/profiling/
 ├── index.ts           ← Barrel exports
 └── web-vitals.ts      ← Core Web Vitals reporting
 ```

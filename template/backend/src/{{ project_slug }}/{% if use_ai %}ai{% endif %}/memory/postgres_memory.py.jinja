@@ -10,12 +10,12 @@ import structlog
 from datetime import UTC, datetime
 from typing import override
 
-from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryPort, Message
+from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryGateway, Message
 
 from {{ project_slug }}.ai.config import DEFAULT_CONVERSATION_LIMIT, DEFAULT_POOL_MAX_SIZE, DEFAULT_POOL_MIN_SIZE
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-class PostgresConversationMemory(ConversationMemoryPort):
+class PostgresConversationMemory(ConversationMemoryGateway):
     """PostgreSQL-backed conversation memory.
 
     Uses raw asyncpg queries against a 'conversation_messages'

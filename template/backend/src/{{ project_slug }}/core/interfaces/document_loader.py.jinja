@@ -1,4 +1,4 @@
-"""Document loader port — abstract interface for document ingestion.
+"""Document loader gateway — abstract interface for document ingestion.
 
 Concrete adapters may use LlamaIndex, Azure Document Intelligence,
 LangChain loaders, etc.
@@ -10,8 +10,8 @@ from typing import Protocol, runtime_checkable
 
 from {{ project_slug }}.core.entities.document import Document
 @runtime_checkable
-class DocumentLoaderPort(Protocol):
-    """Protocol for loading and parsing documents."""
+class DocumentLoaderGateway(Protocol):
+    """Gateway for loading and parsing documents."""
 
     async def load(self, source: str) -> list[Document]:
         """Load and parse a document source into Document entities.

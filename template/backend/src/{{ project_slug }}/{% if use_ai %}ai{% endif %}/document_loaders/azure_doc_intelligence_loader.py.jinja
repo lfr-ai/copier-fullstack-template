@@ -1,4 +1,4 @@
-"""Azure Document Intelligence loader — implements 'DocumentLoaderPort'.
+"""Azure Document Intelligence loader — implements 'DocumentLoaderGateway'.
 
 Uses Azure AI Document Intelligence (Form Recognizer) to extract
 text, tables, and structure from PDFs and scanned documents.
@@ -12,10 +12,10 @@ import asyncio
 import structlog
 
 from {{ project_slug }}.core.entities.document import Document
-from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderPort
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-class AzureDocIntelligenceLoader(DocumentLoaderPort):
+class AzureDocIntelligenceLoader(DocumentLoaderGateway):
     """Document loader backed by Azure Document Intelligence.
 
     Extracts structured text from PDFs, images, and office documents

@@ -43,12 +43,12 @@ azure-identity = ">=1.17"
 copier-fullstack-template/
 ├── copier.yml              # Template configuration and variables
 ├── template/               # _subdirectory: "template" in copier.yml
-│   ├── backend/            # Python backend (FastAPI + clean / hexagonal architecture)
+│   ├── backend/            # Python backend (FastAPI + Clean Architecture)
 │   │   ├── src/{{ project_slug }}/
 │   │   │   ├── core/       # Domain layer
 │   │   │   ├── application/ # Use cases
-│   │   │   ├── adapters/   # Infrastructure
-│   │   │   ├── ports/      # Presentation
+│   │   │   ├── infrastructure/   # Infrastructure
+│   │   │   ├── presentation/    # Presentation
 │   │   │   ├── config/     # Settings, DI
 │   │   │   └── utils/      # Shared utilities
 │   │   ├── tests/

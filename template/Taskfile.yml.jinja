@@ -306,7 +306,7 @@ tasks:
       OPENAPI_PORT: 8199
       OPENAPI_HOST: 127.0.0.1
     cmds:
-      - cd backend && uv run uvicorn {{ project_slug }}.ports.api.app:create_api_app --factory --host {% raw %}{{.OPENAPI_HOST}}{% endraw %} --port {% raw %}{{.OPENAPI_PORT}}{% endraw %} &
+      - cd backend && uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --host {% raw %}{{.OPENAPI_HOST}}{% endraw %} --port {% raw %}{{.OPENAPI_PORT}}{% endraw %} &
       - |
         until curl -sf http://{% raw %}{{.OPENAPI_HOST}}{% endraw %}:{% raw %}{{.OPENAPI_PORT}}{% endraw %}/api/openapi.json >/dev/null 2>&1; do
           sleep 0.5

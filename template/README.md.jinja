@@ -116,22 +116,22 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed overview.
 | Cache / broker | Redis | Caching and task queue |
 {%- endif %}
 {% endif %}
-This project follows **clean / hexagonal (ports-and-adapters) architecture**:
+This project follows **Clean Architecture**:
 
 ```
 backend/src/{{ project_slug }}/
 ├── core/            # Pure domain — ZERO external imports
 ├── application/     # Use cases, services, DTOs, mappers
-├── ports/           # Inbound adapters (API routes, CLI, web)
+├── presentation/    # Inbound: API routes, CLI, web controllers
 │   ├── api/middleware/  # HTTP cross-cutting concerns
 {%- if api_style in ('graphql', 'both') %}
 │   └── graphql/     # Strawberry GraphQL schema, resolvers, types
 {%- endif %}
-├── adapters/        # Outbound adapters (DB, cache, messaging)
+├── infrastructure/  # Outbound: DB repos, cache, messaging, auth
 ├── composition/     # Dependency injection wiring
-├── config/          # Settings, DI container
+├── config/          # Settings, constants, logging
 {%- if use_ai %}
-├── ai/              # LLM/agent tooling
+├── ai/              # AI vertical: LLM, agents, RAG, MCP
 {%- endif %}
 └── utils/           # Shared utilities
 ```
