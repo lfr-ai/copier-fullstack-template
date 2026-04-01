@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import structlog
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from {{ project_slug }}.infrastructure.cache.memory_cache import MemoryCacheAdapter
 from {{ project_slug }}.infrastructure.messaging.memory_event_bus import MemoryEventBus
@@ -51,6 +51,7 @@ if TYPE_CHECKING:
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class Container:
     """Dependency injection container.
 

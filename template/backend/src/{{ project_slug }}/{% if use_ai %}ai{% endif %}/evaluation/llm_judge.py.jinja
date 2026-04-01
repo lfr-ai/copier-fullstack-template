@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import json
 import structlog
 
@@ -11,9 +13,9 @@ from {{ project_slug }}.core.interfaces.llm import LLMGateway
 from {{ project_slug }}.ai.config import EVAL_MAX_TOKENS
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_DEFAULT_THRESHOLD: float = 0.7
-_JUDGE_TEMPERATURE: float = 0.0
-_ZERO_SCORE: float = 0.0
+_DEFAULT_THRESHOLD = 0.7
+_JUDGE_TEMPERATURE = 0.0
+_ZERO_SCORE = 0.0
 
 _EVAL_SYSTEM_PROMPT = (
     "You are an expert evaluator. Score the provided answer on a scale of "
@@ -23,6 +25,7 @@ _EVAL_SYSTEM_PROMPT = (
 )
 
 
+@final
 class LLMJudgeEvaluator:
     """LLM-as-judge evaluator for automated quality assessment."""
 

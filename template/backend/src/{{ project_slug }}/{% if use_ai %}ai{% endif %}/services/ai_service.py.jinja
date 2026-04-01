@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 
 from {{ project_slug }}.ai.models import CompletionRequest, CompletionResponse
@@ -10,6 +12,7 @@ from {{ project_slug }}.core.interfaces.llm import LLMGateway
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class AIService:
     """High-level AI orchestration service for completions."""
 

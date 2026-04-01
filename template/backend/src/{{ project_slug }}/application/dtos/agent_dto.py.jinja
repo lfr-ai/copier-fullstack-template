@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, final
 
 from pydantic import Field
 
 from {{ project_slug }}.application.dtos.base import BaseDTO
 
-_MAX_TASK_LENGTH: int = 8192
-_DEFAULT_MAX_STEPS: int = 10
-_MAX_STEPS_LIMIT: int = 50
+_MAX_TASK_LENGTH = 8192
+_DEFAULT_MAX_STEPS = 10
+_MAX_STEPS_LIMIT = 50
 
 
+@final
 class AgentTaskDTO(BaseDTO):
     """Input for an agent execution."""
 
@@ -22,6 +23,7 @@ class AgentTaskDTO(BaseDTO):
     tools: Annotated[list[str], Field(default_factory=list)]
 
 
+@final
 class AgentResultDTO(BaseDTO):
     """Output from an agent execution."""
 

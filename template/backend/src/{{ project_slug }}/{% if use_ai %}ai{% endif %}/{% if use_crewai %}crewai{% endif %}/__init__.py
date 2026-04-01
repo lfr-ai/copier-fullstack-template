@@ -18,4 +18,3 @@ Integrates cleanly with the existing Clean Architecture:
   'core/interfaces' → 'ai/crewai' → 'application/services'
 """
 
-from __future__ import annotations

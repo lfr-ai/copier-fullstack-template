@@ -1,12 +1,11 @@
 """Standard error response schemas for API endpoints."""
 
-from __future__ import annotations
-
-from typing import Annotated
+from typing import Annotated, final
 
 from pydantic import Field
 
 from .base import BaseSchema
+@final
 class ErrorDetail(BaseSchema):
     """Single error detail entry."""
 
@@ -26,6 +25,7 @@ class ErrorDetail(BaseSchema):
     )]
 
 
+@final
 class ErrorResponse(BaseSchema):
     """Standard error response returned by API endpoints."""
 

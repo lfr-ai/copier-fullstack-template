@@ -5,7 +5,7 @@ from __future__ import annotations
 import structlog
 import time
 from collections.abc import AsyncIterator
-from typing import Annotated, TypedDict, override
+from typing import Annotated, TypedDict, override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_HISTORY_WINDOW
 from {{ project_slug }}.config.constants import MS_PER_SECOND
@@ -19,9 +19,9 @@ from {{ project_slug }}.core.interfaces.workflow_engine import (
 )
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_AGENT_MAX_TOKENS: int = 2048
-_AGENT_TEMPERATURE: float = 0.3
-_MS_PER_SECOND: int = MS_PER_SECOND
+_AGENT_MAX_TOKENS = 2048
+_AGENT_TEMPERATURE = 0.3
+_MS_PER_SECOND = MS_PER_SECOND
 
 
 class _GraphState(TypedDict):
@@ -34,6 +34,7 @@ class _GraphState(TypedDict):
     final_answer: str
 
 
+@final
 class LangGraphWorkflowEngine(WorkflowEngineGateway):
     """LangGraph-backed workflow engine with durable execution.
 

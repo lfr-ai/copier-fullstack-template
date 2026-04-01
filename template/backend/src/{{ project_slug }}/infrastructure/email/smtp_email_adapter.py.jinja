@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import asyncio
 from email.message import EmailMessage
 
@@ -12,6 +14,7 @@ from {{ project_slug }}.config.constants import DEFAULT_FROM_ADDRESS, DEFAULT_SM
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class SmtpEmailAdapter:
     """Send email via SMTP.
 

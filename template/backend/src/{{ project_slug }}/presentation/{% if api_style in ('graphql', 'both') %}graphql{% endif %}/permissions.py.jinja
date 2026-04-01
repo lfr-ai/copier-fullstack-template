@@ -8,6 +8,8 @@ Strawberry's built-in permission pattern.
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 from strawberry.permission import BasePermission
 from strawberry.types import Info
@@ -17,6 +19,7 @@ from {{ project_slug }}.presentation.graphql.context import GraphQLContext
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class IsAuthenticated(BasePermission):
     """Reject requests that lack a valid authentication token.
 

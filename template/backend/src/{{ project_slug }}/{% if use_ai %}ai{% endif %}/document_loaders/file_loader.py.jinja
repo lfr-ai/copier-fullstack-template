@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import structlog
 from pathlib import Path
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.core.entities.document import Document
 from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
@@ -20,6 +20,7 @@ _TEXT_EXTENSIONS: frozenset[str] = frozenset({
 })
 
 
+@final
 class FileDocumentLoader(DocumentLoaderGateway):
     """Document loader for local files with format detection."""
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from {{ project_slug }}.utils.crypto_utils import generate_token, hash_sha256
 
-_SHA256_HEX_LENGTH: int = 64
+_SHA256_HEX_LENGTH = 64
 """Expected length of a SHA-256 hex digest (32 bytes × 2 hex chars)."""
 
 class TestGenerateToken:

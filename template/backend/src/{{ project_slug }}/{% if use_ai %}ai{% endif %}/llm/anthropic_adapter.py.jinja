@@ -7,13 +7,16 @@ and supports tool use, extended thinking, and streaming out of the box.
 
 from __future__ import annotations
 
+from typing import final
+
 from {{ project_slug }}.ai.config import DEFAULT_ANTHROPIC_MODEL
 
 from .litellm_adapter import LiteLLMAdapter
 
-_DEFAULT_MAX_RETRIES: int = 3
+_DEFAULT_MAX_RETRIES = 3
 
 
+@final
 class AnthropicAdapter(LiteLLMAdapter):
     """Anthropic Claude adapter — delegates to :class:`LiteLLMAdapter`.
 

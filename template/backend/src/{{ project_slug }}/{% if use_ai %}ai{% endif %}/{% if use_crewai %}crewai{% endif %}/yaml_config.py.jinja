@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import structlog
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 if TYPE_CHECKING:
     from crewai import Crew
@@ -33,6 +33,7 @@ def _load_yaml(path: Path) -> dict[str, object]:
         return yaml.safe_load(f) or {}
 
 
+@final
 class CrewConfigLoader:
     """Loads CrewAI agents and tasks from YAML configuration.
 

@@ -4,24 +4,17 @@ Concrete adapters may use NetworkX, Neo4j, RDFLib, or external knowledge
 graphs (Wikidata, DBpedia) via SPARQL.
 """
 
-from __future__ import annotations
-
 from typing import Protocol, runtime_checkable
 
 DEFAULT_NEIGHBOR_DEPTH = 1
-"""Default traversal depth for neighbor queries."""
 
 DEFAULT_NEIGHBOR_LIMIT = 50
-"""Default maximum neighbors returned by a knowledge graph query."""
 
 DEFAULT_SPARQL_TIMEOUT_SECONDS = 30
-"""Default timeout in seconds for SPARQL queries."""
 
 DEFAULT_ENTITY_LOOKUP_LIMIT = 5
-"""Default maximum results for external entity lookups."""
 
 DEFAULT_RELATION_LIMIT = 50
-"""Default maximum relations returned for an entity."""
 
 
 @runtime_checkable

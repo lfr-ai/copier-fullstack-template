@@ -5,6 +5,8 @@ Handles: query embedding → vector search → context assembly → LLM generati
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 from dataclasses import dataclass, field
 
@@ -15,10 +17,11 @@ from {{ project_slug }}.core.interfaces.llm import LLMGateway
 from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_DEFAULT_GRAPH_ENRICHMENT_DEPTH: int = 1
+_DEFAULT_GRAPH_ENRICHMENT_DEPTH = 1
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class RetrievalResult:
     """Result of a RAG retrieval-and-generation cycle."""
 
@@ -28,6 +31,7 @@ class RetrievalResult:
     graph_context: list[dict[str, object]] = field(default_factory=list)
 
 
+@final
 class RetrievalPipeline:
     """Orchestrates retrieval-augmented generation.
 

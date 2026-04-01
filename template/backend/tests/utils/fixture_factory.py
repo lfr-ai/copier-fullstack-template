@@ -3,15 +3,13 @@
 Factory for creating test fixtures.
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from typing import Generic, TypeVar
 
 T = TypeVar("T")
 
 
-class BaseFixtureFactory[T](ABC):
+class BaseFixtureFactory(ABC, Generic[T]):
     """Base fixture factory.
 
     Creates test data fixtures with auto-incrementing sequences

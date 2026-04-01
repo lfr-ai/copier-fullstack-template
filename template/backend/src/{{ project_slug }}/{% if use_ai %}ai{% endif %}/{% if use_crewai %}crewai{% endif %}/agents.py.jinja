@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import structlog
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from {{ project_slug }}.ai.crewai.config import (
     DEFAULT_AGENT_MAX_ITER,
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 @dataclass(frozen=True, slots=True)
+@final
 class AgentSpec:
     """Specification for creating a CrewAI agent.
 

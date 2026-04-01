@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,6 +15,7 @@ from {{ project_slug }}.core.constants import (
 )
 
 
+@final
 class UserModel(ORMBase, IdentityMixin, AuditMixin):
     """SQLAlchemy ORM model for users table."""
 

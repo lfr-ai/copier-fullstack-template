@@ -10,9 +10,9 @@ import strawberry
 from {{ project_slug }}.presentation.graphql.context import GraphQLContext
 from {{ project_slug }}.presentation.graphql.types import HealthType
 
-_DEFAULT_HEARTBEAT_INTERVAL: int = 10
-_MIN_INTERVAL: int = 1
-_MAX_INTERVAL: int = 60
+_DEFAULT_HEARTBEAT_INTERVAL = 10
+_MIN_INTERVAL = 1
+_MAX_INTERVAL = 60
 
 
 @strawberry.type(description="Root subscription type.")

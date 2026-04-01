@@ -7,7 +7,7 @@ and return matching context chunks.
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_SIMILARITY_TOP_K
 from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
@@ -15,6 +15,7 @@ from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, Retri
 from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class VectorRetriever(RetrieverGateway):
     """Retrieve context by embedding the query and searching the vector store."""
 

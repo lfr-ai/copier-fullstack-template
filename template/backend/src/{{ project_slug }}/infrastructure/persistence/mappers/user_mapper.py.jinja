@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from {{ project_slug }}.infrastructure.persistence.orm.user_model import UserModel
 from {{ project_slug }}.core.entities.user import User
 
 
+@final
 class UserPersistenceMapper:
     """Bidirectional mapper between :class:`UserModel` and :class:`User`."""
 

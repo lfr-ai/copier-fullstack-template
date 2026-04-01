@@ -4,8 +4,6 @@ Provide a single 'configure_logging' entry-point that all layers
 can import without depending on any first-party project module.
 """
 
-from __future__ import annotations
-
 import logging
 import sys
 

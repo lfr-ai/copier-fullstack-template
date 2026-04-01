@@ -1,17 +1,16 @@
 """Local filesystem storage adapter."""
 
-from __future__ import annotations
-
 import asyncio
 import shutil
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, final
 
 import structlog
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class LocalStorageAdapter:
     """Store and retrieve files on the local filesystem.
 

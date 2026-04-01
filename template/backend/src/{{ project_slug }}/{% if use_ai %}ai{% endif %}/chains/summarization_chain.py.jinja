@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
 from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_DEFAULT_CHUNK_SIZE: int = 4000
-_MAP_MAX_TOKENS: int = 256
-_REDUCE_MAX_TOKENS: int = 512
-_SUMMARIZE_TEMPERATURE: float = 0.2
-_DEFAULT_MAX_SENTENCES: int = 5
+_DEFAULT_CHUNK_SIZE = 4000
+_MAP_MAX_TOKENS = 256
+_REDUCE_MAX_TOKENS = 512
+_SUMMARIZE_TEMPERATURE = 0.2
+_DEFAULT_MAX_SENTENCES = 5
 
 
+@final
 class SummarizationChain(BaseChain):
     """Multi-document summarization using map-reduce pattern.
 

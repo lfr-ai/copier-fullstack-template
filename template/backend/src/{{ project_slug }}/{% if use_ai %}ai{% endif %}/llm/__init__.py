@@ -7,4 +7,3 @@ The 'anthropic_adapter' module provides a convenience wrapper
 that normalises the 'anthropic/' model prefix.
 """
 
-from __future__ import annotations

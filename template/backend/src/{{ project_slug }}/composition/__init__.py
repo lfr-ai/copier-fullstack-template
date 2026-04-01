@@ -5,4 +5,3 @@ where concrete classes are selected and injected.  No other layer
 should reference this package except the application entry point.
 """
 
-from __future__ import annotations

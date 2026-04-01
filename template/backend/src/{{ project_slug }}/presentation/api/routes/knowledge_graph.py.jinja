@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -14,17 +16,18 @@ from {{ project_slug }}.presentation.api.dependencies import ContainerDep
 
 router = APIRouter()
 
-_DEFAULT_QUERY_DEPTH: int = 2
-_MAX_QUERY_DEPTH: int = 5
-_DEFAULT_QUERY_RESULTS: int = 20
-_MAX_QUERY_RESULTS: int = 100
-_DEFAULT_MAX_TRIPLETS: int = 50
-_MAX_TRIPLETS: int = 200
-_MAX_NEIGHBOR_LIMIT: int = 200
-_MAX_EXTERNAL_LOOKUP_LIMIT: int = 20
-_MAX_EXTERNAL_RELATIONS_LIMIT: int = 200
+_DEFAULT_QUERY_DEPTH = 2
+_MAX_QUERY_DEPTH = 5
+_DEFAULT_QUERY_RESULTS = 20
+_MAX_QUERY_RESULTS = 100
+_DEFAULT_MAX_TRIPLETS = 50
+_MAX_TRIPLETS = 200
+_MAX_NEIGHBOR_LIMIT = 200
+_MAX_EXTERNAL_LOOKUP_LIMIT = 20
+_MAX_EXTERNAL_RELATIONS_LIMIT = 200
 
 
+@final
 class TripletResponse(BaseModel):
     """Single knowledge graph triplet."""
 
@@ -34,6 +37,7 @@ class TripletResponse(BaseModel):
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
+@final
 class GraphQueryRequest(BaseModel):
     """Request for querying the knowledge graph."""
 
@@ -42,12 +46,14 @@ class GraphQueryRequest(BaseModel):
     max_results: int = Field(default=_DEFAULT_QUERY_RESULTS, ge=1, le=_MAX_QUERY_RESULTS)
 
 
+@final
 class GraphQueryResponse(BaseModel):
     """Response from a knowledge graph query."""
 
     triplets: list[TripletResponse]
 
 
+@final
 class ExtractTripletsRequest(BaseModel):
     """Request to extract triplets from text."""
 
@@ -55,6 +61,7 @@ class ExtractTripletsRequest(BaseModel):
     max_triplets: int = Field(default=_DEFAULT_MAX_TRIPLETS, ge=1, le=_MAX_TRIPLETS)
 
 
+@final
 class ExtractTripletsResponse(BaseModel):
     """Response with extracted triplets."""
 
@@ -121,6 +128,7 @@ async def extract_triplets(request: ExtractTripletsRequest, container: Container
     )
 
 
+@final
 class NeighborQueryRequest(BaseModel):
     """Request for querying knowledge graph neighbors."""
 
@@ -129,6 +137,7 @@ class NeighborQueryRequest(BaseModel):
     limit: int = Field(default=DEFAULT_NEIGHBOR_LIMIT, ge=1, le=_MAX_NEIGHBOR_LIMIT)
 
 
+@final
 class NeighborQueryResponse(BaseModel):
     """Response from a neighbor query."""
 
@@ -137,6 +146,7 @@ class NeighborQueryResponse(BaseModel):
     neighbors: list[dict[str, object]]
 
 
+@final
 class StatsResponse(BaseModel):
     """Knowledge graph statistics."""
 
@@ -145,6 +155,7 @@ class StatsResponse(BaseModel):
     backend: str
 
 
+@final
 class AddTripletRequest(BaseModel):
     """Request to add a single triplet."""
 
@@ -217,6 +228,7 @@ async def add_triplet(request: AddTripletRequest, container: ContainerDep) -> di
 {% if use_external_knowledge_graph is defined and use_external_knowledge_graph %}
 
 
+@final
 class ExternalLookupRequest(BaseModel):
     """Request to look up an entity in an external knowledge graph."""
 
@@ -226,6 +238,7 @@ class ExternalLookupRequest(BaseModel):
     limit: int = Field(default=DEFAULT_ENTITY_LOOKUP_LIMIT, ge=1, le=_MAX_EXTERNAL_LOOKUP_LIMIT)
 
 
+@final
 class ExternalRelationsRequest(BaseModel):
     """Request to get relations for an external entity."""
 

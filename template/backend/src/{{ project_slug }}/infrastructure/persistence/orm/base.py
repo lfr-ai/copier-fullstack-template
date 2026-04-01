@@ -1,15 +1,12 @@
 """SQLAlchemy declarative base and common mixins."""
 
-from __future__ import annotations
-
 import uuid
 from datetime import datetime
 
 from sqlalchemy import TIMESTAMP, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-_UUID_STRING_LENGTH: int = 36
-"""Character length of a UUID4 string representation."""
+_UUID_STRING_LENGTH = 36
 
 
 def _generate_uuid() -> str:

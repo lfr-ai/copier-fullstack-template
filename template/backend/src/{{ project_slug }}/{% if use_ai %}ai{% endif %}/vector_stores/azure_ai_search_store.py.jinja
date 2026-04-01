@@ -8,12 +8,15 @@ Add 'azure-search-documents' to project dependencies before using.
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 
 from {{ project_slug }}.ai.config import DEFAULT_EMBEDDING_DIMENSION
 from {{ project_slug }}.core.interfaces.vector_store import DEFAULT_SEARCH_TOP_K, VectorSearchResult, VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class AzureAISearchVectorStore(VectorStoreGateway):
     """Azure AI Search backed vector store.
 

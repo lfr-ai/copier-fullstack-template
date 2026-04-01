@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from {{ project_slug }}.core.entities.user import User
 from {{ project_slug }}.core.events.user_events import UserDeactivated
 from {{ project_slug }}.core.exceptions.base import ConflictError, DomainError
 from {{ project_slug }}.core.value_objects.email import Email
 
 
+@final
 class UserDomainService:
     """Domain service for user-related business rules.
 

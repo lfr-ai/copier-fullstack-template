@@ -6,13 +6,14 @@ Add 'llama-index' to project dependencies before using.
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
 from {{ project_slug }}.core.entities.document import Chunk, Document
 from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class LlamaIndexDocumentLoader(DocumentLoaderGateway):
     """Document loader backed by LlamaIndex's 'SimpleDirectoryReader'.
 
@@ -67,6 +68,7 @@ class LlamaIndexDocumentLoader(DocumentLoaderGateway):
         return all_docs
 
 
+@final
 class LlamaIndexChunker:
     """Chunker backed by LlamaIndex's 'SentenceSplitter'.
 
