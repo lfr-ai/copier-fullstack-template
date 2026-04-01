@@ -17,9 +17,12 @@ Example::
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar, final
+
+T = TypeVar("T")
 
 
-class Specification[T](ABC):
+class Specification(ABC, Generic[T]):
     """Abstract specification — a predicate over domain objects."""
 
     @abstractmethod
@@ -37,7 +40,8 @@ class Specification[T](ABC):
         return NotSpecification(self)
 
 
-class AndSpecification[T](Specification[T]):
+@final
+class AndSpecification(Specification[T]):
     """Composite: both specifications must be satisfied."""
 
     def __init__(self, left: Specification[T], right: Specification[T]) -> None:
@@ -50,7 +54,8 @@ class AndSpecification[T](Specification[T]):
         )
 
 
-class OrSpecification[T](Specification[T]):
+@final
+class OrSpecification(Specification[T]):
     """Composite: at least one specification must be satisfied."""
 
     def __init__(self, left: Specification[T], right: Specification[T]) -> None:
@@ -63,7 +68,8 @@ class OrSpecification[T](Specification[T]):
         )
 
 
-class NotSpecification[T](Specification[T]):
+@final
+class NotSpecification(Specification[T]):
     """Composite: negation of a specification."""
 
     def __init__(self, spec: Specification[T]) -> None:

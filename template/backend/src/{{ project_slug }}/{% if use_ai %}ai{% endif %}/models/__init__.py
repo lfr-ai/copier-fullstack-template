@@ -1,6 +1,6 @@
 """Pydantic models for AI request/response payloads."""
 
-from __future__ import annotations
+from typing import final
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,6 +25,7 @@ from ..config import (
 )
 
 
+@final
 class CompletionRequest(BaseModel):
     """Request payload for an AI completion."""
 
@@ -63,6 +64,7 @@ class CompletionRequest(BaseModel):
     )
 
 
+@final
 class CompletionResponse(BaseModel):
     """Response payload from an AI completion."""
 
@@ -101,6 +103,7 @@ class CompletionResponse(BaseModel):
         return self.prompt_tokens + self.completion_tokens
 
 
+@final
 class DocumentIngestRequest(BaseModel):
     """Request to ingest a document into the knowledge base."""
 
@@ -109,6 +112,7 @@ class DocumentIngestRequest(BaseModel):
     source: str = Field(..., min_length=1, description="Document source path or URL")
 
 
+@final
 class DocumentIngestResponse(BaseModel):
     """Summary of a document ingestion operation."""
 
@@ -119,6 +123,7 @@ class DocumentIngestResponse(BaseModel):
     chunk_count: int = Field(default=0, ge=0)
 
 
+@final
 class SourceReference(BaseModel):
     """Single source reference from vector search or RAG retrieval."""
 
@@ -129,6 +134,7 @@ class SourceReference(BaseModel):
     content: str = Field(default="", description="Snippet of matched content")
 
 
+@final
 class RAGQueryRequest(BaseModel):
     """Request for a RAG-augmented query."""
 
@@ -140,6 +146,7 @@ class RAGQueryRequest(BaseModel):
     use_graph: bool = Field(default=False)
 
 
+@final
 class RAGQueryResponse(BaseModel):
     """Response from a RAG-augmented query."""
 
@@ -150,6 +157,7 @@ class RAGQueryResponse(BaseModel):
     sources: list[SourceReference] = Field(default_factory=list)
 
 
+@final
 class VectorSearchRequest(BaseModel):
     """Direct vector similarity search request."""
 
@@ -160,6 +168,7 @@ class VectorSearchRequest(BaseModel):
     filters: dict[str, object] | None = Field(default=None)
 
 
+@final
 class VectorSearchResponse(BaseModel):
     """Vector similarity search results."""
 

@@ -1,22 +1,18 @@
 """Workflow engine gateway."""
 
-from __future__ import annotations
-
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, final
 
 DEFAULT_MAX_ITERATIONS = 25
-"""Default maximum iterations for workflow execution."""
 
 DEFAULT_RECURSION_LIMIT = 50
-"""Default recursion limit for graph traversal."""
 
 DEFAULT_TIMEOUT_SECONDS = 300.0
-"""Default timeout in seconds for workflow execution."""
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class WorkflowConfig:
     """Configuration passed to a workflow execution."""
 
@@ -31,6 +27,7 @@ class WorkflowConfig:
 
 
 @dataclass(slots=True)
+@final
 class WorkflowResult:
     """Result from a workflow execution."""
 
@@ -44,6 +41,7 @@ class WorkflowResult:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class WorkflowStreamEvent:
     """Single event emitted during workflow streaming."""
 

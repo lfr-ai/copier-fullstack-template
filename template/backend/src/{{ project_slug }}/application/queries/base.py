@@ -1,11 +1,13 @@
 """Base query handler for CQRS read operations."""
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar
+
+QueryT = TypeVar("QueryT")
+ResultT = TypeVar("ResultT")
 
 
-class QueryHandler[QueryT, ResultT](ABC):
+class QueryHandler(ABC, Generic[QueryT, ResultT]):
     """Abstract base for query handlers.
 
     Implements CQRS read side without unit of work

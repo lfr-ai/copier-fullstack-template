@@ -1,26 +1,22 @@
 """Model configuration value object."""
 
-from __future__ import annotations
+from typing import final
 
 from dataclasses import dataclass, field
 
 DEFAULT_MAX_TOKENS = 1024
-"""Default maximum tokens in a completion response."""
 
 DEFAULT_TEMPERATURE = 0.7
-"""Default sampling temperature for completions."""
 
 DEFAULT_TOP_P = 1.0
-"""Default top-p (nucleus sampling) value."""
 
 DEFAULT_MAX_RETRIES = 3
-"""Default maximum retry count for tool calls."""
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
-"""Default timeout in seconds for tool calls."""
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class ModelConfig:
     """Immutable configuration for an LLM provider."""
 
@@ -36,6 +32,7 @@ class ModelConfig:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class ToolConfig:
     """Immutable configuration for an AI tool binding."""
 

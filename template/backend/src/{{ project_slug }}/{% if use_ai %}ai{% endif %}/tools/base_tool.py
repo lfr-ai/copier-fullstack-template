@@ -1,11 +1,12 @@
 """Base tool — abstract foundation for agent tools."""
 
-from __future__ import annotations
+from typing import final
 
 import abc
 import structlog
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class ToolResult:
     """Result of a tool execution."""
 

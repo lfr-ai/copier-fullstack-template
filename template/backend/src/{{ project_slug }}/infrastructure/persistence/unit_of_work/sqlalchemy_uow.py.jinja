@@ -7,7 +7,7 @@ lifecycle that begins with ``Entity.register_event()``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, final
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class SQLAlchemyUnitOfWork:
     """SQLAlchemy-based Unit of Work with domain event dispatch.
 

@@ -7,6 +7,8 @@ SQLAlchemy models.
 
 from __future__ import annotations
 
+from typing import final
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +24,7 @@ from {{ project_slug }}.core.entities.user import User
 _mapper = UserPersistenceMapper()
 
 
+@final
 class UserRepository(SQLAlchemyRepository[UserModel]):
     """Repository for user persistence operations.
 

@@ -9,12 +9,13 @@ Requires: 'pip install sentence-transformers>=3.3'
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_CROSS_ENCODER_MODEL
 from {{ project_slug }}.core.interfaces.reranker import RankedResult, RerankerGateway, _DEFAULT_RERANK_TOP_K
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class CrossEncoderReranker(RerankerGateway):
     """Reranker backed by a cross-encoder model.
 

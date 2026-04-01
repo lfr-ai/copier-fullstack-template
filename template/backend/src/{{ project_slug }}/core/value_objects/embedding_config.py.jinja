@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from dataclasses import dataclass
 
 from {{ project_slug }}.core.entities.base import ValueObject
 
-_DEFAULT_DIMENSIONS: int = 1536
-_DEFAULT_BATCH_SIZE: int = 100
+_DEFAULT_DIMENSIONS = 1536
+_DEFAULT_BATCH_SIZE = 100
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class EmbeddingConfig(ValueObject):
     """Immutable embedding model configuration."""
 

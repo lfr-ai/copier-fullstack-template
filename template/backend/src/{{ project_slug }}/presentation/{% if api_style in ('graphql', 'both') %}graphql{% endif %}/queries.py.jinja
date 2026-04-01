@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from importlib.metadata import version
 
 import strawberry
@@ -24,19 +26,20 @@ from {{ project_slug }}.presentation.graphql.types import (
 {%- endif %}
 )
 
-_DEFAULT_PAGE_LIMIT: int = 20
-_MS_PER_SECOND: int = 1000
-_ERROR_MSG_MAX_LEN: int = 200
+_DEFAULT_PAGE_LIMIT = 20
+_MS_PER_SECOND = 1000
+_ERROR_MSG_MAX_LEN = 200
 {%- if use_ai %}
-_DEFAULT_MAX_TOKENS: int = 256
-_DEFAULT_TEMPERATURE: float = 0.7
+_DEFAULT_MAX_TOKENS = 256
+_DEFAULT_TEMPERATURE = 0.7
 {%- endif %}
 {%- if use_rag %}
-_DEFAULT_RAG_TOP_K: int = 5
+_DEFAULT_RAG_TOP_K = 5
 {%- endif %}
 
 
 @strawberry.type(description="Root query type.")
+@final
 class Query:
     """All top-level GraphQL queries."""
 

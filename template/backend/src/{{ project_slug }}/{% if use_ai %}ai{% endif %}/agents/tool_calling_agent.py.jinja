@@ -10,19 +10,20 @@ from __future__ import annotations
 import json
 import structlog
 from collections.abc import Callable, Coroutine
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.agents.base_agent import AgentResult, AgentTool, BaseAgent
 from {{ project_slug }}.ai.config import DEFAULT_AGENT_MAX_STEPS
 from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_STEP_MAX_TOKENS: int = 1024
-_STEP_TEMPERATURE: float = 0.2
+_STEP_MAX_TOKENS = 1024
+_STEP_TEMPERATURE = 0.2
 
 ToolExecutor = Callable[..., Coroutine[object, object, object]]
 
 
+@final
 class ToolCallingAgent(BaseAgent):
     """Agent with real tool dispatch via registered executors.
 

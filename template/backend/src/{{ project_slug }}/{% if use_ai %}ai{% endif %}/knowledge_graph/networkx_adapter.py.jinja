@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import structlog
 from pathlib import Path
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_DEPTH,
@@ -21,6 +21,7 @@ from {{ project_slug }}.core.interfaces.knowledge_graph import (
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class NetworkXKnowledgeGraph(KnowledgeGraphGateway):
     """In-memory knowledge graph backed by NetworkX."""
 

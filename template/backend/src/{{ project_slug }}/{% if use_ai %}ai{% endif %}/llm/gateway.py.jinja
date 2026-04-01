@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import structlog
 from collections.abc import AsyncIterator
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from {{ project_slug }}.ai.llm.base_llm_adapter import BaseLLMAdapter
 from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class AIGateway(BaseLLMAdapter):
     """Routes LLM requests across multiple provider adapters.
 

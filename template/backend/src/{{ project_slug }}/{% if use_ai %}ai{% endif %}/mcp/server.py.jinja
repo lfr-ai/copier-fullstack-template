@@ -13,6 +13,8 @@ Add 'mcp[cli]' to project dependencies before using.
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -31,6 +33,7 @@ from {{ project_slug }}.core.interfaces.knowledge_graph import (
 from pydantic import BaseModel, Field
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class SearchResult(BaseModel):
     """Single document search result."""
 
@@ -39,6 +42,7 @@ class SearchResult(BaseModel):
     source: str = Field(default="", description="Source document identifier")
 
 
+@final
 class SearchOutput(BaseModel):
     """Structured output for document search."""
 
@@ -48,6 +52,7 @@ class SearchOutput(BaseModel):
     message: str = Field(default="", description="Diagnostic message")
 
 
+@final
 class RAGOutput(BaseModel):
     """Structured output for RAG queries."""
 
@@ -56,6 +61,7 @@ class RAGOutput(BaseModel):
     sources: list[SearchResult] = Field(default_factory=list)
 
 
+@final
 class CompletionOutput(BaseModel):
     """Structured output for text completion."""
 
@@ -64,6 +70,7 @@ class CompletionOutput(BaseModel):
     message: str = Field(default="", description="Diagnostic message")
 
 
+@final
 class KGNeighborOutput(BaseModel):
     """Structured output for knowledge graph queries."""
 
@@ -73,6 +80,7 @@ class KGNeighborOutput(BaseModel):
     message: str = Field(default="", description="Diagnostic message")
 
 
+@final
 class TripletOutput(BaseModel):
     """Structured output for triplet operations."""
 
@@ -81,6 +89,7 @@ class TripletOutput(BaseModel):
     message: str = Field(default="", description="Diagnostic message")
 
 
+@final
 class EvalOutput(BaseModel):
     """Structured output for LLM output evaluation."""
 

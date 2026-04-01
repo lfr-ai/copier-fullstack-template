@@ -7,6 +7,8 @@ Unit of Work.
 
 from __future__ import annotations
 
+from typing import final
+
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
 from {{ project_slug }}.application.mappers.user_mapper import UserMapper
 from {{ project_slug }}.application.services.base import BaseService
@@ -18,6 +20,7 @@ from {{ project_slug }}.core.interfaces.password_hasher import PasswordHasher
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
 
+@final
 class UserService(BaseService):
     """Application service for user management.
 

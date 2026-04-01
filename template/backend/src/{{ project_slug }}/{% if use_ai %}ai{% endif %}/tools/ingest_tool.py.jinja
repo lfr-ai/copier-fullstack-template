@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 
 from {{ project_slug }}.ai.rag.ingestion import IngestionPipeline
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class IngestTool:
     """Tool for document ingestion into the knowledge base.
 

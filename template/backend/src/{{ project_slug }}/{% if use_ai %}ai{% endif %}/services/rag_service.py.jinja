@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 
 from {{ project_slug }}.ai.models import (
@@ -24,6 +26,7 @@ from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class RAGService:
     """RAG orchestration service — ingestion, search, and query."""
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Generic, TypeVar
+from typing import Annotated, Generic, TypeVar, final
 
 from pydantic import Field
 
@@ -11,6 +11,7 @@ from {{ project_slug }}.config.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 T = TypeVar("T")
 
 
+@final
 class PaginationParams(BaseSchema):
     """Query parameters for paginated list endpoints."""
 
@@ -29,6 +30,7 @@ class PaginationParams(BaseSchema):
     )]
 
 
+@final
 class PaginatedResponse(BaseSchema, Generic[T]):
     """Wrapper for paginated list responses."""
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import override
+from typing import override, final
 
 import structlog
 
@@ -13,9 +13,10 @@ from {{ project_slug }}.core.interfaces.observability import ObservabilityGatewa
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-_MS_PER_SECOND: int = MS_PER_SECOND
+_MS_PER_SECOND = MS_PER_SECOND
 
 
+@final
 class StructlogObservability(ObservabilityGateway):
     """Structlog-backed AI tracing and telemetry."""
 

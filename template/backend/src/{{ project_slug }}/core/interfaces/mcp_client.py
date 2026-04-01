@@ -4,8 +4,6 @@ Concrete adapters use the official MCP Python SDK to communicate
 via streamable-http, stdio, or SSE transports.
 """
 
-from __future__ import annotations
-
 from typing import Protocol, runtime_checkable
 
 

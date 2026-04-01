@@ -5,7 +5,7 @@ import contextlib
 import datetime
 import pathlib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 import structlog
 
@@ -16,6 +16,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class CpuProfileResult:
     """Result of a CPU profiling session."""
 

@@ -16,7 +16,7 @@ from {{ project_slug }}.presentation.graphql.queries import Query
 from {{ project_slug }}.presentation.graphql.subscriptions import Subscription
 {%- endif %}
 
-_DEFAULT_MAX_QUERY_DEPTH: int = 10
+_DEFAULT_MAX_QUERY_DEPTH = 10
 
 
 def create_schema(*, max_depth: int = _DEFAULT_MAX_QUERY_DEPTH) -> strawberry.Schema:

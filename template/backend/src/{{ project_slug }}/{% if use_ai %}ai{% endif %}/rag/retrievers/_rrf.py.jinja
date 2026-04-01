@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
 from {{ project_slug }}.core.interfaces.retriever import RetrievedContext
-_RRF_K: int = 60
-"""Standard RRF constant from the original paper."""
+_RRF_K = 60
 
-_DOC_KEY_TRUNCATE_LEN: int = 100
-"""Truncation length for content-based document keys."""
+_DOC_KEY_TRUNCATE_LEN = 100
 
 
 def reciprocal_rank_fusion(

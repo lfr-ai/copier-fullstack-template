@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+
 class CommandHandler[CommandT, ResultT](ABC):
     """Abstract base for command handlers.
 

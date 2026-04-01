@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 
 from {{ project_slug }}.core.entities.document import Chunk, Document
@@ -11,6 +13,7 @@ from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
 from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class IngestionPipeline:
     """Orchestrates document ingestion into the vector store.
 

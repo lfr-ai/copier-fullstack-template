@@ -1,11 +1,12 @@
 """Base chain — abstract foundation for LLM chain compositions."""
 
-from __future__ import annotations
+from typing import final
 
 import abc
 import structlog
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class ChainResult:
     """Result of a chain execution."""
 

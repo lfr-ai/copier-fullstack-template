@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from {{ project_slug }}.application.dtos.mcp_dto import MCPToolCallDTO, MCPToolResultDTO
 from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.mcp_server import MCPServerGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+@final
 class MCPService(BaseService):
     """Application-level MCP orchestration.
 

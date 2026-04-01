@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, HTTPException, status
@@ -13,10 +15,11 @@ from {{ project_slug }}.presentation.api.dependencies import ContainerDep
 
 router = APIRouter()
 
-_MAX_GOAL_LENGTH: int = 8192
-_MAX_ITERATIONS_LIMIT: int = 100
+_MAX_GOAL_LENGTH = 8192
+_MAX_ITERATIONS_LIMIT = 100
 
 
+@final
 class WorkflowExecuteRequest(BaseModel):
     """Request to execute a multi-agent workflow."""
 
@@ -29,6 +32,7 @@ class WorkflowExecuteRequest(BaseModel):
     stream: bool = False
 
 
+@final
 class WorkflowResumeRequest(BaseModel):
     """Request to resume a paused workflow."""
 
@@ -36,6 +40,7 @@ class WorkflowResumeRequest(BaseModel):
     input_data: dict[str, object] = Field(default_factory=dict)
 
 
+@final
 class WorkflowStepResponse(BaseModel):
     """Single step in a workflow execution trace."""
 
@@ -47,6 +52,7 @@ class WorkflowStepResponse(BaseModel):
     token_usage: dict[str, int] = Field(default_factory=dict)
 
 
+@final
 class WorkflowExecuteResponse(BaseModel):
     """Response from a workflow execution."""
 

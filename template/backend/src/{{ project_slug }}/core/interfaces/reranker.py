@@ -4,15 +4,14 @@ Concrete adapters may use Cohere, Cross-Encoder models, LLM-based
 reranking, or reciprocal rank fusion strategies.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, final
 
-_DEFAULT_RERANK_TOP_K: int = 5
+_DEFAULT_RERANK_TOP_K = 5
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class RankedResult:
     """Reranked search result with updated relevance score."""
 

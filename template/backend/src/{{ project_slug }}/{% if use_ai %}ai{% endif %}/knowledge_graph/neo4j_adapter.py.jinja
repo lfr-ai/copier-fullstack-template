@@ -10,7 +10,7 @@ Add 'neo4j' to project dependencies before using.
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_LIMIT,
@@ -18,9 +18,10 @@ from {{ project_slug }}.core.interfaces.knowledge_graph import (
 )
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_MAX_QUERY_RESULTS: int = 1000
+_MAX_QUERY_RESULTS = 1000
 
 
+@final
 class Neo4jKnowledgeGraph(KnowledgeGraphGateway):
     """Neo4j-backed knowledge graph with Cypher query support."""
 

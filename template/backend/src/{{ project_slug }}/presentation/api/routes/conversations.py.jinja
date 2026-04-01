@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -11,14 +13,15 @@ from {{ project_slug }}.presentation.api.dependencies import AIServiceDep, Conta
 
 router = APIRouter()
 
-_DEFAULT_HISTORY_LIMIT: int = 50
-_MAX_HISTORY_LIMIT: int = 200
-_CHAT_MAX_TOKENS: int = 1024
-_CHAT_TEMPERATURE: float = 0.7
-_DEFAULT_TOP_K: int = 5
-_MAX_TOP_K: int = 20
+_DEFAULT_HISTORY_LIMIT = 50
+_MAX_HISTORY_LIMIT = 200
+_CHAT_MAX_TOKENS = 1024
+_CHAT_TEMPERATURE = 0.7
+_DEFAULT_TOP_K = 5
+_MAX_TOP_K = 20
 
 
+@final
 class MessageResponse(BaseModel):
     """Single conversation message."""
 
@@ -27,12 +30,14 @@ class MessageResponse(BaseModel):
     timestamp: datetime | None = None
 
 
+@final
 class ConversationListResponse(BaseModel):
     """List of conversation sessions."""
 
     sessions: list[str]
 
 
+@final
 class ConversationHistoryResponse(BaseModel):
     """Full conversation history for a session."""
 
@@ -40,6 +45,7 @@ class ConversationHistoryResponse(BaseModel):
     messages: list[MessageResponse]
 
 
+@final
 class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
 
@@ -48,6 +54,7 @@ class SendMessageRequest(BaseModel):
     top_k: int = Field(default=_DEFAULT_TOP_K, ge=1, le=_MAX_TOP_K)
 
 
+@final
 class SendMessageResponse(BaseModel):
     """Response after sending a message."""
 

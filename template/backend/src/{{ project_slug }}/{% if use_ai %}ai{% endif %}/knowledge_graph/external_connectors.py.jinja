@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_ENTITY_LOOKUP_LIMIT,
@@ -19,6 +19,7 @@ _DBPEDIA_SPARQL = "https://dbpedia.org/sparql"
 _CONCEPTNET_API = "https://api.conceptnet.io"
 
 
+@final
 class _SPARQLMixin:
     """Shared SPARQL query execution for Wikidata and DBpedia connectors."""
 
@@ -52,6 +53,7 @@ class _SPARQLMixin:
         ]
 
 
+@final
 class WikidataKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphGateway):
     """Query Wikidata via its public SPARQL endpoint.
 
@@ -149,6 +151,7 @@ class WikidataKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphGateway):
     # _run_sparql inherited from _SPARQLMixin
 
 
+@final
 class DBpediaKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphGateway):
     """Query DBpedia via its public SPARQL endpoint.
 
@@ -249,6 +252,7 @@ class DBpediaKnowledgeGraph(_SPARQLMixin, ExternalKnowledgeGraphGateway):
     # _run_sparql inherited from _SPARQLMixin
 
 
+@final
 class ConceptNetKnowledgeGraph(ExternalKnowledgeGraphGateway):
     """Query ConceptNet via its REST API.
 

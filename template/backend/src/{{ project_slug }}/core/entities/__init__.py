@@ -10,8 +10,6 @@ Re-exports base entity types::
     )
 """
 
-from __future__ import annotations
-
 from {{ project_slug }}.core.entities.base import (
     AggregateRoot,
     DomainEvent,

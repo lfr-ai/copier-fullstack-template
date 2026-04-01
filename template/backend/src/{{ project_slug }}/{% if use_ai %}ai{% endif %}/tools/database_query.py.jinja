@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import structlog
 import re
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import EVAL_MAX_TOKENS
 from {{ project_slug }}.ai.tools.base_tool import BaseTool, ToolResult
@@ -16,11 +16,12 @@ _FORBIDDEN_PATTERNS: re.Pattern[str] = re.compile(
     re.IGNORECASE,
 )
 
-_STATEMENT_TIMEOUT_MS: int = 5_000
-_MAX_RESULT_ROWS: int = 50
-_SQL_GEN_TEMPERATURE: float = 0.0
+_STATEMENT_TIMEOUT_MS = 5_000
+_MAX_RESULT_ROWS = 50
+_SQL_GEN_TEMPERATURE = 0.0
 
 
+@final
 class DatabaseQueryTool(BaseTool):
     """Natural language to read-only SQL query tool."""
 

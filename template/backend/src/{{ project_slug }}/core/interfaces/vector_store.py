@@ -3,12 +3,9 @@
 Concrete adapters: FAISS, Azure AI Search, Chroma, Pinecone, etc.
 """
 
-from __future__ import annotations
-
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, final
 
 DEFAULT_SEARCH_TOP_K = 10
-"""Default number of results for vector similarity search."""
 
 
 @runtime_checkable
@@ -44,6 +41,7 @@ class VectorStoreGateway(Protocol):
         ...
 
 
+@final
 class VectorSearchResult:
     """Result from a vector similarity search."""
 
