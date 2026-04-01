@@ -7,7 +7,7 @@ text by a hierarchy of separators. Compatible with the core
 
 from __future__ import annotations
 
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
 from {{ project_slug }}.core.entities.document import Chunk, Document
@@ -15,6 +15,7 @@ from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
 _SEPARATORS: list[str] = ["\n\n", "\n", ". ", " ", ""]
 
 
+@final
 class RecursiveTextSplitter(TextSplitterGateway):
     """Recursive character-based text splitter.
 

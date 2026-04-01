@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from dataclasses import dataclass, field
 
 from {{ project_slug }}.core.entities.base import generate_id
 @dataclass(slots=True)
+@final
 class GraphNode:
     """Node in the knowledge graph."""
 
@@ -17,6 +20,7 @@ class GraphNode:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class Triplet:
     """Subject-predicate-object triplet in the knowledge graph."""
 
@@ -27,6 +31,7 @@ class Triplet:
 
 
 @dataclass(slots=True)
+@final
 class GraphEdge:
     """Edge connecting two nodes in the knowledge graph."""
 
@@ -38,6 +43,7 @@ class GraphEdge:
 
 
 @dataclass(slots=True)
+@final
 class ExternalEntityResult:
     """Result from an external knowledge graph lookup."""
 

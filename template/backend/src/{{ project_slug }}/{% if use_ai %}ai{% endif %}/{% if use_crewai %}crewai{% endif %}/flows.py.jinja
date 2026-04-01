@@ -33,12 +33,14 @@ Usage::
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 from dataclasses import dataclass
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-_LOG_TRUNCATE: int = 200
+_LOG_TRUNCATE = 200
 
 # ── Flow state helpers ───────────────────────────────────────────────
 
@@ -84,6 +86,7 @@ def create_flow_state_class(
 
 
 @dataclass(slots=True)
+@final
 class FlowRunResult:
     """Result container for a flow execution."""
 
@@ -93,6 +96,7 @@ class FlowRunResult:
     state: object = None
 
 
+@final
 class FlowRunner:
     """Execute a CrewAI Flow with logging, error handling, and state capture.
 
@@ -159,6 +163,7 @@ class FlowRunner:
 # ── Flow registry ────────────────────────────────────────────────────
 
 
+@final
 class FlowRegistry:
     """Registry for named flow classes.
 

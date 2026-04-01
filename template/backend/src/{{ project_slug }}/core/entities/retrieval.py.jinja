@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from dataclasses import dataclass, field
 
 from {{ project_slug }}.core.entities.base import generate_id
 @dataclass(slots=True)
+@final
 class SearchResult:
     """Single vector similarity search result."""
 
@@ -16,6 +19,7 @@ class SearchResult:
 
 
 @dataclass(slots=True)
+@final
 class RetrievalResult:
     """Composite result from a retrieval operation.
 

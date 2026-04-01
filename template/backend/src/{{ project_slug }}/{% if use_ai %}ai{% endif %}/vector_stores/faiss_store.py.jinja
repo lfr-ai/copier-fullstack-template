@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import json
 import structlog
 from pathlib import Path
@@ -10,6 +12,7 @@ from {{ project_slug }}.ai.config import DEFAULT_SEARCH_TOP_K
 from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class FaissVectorStore(VectorStoreGateway):
     """FAISS-backed vector store with metadata and persistence support."""
 

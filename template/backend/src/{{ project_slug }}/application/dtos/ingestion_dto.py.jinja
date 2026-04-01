@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, final
 
 from pydantic import Field
 
 from {{ project_slug }}.application.dtos.base import BaseDTO
 
-_MIN_CHUNK_SIZE: int = 64
-_MAX_CHUNK_SIZE: int = 8192
-_MAX_CHUNK_OVERLAP: int = 1024
-_DEFAULT_CHUNK_SIZE: int = 512
-_DEFAULT_CHUNK_OVERLAP: int = 64
+_MIN_CHUNK_SIZE = 64
+_MAX_CHUNK_SIZE = 8192
+_MAX_CHUNK_OVERLAP = 1024
+_DEFAULT_CHUNK_SIZE = 512
+_DEFAULT_CHUNK_OVERLAP = 64
 
 
+@final
 class IngestionRequestDTO(BaseDTO):
     """Input for a document ingestion operation."""
 
@@ -26,6 +27,7 @@ class IngestionRequestDTO(BaseDTO):
     build_knowledge_graph: bool = False
 
 
+@final
 class IngestionResultDTO(BaseDTO):
     """Output from a document ingestion operation."""
 

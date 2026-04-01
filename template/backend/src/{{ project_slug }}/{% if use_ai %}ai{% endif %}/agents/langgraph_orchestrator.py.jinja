@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import structlog
 from collections.abc import AsyncIterator
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.core.interfaces.agent_orchestrator import (
     AgentOrchestratorGateway,
@@ -24,10 +24,11 @@ from {{ project_slug }}.ai.config import DEFAULT_HISTORY_WINDOW, RECURSION_LIMIT
 from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_AGENT_MAX_TOKENS: int = 2048
-_AGENT_TEMPERATURE: float = 0.3
+_AGENT_MAX_TOKENS = 2048
+_AGENT_TEMPERATURE = 0.3
 
 
+@final
 class LangGraphOrchestrator(AgentOrchestratorGateway):
     """Multi-agent orchestrator backed by LangGraph StateGraph.
 

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from collections.abc import AsyncIterator
 
 from {{ project_slug }}.application.dtos.agent_dto import AgentResultDTO, AgentTaskDTO
 from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.agent_orchestrator import AgentOrchestratorGateway, AgentState
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+@final
 class AgentService(BaseService):
     """Application-level agent execution orchestration.
 

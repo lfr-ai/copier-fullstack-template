@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import pathlib
 import re
-from typing import override
+from typing import override, final
 
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -29,6 +29,7 @@ def _timestamp() -> str:
     return datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S_%f")
 
 
+@final
 class ProfilingMiddleware(BaseHTTPMiddleware):
     """FastAPI middleware for on-demand request CPU profiling with pyinstrument."""
 

@@ -10,15 +10,16 @@ from __future__ import annotations
 
 import asyncio
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.core.entities.document import Document
 from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_HTTP_TIMEOUT_SECONDS: float = 30.0
+_HTTP_TIMEOUT_SECONDS = 30.0
 
 
+@final
 class WebDocumentLoader(DocumentLoaderGateway):
     """Document loader for web URLs."""
 

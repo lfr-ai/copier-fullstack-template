@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from collections.abc import AsyncIterator
 
 from {{ project_slug }}.application.dtos.workflow_dto import (
@@ -18,6 +20,7 @@ from {{ project_slug }}.core.interfaces.workflow_engine import (
 )
 
 
+@final
 class WorkflowService(BaseService):
     """Application-level workflow orchestration.
 

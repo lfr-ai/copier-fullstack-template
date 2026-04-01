@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 import structlog
 
@@ -19,13 +19,14 @@ if TYPE_CHECKING:
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 _QUERY_START_KEY = "_profiling_query_start"
-_DEFAULT_TRUNCATE_LEN: int = 200
-_LOG_TRUNCATE_LEN: int = 100
-_DEFAULT_SLOW_THRESHOLD_MS: float = 100.0
-_PROFILE_SLOW_THRESHOLD_MS: float = 50.0
+_DEFAULT_TRUNCATE_LEN = 200
+_LOG_TRUNCATE_LEN = 100
+_DEFAULT_SLOW_THRESHOLD_MS = 100.0
+_PROFILE_SLOW_THRESHOLD_MS = 50.0
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class QueryTiming:
     """Timing data for single SQL query."""
 
@@ -35,6 +36,7 @@ class QueryTiming:
 
 
 @dataclass(slots=True)
+@final
 class SqlProfileResult:
     """Aggregated result of SQL query profiling."""
 

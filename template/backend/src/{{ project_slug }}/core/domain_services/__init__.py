@@ -6,4 +6,3 @@ They depend only on other core-layer types (entities, value
 objects, interfaces) and contain zero infrastructure concerns.
 """
 
-from __future__ import annotations

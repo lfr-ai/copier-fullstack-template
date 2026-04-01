@@ -11,8 +11,8 @@ from pydantic import model_validator
 from {{ project_slug }}.config.settings.base import BaseAppSettings
 from {{ project_slug }}.core.enums.environment import Environment
 
-_MIN_SECRET_KEY_LENGTH: int = 32
-_INSECURE_DEFAULT: str = "change-me-in-production"
+_MIN_SECRET_KEY_LENGTH = 32
+_INSECURE_DEFAULT = "change-me-in-production"
 
 
 class StagingSettings(BaseAppSettings):

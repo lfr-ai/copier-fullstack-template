@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from dataclasses import dataclass
 
 from {{ project_slug }}.core.entities.base import ValueObject
 from {{ project_slug }}.core.exceptions.validation import ValidationError
 from {{ project_slug }}.core.validators import EMAIL_PATTERN
 @dataclass(frozen=True, slots=True)
+@final
 class Email(ValueObject):
     """Immutable email value object with format validation.
 

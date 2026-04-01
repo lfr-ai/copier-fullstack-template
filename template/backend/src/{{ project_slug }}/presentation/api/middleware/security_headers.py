@@ -1,16 +1,15 @@
 """Security headers middleware."""
 
-from __future__ import annotations
-
-from typing import override
+from typing import override, final
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
-_HSTS_MAX_AGE_SECONDS: int = 63_072_000  # 2 years
+_HSTS_MAX_AGE_SECONDS = 63_072_000  # 2 years
 
 
+@final
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses.
 

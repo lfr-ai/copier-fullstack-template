@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from dataclasses import dataclass, field
 
 from pydantic import Field
@@ -16,11 +18,12 @@ from {{ project_slug }}.core.interfaces.knowledge_graph import (
 from {{ project_slug }}.core.interfaces.llm import LLMGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
-_EXTRACTION_MAX_TOKENS: int = 1024
-_EXTRACTION_TEMPERATURE: float = 0.1
-_TRIPLET_PART_COUNT: int = 3
+_EXTRACTION_MAX_TOKENS = 1024
+_EXTRACTION_TEMPERATURE = 0.1
+_TRIPLET_PART_COUNT = 3
 
 
+@final
 class TripletDTO(BaseDTO):
     """Knowledge graph triplet."""
 
@@ -29,6 +32,7 @@ class TripletDTO(BaseDTO):
     object: str = ""
 
 
+@final
 class GraphQueryDTO(BaseDTO):
     """Input for a knowledge graph query."""
 
@@ -37,6 +41,7 @@ class GraphQueryDTO(BaseDTO):
     limit: int = DEFAULT_NEIGHBOR_LIMIT
 
 
+@final
 class GraphQueryResultDTO(BaseDTO):
     """Output from a knowledge graph query."""
 
@@ -47,12 +52,14 @@ class GraphQueryResultDTO(BaseDTO):
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class AddTripletsCommand:
     """Command to bulk-add triplets to the knowledge graph."""
 
     triplets: list[tuple[str, str, str]] = field(default_factory=list)
 
 
+@final
 class KnowledgeGraphService(BaseService):
     """Application-level knowledge graph orchestration."""
 

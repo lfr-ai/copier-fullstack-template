@@ -10,7 +10,7 @@ from __future__ import annotations
 import structlog
 from dataclasses import dataclass, field
 from enum import StrEnum, auto, unique
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from {{ project_slug }}.ai.crewai.config import (
     DEFAULT_CREW_MAX_RPM,
@@ -31,6 +31,7 @@ class CrewProcessType(StrEnum):
 
 
 @dataclass(slots=True)
+@final
 class CrewSpec:
     """Specification for building a CrewAI crew.
 

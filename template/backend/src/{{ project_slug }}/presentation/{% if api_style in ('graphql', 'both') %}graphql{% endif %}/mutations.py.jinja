@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import strawberry
 
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
@@ -19,15 +21,16 @@ from {{ project_slug }}.presentation.graphql.types import (
 )
 
 {%- if use_ai %}
-_DEFAULT_MAX_TOKENS: int = 256
-_DEFAULT_TEMPERATURE: float = 0.7
+_DEFAULT_MAX_TOKENS = 256
+_DEFAULT_TEMPERATURE = 0.7
 {%- endif %}
 {%- if use_rag %}
-_ERROR_MSG_MAX_LEN: int = 200
+_ERROR_MSG_MAX_LEN = 200
 {%- endif %}
 
 
 @strawberry.type(description="Root mutation type.")
+@final
 class Mutation:
     """All top-level GraphQL mutations."""
 

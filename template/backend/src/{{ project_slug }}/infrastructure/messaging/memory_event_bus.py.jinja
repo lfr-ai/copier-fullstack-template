@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
 
@@ -14,6 +16,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 EventHandler = Callable[[DomainEvent], Coroutine[object, object, None]]
 
 
+@final
 class MemoryEventBus:
     """In-memory event bus implementing EventBus protocol.
 

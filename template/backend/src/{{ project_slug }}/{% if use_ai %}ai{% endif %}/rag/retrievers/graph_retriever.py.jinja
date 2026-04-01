@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
 from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
@@ -11,13 +11,14 @@ from {{ project_slug }}.core.interfaces.llm import LLMGateway
 from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_ENTITY_EXTRACTION_MAX_TOKENS: int = 128
-_ENTITY_EXTRACTION_TEMPERATURE: float = 0.0
-_DEFAULT_GRAPH_DEPTH: int = 2
-_BASE_DECAY_SCORE: float = 1.0
-_RANK_OFFSET: int = 1
+_ENTITY_EXTRACTION_MAX_TOKENS = 128
+_ENTITY_EXTRACTION_TEMPERATURE = 0.0
+_DEFAULT_GRAPH_DEPTH = 2
+_BASE_DECAY_SCORE = 1.0
+_RANK_OFFSET = 1
 
 
+@final
 class GraphRetriever(RetrieverGateway):
     """Retriever that traverses a knowledge graph for context.
 

@@ -6,13 +6,12 @@ Concrete adapters may use DeepEval, Ragas, LangSmith, or custom
 evaluation pipelines.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, final
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class EvalResult:
     """Result from a single evaluation."""
 
@@ -24,6 +23,7 @@ class EvalResult:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class EvalSuite:
     """Aggregated results from an evaluation suite run."""
 

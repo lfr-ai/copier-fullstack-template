@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import asyncio
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_SENTENCE_TRANSFORMER_MODEL
 from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class SentenceTransformerEmbeddingAdapter(EmbeddingGateway):
     """Embedding adapter backed by sentence-transformers (local inference)."""
 

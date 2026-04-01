@@ -4,13 +4,12 @@ Concrete adapters may use LangSmith, OpenTelemetry, Phoenix (Arize),
 or custom tracing backends.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, final
 
 
 @dataclass(slots=True)
+@final
 class TraceSpan:
     """Single span in an AI execution trace."""
 

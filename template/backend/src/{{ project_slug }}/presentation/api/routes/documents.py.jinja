@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from fastapi import APIRouter, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
@@ -9,15 +11,16 @@ from {{ project_slug }}.presentation.api.dependencies import RAGServiceDep
 
 router = APIRouter()
 
-_MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024  # 10 MB
-_UPLOAD_READ_CHUNK_BYTES: int = 64 * 1024
-_BYTES_PER_MB: int = 1024 * 1024
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+_UPLOAD_READ_CHUNK_BYTES = 64 * 1024
+_BYTES_PER_MB = 1024 * 1024
 _ALLOWED_EXTENSIONS: frozenset[str] = frozenset({
     ".txt", ".md", ".pdf", ".csv", ".json", ".xml",
     ".html", ".htm", ".rst", ".doc", ".docx",
 })
 
 
+@final
 class DocumentResponse(BaseModel):
     """Response for a single document."""
 
@@ -27,6 +30,7 @@ class DocumentResponse(BaseModel):
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
+@final
 class DocumentListResponse(BaseModel):
     """Response for listing documents."""
 
@@ -34,6 +38,7 @@ class DocumentListResponse(BaseModel):
     total: int
 
 
+@final
 class IngestionResponse(BaseModel):
     """Response after document ingestion."""
 

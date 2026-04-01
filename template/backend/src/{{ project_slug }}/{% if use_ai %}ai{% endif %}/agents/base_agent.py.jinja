@@ -7,6 +7,8 @@ count is reached.
 
 from __future__ import annotations
 
+from typing import final
+
 import abc
 import structlog
 from dataclasses import dataclass, field
@@ -15,6 +17,7 @@ from {{ project_slug }}.ai.config import DEFAULT_AGENT_MAX_STEPS
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 @dataclass(frozen=True, slots=True)
+@final
 class AgentTool:
     """Definition of a tool available to an agent."""
 
@@ -24,6 +27,7 @@ class AgentTool:
 
 
 @dataclass(slots=True)
+@final
 class AgentResult:
     """Result of an agent execution cycle."""
 

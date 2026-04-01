@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import structlog
 from pathlib import Path
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.core.interfaces.prompt_template import PromptTemplateGateway
 
@@ -48,6 +48,7 @@ _BUILTIN_TEMPLATES: dict[str, str] = {
 }
 
 
+@final
 class Jinja2PromptTemplate(PromptTemplateGateway):
     """Prompt template manager using Jinja2 rendering.
 

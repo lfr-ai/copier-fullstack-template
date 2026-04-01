@@ -7,7 +7,7 @@ for multi-turn, context-aware question answering.
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
 from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryGateway
@@ -15,15 +15,16 @@ from {{ project_slug }}.core.interfaces.llm import LLMGateway
 from {{ project_slug }}.core.interfaces.retriever import RetrieverGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_HISTORY_LIMIT: int = 10
-_REFORMULATE_MAX_TOKENS: int = 256
-_REFORMULATE_TEMPERATURE: float = 0.0
-_RETRIEVAL_TOP_K: int = 5
-_ANSWER_MAX_TOKENS: int = 1024
-_ANSWER_TEMPERATURE: float = 0.3
-_SOURCE_PREVIEW_LENGTH: int = 200
+_HISTORY_LIMIT = 10
+_REFORMULATE_MAX_TOKENS = 256
+_REFORMULATE_TEMPERATURE = 0.0
+_RETRIEVAL_TOP_K = 5
+_ANSWER_MAX_TOKENS = 1024
+_ANSWER_TEMPERATURE = 0.3
+_SOURCE_PREVIEW_LENGTH = 200
 
 
+@final
 class ConversationalRAGChain(BaseChain):
     """Conversational RAG chain with memory.
 

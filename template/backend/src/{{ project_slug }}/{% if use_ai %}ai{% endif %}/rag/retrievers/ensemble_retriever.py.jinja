@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
 from {{ project_slug }}.ai.rag.retrievers._rrf import reciprocal_rank_fusion
 from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_OVERSAMPLE_FACTOR: int = 2
-"""Fetch this many times top_k results before fusing/reranking."""
+_OVERSAMPLE_FACTOR = 2
 
 
+@final
 class EnsembleRetriever(RetrieverGateway):
     """Ensemble retriever combining multiple strategies via RRF.
 

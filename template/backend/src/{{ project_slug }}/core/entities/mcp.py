@@ -1,11 +1,12 @@
 """MCP domain entities — tool definitions, resources, results."""
 
-from __future__ import annotations
+from typing import final
 
 from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class ToolDefinition:
     """Definition of an MCP tool exposed by a server."""
 
@@ -15,6 +16,7 @@ class ToolDefinition:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class ToolResult:
     """Result of an MCP tool invocation."""
 
@@ -25,6 +27,7 @@ class ToolResult:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class ResourceDefinition:
     """Definition of an MCP resource served by a server."""
 
@@ -35,6 +38,7 @@ class ResourceDefinition:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class ResourceContent:
     """Content of an MCP resource."""
 

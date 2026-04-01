@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from pydantic import Field
 
 from {{ project_slug }}.application.dtos.base import BaseDTO
 
-_MAX_QUESTION_LENGTH: int = 8192
-_DEFAULT_TOP_K: int = 5
-_MAX_TOP_K: int = 50
+_MAX_QUESTION_LENGTH = 8192
+_DEFAULT_TOP_K = 5
+_MAX_TOP_K = 50
 
 
+@final
 class SourceDTO(BaseDTO):
     """Source reference from retrieval."""
 
@@ -19,6 +22,7 @@ class SourceDTO(BaseDTO):
     content: str = ""
 
 
+@final
 class RAGQueryDTO(BaseDTO):
     """Input for a RAG query operation."""
 
@@ -29,6 +33,7 @@ class RAGQueryDTO(BaseDTO):
     use_graph: bool = False
 
 
+@final
 class RAGResponseDTO(BaseDTO):
     """Output from a RAG query operation."""
 

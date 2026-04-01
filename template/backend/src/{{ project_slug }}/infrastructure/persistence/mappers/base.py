@@ -7,12 +7,13 @@ This enforces the Dependency Rule: adapters depend on core,
 never the reverse.
 """
 
-from __future__ import annotations
+from typing import Protocol, TypeVar
 
-from typing import Protocol
+EntityT = TypeVar("EntityT")
+ModelT = TypeVar("ModelT")
 
 
-class PersistenceMapper[EntityT, ModelT](Protocol):
+class PersistenceMapper(Protocol[EntityT, ModelT]):
     """Bidirectional mapper between a domain entity and an ORM model.
 
     Implementations live in ``infrastructure/persistence/mappers/`` and are

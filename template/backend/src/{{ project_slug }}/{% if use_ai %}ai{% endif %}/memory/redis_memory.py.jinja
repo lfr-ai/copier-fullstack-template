@@ -8,6 +8,8 @@ Add 'redis' to project dependencies before using.
 
 from __future__ import annotations
 
+from typing import final
+
 import json
 import structlog
 import time
@@ -16,6 +18,7 @@ from {{ project_slug }}.ai.config import DEFAULT_CONVERSATION_LIMIT, DEFAULT_CON
 from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryGateway, Message
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class RedisConversationMemory(ConversationMemoryGateway):
     """Redis-backed conversation history store with TTL support."""
 

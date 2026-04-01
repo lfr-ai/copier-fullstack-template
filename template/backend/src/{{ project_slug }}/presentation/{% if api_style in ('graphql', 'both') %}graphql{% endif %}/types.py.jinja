@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import strawberry
 
 
 @strawberry.type(description="Application user account.")
+@final
 class UserType:
     """GraphQL representation of a user."""
 
@@ -16,6 +19,7 @@ class UserType:
 
 
 @strawberry.type(description="Health status of a single dependency.")
+@final
 class DependencyHealthType:
     """GraphQL representation of a dependency health probe."""
 
@@ -26,6 +30,7 @@ class DependencyHealthType:
 
 
 @strawberry.type(description="Aggregate health check result.")
+@final
 class HealthType:
     """GraphQL representation of application health."""
 
@@ -35,6 +40,7 @@ class HealthType:
 
 
 @strawberry.input(description="Input for creating a new user.")
+@final
 class CreateUserInput:
     """GraphQL input type for user creation."""
 
@@ -44,6 +50,7 @@ class CreateUserInput:
 
 
 @strawberry.type(description="Paginated list of users.")
+@final
 class UserConnection:
     """Relay-style connection for paginated user lists."""
 
@@ -56,6 +63,7 @@ class UserConnection:
 
 
 @strawberry.input(description="Input for an AI completion request.")
+@final
 class CompletionInput:
     """GraphQL input for AI text completion."""
 
@@ -65,6 +73,7 @@ class CompletionInput:
 
 
 @strawberry.type(description="AI completion response.")
+@final
 class CompletionResult:
     """GraphQL result for an AI completion."""
 
@@ -74,10 +83,11 @@ class CompletionResult:
 {%- endif %}
 {%- if use_rag %}
 
-_DEFAULT_RAG_TOP_K: int = 5
+_DEFAULT_RAG_TOP_K = 5
 
 
 @strawberry.input(description="Input for a RAG query.")
+@final
 class RAGQueryInput:
     """GraphQL input for Retrieval-Augmented Generation."""
 
@@ -86,6 +96,7 @@ class RAGQueryInput:
 
 
 @strawberry.type(description="A single retrieved document chunk.")
+@final
 class RetrievedChunk:
     """GraphQL type for a RAG-retrieved chunk."""
 
@@ -95,6 +106,7 @@ class RetrievedChunk:
 
 
 @strawberry.type(description="RAG query response.")
+@final
 class RAGResult:
     """GraphQL result for a RAG query."""
 
@@ -104,6 +116,7 @@ class RAGResult:
 
 
 @strawberry.type(description="Mutation outcome with success flag and optional error message.")
+@final
 class MutationResult:
     """Generic mutation result envelope."""
 

@@ -5,12 +5,12 @@ from __future__ import annotations
 import ast
 import structlog
 import operator
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.tools.base_tool import BaseTool, ToolResult
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_MAX_EXPONENT: int = 100
+_MAX_EXPONENT = 100
 
 _SAFE_OPERATORS: dict[type, object] = {
     ast.Add: operator.add,
@@ -52,6 +52,7 @@ def _safe_eval(node: ast.AST) -> float:
     raise ValueError(msg)
 
 
+@final
 class CalculatorTool(BaseTool):
     """Safe calculator tool for mathematical expressions."""
 

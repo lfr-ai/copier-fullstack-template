@@ -13,8 +13,6 @@ Re-exports the most commonly used interfaces for convenient import::
     )
 """
 
-from __future__ import annotations
-
 from {{ project_slug }}.core.interfaces.document_repository import DocumentRepository
 from {{ project_slug }}.core.interfaces.event_bus import EventBus
 from {{ project_slug }}.core.interfaces.password_hasher import PasswordHasher

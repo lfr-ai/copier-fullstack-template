@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 
+from typing import final
+
 import httpx
 
 from {{ project_slug }}.utils.retry_policies import http_retry
@@ -10,6 +12,7 @@ from {{ project_slug }}.utils.retry_policies import http_retry
 DEFAULT_TIMEOUT_SECONDS = 30.0
 
 
+@final
 class HTTPClientAdapter:
     """Async HTTP client with retry support.
 

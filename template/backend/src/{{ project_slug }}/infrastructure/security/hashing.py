@@ -1,14 +1,15 @@
 """Cryptographic hashing adapter — implements :class:`PasswordHasher` port."""
 
-from __future__ import annotations
+from typing import final
 
 import hashlib
 import secrets
 
-_SALT_LENGTH: int = 32
-_PBKDF2_ITERATIONS: int = 600_000
+_SALT_LENGTH = 32
+_PBKDF2_ITERATIONS = 600_000
 
 
+@final
 class PBKDF2PasswordHasher:
     """PBKDF2-SHA256 password hasher implementing the :class:`PasswordHasher` port."""
 

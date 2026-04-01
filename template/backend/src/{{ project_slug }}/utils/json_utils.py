@@ -4,14 +4,13 @@ Thin wrappers around :mod:`json` with :class:`AppJSONEncoder` as the
 default encoder for common Python types (datetime, UUID, set).
 """
 
-from __future__ import annotations
-
 import datetime
 import json
 import uuid
-from typing import override
+from typing import override, final
 
 
+@final
 class AppJSONEncoder(json.JSONEncoder):
     """Extended encoder that handles common Python types."""
 

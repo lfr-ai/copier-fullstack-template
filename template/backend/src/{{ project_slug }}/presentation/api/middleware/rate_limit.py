@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from fastapi import FastAPI, Request
 
 
-DEFAULT_RATE_LIMIT = "60/minute"
-HTTP_TOO_MANY_REQUESTS = 429
+_DEFAULT_RATE_LIMIT = "60/minute"
+_HTTP_TOO_MANY_REQUESTS = 429
 
 
 def _get_real_client_ip(request: "Request") -> str:
@@ -36,7 +36,7 @@ async def _rate_limit_exceeded(
     retry_after = getattr(exc, "retry_after", None)
     headers = {"Retry-After": str(retry_after)} if retry_after else {}
     return JSONResponse(
-        status_code=HTTP_TOO_MANY_REQUESTS,
+        status_code=_HTTP_TOO_MANY_REQUESTS,
         content={"detail": "Rate limit exceeded"},
         headers=headers,
     )
@@ -52,7 +52,7 @@ def configure_rate_limiting(app: FastAPI) -> None:
         app (FastAPI): Application instance to configure.
     """
     settings = app.state.settings
-    limit = getattr(settings, "rate_limit", DEFAULT_RATE_LIMIT)
+    limit = getattr(settings, "rate_limit", _DEFAULT_RATE_LIMIT)
 
     limiter = Limiter(key_func=_get_real_client_ip, default_limits=[limit])
     app.state.limiter = limiter

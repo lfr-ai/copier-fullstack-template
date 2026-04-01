@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, final
 
 from pydantic import Field
 
@@ -17,6 +17,7 @@ from {{ project_slug }}.core.constants import (
 )
 
 
+@final
 class CreateUserDTO(BaseDTO):
     """DTO for creating a new user."""
 
@@ -48,6 +49,7 @@ class CreateUserDTO(BaseDTO):
     ]
 
 
+@final
 class UserDTO(BaseDTO):
     """DTO for user responses."""
 

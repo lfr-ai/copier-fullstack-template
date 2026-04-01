@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import structlog
 from pathlib import Path
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_LIMIT,
@@ -23,6 +23,7 @@ _ENTITY_NS = "http://example.org/entity/"
 _REL_NS = "http://example.org/relation/"
 
 
+@final
 class RDFLibKnowledgeGraph(KnowledgeGraphGateway, SPARQLQueryGateway):
     """RDF knowledge graph backed by RDFLib with SPARQL support."""
 

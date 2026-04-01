@@ -1,12 +1,9 @@
 """Base DTO definitions using Pydantic."""
 
-from __future__ import annotations
-
-from typing import Annotated, Generic, TypeVar
+from typing import Annotated, Generic, TypeVar, final
 
 from pydantic import BaseModel, ConfigDict, Field
-_MAX_RESPONSE_LIMIT: int = 1_000
-"""Upper bound for the 'limit' field in paginated responses."""
+_MAX_RESPONSE_LIMIT = 1_000
 
 DataT = TypeVar("DataT")
 
@@ -21,6 +18,7 @@ class BaseDTO(BaseModel):
     )
 
 
+@final
 class PaginatedResponse(BaseDTO, Generic[DataT]):
     """Paginated response envelope for list endpoints."""
 
@@ -46,6 +44,7 @@ class PaginatedResponse(BaseDTO, Generic[DataT]):
         return (self.offset + self.limit) < self.total
 
 
+@final
 class ErrorDTO(BaseDTO):
     """Standardized error DTO for application-layer boundaries."""
 

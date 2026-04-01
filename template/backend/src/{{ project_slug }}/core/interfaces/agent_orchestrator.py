@@ -4,14 +4,13 @@ Concrete adapters may use LangGraph, CrewAI,
 AutoGen, or custom orchestration implementations.
 """
 
-from __future__ import annotations
-
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, final
 
 
 @dataclass(slots=True)
+@final
 class AgentState:
     """Shared state passed between agents in a workflow."""
 
@@ -22,6 +21,7 @@ class AgentState:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class OrchestratorResult:
     """Result from a multi-agent orchestration run."""
 

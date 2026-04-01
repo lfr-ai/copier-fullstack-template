@@ -14,8 +14,8 @@ from {{ project_slug }}.config.constants import (
 {%- endif %}
 )
 from {{ project_slug }}.core.enums.environment import Environment
-_MAX_GRAPHQL_DEPTH: int = 50
-_MAX_AGENT_STEPS: int = 50
+_MAX_GRAPHQL_DEPTH = 50
+_MAX_AGENT_STEPS = 50
 
 
 class BaseAppSettings(BaseSettings):

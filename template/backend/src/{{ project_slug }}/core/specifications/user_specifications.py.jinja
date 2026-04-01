@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from {{ project_slug }}.core.entities.user import User
 from {{ project_slug }}.core.specifications.base import Specification
 
 
+@final
 class IsActiveUser(Specification[User]):
     """Satisfied when the user account is active."""
 
@@ -13,6 +16,7 @@ class IsActiveUser(Specification[User]):
         return candidate.is_active
 
 
+@final
 class HasEmailDomain(Specification[User]):
     """Satisfied when the user's email belongs to a specific domain."""
 
@@ -23,6 +27,7 @@ class HasEmailDomain(Specification[User]):
         return candidate.email.lower().endswith(f"@{self._domain}")
 
 
+@final
 class HasDisplayName(Specification[User]):
     """Satisfied when the user has a non-empty display name."""
 

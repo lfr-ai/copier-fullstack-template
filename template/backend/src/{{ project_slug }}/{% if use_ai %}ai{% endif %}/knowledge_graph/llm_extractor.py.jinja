@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import json
 import structlog
 
@@ -10,10 +12,10 @@ from {{ project_slug }}.core.interfaces.llm import LLMGateway
 from {{ project_slug }}.ai.config import DEFAULT_MAX_TOKENS, EXTRACTION_INPUT_LIMIT
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_DEFAULT_MAX_TRIPLETS: int = 20
-_EXTRACTION_TEMPERATURE: float = 0.0
+_DEFAULT_MAX_TRIPLETS = 20
+_EXTRACTION_TEMPERATURE = 0.0
 
-_EXTRACTION_SYSTEM_PROMPT: str = """You are an entity and relationship extraction system.
+_EXTRACTION_SYSTEM_PROMPT = """You are an entity and relationship extraction system.
 Given text, extract structured triplets in the form (subject, predicate, object).
 
 Return a JSON array of objects, each with "subject", "predicate", and "object" keys.
@@ -27,6 +29,7 @@ Example output:
 ]"""
 
 
+@final
 class LLMEntityExtractor:
     """Extracts entity-relation triplets from text using an LLM."""
 

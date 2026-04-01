@@ -1,11 +1,9 @@
 """File-system utility helpers."""
 
-from __future__ import annotations
-
 import hashlib
 from pathlib import Path
 
-_READ_CHUNK_SIZE: int = 8192
+_READ_CHUNK_SIZE = 8192
 
 
 def ensure_directory(path: Path) -> Path:

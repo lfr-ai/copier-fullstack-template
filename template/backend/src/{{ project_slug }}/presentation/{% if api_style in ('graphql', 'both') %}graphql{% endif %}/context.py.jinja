@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from strawberry.dataloader import DataLoader
 from strawberry.fastapi import BaseContext
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 {%- endif %}
 
 
+@final
 class GraphQLContext(BaseContext):
     """Custom context available in every Strawberry resolver via 'info.context'.
 

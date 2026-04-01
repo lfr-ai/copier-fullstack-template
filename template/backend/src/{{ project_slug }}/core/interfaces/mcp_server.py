@@ -1,7 +1,5 @@
 """MCP server gateway — abstract interface for Model Context Protocol server lifecycle."""
 
-from __future__ import annotations
-
 from typing import Protocol, runtime_checkable
 
 

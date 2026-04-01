@@ -8,12 +8,13 @@ to instantiate any supported chat model. Parameters are passed via
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.config import DEFAULT_CHAT_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from {{ project_slug }}.ai.llm.base_llm_adapter import BaseLLMAdapter
 
 
+@final
 class LangChainLLMAdapter(BaseLLMAdapter):
     """LangChain-backed LLM adapter extending 'BaseLLMAdapter'."""
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import json
 import structlog
 from starlette.requests import Request
@@ -12,6 +14,7 @@ from strawberry.types import ExecutionResult
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class ProductionGraphQLRouter(GraphQLRouter):
     """GraphQL router extended with production-grade error handling."""
 

@@ -3,8 +3,6 @@
 Reusable testing utilities and helpers.
 """
 
-from __future__ import annotations
-
 from tests.utils.assertion_helpers import (
     assert_dict_subset,
     assert_list_equal_unordered,

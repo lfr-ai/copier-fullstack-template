@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from pydantic import Field
 
 from {{ project_slug }}.application.dtos.base import BaseDTO
 from {{ project_slug }}.core.interfaces.workflow_engine import DEFAULT_MAX_ITERATIONS
 
-_MAX_ITERATIONS_LIMIT: int = 100
-_WORKFLOW_NAME_MAX_LENGTH: int = 256
-_WORKFLOW_GOAL_MAX_LENGTH: int = 8192
+_MAX_ITERATIONS_LIMIT = 100
+_WORKFLOW_NAME_MAX_LENGTH = 256
+_WORKFLOW_GOAL_MAX_LENGTH = 8192
 
 
+@final
 class WorkflowNodeDTO(BaseDTO):
     """Node definition within a workflow."""
 
@@ -22,6 +25,7 @@ class WorkflowNodeDTO(BaseDTO):
     tools: list[str] = Field(default_factory=list)
 
 
+@final
 class WorkflowEdgeDTO(BaseDTO):
     """Edge definition within a workflow."""
 
@@ -30,6 +34,7 @@ class WorkflowEdgeDTO(BaseDTO):
     condition: str = ""
 
 
+@final
 class CreateWorkflowDTO(BaseDTO):
     """Input for creating a workflow definition."""
 
@@ -41,6 +46,7 @@ class CreateWorkflowDTO(BaseDTO):
     max_iterations: int = Field(default=DEFAULT_MAX_ITERATIONS, ge=1, le=_MAX_ITERATIONS_LIMIT)
 
 
+@final
 class ExecuteWorkflowDTO(BaseDTO):
     """Input for executing a workflow."""
 
@@ -53,6 +59,7 @@ class ExecuteWorkflowDTO(BaseDTO):
     stream: bool = False
 
 
+@final
 class ResumeWorkflowDTO(BaseDTO):
     """Input for resuming a paused workflow (human-in-the-loop)."""
 
@@ -60,6 +67,7 @@ class ResumeWorkflowDTO(BaseDTO):
     input_data: dict[str, object] = Field(default_factory=dict)
 
 
+@final
 class WorkflowStepDTO(BaseDTO):
     """Output representing a single workflow execution step."""
 
@@ -71,6 +79,7 @@ class WorkflowStepDTO(BaseDTO):
     token_usage: dict[str, int] = Field(default_factory=dict)
 
 
+@final
 class WorkflowResultDTO(BaseDTO):
     """Output from a workflow execution."""
 

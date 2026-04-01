@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum, unique
@@ -36,6 +38,7 @@ class StepType(StrEnum):
 
 
 @dataclass(slots=True)
+@final
 class WorkflowStep:
     """Single step in a workflow execution trace."""
 
@@ -50,6 +53,7 @@ class WorkflowStep:
 
 
 @dataclass(slots=True)
+@final
 class WorkflowNode:
     """Definition of a node in a workflow graph."""
 
@@ -62,6 +66,7 @@ class WorkflowNode:
 
 
 @dataclass(slots=True)
+@final
 class WorkflowEdge:
     """Directed edge in a workflow graph defining agent transitions."""
 

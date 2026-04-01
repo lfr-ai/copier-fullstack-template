@@ -34,12 +34,12 @@ from __future__ import annotations
 import structlog
 from dataclasses import dataclass, field
 from enum import StrEnum, auto, unique
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from {{ project_slug }}.ai.crewai.config import HMAS_MAX_DEPTH
 from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
-_LOG_TRUNCATE_LEN: int = 200
+_LOG_TRUNCATE_LEN = 200
 
 if TYPE_CHECKING:
     from crewai import Crew
@@ -67,6 +67,7 @@ class SubGoalState(StrEnum):
 
 
 @dataclass
+@final
 class SubGoal:
     """Decomposed sub-goal within the HMAS plan."""
 
@@ -82,6 +83,7 @@ class SubGoal:
 
 
 @dataclass
+@final
 class HMASPlan:
     """Execution plan produced by the HMAS planner."""
 
@@ -91,6 +93,7 @@ class HMASPlan:
     metadata: dict[str, object] = field(default_factory=dict)
 
 
+@final
 class CrewAIHMASSupervisor:
     """Hierarchical Multi-Agent System supervisor using CrewAI.
 

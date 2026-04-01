@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import time
 from dataclasses import dataclass
 
@@ -9,6 +11,7 @@ from {{ project_slug }}.config.constants import DEFAULT_CACHE_TTL_SECONDS
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class _CacheEntry:
     """Internal cache entry with value and expiration."""
 
@@ -16,6 +19,7 @@ class _CacheEntry:
     expires_at: float
 
 
+@final
 class MemoryCacheAdapter:
     """In-memory cache implementing CacheGateway.
 

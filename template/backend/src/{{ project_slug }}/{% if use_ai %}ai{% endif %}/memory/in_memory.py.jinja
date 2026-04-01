@@ -6,6 +6,8 @@ Redis- or PostgreSQL-backed implementations.
 
 from __future__ import annotations
 
+from typing import final
+
 import structlog
 from collections import defaultdict
 
@@ -15,6 +17,7 @@ from {{ project_slug }}.core.interfaces.conversation_memory import ConversationM
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class InMemoryConversationMemory(ConversationMemoryGateway):
     """In-memory conversation history store."""
 

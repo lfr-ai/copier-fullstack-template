@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from {{ project_slug }}.core.entities.base import generate_id
 @dataclass(frozen=True, slots=True)
+@final
 class Message:
     """Single conversation message."""
 

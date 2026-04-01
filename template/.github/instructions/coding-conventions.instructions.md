@@ -51,8 +51,8 @@ z: list[int]
 - `typing` imports ONLY for: `TypeVar`, `Protocol`, `TypeAlias`, `Annotated`, `Literal`,
   `NoReturn`, `Generic`, `runtime_checkable`, `TypedDict`, `final`, `overload`,
   `TYPE_CHECKING`, `Self`, `override`
-- ZERO `Final` or `Final[type]` annotations — plain `UPPER_SNAKE_CASE` assignment is
-  sufficient
+- ZERO `Final[type]` type annotations on constants — plain `UPPER_SNAKE_CASE` assignment
+  is sufficient
 - Use `match/case` for multi-branch dispatch over types, enums, literals
 - Use `@override` on overriding methods
 - Use `Self` for fluent/builder return types
@@ -65,11 +65,37 @@ MAX_RETRIES = 3
 _INTERNAL_BUFFER_SIZE = 4096
 ```
 
-- ZERO `Final` or `Final[type]` annotations — plain `UPPER_SNAKE_CASE` is sufficient
+- ZERO `Final[type]` type annotations on constants — plain `UPPER_SNAKE_CASE` is
+  sufficient
 - ZERO literal numbers in logic — extract to named `UPPER_SNAKE_CASE` constant
 - ZERO hardcoded config strings — `AppSettings` or named constants
 - ZERO hardcoded field/column names — naming registry
 - ZERO hardcoded URLs/paths/timeouts/retries — named constants
+- ZERO docstring comments on constants — the name and value are self-documenting
+
+## `@final` Decorator on Classes
+
+- Use `@final` on ALL concrete leaf classes:
+  - Frozen dataclasses (`@dataclass(frozen=True)`)
+  - Concrete service implementations
+  - Middleware classes
+  - Pydantic models
+  - DTOs and mappers
+  - GraphQL types
+- NEVER use `@final` on:
+  - `Protocol` classes
+  - `ABC` abstract base classes
+  - Domain entity base classes (Entity, AggregateRoot, ValueObject)
+  - Extensible domain entities designed for subclassing
+  - Enums
+  - Exception base classes
+  - Settings classes
+  - `TypedDict` definitions
+  - ORM base classes (declarative_base)
+  - Generic base classes designed for subclassing
+- Import: `from typing import final`
+
+## Logging
 
 ```python
 logger.info(f"Processing {item_id}")
@@ -149,7 +175,10 @@ When `*` is NOT required:
 - Dunder methods following Python protocols (`__eq__`, `__hash__`)
 - Callbacks matching external contracts (FastAPI DI)
 
-- `from __future__ import annotations` at top of EVERY Python file
+- `from __future__ import annotations` ONLY in files with:
+  - `TYPE_CHECKING` blocks importing types
+  - Forward references (types used before definition in return annotations)
+- ZERO in other files — Python 3.11+ doesn't need it for most code
 - EVERY function has return type (including `-> None`)
 - EVERY parameter has type annotation
 - EVERY `@property` has return type
@@ -172,6 +201,6 @@ When `*` is NOT required:
 
 1. **Critical:** F-string logging, exception chaining (correctness + performance)
 2. **High:** Dataclass slots, enum @unique, type coverage (correctness + memory)
-3. **Medium:** Named constants (no Final), keyword-only args, modern syntax
-   (maintainability)
+3. **Medium:** Named constants (no Final[type]), @final on leaf classes, keyword-only
+   args, modern syntax (maintainability)
 4. **Low:** Unused imports, punctuation, underscore compliance (cleanliness)

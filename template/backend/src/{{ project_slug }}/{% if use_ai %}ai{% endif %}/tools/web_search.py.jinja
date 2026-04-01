@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 import httpx
 
 from {{ project_slug }}.ai.tools.base_tool import BaseTool, ToolResult
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_DEFAULT_TIMEOUT: float = 10.0
-_MAX_RELATED_TOPICS: int = 5
-_DEFAULT_API_URL: str = "https://api.duckduckgo.com/"
+_DEFAULT_TIMEOUT = 10.0
+_MAX_RELATED_TOPICS = 5
+_DEFAULT_API_URL = "https://api.duckduckgo.com/"
 
 
+@final
 class WebSearchTool(BaseTool):
     """Web search tool for agents."""
 

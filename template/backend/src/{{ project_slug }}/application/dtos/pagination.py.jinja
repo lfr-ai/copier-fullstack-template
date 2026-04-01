@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, final
 
 from pydantic import Field
 
 from {{ project_slug }}.application.dtos.base import BaseDTO
 
-_DEFAULT_PAGE_SIZE: int = 20
-_MAX_PAGE_SIZE: int = 100
+_DEFAULT_PAGE_SIZE = 20
+_MAX_PAGE_SIZE = 100
 
 
+@final
 class PaginationParams(BaseDTO):
     """Query parameters for paginated endpoints.
 

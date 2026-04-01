@@ -1,11 +1,12 @@
 """MCP client adapter."""
 
-from __future__ import annotations
+from typing import final
 
 import structlog
 from contextlib import AsyncExitStack
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+@final
 class MCPClientAdapter:
     """Client for connecting to external MCP servers.
 

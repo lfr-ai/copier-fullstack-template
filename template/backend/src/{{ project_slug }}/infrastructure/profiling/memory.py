@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import tracemalloc
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 import structlog
 
@@ -14,15 +14,16 @@ if TYPE_CHECKING:
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-_TRACEBACK_FRAME_LIMIT: int = 25
-_BYTES_PER_KB: int = 1024
-_BYTES_PER_MB: int = 1024 * 1024
-_SIZE_DECIMAL_PLACES: int = 2
-_PEAK_DECIMAL_PLACES: int = 3
-_DEFAULT_PROFILE_TOP_N: int = 10
+_TRACEBACK_FRAME_LIMIT = 25
+_BYTES_PER_KB = 1024
+_BYTES_PER_MB = 1024 * 1024
+_SIZE_DECIMAL_PLACES = 2
+_PEAK_DECIMAL_PLACES = 3
+_DEFAULT_PROFILE_TOP_N = 10
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class MemoryAllocation:
     """Single memory allocation entry."""
 
@@ -32,6 +33,7 @@ class MemoryAllocation:
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class MemoryProfileResult:
     """Result of a memory profiling session."""
 

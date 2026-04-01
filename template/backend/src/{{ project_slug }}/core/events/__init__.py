@@ -5,4 +5,3 @@ via :class:`~core.interfaces.event_bus.EventBus`.
 Wire concrete handlers via the DI container in 'composition/container.py'.
 """
 
-from __future__ import annotations

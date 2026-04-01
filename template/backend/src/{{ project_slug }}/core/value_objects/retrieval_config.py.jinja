@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from dataclasses import dataclass
 
 from {{ project_slug }}.core.entities.base import ValueObject
 
-_DEFAULT_TOP_K: int = 5
-_DEFAULT_SCORE_THRESHOLD: float = 0.7
-_DEFAULT_RERANKER_TOP_K: int = 3
-_DEFAULT_GRAPH_DEPTH: int = 2
+_DEFAULT_TOP_K = 5
+_DEFAULT_SCORE_THRESHOLD = 0.7
+_DEFAULT_RERANKER_TOP_K = 3
+_DEFAULT_GRAPH_DEPTH = 2
 
 
 @dataclass(frozen=True, slots=True)
+@final
 class RetrievalConfig(ValueObject):
     """Immutable retrieval pipeline configuration."""
 

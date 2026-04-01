@@ -7,7 +7,7 @@ Measures every request's wall-clock time and exposes it via the
 from __future__ import annotations
 
 import time
-from typing import override
+from typing import override, final
 
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -19,6 +19,7 @@ from {{ project_slug }}.config.constants import MS_PER_SECOND
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+@final
 class TimingMiddleware(BaseHTTPMiddleware):
     """Track request processing time and add Server-Timing header."""
 

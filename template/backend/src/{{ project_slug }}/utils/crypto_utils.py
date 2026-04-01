@@ -1,14 +1,12 @@
 """Cryptographic utility functions."""
 
-from __future__ import annotations
-
 import hashlib
 import secrets
 
-TOKEN_BYTES = 32
+_TOKEN_BYTES = 32
 
 
-def generate_token(*, nbytes: int = TOKEN_BYTES) -> str:
+def generate_token(*, nbytes: int = _TOKEN_BYTES) -> str:
     """Generate cryptographically secure random token.
 
     Args:

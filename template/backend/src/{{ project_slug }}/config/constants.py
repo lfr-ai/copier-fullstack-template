@@ -4,8 +4,6 @@ Domain validation constants (email lengths, password rules, etc.) live in
 'core.constants'.  Import them from there directly.
 """
 
-from __future__ import annotations
-
 API_V1_PREFIX = "/api/v1"
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100

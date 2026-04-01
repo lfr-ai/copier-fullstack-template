@@ -4,8 +4,6 @@ Concrete adapters implement specific tools (web search, code execution,
 database query, etc.) that agents can invoke during planning/execution.
 """
 
-from __future__ import annotations
-
 from typing import Protocol, runtime_checkable
 
 

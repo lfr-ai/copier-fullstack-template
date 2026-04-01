@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import structlog
-from typing import override
+from typing import override, final
 
 from {{ project_slug }}.ai.chains.base_chain import BaseChain, ChainResult
 from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-_DEFAULT_CHUNK_SIZE: int = 4000
-_DEFAULT_MAX_REFINEMENT_PASSES: int = 10
-_ANSWER_MAX_TOKENS: int = 512
-_INITIAL_TEMPERATURE: float = 0.3
-_REFINE_TEMPERATURE: float = 0.2
+_DEFAULT_CHUNK_SIZE = 4000
+_DEFAULT_MAX_REFINEMENT_PASSES = 10
+_ANSWER_MAX_TOKENS = 512
+_INITIAL_TEMPERATURE = 0.3
+_REFINE_TEMPERATURE = 0.2
 
 
+@final
 class RefinementChain(BaseChain):
     """Iterative refinement chain for long-document QA.
 

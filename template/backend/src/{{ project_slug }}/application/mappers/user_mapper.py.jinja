@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import final
+
 from {{ project_slug }}.application.dtos.user_dto import UserDTO
 from {{ project_slug }}.core.entities.user import User
 
 
+@final
 class UserMapper:
     """Map between User domain entities and UserDTO data transfer objects.
 
