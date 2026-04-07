@@ -1,0 +1,403 @@
+"""
+End-to-end validation tests for DeepRAG multi-hop reasoning pipeline.
+
+This module tests the complete multi-hop reasoning chain including:
+- Full KG→Vector reasoning with knowledge graph backend
+- Fallback to vector-only semantic chain when KG unavailable
+- Sliding window context management
+- Reasoning trace accumulation across multiple hops
+- Graceful degradation and error handling
+"""
+
+import unittest
+from typing import Any, List
+from unittest.mock import Mock, MagicMock
+import logging
+
+from src.ai.langgraph_workflows.multi_hop_workflow import MultiHopWorkflow
+from core.interfaces.knowledge_graph import (
+    KnowledgeGraphBackend,
+    SlidingWindowKnowledgeGraph,
+)
+
+
+class MockNeo4jBackend(KnowledgeGraphBackend):
+    """Mock Neo4j backend for testing."""
+
+    def __init__(self, *, nodes: List[Any]) -> None:
+        """
+        Initialize mock Neo4j backend.
+
+        Args:
+            nodes: List of nodes to return during traversal.
+        """
+        self.nodes = nodes
+
+    def traverse(self, node_id: Any) -> List[Any]:
+        """
+        Simulate Neo4j traversal.
+
+        Args:
+            node_id: Starting node identifier.
+
+        Returns:
+            List of nodes in traversal path.
+        """
+        return self.nodes
+
+
+class MockNetworkXBackend(KnowledgeGraphBackend):
+    """Mock NetworkX backend for testing."""
+
+    def __init__(self, *, graph_data: List[Any]) -> None:
+        """
+        Initialize mock NetworkX backend.
+
+        Args:
+            graph_data: Graph structure data.
+        """
+        self.graph_data = graph_data
+
+    def traverse(self, node_id: Any) -> List[Any]:
+        """
+        Simulate NetworkX traversal.
+
+        Args:
+            node_id: Starting node identifier.
+
+        Returns:
+            List of nodes in traversal path.
+        """
+        return self.graph_data
+
+
+class TestMultiHopPipelineEndToEnd(unittest.TestCase):
+    """End-to-end tests for the DeepRAG multi-hop reasoning pipeline."""
+
+    def setUp(self) -> None:
+        """Set up test fixtures."""
+        self.mock_vector_store = Mock()
+        self.logger = logging.getLogger(__name__)
+
+    def test_full_kg_vector_reasoning_with_neo4j(self) -> None:
+        """
+        Test complete KG→Vector reasoning pipeline with Neo4j backend.
+
+        Validates:
+        - Neo4j backend traversal
+        - Vector enrichment at each hop
+        - Trace accumulation across 5 hops
+        - Proper structure of reasoning trace
+        """
+        # Arrange
+        test_nodes = ["Entity-A", "Entity-B", "Entity-C", "Entity-D", "Entity-E"]
+        neo4j_backend = MockNeo4jBackend(nodes=test_nodes)
+        workflow = MultiHopWorkflow(
+            kg_backend=neo4j_backend,
+            vector_store=self.mock_vector_store,
+            max_hops=5,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        self.assertEqual(len(trace), 5, "Should traverse exactly 5 hops")
+        for i, hop in enumerate(trace):
+            self.assertIn("node", hop, f"Hop {i} should contain 'node' key")
+            self.assertIn("enrichment", hop, f"Hop {i} should contain 'enrichment' key")
+            self.assertEqual(
+                hop["node"],
+                test_nodes[i],
+                f"Hop {i} should contain correct node",
+            )
+            self.assertIsInstance(
+                hop["enrichment"],
+                dict,
+                f"Hop {i} enrichment should be a dictionary",
+            )
+            self.assertIn(
+                "embedding",
+                hop["enrichment"],
+                f"Hop {i} should have embedding in enrichment",
+            )
+
+    def test_full_kg_vector_reasoning_with_networkx(self) -> None:
+        """
+        Test complete KG→Vector reasoning pipeline with NetworkX backend.
+
+        Validates:
+        - NetworkX backend traversal
+        - Vector enrichment at each hop
+        - Trace accumulation
+        """
+        # Arrange
+        graph_data = ["Node-1", "Node-2", "Node-3", "Node-4", "Node-5"]
+        networkx_backend = MockNetworkXBackend(graph_data=graph_data)
+        workflow = MultiHopWorkflow(
+            kg_backend=networkx_backend,
+            vector_store=self.mock_vector_store,
+            max_hops=5,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        self.assertEqual(len(trace), 5, "Should traverse exactly 5 hops")
+        for i, hop in enumerate(trace):
+            self.assertEqual(
+                hop["node"],
+                graph_data[i],
+                f"Hop {i} should match NetworkX node",
+            )
+            self.assertIn("embedding", hop["enrichment"])
+
+    def test_fallback_to_vector_only_when_kg_unavailable(self) -> None:
+        """
+        Test graceful fallback to vector-only semantic chain when KG unavailable.
+
+        Validates:
+        - Fallback behavior when kg_backend is None
+        - Vector-only traversal generates valid trace
+        - Trace structure is consistent with KG-backed traces
+        """
+        # Arrange
+        workflow = MultiHopWorkflow(
+            kg_backend=None,
+            vector_store=self.mock_vector_store,
+            max_hops=5,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        self.assertEqual(len(trace), 5, "Should generate 5 hops in fallback mode")
+        for i, hop in enumerate(trace):
+            self.assertIn("node", hop)
+            self.assertIn("enrichment", hop)
+            self.assertTrue(
+                hop["node"].startswith("Vector-"),
+                "Fallback nodes should be vector-based",
+            )
+            self.assertIn("embedding", hop["enrichment"])
+
+    def test_sliding_window_context_management(self) -> None:
+        """
+        Test sliding window context management across multiple hops.
+
+        Validates:
+        - Sliding window truncation when traversal exceeds window size
+        - Window size enforcement
+        - Correct subset of nodes retained
+        """
+        # Arrange
+        window_size = 5
+        sliding_window_kg = SlidingWindowKnowledgeGraph(window_size=window_size)
+        workflow = MultiHopWorkflow(
+            kg_backend=sliding_window_kg,
+            vector_store=self.mock_vector_store,
+            max_hops=5,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        self.assertEqual(
+            len(trace),
+            5,
+            "Trace should respect max_hops limit",
+        )
+        # Sliding window backend returns last 5 nodes from 20-node simulation
+        expected_nodes = ["Node-16", "Node-17", "Node-18", "Node-19", "Node-20"]
+        for i, hop in enumerate(trace):
+            self.assertEqual(
+                hop["node"],
+                expected_nodes[i],
+                f"Hop {i} should contain sliding window node",
+            )
+
+    def test_max_hops_enforcement_with_longer_path(self) -> None:
+        """
+        Test that max_hops limit is enforced even when backend returns more nodes.
+
+        Validates:
+        - Traversal stops at max_hops limit
+        - Extra nodes from backend are ignored
+        """
+        # Arrange
+        long_path = [f"Node-{i}" for i in range(1, 11)]  # 10 nodes
+        kg_backend = MockNeo4jBackend(nodes=long_path)
+        workflow = MultiHopWorkflow(
+            kg_backend=kg_backend,
+            vector_store=self.mock_vector_store,
+            max_hops=5,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        self.assertEqual(
+            len(trace),
+            5,
+            "Should stop at max_hops even with longer backend path",
+        )
+        for i in range(5):
+            self.assertEqual(trace[i]["node"], f"Node-{i+1}")
+
+    def test_trace_accumulation_structure(self) -> None:
+        """
+        Test proper structure of accumulated reasoning trace.
+
+        Validates:
+        - Each hop contains required keys
+        - Enrichment data is properly structured
+        - Node and enrichment data types are correct
+        """
+        # Arrange
+        test_nodes = ["Entity-X", "Entity-Y", "Entity-Z"]
+        kg_backend = MockNeo4jBackend(nodes=test_nodes)
+        workflow = MultiHopWorkflow(
+            kg_backend=kg_backend,
+            vector_store=self.mock_vector_store,
+            max_hops=3,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        self.assertEqual(len(trace), 3)
+        for hop in trace:
+            # Validate structure
+            self.assertIsInstance(hop, dict)
+            self.assertIn("node", hop)
+            self.assertIn("enrichment", hop)
+
+            # Validate enrichment structure
+            enrichment = hop["enrichment"]
+            self.assertIsInstance(enrichment, dict)
+            self.assertIn("embedding", enrichment)
+            self.assertIsInstance(enrichment["embedding"], str)
+
+    def test_empty_backend_path(self) -> None:
+        """
+        Test graceful handling when backend returns empty path.
+
+        Validates:
+        - Empty path results in empty trace
+        - No errors are raised
+        """
+        # Arrange
+        empty_backend = MockNeo4jBackend(nodes=[])
+        workflow = MultiHopWorkflow(
+            kg_backend=empty_backend,
+            vector_store=self.mock_vector_store,
+            max_hops=5,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        self.assertEqual(len(trace), 0, "Empty backend should yield empty trace")
+
+    def test_vector_enrichment_applied_to_all_hops(self) -> None:
+        """
+        Test that vector enrichment is applied to every hop in the trace.
+
+        Validates:
+        - Each hop receives enrichment
+        - Enrichment contains expected data
+        """
+        # Arrange
+        test_nodes = ["A", "B", "C", "D", "E"]
+        kg_backend = MockNeo4jBackend(nodes=test_nodes)
+        workflow = MultiHopWorkflow(
+            kg_backend=kg_backend,
+            vector_store=self.mock_vector_store,
+            max_hops=5,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        for i, hop in enumerate(trace):
+            node = hop["node"]
+            enrichment = hop["enrichment"]
+            expected_embedding = f"Embedding for {node}"
+            self.assertEqual(
+                enrichment["embedding"],
+                expected_embedding,
+                f"Hop {i} should have correct enrichment",
+            )
+
+    def test_different_max_hops_values(self) -> None:
+        """
+        Test workflow with different max_hops configurations.
+
+        Validates:
+        - max_hops correctly controls trace length
+        - Works with various hop counts (1, 3, 10)
+        """
+        test_nodes = [f"Node-{i}" for i in range(1, 21)]
+        kg_backend = MockNeo4jBackend(nodes=test_nodes)
+
+        for max_hops in [1, 3, 10]:
+            with self.subTest(max_hops=max_hops):
+                # Arrange
+                workflow = MultiHopWorkflow(
+                    kg_backend=kg_backend,
+                    vector_store=self.mock_vector_store,
+                    max_hops=max_hops,
+                )
+
+                # Act
+                trace = workflow.traverse_and_enrich("start-node")
+
+                # Assert
+                self.assertEqual(
+                    len(trace),
+                    max_hops,
+                    f"Trace should have exactly {max_hops} hops",
+                )
+
+    def test_integration_with_sliding_window_and_enrichment(self) -> None:
+        """
+        Integration test combining sliding window KG with vector enrichment.
+
+        Validates:
+        - Sliding window KG properly integrates with workflow
+        - Vector enrichment works on windowed nodes
+        - Complete pipeline functions as expected
+        """
+        # Arrange
+        sliding_window_kg = SlidingWindowKnowledgeGraph(window_size=3)
+        workflow = MultiHopWorkflow(
+            kg_backend=sliding_window_kg,
+            vector_store=self.mock_vector_store,
+            max_hops=3,
+        )
+
+        # Act
+        trace = workflow.traverse_and_enrich("start-node")
+
+        # Assert
+        self.assertEqual(len(trace), 3)
+        # Sliding window returns last 3 from 20-node simulation
+        expected_nodes = ["Node-18", "Node-19", "Node-20"]
+        for i, hop in enumerate(trace):
+            self.assertEqual(hop["node"], expected_nodes[i])
+            self.assertIn("embedding", hop["enrichment"])
+            self.assertEqual(
+                hop["enrichment"]["embedding"],
+                f"Embedding for {expected_nodes[i]}",
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

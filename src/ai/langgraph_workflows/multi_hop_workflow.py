@@ -1,5 +1,8 @@
 from typing import List, Any, Optional
 from core.interfaces.knowledge_graph import KnowledgeGraphBackend
+import logging
+
+logger = logging.getLogger(__name__)
 
 class MultiHopWorkflow:
     def __init__(self, kg_backend: Optional[KnowledgeGraphBackend], vector_store: Any, max_hops: int = 5):
@@ -28,15 +31,18 @@ class MultiHopWorkflow:
         trace = []
 
         if self.kg_backend:
+            logger.info("Using knowledge graph backend.")
             nodes = self.kg_backend.traverse(start_node)
         else:
-            # Fallback to vector-only traversal if kg_backend is unavailable
+            logger.warning("Knowledge graph backend unavailable. Falling back to vector-only traversal.")
             nodes = self.simulate_vector_only_traversal(start_node)
 
         for i, node in enumerate(nodes[:self.max_hops]):
             enriched_context = self.enrich_with_vector_context(node)
             trace.append({"node": node, "enrichment": enriched_context})
+            logger.debug(f"Hop {i + 1}/{self.max_hops}: Node={node}, Enrichment={enriched_context}")
 
+        logger.info("Completed traversal and enrichment.")
         return trace
 
     def simulate_vector_only_traversal(self, start_node: Any) -> List[Any]:
