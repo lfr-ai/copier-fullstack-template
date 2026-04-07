@@ -49,6 +49,37 @@ class Neo4jKnowledgeGraph(KnowledgeGraphGateway):
         self._database = database
         logger.info("Neo4j knowledge graph connected to %s", uri)
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> Neo4jKnowledgeGraph:
+        """Create a Neo4jKnowledgeGraph instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "uri": "bolt://localhost:7687",    # optional (default: "bolt://localhost:7687")
+                "username": "neo4j",                # optional (default: "neo4j")
+                "password": "secret",               # optional (default: "")
+                "database": "neo4j",                # optional (default: "neo4j")
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            Neo4jKnowledgeGraph: Configured knowledge graph instance.
+        """
+        uri = str(config.get("uri", "bolt://localhost:7687"))
+        username = str(config.get("username", "neo4j"))
+        password = str(config.get("password", ""))
+        database = str(config.get("database", "neo4j"))
+
+        return cls(
+            uri=uri,
+            username=username,
+            password=password,
+            database=database,
+        )
+
     async def close(self) -> None:
         """Close the Neo4j driver connection."""
         await self._driver.close()
