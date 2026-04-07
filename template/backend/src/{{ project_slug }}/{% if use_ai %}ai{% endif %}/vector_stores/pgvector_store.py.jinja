@@ -52,6 +52,38 @@ class PgvectorStore(VectorStoreGateway):
         self._pool: object | None = None
         self._database_url = database_url
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> PgvectorStore:
+        """Create a PgvectorStore instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "database_url": "postgresql://user:pass@localhost/db",
+                "dimension": 1536,
+                "table_name": "vector_embeddings",  # optional (default: "vector_embeddings")
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            PgvectorStore: Configured vector store instance.
+        """
+        database_url = config.get("database_url")
+        if not database_url:
+            msg = "database_url is required in config for PgvectorStore"
+            raise ValueError(msg)
+
+        dimension = int(config["dimension"])
+        table_name = str(config.get("table_name", "vector_embeddings"))
+
+        return cls(
+            database_url=str(database_url),
+            dimension=dimension,
+            table_name=table_name,
+        )
+
     async def _ensure_pool(self) -> None:
         """Lazily create connection pool and provision the vector table."""
         if self._pool is not None:

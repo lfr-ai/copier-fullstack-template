@@ -29,6 +29,25 @@ class CrossEncoderReranker(RerankerGateway):
         self._model_name = model_name
         self._model = None
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> CrossEncoderReranker:
+        """Create a CrossEncoderReranker instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2",  # optional (default from config)
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            CrossEncoderReranker: Configured reranker instance.
+        """
+        model_name = str(config.get("model_name", DEFAULT_CROSS_ENCODER_MODEL))
+        return cls(model_name=model_name)
+
     def _get_model(self) -> object:
         """Lazily load the cross-encoder model."""
         if self._model is not None:

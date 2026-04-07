@@ -62,3 +62,22 @@ class SentenceTransformerEmbeddingAdapter(EmbeddingGateway):
     @override
     def dimension(self) -> int:
         return self._dimension
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> SentenceTransformerEmbeddingAdapter:
+        """Create a SentenceTransformerEmbeddingAdapter instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "model_name": "all-MiniLM-L6-v2",  # optional (default from config)
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            SentenceTransformerEmbeddingAdapter: Configured adapter instance.
+        """
+        model_name = str(config.get("model_name", DEFAULT_SENTENCE_TRANSFORMER_MODEL))
+        return cls(model_name=model_name)

@@ -44,3 +44,41 @@ class AnthropicAdapter(LiteLLMAdapter):
             num_retries=max_retries,
             **extra,
         )
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> AnthropicAdapter:
+        """Create an AnthropicAdapter instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "api_key": "sk-ant-...",
+                "model": "claude-sonnet-4-20250514",  # optional (default from config)
+                "max_retries": 3,                     # optional (default: 3)
+                "timeout": 60.0,                      # optional
+                "default_headers": {"X-Custom": "value"},  # optional
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            AnthropicAdapter: Configured adapter instance.
+        """
+        api_key = config.get("api_key")
+        if not api_key:
+            msg = "api_key is required in config for AnthropicAdapter"
+            raise ValueError(msg)
+
+        model = str(config.get("model", DEFAULT_ANTHROPIC_MODEL))
+        max_retries = int(config.get("max_retries", _DEFAULT_MAX_RETRIES))
+        timeout = config.get("timeout")
+        default_headers = config.get("default_headers")
+
+        return cls(
+            api_key=str(api_key),
+            model=model,
+            max_retries=max_retries,
+            timeout=float(timeout) if timeout is not None else None,
+            default_headers=dict(default_headers) if default_headers else None,
+        )

@@ -103,3 +103,49 @@ class LiteLLMEmbeddingAdapter(EmbeddingGateway):
     def dimension(self) -> int:
         """Return the embedding vector dimension."""
         return self._dimension
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> LiteLLMEmbeddingAdapter:
+        """Create a LiteLLMEmbeddingAdapter instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "model": "text-embedding-3-small",
+                "dimension": 1536,              # optional (default from config)
+                "api_key": "sk-...",            # optional
+                "api_base": "https://...",      # optional
+                "api_version": "2024-02-01",    # optional
+                "timeout": 30.0,                # optional
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            LiteLLMEmbeddingAdapter: Configured adapter instance.
+        """
+        model = str(config.get("model", DEFAULT_EMBEDDING_MODEL))
+        dimension = int(config.get("dimension", DEFAULT_EMBEDDING_DIMENSION))
+        api_key = config.get("api_key")
+        api_base = config.get("api_base")
+        api_version = config.get("api_version")
+        timeout = config.get("timeout")
+
+        # Collect any extra kwargs not already handled
+        handled_keys = {
+            "model", "dimension", "api_key", "api_base", "api_version", "timeout",
+        }
+        extra_kwargs = {
+            k: v for k, v in config.items() if k not in handled_keys
+        }
+
+        return cls(
+            model=model,
+            dimension=dimension,
+            api_key=str(api_key) if api_key is not None else None,
+            api_base=str(api_base) if api_base is not None else None,
+            api_version=str(api_version) if api_version is not None else None,
+            timeout=float(timeout) if timeout is not None else None,
+            **extra_kwargs,
+        )

@@ -30,6 +30,36 @@ class LangChainLLMAdapter(BaseLLMAdapter):
             msg = "langchain and langchain-openai are required — pip install langchain langchain-openai"
             raise ImportError(msg) from exc
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> LangChainLLMAdapter:
+        """Create a LangChainLLMAdapter instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "provider": "openai",           # optional (default: "openai")
+                "model": "gpt-4o",              # optional (default from config)
+                "temperature": 0.7,             # optional extra kwargs
+                "api_key": "sk-...",            # optional extra kwargs
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            LangChainLLMAdapter: Configured adapter instance.
+        """
+        provider = str(config.get("provider", "openai"))
+        model = str(config.get("model", DEFAULT_CHAT_MODEL))
+
+        # Pass all other config items as extra kwargs to LangChain
+        handled_keys = {"provider", "model"}
+        extra_kwargs = {
+            k: v for k, v in config.items() if k not in handled_keys
+        }
+
+        return cls(provider=provider, model=model, **extra_kwargs)
+
     @property
     @override
     def model(self) -> str:
