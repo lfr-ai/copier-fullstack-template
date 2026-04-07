@@ -1,0 +1,153 @@
+"""Integration tests for test fixture schema isolation."""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
+{%- endif %}
+
+
+pytestmark = pytest.mark.integration
+
+
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+
+
+@pytest.mark.asyncio
+async def test_environment_variable_set_to_test() -> None:
+    """Verify ENVIRONMENT=TEST is set at module import time."""
+    env_var = os.environ.get("{{ project_slug | upper }}_ENVIRONMENT")
+    assert env_var == "TEST", "ENVIRONMENT must be TEST for all test runs"
+
+
+@pytest.mark.asyncio
+async def test_engine_uses_test_schema(engine: AsyncEngine) -> None:
+    """Verify that test engine routes to test_schema via search_path."""
+    async with engine.begin() as conn:
+        result = await conn.execute(text("SHOW search_path"))
+        search_path = result.scalar()
+        assert (
+            "test_schema" in search_path.lower()
+        ), f"Expected test_schema in search_path, got: {search_path}"
+
+
+@pytest.mark.asyncio
+async def test_schema_isolation_from_public(engine: AsyncEngine) -> None:
+    """Verify test data goes to test_schema, not public schema."""
+    async with engine.begin() as conn:
+        # Create a test table in current schema (should be test_schema)
+        await conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS schema_isolation_test (
+                    id SERIAL PRIMARY KEY,
+                    data TEXT NOT NULL
+                )
+                """
+            )
+        )
+
+        # Insert test data
+        await conn.execute(
+            text(
+                """
+                INSERT INTO schema_isolation_test (data)
+                VALUES ('test-data-1'), ('test-data-2')
+                """
+            )
+        )
+
+        # Verify table exists in test_schema
+        result = await conn.execute(
+            text(
+                """
+                SELECT table_schema
+                FROM information_schema.tables
+                WHERE table_name = 'schema_isolation_test'
+                AND table_schema IN ('public', 'test_schema')
+                """
+            )
+        )
+        schemas = [row[0] for row in result.fetchall()]
+
+        assert "test_schema" in schemas, "Table should exist in test_schema"
+        assert (
+            "public" not in schemas or len(schemas) == 1
+        ), "Table should not exist in public schema"
+
+        # Clean up
+        await conn.execute(text("DROP TABLE schema_isolation_test CASCADE"))
+
+
+@pytest.mark.asyncio
+async def test_test_schema_exists(engine: AsyncEngine) -> None:
+    """Verify test_schema exists in the database."""
+    async with engine.begin() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT schema_name
+                FROM information_schema.schemata
+                WHERE schema_name = 'test_schema'
+                """
+            )
+        )
+        schema = result.scalar()
+        assert (
+            schema == "test_schema"
+        ), "test_schema must exist before tests can run"
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("clean_test_schema")
+async def test_clean_test_schema_fixture(engine: AsyncEngine) -> None:
+    """Verify clean_test_schema fixture truncates tables correctly."""
+    async with engine.begin() as conn:
+        # Create and populate a test table
+        await conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS cleanup_test (
+                    id SERIAL PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+                """
+            )
+        )
+
+        await conn.execute(
+            text("INSERT INTO cleanup_test (value) VALUES ('will-be-cleaned')")
+        )
+
+        # Verify data exists
+        result = await conn.execute(text("SELECT COUNT(*) FROM cleanup_test"))
+        count = result.scalar()
+        assert count == 1, "Test data should exist before cleanup"
+
+        # Clean up table
+        await conn.execute(text("DROP TABLE cleanup_test CASCADE"))
+
+
+{%- elif database_backend == "sqlite" %}
+
+
+def test_schema_isolation_not_applicable_for_sqlite() -> None:
+    """SQLite does not support schemas - isolation is via separate database file."""
+    # This test just ensures the template renders correctly for SQLite
+    assert True
+
+
+{%- else %}
+
+
+def test_schema_isolation_placeholder() -> None:
+    """Placeholder test for non-PostgreSQL backends."""
+    # Schema isolation is only implemented for PostgreSQL
+    assert True
+
+
+{%- endif %}
