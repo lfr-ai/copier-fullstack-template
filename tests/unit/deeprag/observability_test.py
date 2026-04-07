@@ -32,9 +32,9 @@ def test_traverse_and_enrich_with_kg(caplog_namespace, workflow):
     trace = workflow.traverse_and_enrich(start_node)
 
     # Verify the log messages
-    assert any("Using knowledge graph backend." in message for message in caplog_namespace.text)
-    assert any("Hop 1/5: Node=Node1, Enrichment={'embedding': 'Embedding for Node1'}" in message for message in caplog_namespace.text)
-    assert any("Completed traversal and enrichment." in message for message in caplog_namespace.text)
+    assert "Using knowledge graph backend." in caplog_namespace.text
+    assert "Hop 1/5: Node=Node1, Enrichment={'embedding': 'Embedding for Node1'}" in caplog_namespace.text
+    assert "Completed traversal and enrichment." in caplog_namespace.text
 
 def test_traverse_and_enrich_without_kg(caplog_namespace, vector_store_mock):
     workflow = MultiHopWorkflow(None, vector_store_mock, max_hops=5)
@@ -42,6 +42,6 @@ def test_traverse_and_enrich_without_kg(caplog_namespace, vector_store_mock):
     trace = workflow.traverse_and_enrich(start_node)
 
     # Verify the log messages
-    assert any("Knowledge graph backend unavailable. Falling back to vector-only traversal." in message for message in caplog_namespace.text)
-    assert any("Hop 1/5: Node=Vector-1, Enrichment={'embedding': 'Embedding for Vector-1'}" in message for message in caplog_namespace.text)
-    assert any("Completed traversal and enrichment." in message for message in caplog_namespace.text)
+    assert "Knowledge graph backend unavailable. Falling back to vector-only traversal." in caplog_namespace.text
+    assert "Hop 1/5: Node=Vector-1, Enrichment={'embedding': 'Embedding for Vector-1'}" in caplog_namespace.text
+    assert "Completed traversal and enrichment." in caplog_namespace.text
