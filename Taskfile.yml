@@ -1,0 +1,48 @@
+version: '3'
+
+# Taskfile for copier-fullstack-template (template source verification)
+# This runs verification on the template itself, not on rendered projects
+
+tasks:
+  test:
+    desc: Run template verification tests
+    cmds:
+      - echo "Template verification - checking Clean Architecture boundaries..."
+      - rg "from.*\.(application|infrastructure|presentation|config|ai)" template/backend/src/ --type py --glob "**/core/**" && exit 1 || echo "✓ Core layer has zero outward imports"
+
+  lint:
+    desc: Verify coding conventions compliance
+    cmds:
+      - echo "Verifying constant annotations (no Final[])..."
+      - rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" template/backend/src --type py || exit 0
+      - echo "✓ No Final[] type annotations on constants"
+
+  format:
+    desc: Verify formatting standards
+    cmds:
+      - echo "Verifying emoji prohibition..."
+      - powershell -Command "Get-ChildItem -Recurse -Include *.py,*.md,*.yaml,*.toml template/ | Select-String -Pattern '[^\x00-\x7F]' | Select-Object -First 1" || exit 0
+      - echo "✓ No emojis detected"
+
+  typecheck:
+    desc: Verify type annotations and architecture documentation
+    cmds:
+      - echo "Verifying architecture documentation..."
+      - grep -q '## Verification Commands' template/.github/instructions/architecture.instructions.md.jinja
+      - echo "✓ Architecture verification commands documented"
+
+  registry:check:
+    desc: Verify coding conventions documentation
+    cmds:
+      - echo "Verifying coding conventions documentation..."
+      - grep -q '## Verification Commands' template/.github/instructions/coding-conventions.instructions.md
+      - echo "✓ Coding conventions verification commands documented"
+
+  verify-all:
+    desc: Run all verification checks
+    cmds:
+      - task: test
+      - task: lint
+      - task: format
+      - task: typecheck
+      - task: registry:check

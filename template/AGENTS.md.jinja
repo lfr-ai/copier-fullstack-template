@@ -789,9 +789,9 @@ are installed via workspace recommendations.
 {% endif %}
 | Server | Type | Source | Purpose |
 | --- | --- | --- | --- |
-| **Context7** | stdio (bunx) | `@upstash/context7-mcp` | Up-to-date library/framework documentation |
+| **Context7** | http | `https://mcp.context7.com/mcp` | Up-to-date library/framework documentation |
 | **GitHub** | http | Copilot built-in | GitHub issues, pull requests, repos, and code search |{% if use_playwright %}
-| **Playwright** | stdio (bunx) | `@microsoft/mcp-server-playwright` | Browser automation for E2E web testing |{% endif %}{% if cloud_provider == 'azure' %}
+| **Playwright** | stdio (npx) | `@playwright/mcp` | Browser automation for E2E web testing |{% endif %}{% if cloud_provider == 'azure' %}
 | **Azure** | http | Copilot built-in | Azure resource management, deployments, monitoring |{% endif %}
 
 ### Usage
