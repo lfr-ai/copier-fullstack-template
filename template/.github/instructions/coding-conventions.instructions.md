@@ -3,6 +3,13 @@ description: Python coding conventions — enforcement patterns and modern stand
 applyTo: '**/*.py'
 ---
 
+## Foundational Principles
+
+- **Single Responsibility Principle (SRP):** Every module, class, and function has one
+  reason to change. Split when responsibilities diverge.
+- **Clean Architecture Dependency Rule:** Dependencies point inward. Inner layers never
+  import from outer layers.
+
 ```python
 @dataclass
 class MyClass: ...
@@ -21,13 +28,13 @@ class MyEnum(StrEnum):
     VALUE = auto()
 ```
 
-- ALL string enums: `StrEnum` + `@unique` + `auto()`
-- ALL integer enums: `IntEnum` + `@unique`
-- `auto()` unless exact value is external contract (comment explaining why)
-- Member names: `UPPER_SNAKE_CASE`
-- Defined in `utils/enums.py` or `core/enums/`
+- ALL string enums: 'StrEnum' + '@unique' + 'auto()'
+- ALL integer enums: 'IntEnum' + '@unique'
+- 'auto()' unless exact value is external contract (comment explaining why)
+- Member names: 'UPPER_SNAKE_CASE'
+- Defined in 'utils/enums.py' or 'core/enums/'
 - NEVER use raw string literals where enum members should be
-- Provide `from_str()` classmethod for external input parsing
+- Provide 'from_str()' classmethod for external input parsing
 
 ```python
 from typing import Any
@@ -47,15 +54,15 @@ y: int | str
 z: list[int]
 ```
 
-- ZERO `typing.List`, `Dict`, `Tuple`, `Set`, `Optional`, `Union`
-- `typing` imports ONLY for: `TypeVar`, `Protocol`, `TypeAlias`, `Annotated`, `Literal`,
-  `NoReturn`, `Generic`, `runtime_checkable`, `TypedDict`, `final`, `overload`,
-  `TYPE_CHECKING`, `Self`, `override`
-- ZERO `Final[type]` type annotations on constants — plain `UPPER_SNAKE_CASE` assignment
+- ZERO 'typing.List', 'Dict', 'Tuple', 'Set', 'Optional', 'Union'
+- 'typing' imports ONLY for: 'TypeVar', 'Protocol', 'TypeAlias', 'Annotated', 'Literal',
+  'NoReturn', 'Generic', 'runtime_checkable', 'TypedDict', 'final', 'overload',
+  'TYPE_CHECKING', 'Self', 'override'
+- ZERO 'Final[type]' type annotations on constants — plain 'UPPER_SNAKE_CASE' assignment
   is sufficient
-- Use `match/case` for multi-branch dispatch over types, enums, literals
-- Use `@override` on overriding methods
-- Use `Self` for fluent/builder return types
+- Use 'match/case' for multi-branch dispatch over types, enums, literals
+- Use '@override' on overriding methods
+- Use 'Self' for fluent/builder return types
 
 ```python
 MAX_RETRIES: Final[int] = 3
@@ -65,35 +72,35 @@ MAX_RETRIES = 3
 _INTERNAL_BUFFER_SIZE = 4096
 ```
 
-- ZERO `Final[type]` type annotations on constants — plain `UPPER_SNAKE_CASE` is
+- ZERO 'Final[type]' type annotations on constants — plain 'UPPER_SNAKE_CASE' is
   sufficient
-- ZERO literal numbers in logic — extract to named `UPPER_SNAKE_CASE` constant
-- ZERO hardcoded config strings — `AppSettings` or named constants
+- ZERO literal numbers in logic — extract to named 'UPPER_SNAKE_CASE' constant
+- ZERO hardcoded config strings — 'AppSettings' or named constants
 - ZERO hardcoded field/column names — naming registry
 - ZERO hardcoded URLs/paths/timeouts/retries — named constants
 - ZERO docstring comments on constants — the name and value are self-documenting
 
-## `@final` Decorator on Classes
+## '@final' Decorator on Classes
 
-- Use `@final` on ALL concrete leaf classes:
-  - Frozen dataclasses (`@dataclass(frozen=True)`)
+- Use '@final' on ALL concrete leaf classes:
+  - Frozen dataclasses ('@dataclass(frozen=True)')
   - Concrete service implementations
   - Middleware classes
   - Pydantic models
   - DTOs and mappers
   - GraphQL types
-- NEVER use `@final` on:
-  - `Protocol` classes
-  - `ABC` abstract base classes
+- NEVER use '@final' on:
+  - 'Protocol' classes
+  - 'ABC' abstract base classes
   - Domain entity base classes (Entity, AggregateRoot, ValueObject)
   - Extensible domain entities designed for subclassing
   - Enums
   - Exception base classes
   - Settings classes
-  - `TypedDict` definitions
+  - 'TypedDict' definitions
   - ORM base classes (declarative_base)
   - Generic base classes designed for subclassing
-- Import: `from typing import final`
+- Import: 'from typing import final'
 
 ## Logging
 
@@ -104,13 +111,13 @@ logger.error("Failed: {}".format(msg))
 logger.info("Processing %s", item_id)
 ```
 
-- ALL log messages: `%s` formatting — ZERO f-strings, `.format()`, `+`
-- ALL modules: `logger = logging.getLogger(__name__)`
-- ALL exception handlers: `logger.exception()` or `logger.error(..., exc_info=True)`
-- ZERO `print()` in source code (CLI `rich.console` excepted)
+- ALL log messages: '%s' formatting — ZERO f-strings, '.format()', '+'
+- ALL modules: 'logger = logging.getLogger(__name__)'
+- ALL exception handlers: 'logger.exception()' or 'logger.error(..., exc_info=True)'
+- ZERO 'print()' in source code (CLI 'rich.console' excepted)
 - ZERO sensitive data in logs (password, token, secret, key, credential)
 - Log messages do NOT end with periods
-- Log enum values as `.value` or `.name` explicitly
+- Log enum values as '.value' or '.name' explicitly
 
 ```python
 except Exception as e:
@@ -121,25 +128,25 @@ except Exception as e:
     raise NewError("Failed") from e
 ```
 
-- ALWAYS `raise ... from e` — chain exceptions
-- ZERO bare `except:` — always specific types
-- ZERO silent `except Exception:` without re-raise or explicit
-  `# Explicitly silenced: <reason>`
+- ALWAYS 'raise ... from e' — chain exceptions
+- ZERO bare 'except:' — always specific types
+- ZERO silent 'except Exception:' without re-raise or explicit
+  '# Explicitly silenced: <reason>'
 - Exceptions logged BEFORE re-raising
-- Error messages: `%s` formatting, NOT f-strings
+- Error messages: '%s' formatting, NOT f-strings
 - Domain exceptions at domain/application boundaries
-- HTTP exceptions ONLY in `presentation/api/`
-- `raise ... from None` ONLY with explicit justification comment
+- HTTP exceptions ONLY in 'presentation/api/'
+- 'raise ... from None' ONLY with explicit justification comment
 
 ```zsh
 emulate -L zsh
 setopt PIPE_FAIL ERR_EXIT
 ```
 
-- `.zsh` extension (never `.sh`)
-- `.azcli` extension for Azure CLI scripts (valid zsh)
-- `local` for all variables inside functions
-- `zparseopts` for option parsing
+- '.zsh' extension (never '.sh')
+- '.azcli' extension for Azure CLI scripts (valid zsh)
+- 'local' for all variables inside functions
+- 'zparseopts' for option parsing
 
 ```python
 logger.info("Task completed.")
@@ -158,49 +165,69 @@ def process(
 ) -> ProcessedData: ...
 ```
 
-When `*` is required:
+When '*' is required:
 
 - 3+ params (excluding self/cls) where at least one has a default
 - ANY boolean flag parameter
 - ANY optional/config param (timeout, retries, limit, offset, ttl, mode)
-- ALL factory functions (`create_*`, `build_*`, `make_*`)
-- ALL public API functions in `presentation/`
-- ALL service methods in `application/services/`
-- ALL utility functions in `utils/`
+- ALL factory functions ('create_*', 'build_*', 'make_*')
+- ALL public API functions in 'presentation/'
+- ALL service methods in 'application/services/'
+- ALL utility functions in 'utils/'
 
-When `*` is NOT required:
+When '*' is NOT required:
 
 - 0–2 params with no defaults
 - ALL params required, distinct types, unambiguous ordering
-- Dunder methods following Python protocols (`__eq__`, `__hash__`)
+- Dunder methods following Python protocols ('__eq__', '__hash__')
 - Callbacks matching external contracts (FastAPI DI)
 
-- `from __future__ import annotations` ONLY in files with:
-  - `TYPE_CHECKING` blocks importing types
+- 'from __future__ import annotations' ONLY in files with:
+  - 'TYPE_CHECKING' blocks importing types
   - Forward references (types used before definition in return annotations)
 - ZERO in other files — Python 3.11+ doesn't need it for most code
-- EVERY function has return type (including `-> None`)
+- EVERY function has return type (including '-> None')
 - EVERY parameter has type annotation
-- EVERY `@property` has return type
+- EVERY '@property' has return type
 - ALL class attributes typed
 - Default values match their type annotation
 
 - EVERY public module, class, method, function: docstring
 - First line: imperative, ends with period, does NOT start with "A"/"An"/"The"
-- `Args:` — each parameter described (NO types in docstring)
-- `Returns:` — describes return value
-- `Raises:` — lists exceptions
-- Remove `:param:`/`@param` style — Google style only
+- 'Args:' — each parameter with type in parentheses: 'name (Type): Description.'
+- 'Returns:' — format: 'TypeName: Description.' (no parentheses)
+- 'Raises:' — format: 'ExceptionName: Description.' (no parentheses)
+- 'Yields:' — format: 'TypeName: Description.' (no parentheses)
+- Remove ':param:'/'@param' style — Google style only
+- ZERO emojis in docstrings, comments, logs, or documentation
 - Use single quotes ('word') in docstrings to reference identifiers — NEVER double
   backticks
 
-- `_` prefix on ALL non-public module-level functions, methods, attributes
-- `_UPPER_SNAKE_CASE` on ALL internal-only constants
-- NO `__` name mangling unless explicitly justified
-- `__all__` in `__init__.py` files exporting public API
+- '_' prefix on ALL non-public module-level functions, methods, attributes
+- '_UPPER_SNAKE_CASE' on ALL internal-only constants
+- NO '__' name mangling unless explicitly justified
+- '__all__' in '__init__.py' files exporting public API
 
 1. **Critical:** F-string logging, exception chaining (correctness + performance)
 2. **High:** Dataclass slots, enum @unique, type coverage (correctness + memory)
 3. **Medium:** Named constants (no Final[type]), @final on leaf classes, keyword-only
    args, modern syntax (maintainability)
 4. **Low:** Unused imports, punctuation, underscore compliance (cleanliness)
+
+## Verification Commands
+
+Run these commands to verify coding standards compliance:
+
+**Verify no Final[] annotations on constants (exit code 1 = pass):**
+```bash
+rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" template/backend/src --type py
+```
+Expected: Exit code 1 (no matches). Constants use plain UPPER_SNAKE_CASE without Final[].
+
+**Verify no emojis in codebase (exit code 1 = pass):**
+```bash
+rg -uuu '[\x{1F300}-\x{1F9FF}]|[\x{2600}-\x{26FF}]|[\x{2700}-\x{27BF}]' template --type-add 'docs:*.{py,md,yaml,yml,toml}' -t docs
+```
+Expected: Exit code 1 (no matches). ZERO emojis in docstrings, comments, logs, or documentation.
+
+**Note:** Exit code 1 from ripgrep indicates no matches found, which proves compliance with the standard.

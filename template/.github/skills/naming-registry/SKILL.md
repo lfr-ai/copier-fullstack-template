@@ -10,7 +10,7 @@ description: >
 
 ## Purpose
 
-Treat `registry/naming_registry.json` as the single source of truth for shared constants.
+Treat 'registry/naming_registry.json' as the single source of truth for shared constants.
 
 ## Use This Skill When
 
@@ -27,8 +27,8 @@ Treat `registry/naming_registry.json` as the single source of truth for shared c
 
 ## Workflow
 
-1. Edit `registry/naming_registry.json`
-2. Run `task registry:validate`
-3. Run `task registry:generate`
-4. Run `task registry:check`
-5. Run `task registry:test`
+1. Edit 'registry/naming_registry.json'
+2. Run 'task registry:validate'
+3. Run 'task registry:generate'
+4. Run 'task registry:check'
+5. Run 'task registry:test'

@@ -1,6 +1,7 @@
+# Agent Configuration
 
-This file provides instructions for AI coding agents (GitHub Copilot, Cursor, Cline, etc.)
-working within this codebase.
+This file provides instructions for AI coding agents (GitHub Copilot, GSD-2, Cursor,
+Cline, OpenCode, etc.) working within this codebase.
 
 ## Documentation and Code-Example Search Policy
 
@@ -10,14 +11,18 @@ working within this codebase.
 - In prompts, explicitly request these tools when relevant:
     - `use context7`
     - `use the gh_grep tool`
-- Prefer Context7 for authoritative API/reference answers and `gh_grep` for practical code patterns.
+- Prefer Context7 for authoritative API/reference answers and `gh_grep` for practical
+  code patterns.
 
 ---
 
+## Architecture
 
-This project follows **Clean Architecture** with
-strict layering. The **Dependency Rule** is the fundamental invariant: source-code
-dependencies always point **inward**, never from core toward frameworks/infrastructure.
+This project follows **Clean Architecture** with strict layering. The **Dependency Rule**
+is the fundamental invariant: source-code dependencies always point **inward**, never
+from core toward frameworks/infrastructure.
+
+### Layer Diagram
 
 ```text
 ┌─────────────────────────────────────────┐
@@ -44,23 +49,71 @@ dependencies always point **inward**, never from core toward frameworks/infrastr
 
 **Always inward**: `presentation/infrastructure → application → core`
 
-- **Core** imports NOTHING external. Only `stdlib` and `typing`.
-- **Application** imports from `core` only. No framework imports.
-  - Application services access persistence via **UoW repository properties**
-    (e.g. `uow.users`), NEVER by importing concrete infrastructure classes.
-- **Presentation** imports from `application` and `core`. FastAPI/Click{% if api_style in ('graphql', 'both') %}/Strawberry{% endif %} allowed here.
-- **Infrastructure** imports from all inner layers. SQLAlchemy, httpx, redis allowed here.
-  - Concrete repos are instantiated inside the UoW — only the infrastructure
-    layer touches concrete repository implementations.
-- **Utils** is a shared leaf — `stdlib` + third-party only. NO first-party imports.
-- **Config** is a separate pillar — settings, constants. Not part of the layer stack.
+| Layer | May Import From | NEVER Imports From |
+| --- | --- | --- |
+| **core/** | stdlib, utils/ | application/, infrastructure/, presentation/, config/, ai/ |
+| **application/** | core/ (protocols + base classes), ai/ (vertical), utils/ | infrastructure/, presentation/, config/ |
+| **infrastructure/** | core/ (protocols), application/ (DTOs, mappers), utils/, libs | presentation/, ai/ |
+| **presentation/** | application/ (services, DTOs), core/ (exceptions, enums, constants, interfaces), config/, utils/, ai/ | infrastructure/ (use DI) |
+| **config/** | core/enums/ (Environment), utils/, external libs | application/, infrastructure/, presentation/, ai/ |
+{%- if use_ai %}
+| **ai/** | core/, application/, utils/, external AI libs | presentation/, config/, infrastructure/ |
+{%- endif %}
+| **utils/** | stdlib ONLY | ALL other project layers |
 
+### Concern Boundaries
+
+| Concern | ONLY In |
+| --- | --- |
+| HTTP status codes, request/response | `presentation/api/` |
+| CLI exit codes, terminal output | `presentation/cli/` |
+| HTML rendering, form handling | `presentation/web/` |
+| Business rules, domain invariants | `core/` |
+| Use case orchestration, DTO mapping | `application/` |
+| Database queries, ORM, SQL, sessions | `infrastructure/persistence/` |
+| Cache get/set/delete | `infrastructure/cache/` |
+| Event publish/subscribe | `infrastructure/messaging/` |
+| Environment variables, settings | `config/settings.py` |
+| Pure, framework-agnostic helpers | `utils/` |
+
+### Entry Points & Dependency Injection
+
+ALL entry points use factory functions — no global mutable state:
+
+- `create_api_app() -> FastAPI` in `presentation/api/app.py`
+- `create_web_app() -> FastAPI` in `presentation/web/app.py`
+- `cli() -> click.Group` in `presentation/cli/app.py`
+{%- if use_celery %}
+- `create_celery_app() -> Celery` in `config/celery.py`
+{%- endif %}
+
+DI wiring:
+
+- `composition/container.py` wires gateway/repository protocols to concrete
+  implementations
+- Constructor injection via typed parameters — no service locator, no global mutable
+  state
+- Routes NEVER instantiate dependencies — use `presentation/api/dependencies.py`
+  with `Depends()`
+- Application services inherit `BaseService`, depend on port protocols ONLY
+- Application services access persistence via **UoW repository properties**
+  (e.g. `uow.users`), NEVER by importing concrete infrastructure classes
+
+### Domain Modeling Patterns
+
+- Domain entities: inherit `Entity` with `@dataclass(slots=True)`
+- Value objects: `@dataclass(frozen=True, slots=True)`
+- Domain events: `@dataclass(frozen=True, slots=True)`
+- Commands and queries: frozen dataclasses
+- `DomainError` hierarchy: `NotFound`, `Conflict`, `Validation`, `Authorization`
+- ORM: SQLAlchemy 2.0+ with `Mapped[]` + `mapped_column()`, single async session factory
+
+### Architecture Anti-Patterns (FORBIDDEN)
 
 - NO business logic in infrastructure, presentation, or middleware
 - NO ORM models in core — core uses pure dataclasses (`frozen=True`, `slots=True`)
 - NO Pydantic models in core — Pydantic is a port/adapter concern
 - NO circular dependencies between any modules
-- NO `from __future__ import annotations` omission — it is **required** in every file
 - NO relative imports except within `__init__.py`
 - NO `print()` — use `structlog` or `logging`
 - NO `Any` type — use proper generics or `object`
@@ -69,14 +122,60 @@ dependencies always point **inward**, never from core toward frameworks/infrastr
 - NO `eval()`, `exec()`, `__import__()`, or `pickle.loads()` on untrusted input
 - NO f-strings in logging calls — use `%s` formatting
 
+---
 
-All constructors and multi-parameter functions must use `*` to enforce keyword-only arguments:
+## Python Conventions
 
-```python
-def __init__(self, *, name: str, value: int) -> None: ...
-async def upload(self, *, key: str, data: BinaryIO) -> str: ...
-```
+### Foundational Principles
 
+- **Single Responsibility Principle (SRP):** Every module, class, and function has
+  one reason to change. Split when responsibilities diverge.
+- **Clean Architecture Dependency Rule:** Dependencies point inward. Inner layers never
+  import from outer layers.
+- Python {{ python_version }}+ syntax (`type` statements, `X | Y` unions, `match`)
+- Line length: 88 characters
+- `__all__` in `__init__.py` where the package exposes a public API
+
+### Type Hints & Modern Syntax
+
+- Full type hints on ALL functions, methods, and class attributes
+- EVERY function has return type (including `-> None`)
+- EVERY parameter has type annotation
+- EVERY `@property` has return type
+- Default values match their type annotation
+- No `Any` type — use proper generics or `object`
+- ZERO `typing.List`, `Dict`, `Tuple`, `Set`, `Optional`, `Union` — use builtin
+  generics and `X | None` syntax
+- `typing` imports ONLY for: `TypeVar`, `Protocol`, `TypeAlias`, `Annotated`,
+  `Literal`, `NoReturn`, `Generic`, `runtime_checkable`, `TypedDict`, `final`,
+  `overload`, `TYPE_CHECKING`, `Self`, `override`
+- `from __future__ import annotations` ONLY in files with `TYPE_CHECKING` blocks
+  or forward references — Python {{ python_version }}+ does not need it elsewhere
+- Use `match/case` for multi-branch dispatch over types, enums, literals
+- Use `@override` on overriding methods
+- Use `Self` for fluent/builder return types
+- Use `pathlib.Path` over `os.path`
+- Use `datetime.UTC` for timezone-aware datetimes
+- Use `decimal.Decimal` for monetary values
+- Use `collections.abc` over `typing` for generic types
+- Context managers for all resource management
+
+### Constants & Enums
+
+- No `Final` annotation on constants — plain `UPPER_SNAKE_CASE` is sufficient
+- No magic numbers — define as named `UPPER_SNAKE_CASE` constants
+- ZERO hardcoded config strings — use `AppSettings` or named constants
+- ZERO hardcoded URLs, paths, timeouts, retries — named constants
+- ZERO docstring comments on constants — the name and value are self-documenting
+- Never hardcode field/column names — use registry constants
+- `_UPPER_SNAKE_CASE` for ALL internal-only constants
+- `StrEnum` + `@unique` + `auto()` for string enums; `IntEnum` + `@unique` for integer
+  enums
+- `auto()` unless exact value is external contract (comment explaining why)
+- Enum member names: `UPPER_SNAKE_CASE`; provide `from_str()` classmethod for external
+  input parsing
+- Enums defined in `utils/enums.py` or `core/enums/`
+- NEVER use raw string literals where enum members should be
 
 All `StrEnum` types must inherit from `ParseableEnum` (defined in `core/enums/base.py`),
 which provides a `from_str()` classmethod for case-insensitive lookup:
@@ -88,48 +187,187 @@ from {{ project_slug }}.core.enums.base import ParseableEnum
 class MyStatus(ParseableEnum):
     active = auto()
     inactive = auto()
-
 ```
+
+### Classes & Decorators
+
+- `@final` on ALL concrete leaf classes: frozen dataclasses, service implementations,
+  middleware, Pydantic models, DTOs, mappers, GraphQL types
+- `@final` NEVER on: `Protocol`, `ABC`, domain entity bases, extensible entities,
+  enums, exception bases, settings, `TypedDict`, ORM bases, generic bases
+- Import: `from typing import final`
+- `@dataclass(frozen=True, slots=True)` for all immutable data structures
+- `@dataclass(slots=True)` for mutable entities
+
+### Keyword-Only Arguments
+
+All constructors and multi-parameter functions must use `*` to enforce keyword-only
+arguments:
+
+```python
+def __init__(self, *, name: str, value: int) -> None: ...
+async def upload(self, *, key: str, data: BinaryIO) -> str: ...
+```
+
+When `*` is REQUIRED:
+
+- 3+ params (excluding self/cls) where at least one has a default
+- ANY boolean flag parameter
+- ANY optional/config param (timeout, retries, limit, offset, ttl, mode)
+- ALL factory functions (`create_*`, `build_*`, `make_*`)
+- ALL public API functions in `presentation/`
+- ALL service methods in `application/services/`
+- ALL utility functions in `utils/`
+
+When `*` is NOT required:
+
+- 0-2 params with no defaults
+- ALL params required, distinct types, unambiguous ordering
+- Dunder methods following Python protocols (`__eq__`, `__hash__`)
+- Callbacks matching external contracts (FastAPI DI)
+
+### Naming & Visibility
+
+- `_` prefix on ALL non-public module-level functions, methods, attributes
+- `_UPPER_SNAKE_CASE` on ALL internal-only constants
+- NO `__` name mangling unless explicitly justified
+- `__all__` in `__init__.py` files exporting public API
+- Files: `snake_case.py`; test files: `test_<module>.py`
+- Classes: `PascalCase`; functions/variables: `snake_case`
+
+### Docstrings
+
+- Google-style docstrings on EVERY public module, class, method, function
+- First line: imperative mood, ends with period, does NOT start with
+  'A'/'An'/'The'
+- `Args:` — each parameter with type in parentheses: `name (Type): Description.`
+- `Returns:` — format: `TypeName: Description.` (no parentheses)
+- `Raises:` — format: `ExceptionName: Description.` (no parentheses)
+- `Yields:` — format: `TypeName: Description.` (no parentheses)
+- Remove `:param:`/`@param` style — Google style only
+- ZERO emojis in docstrings, comments, logs, or documentation
+- Use single quotes ('word') in docstrings to reference identifiers — NEVER backticks
+
+### Logging
+
+- Structured logging with `structlog`; never `print()` (CLI `rich.console` excepted)
+- ALL log messages use `%s` formatting — ZERO f-strings, `.format()`, `+` concatenation
+- ALL modules: `logger = logging.getLogger(__name__)`
+- ALL exception handlers: `logger.exception()` or `logger.error(..., exc_info=True)`
+- Log messages do NOT end with periods
+- Log enum values as `.value` or `.name` explicitly
+- ZERO sensitive data in logs (password, token, secret, key, credential)
+
+### Exceptions
+
+- `raise ... from e` to preserve exception context
+- `raise ... from None` ONLY with explicit justification comment
+- Catch specific exceptions, never bare `except:`
+- ZERO silent `except Exception:` without re-raise or explicit
+  `# Explicitly silenced: <reason>`
+- Exceptions logged BEFORE re-raising
+- Error messages use `%s` formatting, NOT f-strings
+- Domain exceptions at domain/application boundaries
+- HTTP exceptions ONLY in `presentation/api/`
 
 ---
 
+## Security Conventions
 
+- Never use `eval()`, `exec()`, `__import__()`, or `pickle.loads()` on untrusted input
+- Never use raw SQL queries — always use SQLAlchemy ORM with parameterized queries
+- Never log sensitive data (passwords, tokens, PII, secrets, API keys)
+- Never hardcode secrets — use environment variables or secret backends
+- Never commit `.env` files or private keys to source control
+- Never use `assert` for runtime input validation
+- Never expose stack traces in API error responses
+- Use `secrets` module for token generation, not `random`
+- Use CORS with explicit allow-lists, not wildcard `*`
+- Use rate limiting (`slowapi`) on all API endpoints
+- Use `datetime.UTC` for timezone-aware security timestamps
+- Validate all input at system boundaries (API routes, CLI, webhooks)
+- Use HMAC for signature verification, not simple string comparison
+- Container images run as non-root users
+- Dependencies audited for known CVEs regularly
 
-- Python 3.12+ syntax (`type` statements, `X | Y` unions, `match`)
-- Full type hints on all functions, methods, and class attributes
-- Google-style docstrings on all public modules, classes, functions, methods
-- Line length: 88 characters
-- `__all__` in `__init__.py` where the package exposes a public API
-- Use `pathlib.Path` over `os.path`
-- Use `datetime.UTC` for timezone-aware datetimes
-- Use `decimal.Decimal` for monetary values
-- Use `collections.abc` over `typing` for generic types
-- Context managers for all resource management
-- Exception chaining: `raise NewError(...) from original_error`
-- Constants: plain `UPPER_SNAKE_CASE` assignment (no `Final`)
+---
 
+## Frontend Conventions
 
-- Strict mode (`strict: true`)
-- No `any` — use `unknown` or proper generics
-- Functional components with typed props
+- Strict TypeScript (`strict: true`) — no `any`, use `unknown` or proper generics
+- Functional components with typed props interfaces
 - Tailwind CSS v4 for styling (CSS-first `@theme {}`, `@layer components`)
+- Vite for build tooling with `manualChunks` vendor splitting; `lightningcss` for CSS
+- Bun as the JavaScript runtime and package manager (replaces Node.js + pnpm)
+- Biome for linting, formatting, and import organization (replaces ESLint + Prettier)
 - React: TanStack Query for server state, React Router for navigation,
   ErrorBoundary + Suspense for loading/error states
 - React Hook Form + Zod resolver for form validation
-- React Aria components for accessible UI primitives
-- Biome for linting, formatting, and import organization (replaces ESLint + Prettier)
-- Vite with SWC plugin for fast development builds, `lightningcss` for CSS
-- Bun as the JavaScript runtime and package manager (replaces Node.js + pnpm){% if use_storybook %}
+- React Aria components for accessible UI primitives{% if use_storybook %}
 - Storybook for isolated component development and visual testing{% endif %}
-
-
-- `.zsh` extension with `#!/usr/bin/env zsh`
-- `setopt ERR_EXIT PIPE_FAIL` at top
-- All variables quoted: `"${var}"`
-- ShellCheck compliant
+- Named exports only — avoid default exports
+- Colocate types with their modules
+- Use `const` assertions for literal objects
+- Destructure props in function signatures
+- Template literals over string concatenation
+- Frontend tests: Vitest with happy-dom; mirror structure in `frontend/tests/unit/`
+- Use `vi.mock()` for module-level mocks; `vi.fn()` for function mocks
+- Setup file at `frontend/tests/setup.ts` handles DOM cleanup and browser API stubs
 
 ---
 
+## Shell Conventions
+
+- `.zsh` extension always — never `.sh` or `.bash`
+- `.azcli` extension for Azure CLI command collections (valid zsh)
+- Shebang: `#!/usr/bin/env zsh`
+- Reset state at top: `emulate -L zsh`
+- Safety options: `setopt PIPE_FAIL ERR_EXIT`
+- `local` for all variables inside functions
+- All variables double-quoted: `"${var}"`
+- `zparseopts` for option parsing
+- `command -v` instead of `which` for executable detection
+- `mktemp` instead of hardcoded `/tmp/` paths
+- ShellCheck compliant
+- Each script has a main function or guard
+- Source shared helpers via `source "${0:A:h}/lib/common.zsh"` pattern
+- Use `printf` over `echo` for portability
+- `trap` for cleanup on exit
+- Heredoc for multi-line strings: `<<'EOF'`
+- Never use `sudo` without explicit justification
+- Never pipe curl/wget output directly to shell
+- Validate checksums for downloaded binaries
+- Prefer package managers over manual binary installs
+
+---
+
+## Scaffolding Conventions
+
+This project is generated from a **Copier** template. All templated files follow
+these conventions:
+
+- Templated files MUST use `.jinja` suffix: `pyproject.toml.jinja`, `README.md.jinja`
+- Conditionally included directories use Jinja2 in folder name:
+  `{% if use_devcontainer %}.devcontainer{% endif %}/`
+- Static files (no Jinja2 inside) do NOT need `.jinja` suffix
+- Spaces inside delimiters: `{{ variable }}`, `{% if condition %}`
+- Access Copier config: `{{ _copier_conf.answers_file }}`
+- Always provide sensible defaults in `copier.yml`
+- Validate required fields with `validator:`
+
+For every generated layer directory:
+
+- `__init__.py` with module-level docstring describing purpose and dependency rules
+- `__all__` exports where the package exposes a public API
+- Base class inheritance, type hints, docstrings on all scaffolded modules
+- Correct layer placement per architecture rules
+
+After modifying a template: `copier copy . /tmp/test-output` and verify no Jinja2
+syntax errors, missing variables, or broken conditionals.
+
+---
+
+## Project Structure
 
 ```text
 backend/src/{{ project_slug }}/
@@ -196,9 +434,11 @@ API testing or a dedicated contract-test suite), not inside the backend test tre
 
 ---
 
+## Naming Registry
 
 The **naming registry** (`registry/naming_registry.json`) is the single source of truth
-for shared identifiers: service names, ports, route paths, enum values, and field mappings.
+for shared identifiers: service names, ports, route paths, enum values, and field
+mappings.
 
 `generate_registry.py` reads this file and generates:
 
@@ -206,38 +446,106 @@ for shared identifiers: service names, ports, route paths, enum values, and fiel
 - **TypeScript constants** → `frontend/src/config/registry_constants.ts`
 - **Env ports** → `.env.ports`
 
+Registry workflow:
 
-- Never hand-edit generated files — edit `naming_registry.json` then run `task registry:generate`
+1. Edit `registry/naming_registry.json`
+2. Run `task registry:validate` — validate JSON structure
+3. Run `task registry:generate` — regenerate all constant files
+4. Run `task registry:check` — CI gate: fail if generated files are stale
+5. Run `task registry:test` — execute registry unit + property tests
+
+Rules:
+
+- Never hand-edit generated files — edit `naming_registry.json` then regenerate
 - The `--check` flag is a CI gate: it fails if generated files are stale
 - Co-located registry tests live in `registry/tests/` (unit + property)
 - Registry property tests also exist in `backend/tests/property/test_generate_registry.py`
 - Generated constant tests live in `backend/tests/unit/core/test_registry_constants.py`
-- Run `task registry:test` to execute registry-specific tests
 
 ---
 
+## Testing Strategy
 
+### Test Hierarchy
 
-| Layer            | Location                    | Runner   | Purpose                                       |
-| ---------------- | --------------------------- | -------- | --------------------------------------------- |
-| Unit             | `backend/tests/unit/`       | pytest   | Pure logic, no I/O, fast                      |
-| Integration      | `backend/tests/integration/`| pytest   | Real DB / cache / external services            |
-| Property         | `backend/tests/property/`   | pytest   | Hypothesis-based invariant testing             |
-| Performance      | `backend/tests/performance/`| pytest   | Benchmarks and regression tests                |
-| Registry check   | `registry/`                 | script   | Verify generated files match registry source   |
-| Registry tests   | `registry/tests/`           | pytest   | Unit + property tests for the generator        |
-| Frontend unit    | `frontend/tests/unit/`      | vitest   | Component + utility tests (happy-dom)          |{% if use_playwright %}
-| Frontend e2e     | `frontend/tests/e2e/`       | playwright | Browser-based end-to-end tests              |{% endif %}
+| Layer | Location | Runner | Purpose |
+| --- | --- | --- | --- |
+| Unit | `backend/tests/unit/` | pytest | Pure logic, no I/O, fast |
+| Integration | `backend/tests/integration/` | pytest | Real DB / cache / external services |
+| Property | `backend/tests/property/` | pytest | Hypothesis-based invariant testing |
+| Performance | `backend/tests/performance/` | pytest | Benchmarks and regression tests |
+| Registry check | `registry/` | script | Verify generated files match registry source |
+| Registry tests | `registry/tests/` | pytest | Unit + property tests for the generator |
+| Frontend unit | `frontend/tests/unit/` | vitest | Component + utility tests (happy-dom) |{% if use_playwright %}
+| Frontend e2e | `frontend/tests/e2e/` | playwright | Browser-based end-to-end tests |{% endif %}
 
+### Naming Conventions
 
-- Tests mirror source structure: `backend/tests/unit/core/`, `backend/tests/unit/application/`, etc.
-- Markers: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.slow`, `@pytest.mark.property`, `@pytest.mark.performance`
+| Element | Pattern |
+| --- | --- |
+| Test files | `test_<module_name>.py` |
+| Test classes | `TestClassName` (no `unittest.TestCase`) |
+| Test functions | `test_<action>_<scenario>_<expected_outcome>` |
+
+EVERY source module MUST have corresponding test(s).
+
+### Markers
+
+```python
+@pytest.mark.unit          # Fast, isolated, no I/O
+@pytest.mark.integration   # Real DB or external service
+@pytest.mark.property      # Hypothesis property-based
+@pytest.mark.performance   # Benchmarks
+@pytest.mark.slow          # Takes > 5 seconds
+@pytest.mark.smoke         # Critical path — must pass before deploy
+```
+
+### Test Rules
+
+- Tests mirror source structure: `backend/tests/unit/core/`,
+  `backend/tests/unit/application/`, etc.
+- ALL test functions: `-> None` return type
+- ALL tests: AAA pattern (Arrange, Act, Assert) — blank line between each section
+- ALL async tests: `pytest-asyncio` correctly configured
+- ZERO `print()` — use `capsys` or assertions
+- ZERO `time.sleep` — mock or async wait
+- Edge cases: empty inputs, `None`, boundary values, invalid types
+- Exception paths: `pytest.raises(ExcType, match=...)` with match verification
+- `*` enforcement: tests confirming positional usage raises `TypeError`
+- Coverage threshold: >= 80% on `core` + `application` layers
+  (`tox -e coverage-core`)
+
+### Fixtures & Mocks
+
+- `conftest.py`: `async_session`, `async_engine`, `test_client` — defined ONCE at root
+- `@pytest.fixture` with explicit scope (`function` default, `session` for DB engine)
+- Fixture names describe what they return: `active_user`, `expired_token`
+- Database fixtures transactional (rollback after each test)
 - Factories: `tests/factories/` using `factory_boy`
-- Property-based: `tests/property/` using `Hypothesis`
-- Coverage threshold: ≥ 80% on `core` + `application` layers
+- Mock at the boundary (interfaces), NEVER inside core
+- Prefer dependency injection over monkey-patching
+- Never mock what you don't own — wrap external libraries first
+- ZERO real DB/Redis in unit tests
+
+### Property-Based Testing
+
+- Hypothesis-based invariant tests in `tests/property/`
+- `@given(st.sampled_from(MyEnum))` for enum-typed inputs
+- Configure `max_examples` and `deadline` for CI
+- Test invariants (idempotency, round-trips, commutativity), not single examples
+
+### Anti-Patterns to Avoid
+
+- Remove tests testing framework behavior (not your code)
+- Remove tests only testing mock configuration
+- Remove tests with no assertions
+- Fix tests passing for wrong reasons (swallowed exceptions)
+- Fix order-dependent tests
+- Fix tests sharing mutable state
 
 ---
 
+## Task Runner Commands
 
 ```bash
 task dev              # Start development servers
@@ -267,82 +575,137 @@ task db:migrate       # Run Alembic migrations
 
 ---
 
+## Configuration Files Index
+
+| File | Purpose |
+| --- | --- |
+| `AGENTS.md` | Root-level agent instructions (this file) |
+| `.github/copilot-instructions.md` | Main GitHub Copilot custom instructions (`applyTo: **`) |
+| `.github/instructions/*.instructions.md` | Scoped Copilot instructions (auto-load by glob) |
+| `.github/agents/*.agent.md` | GitHub Copilot agent definitions |
+| `.github/hooks/*.json` | Copilot agent hook configurations |
+| `.github/hooks/scripts/` | Hook implementation scripts (`.sh` + `.ps1`) |
+| `.github/skills/*/SKILL.md` | Agent skill definitions |
+| `.github/prompts/*.prompt.md` | Reusable prompt templates |{% if with_gsd %}
+| `.gsd/PREFERENCES.md` | GSD-2 project preferences (YAML frontmatter + markdown body) |
+| `.gsd/mcp.json` | GSD-2 MCP server configuration |
+| `agent-instructions.md` | Quick-reference for GSD-2 (points to full docs) |{% endif %}
+| `{{ project_slug }}.code-workspace` | VS Code workspace settings, extensions, launch configs |
+| `registry/naming_registry.json` | Single source of truth for shared identifiers |
+
+---
+
 ## Multi-Agent System
 
-This project ships with a **coordinator / worker** multi-agent architecture for both
-**GitHub Copilot** (VS Code). Agents are specialized by concern, use
-scoped tool permissions, and support handoffs for human-approved stage transitions.
+This project ships with a **coordinator / worker** multi-agent architecture for
+**GitHub Copilot** (VS Code agent mode){% if with_gsd %} and **GSD-2** (CLI agent){% endif %}.
+Agents are specialized by concern, use scoped tool permissions, and support handoffs
+for human-approved stage transitions.
 
 ### Architecture Overview
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────┐
 │                         Human Developer                              │
-│           (invokes coordinator or standalone orchestrator)            │
-└────────────────────────────────┬─────────────────────────────────────┘
-                                 │
-                    ┌────────────▼────────────┐
-                    │      Coordinator        │  ← Central orchestrator
-                    │  tools: agent, read,    │    Delegates to workers
-                    │  search, edit, execute  │    Synthesizes results
-                    └────┬───┬───┬───┬───┬────┘
-                         │   │   │   │   │
-          ┌──────────────┤   │   │   │   ├──────────────┐
-          ▼              ▼   ▼   ▼   ▼   ▼              ▼
-     ┌─────────┐  ┌─────────┐  ┌──────┐  ┌──────────┐  ┌──────────┐
-     │ Planner │  │Architect│  │Impl. │  │ Reviewer │  │  Tester  │
-     │(R/O)    │  │(R/O)    │  │(R/W) │  │(R/O)     │  │(R/W)     │
-     └─────────┘  └─────────┘  └──────┘  └──────────┘  └──────────┘
-          │              │         │           │              │
-          └──────────────┴────┬────┴───────────┴──────────────┘
-                              │
-                    ┌─────────▼──────────┐
-                    │   Security Auditor │  (R/O)
-                    │   Doc Writer       │  (R/W docs only)
-                    └────────────────────┘
+│           (invokes coordinator or standalone agents)                  │
+└─────────────────────────┬────────────────────────────────────────────┘
+                          │
+             ┌────────────▼────────────┐
+             │      Coordinator        │  ← Central orchestrator
+             │  (planning, impl,       │    End-to-end workflow
+             │   review, test, docs)   │    with inlined phases
+             └────┬───────┬───────┬────┘
+                  │       │       │
+         ┌────────┤       │       ├────────┐
+         ▼        ▼       ▼       ▼        ▼
+    ┌────────┐ ┌─────┐ ┌──────┐ ┌──────┐ ┌───────────────┐
+    │  TDD   │ │Debug│ │Deep  │ │Review│ │Security Audit │
+    │(R/W)   │ │(R/W)│ │Think.│ │(R/O) │ │(R/O, internal)│
+    └────────┘ └─────┘ │(R/W) │ └──────┘ └───────────────┘
+                       └──────┘
 ```
+
+### GitHub Copilot Custom Instructions
+
+The main custom instructions file (`.github/copilot-instructions.md`) applies to ALL
+files (`applyTo: "**"`) and covers:
+
+- Agent skills references (`.github/skills/`)
+- Scoped instructions index (`.github/instructions/`)
+- PEP 20 (Zen of Python) principles
+- Clean Architecture layer rules and dependency direction
+- File naming conventions (`.py`, `.zsh`, `.azcli`, `.jinja`)
+- Python coding standards (type hints, constants, enums, `@final`, `@override`,
+  logging, exceptions, keyword-only args, docstrings, visibility, naming)
+- Frontend conventions (TypeScript, Vite, Bun, Biome, Tailwind v4)
+- Shell conventions (zsh, `.azcli` for Azure CLI)
+- Naming registry workflow
+- Testing standards (pytest, hypothesis, vitest)
+{%- if use_redis %}
+- Redis caching conventions
+{%- endif %}
+{%- if database_backend != 'none' %}
+- Database patterns (SQLAlchemy 2.0+, Alembic, indices, timestamps)
+{%- endif %}
+- Pydantic model configuration (`ConfigDict`, `Annotated`, `Field`)
+
+### Scoped Instructions
+
+File-scoped instructions auto-load for matching globs:
+
+| File | Scope | Purpose |
+| --- | --- | --- |
+| `architecture.instructions.md` | `backend/**/*.py` | Clean Architecture enforcement, dependency table, concern boundaries, DI patterns |
+| `coding-conventions.instructions.md` | `**/*.py` | SRP, enums, typing, `@final`, `@override`, logging, exceptions, keyword-only args, docstrings |
+| `frontend.instructions.md` | `frontend/**/*.ts, frontend/**/*.tsx, frontend/**/*.css` | TypeScript, React, Tailwind v4, Vite, Biome, testing patterns |
+| `security.instructions.md` | `**/*.py, **/*.ts, **/*.js, **/*.zsh` | OWASP security rules, injection prevention, secrets management |
+| `shell.instructions.md` | `**/*.zsh, **/*.azcli, scripts/**` | Zsh scripting, Azure CLI patterns, safe scripting |
+| `testing.instructions.md` | `backend/tests/**/*.py` | Test structure, markers, fixtures, property testing, anti-patterns |
+| `scaffolding.instructions.md` | `**/*.jinja` | Copier template conventions, Jinja2 patterns, validation |
 
 ### GitHub Copilot Agents
 
 Located in `.github/agents/`. Invoked via `@AgentName` in Copilot Chat (agent mode).
 
 | Agent | File | Invocable | Tools | Purpose |
-|-------|------|-----------|-------|---------|
-| **Coordinator** | `coordinator.agent.md` | Yes | agent, read, search, edit, execute, web | Central orchestrator; routes tasks to specialized agents with inlined phase guidance (planning, implementation, review, testing, documentation) |
-| **TDD** | `tdd.agent.md` | Yes | agent, read, search, edit, execute | Red-Green-Refactor TDD orchestrator with inlined red/green/refactor phase guidance |
-| **Thorough Reviewer** | `thorough-reviewer.agent.md` | Yes | agent, read, search | Multi-perspective parallel code review |
-| **Deep Thinking** | `deep-thinking.agent.md` | Yes | read, search, execute | Complex problem-solving with extended reasoning |
-| **Debug** | `debug.agent.md` | Yes | read, search, edit, execute | Systematic 4-phase debugging |
-| **Security Auditor** | `security-auditor.agent.md` | No | read, search | OWASP/CWE vulnerability scanning |
+| --- | --- | --- | --- | --- |
+| **Coordinator** | `coordinator.agent.md` | Yes | agent, read, search, edit, execute, web, context7 | Central orchestrator with inlined phase guidance (planning, implementation, review, testing, documentation); delegates to Security Auditor via handoff |
+| **TDD** | `tdd.agent.md` | Yes | read, search, edit, execute, context7 | Red-Green-Refactor TDD orchestrator — fully self-contained, no subagent delegation |
+| **Thorough Reviewer** | `thorough-reviewer.agent.md` | Yes | agent, read, search | Multi-perspective parallel code review (correctness, quality, security, architecture, performance) |
+| **Deep Thinking** | `deep-thinking.agent.md` | Yes | read, search, edit, execute, web, context7 | Autonomous complex problem-solving with extended reasoning; persists until fully resolved |
+| **Debug** | `debug.agent.md` | Yes | read, search, edit, execute, web, context7 | Systematic 4-phase debugging (gather context → reproduce → root cause → fix + verify) |
+| **Security Auditor** | `security-auditor.agent.md` | No | read, search, web | OWASP/CWE vulnerability scanning — read-only, never modifies files; produces structured audit report |
 
-#### Copilot Handoff Workflow
+### Copilot Handoff Workflow
 
-The coordinator includes inlined phase guidance (formerly separate planner, architect,
-implementer, reviewer, tester, doc-writer agents) and supports **handoffs** — structured
+The coordinator includes inlined phase guidance and supports **handoffs** — structured
 transition points where the human can approve, redirect, or abort:
 
-1. **Discovery** → handoff → **Planning** (coordinator: planning phase)
-2. **Planning** → handoff → **Implementation** (coordinator: implementation phase)
-3. **Implementation** → handoff → **Review** (coordinator: review phase + security auditor)
-4. **Review** → handoff → **Testing** (coordinator: testing phase)
-5. **Testing** → handoff → **Documentation** (coordinator: documentation phase)
+1. **Discovery** → handoff → **Planning** (architecture validation, task decomposition)
+2. **Planning** → handoff → **Implementation** (coding standards, layer compliance)
+3. **Implementation** → handoff → **Review** (quality assurance + security auditor)
+4. **Review** → handoff → **Testing** (unit + integration + property tests)
+5. **Testing** → handoff → **Documentation** (docstrings, CHANGELOG, docs/)
 
-#### Usage Examples (Copilot)
+### Usage Examples
 
 ```
 @Coordinator Implement a new user preferences feature with API endpoint and frontend form
 @TDD Add a discount calculation service using test-driven development
 @Thorough-Reviewer Review the changes in the current branch
 @Debug Investigate the intermittent database connection timeout
+@Deep-Thinking Design the caching strategy for the recommendation engine
 ```
 ### Agent Design Principles
 
-1. **Least privilege**: Workers get only the tools they need (read-only agents cannot edit)
+1. **Least privilege**: Workers get only the tools they need (read-only agents cannot
+   edit)
 2. **Single responsibility**: Each agent has one clear concern
 3. **Structured output**: Agents produce consistent, parseable formats
 4. **Handoff gates**: Human stays in the loop at critical transitions
-5. **Model selection**: Use the best available model from your provider; reasoning-heavy tasks benefit from stronger models
-6. **Temperature tuning**: Read-only analysis at 0.1; code generation at 0.2–0.3
+5. **Model selection**: Use the best available model from your provider;
+   reasoning-heavy tasks benefit from stronger models
+6. **Temperature tuning**: Read-only analysis at 0.1; code generation at 0.2-0.3
 7. **Convention enforcement**: All agents reference this file and project conventions
 
 ---
@@ -360,7 +723,7 @@ VS Code supports eight hook lifecycle events: `SessionStart`, `UserPromptSubmit`
 Located in `.github/hooks/`. VS Code loads all `*.json` files from this directory.
 
 | Hook | File | Events | Mode | Purpose |
-|------|------|--------|------|---------|
+| --- | --- | --- | --- | --- |
 | **Tool Guardian** | `tool-guardian.json` | `PreToolUse` | block | Blocks destructive ops (rm -rf, force push, DROP TABLE, chmod 777, etc.) |
 | **Session Logger** | `session-logger.json` | All 8 events | log | Complete audit trail of session activity; PreToolUse/PostToolUse at DEBUG level |
 | **Secrets Scanner** | `secrets-scanner.json` | `Stop` | warn | Scans modified files for leaked credentials before commit |
@@ -391,6 +754,7 @@ Each hook is configured via environment variables in its JSON file:
 ### Hook Logs
 
 All hook logs are written to `logs/copilot/` in JSON Lines format:
+
 - `logs/copilot/tool-guardian/guard.log`
 - `logs/copilot/sessions/session.log`
 - `logs/copilot/sessions/prompts.log`
@@ -401,6 +765,7 @@ All hook logs are written to `logs/copilot/` in JSON Lines format:
 ### Disabling Hooks
 
 Set the skip environment variable for any hook:
+
 - `SKIP_TOOL_GUARD=true`
 - `SKIP_LOGGING=true`
 - `SKIP_SECRETS_SCAN=true`
@@ -414,25 +779,31 @@ Or remove the hook's JSON file from `.github/hooks/`.
 
 ## MCP Servers
 
-MCP (Model Context Protocol) servers provide tools that agents can invoke. Configured
-in `.vscode/mcp.json`.
+MCP (Model Context Protocol) servers provide tools that agents can invoke.
 
-| Server | Type | Purpose |
-|--------|------|---------|
-| **Context7** | stdio (bunx) | Up-to-date library/framework documentation |
-| **GitHub** | http | GitHub issues, pull requests, repos, and code search |{% if use_playwright %}
-| **Playwright** | stdio (bunx) | Browser automation for E2E web testing |{% endif %}{% if cloud_provider == 'azure' %}
-| **Azure** | http | Azure resource management, deployments, monitoring |{% endif %}
-| **Microsoft Docs** | http | Official Microsoft and Azure documentation |
+**GitHub Copilot**: MCP tools are referenced in agent `.agent.md` tool lists
+(e.g., `context7/get-library-docs`, `context7/resolve-library-id`). Server extensions
+are installed via workspace recommendations.
+{% if with_gsd %}
+**GSD-2**: MCP servers are configured in `.gsd/mcp.json`.
+{% endif %}
+| Server | Type | Source | Purpose |
+| --- | --- | --- | --- |
+| **Context7** | stdio (bunx) | `@upstash/context7-mcp` | Up-to-date library/framework documentation |
+| **GitHub** | http | Copilot built-in | GitHub issues, pull requests, repos, and code search |{% if use_playwright %}
+| **Playwright** | stdio (bunx) | `@microsoft/mcp-server-playwright` | Browser automation for E2E web testing |{% endif %}{% if cloud_provider == 'azure' %}
+| **Azure** | http | Copilot built-in | Azure resource management, deployments, monitoring |{% endif %}
 
 ### Usage
 
 Agents with `context7/*` tools can resolve library IDs and fetch docs:
+
 ```
-@Implementer Use context7 to look up the latest FastAPI dependency injection patterns
+@Coordinator Use context7 to look up the latest FastAPI dependency injection patterns
 ```
 
 The GitHub MCP server provides repository context:
+
 ```
 @Coordinator List open issues labelled "bug" in this repo
 ```
@@ -443,14 +814,18 @@ The GitHub MCP server provides repository context:
 
 Agent skills provide domain knowledge that agents reference automatically. Each skill
 is a directory under `.github/skills/` containing a `SKILL.md` file following the
-[Agent Skills standard](https://agentskills.io/). Skills can also be invoked as slash commands.
+[Agent Skills standard](https://agentskills.io/). Skills can also be invoked as slash
+commands.
 
-| Skill | Directory | Scope |
-|-------|-----------|-------|
-| **Clean Architecture** | `clean-architecture/` | Layer boundaries, dependency rules, pattern conventions |
-| **Python Conventions** | `python-conventions/` | Naming, typing, Pydantic, async patterns |
-| **Testing Conventions** | `testing-conventions/` | Pytest fixtures, factories, assertions, coverage |
-| **Naming Registry** | `naming-registry/` | Canonical names for modules, classes, variables |
+| Skill | Directory | Scope | Key Rules |
+| --- | --- | --- | --- |
+| **Clean Architecture** | `clean-architecture/` | Layer boundaries, dependency rules | Dependency direction, protocol placement, DI wiring |
+| **Python Conventions** | `python-conventions/` | Naming, typing, async patterns | Type hints, structured logging, keyword-only args |
+| **Testing Conventions** | `testing-conventions/` | Pytest structure, coverage | Markers, factories, fixtures, >= 80% coverage |
+| **Naming Registry** | `naming-registry/` | Registry-first constants | Edit JSON → validate → generate → check → test |
+
+The `clean-architecture` skill is **MANDATORY** for all backend Python work — agents
+MUST apply it regardless of task scope.
 
 ---
 
@@ -460,20 +835,20 @@ Reusable prompt templates for common workflows. Located in `.github/prompts/`.
 Invoke via `/` slash command in chat, or Command Palette → **Chat: Run Prompt File**.
 
 | Prompt | File | Purpose |
-|--------|------|---------|
-| **Conventional Commit** | `conventional-commit.prompt.md` | Generate commit messages following Conventional Commits |
+| --- | --- | --- |
+| **Conventional Commit** | `conventional-commit.prompt.md` | Generate commit messages following Conventional Commits spec |
 
 ---
 
 ## Agent Plugins
 
 Plugins are prepackaged bundles of agents, skills, hooks, and MCP servers installed
-from marketplaces. Configured in `.vscode/settings.json`.
+from marketplaces. Configured in the workspace settings file.
 
 ### Enabled Plugins
 
 | Plugin | Source | Purpose |
-|--------|--------|---------|
+| --- | --- | --- |
 | **awesome-copilot** | awesome-copilot | Meta prompts for discovering agents, skills, instructions |
 | **context-engineering** | awesome-copilot | Better context management and planning |
 | **doublecheck** | awesome-copilot | Verification and validation of agent outputs |
@@ -495,8 +870,8 @@ from marketplaces. Configured in `.vscode/settings.json`.
 
 ### Superpowers Plugin
 
-[Superpowers](https://github.com/obra/superpowers) (124k★) provides a complete
-software development methodology with composable skills:
+[Superpowers](https://github.com/obra/superpowers) provides a complete software
+development methodology with composable skills:
 
 - **brainstorming** — Socratic design refinement before coding
 - **writing-plans** — Detailed implementation plans with verification steps
@@ -506,7 +881,7 @@ software development methodology with composable skills:
 - **using-git-worktrees** — Parallel development branches
 
 Skills trigger automatically based on context. The marketplace is configured in
-`.vscode/settings.json` → `chat.plugins.marketplaces`.
+the workspace settings → `chat.plugins.marketplaces`.
 {% if with_gsd %}
 
 ---
@@ -514,20 +889,34 @@ Skills trigger automatically based on context. The marketplace is configured in
 ## GSD-2
 
 [GSD-2](https://github.com/gsd-build/GSD-2) is a TypeScript CLI coding agent built
-on Pi SDK. It uses a state machine driven by files in `.gsd/` for
-auto-mode sessions, context pre-loading, git isolation, and crash recovery.
+on Pi SDK. It uses a state machine driven by files in `.gsd/` for auto-mode sessions,
+context pre-loading, git isolation, and crash recovery.
 
-### Configuration
+### Configuration Files
 
 | File | Purpose |
-|------|---------|
-| `.gsd/preferences.md` | Project conventions, verification commands, model preferences |
-| `.gsd/mcp.json` | MCP server configuration for GSD sessions |
-| `agent-instructions.md` | Root-level instructions picked up by GSD |
+| --- | --- |
+| `.gsd/PREFERENCES.md` | Project conventions, verification commands, model preferences (YAML frontmatter + markdown body) |
+| `.gsd/mcp.json` | GSD-2 MCP server configuration (Context7, GitHub{% if use_playwright %}, Playwright{% endif %}{% if cloud_provider == 'azure' %}, Azure{% endif %}) |
+| `AGENTS.md` | Root-level agent instructions — this file (replaces deprecated `agent-instructions.md`) |
+
+### PREFERENCES.md Structure
+
+The `.gsd/PREFERENCES.md` file has two parts:
+
+1. **YAML frontmatter** (between `---` markers): Machine-readable configuration
+   including `custom_instructions` (list of rules), `verification_commands`,
+   `always_use_skills`, `skill_discovery`, `verification_auto_fix`, and
+   `verification_max_retries`.
+2. **Markdown body**: Human-readable project context covering architecture,
+   conventions, model preferences, behavior expectations, and agent integration notes.
+
+GSD project-level PREFERENCES.md inherits from the global `~/.gsd/PREFERENCES.md`
+when present. The project file should stay lean and add only project-specific overrides.
 
 ### Requirements
 
-- Node.js ≥ 22.0.0 or Bun ≥ 1.0
+- Node.js >= 22.0.0 or Bun >= 1.0
 - Install: `bun install -g gsd-pi@latest` (or `npm install -g gsd-pi@latest`)
 
 ### Usage
@@ -543,4 +932,18 @@ gsd "fix the login bug" # Direct task
 GSD includes three built-in agents: **Scout** (reconnaissance), **Researcher**
 (deep analysis), and **Worker** (implementation). These complement the GitHub Copilot
 agents in `.github/agents/`.
+
+### Convention Alignment
+
+GSD and Copilot agents share the same conventions:
+
+- **Skills** — `.github/skills/` (clean-architecture, python-conventions,
+  testing-conventions, naming-registry)
+- **Instructions** — `.github/instructions/` (architecture, coding, frontend,
+  security, shell, testing, scaffolding)
+- **Custom instructions** — GSD's `custom_instructions` in PREFERENCES.md mirror
+  the rules from Copilot's `.github/copilot-instructions.md` and scoped instructions
+
+Both agent systems enforce the same Clean Architecture rules, coding conventions,
+and quality gates.
 {% endif %}

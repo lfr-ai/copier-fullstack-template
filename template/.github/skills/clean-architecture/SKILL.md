@@ -12,7 +12,7 @@ description: >
 
 Keep all backend changes compliant with Clean Architecture rules and the
 Dependency Rule. Application services access persistence via UnitOfWork repository properties
-(e.g. `uow.users`), never by importing concrete infrastructure classes.
+(e.g. 'uow.users'), never by importing concrete infrastructure classes.
 
 ## Use This Skill When
 
@@ -22,9 +22,9 @@ Dependency Rule. Application services access persistence via UnitOfWork reposito
 
 ## Rules
 
-- Dependency direction must flow inward: `presentation/infrastructure -> application -> core`
-- `core/` has zero framework imports
-- `application/` imports from `core/` only (domain entities, protocols, exceptions)
+- Dependency direction must flow inward: 'presentation/infrastructure -> application -> core'
+- 'core/' has zero framework imports
+- 'application/' imports from 'core/' only (domain entities, protocols, exceptions)
 - Business logic stays out of infrastructure and presentation layers
 - No circular imports
 - Presentation and Infrastructure never depend on each other

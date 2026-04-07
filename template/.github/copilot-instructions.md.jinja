@@ -7,30 +7,33 @@ applyTo: "**"
 
 This document defines coding standards, conventions, and best practices for this codebase
 
-## Agent Skills (`.github/skills/`)
+## Agent Skills ('.github/skills/')
 
-Use the agent skills in `.github/skills/` as task-specific playbooks. Each skill is
-a directory containing a `SKILL.md` file:
+Use the agent skills in '.github/skills/' as task-specific playbooks. Each skill is
+a directory containing a 'SKILL.md' file:
 
-- `clean-architecture/` for Clean Architecture boundary and Dependency Rule checks
-- `python-conventions/` for Python code quality and typing standards
-- `testing-conventions/` for test strategy, markers, and coverage gates
-- `naming-registry/` for registry-first constant/code generation workflow
+- 'clean-architecture/' for Clean Architecture boundary and Dependency Rule checks
+- 'python-conventions/' for Python code quality and typing standards
+- 'testing-conventions/' for test strategy, markers, and coverage gates
+- 'naming-registry/' for registry-first constant/code generation workflow
 
 When a task clearly matches one of those domains, apply that skill guidance first,
 then apply the general conventions in this file.
 
-## Scoped Instructions (`.github/instructions/`)
+The 'clean-architecture/' skill is MANDATORY for all backend Python work — always
+apply it regardless of task scope.
+
+## Scoped Instructions ('.github/instructions/')
 
 File-scoped instructions auto-load for matching globs:
 
-- `architecture.instructions.md` — Clean Architecture for `backend/**/*.py`
-- `coding-conventions.instructions.md` — Python conventions for `**/*.py`
-- `frontend.instructions.md` — TypeScript, component, and Vite patterns for `frontend/**`
-- `security.instructions.md` — security rules for all source code
-- `shell.instructions.md` — zsh scripting and Azure CLI patterns for `**/*.zsh`, `scripts/**`
-- `testing.instructions.md` — test structure and markers for `backend/tests/**/*.py`
-- `scaffolding.instructions.md` — Copier template conventions for `**/*.jinja`
+- 'architecture.instructions.md' — Clean Architecture for 'backend/**/*.py'
+- 'coding-conventions.instructions.md' — Python conventions for '**/*.py'
+- 'frontend.instructions.md' — TypeScript, component, and Vite patterns for 'frontend/**'
+- 'security.instructions.md' — security rules for all source code
+- 'shell.instructions.md' — zsh scripting and Azure CLI patterns for '**/*.zsh', 'scripts/**'
+- 'testing.instructions.md' — test structure and markers for 'backend/tests/**/*.py'
+- 'scaffolding.instructions.md' — Copier template conventions for '**/*.jinja'
 
 Apply principles from PEP 20 (The Zen of Python) throughout:
 
@@ -69,18 +72,18 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 
 
-- Python modules should use snake_case: `my_module.py`
-- Test files should be prefixed with `test_`: `test_my_module.py`
+- Python modules should use snake_case: 'my_module.py'
+- Test files should be prefixed with 'test_': 'test_my_module.py'
 
 
-- Shell scripts MUST use `.zsh` extension: `setup-ai.zsh`
-- Azure CLI scripts MUST use `.azcli` extension: `deploy.azcli`
-- Never use `.sh` extension in this repository
+- Shell scripts MUST use '.zsh' extension: 'setup-ai.zsh'
+- Azure CLI scripts MUST use '.azcli' extension: 'deploy.azcli'
+- Never use '.sh' extension in this repository
 
 
-- Jinja2 HTML templates MUST use `.html.j2` extension if used
-- TypeScript files use `.ts` extension: `app.ts`
-- CSS files use `.css` extension: `styles.css`
+- Jinja2 HTML templates MUST use '.html.j2' extension if used
+- TypeScript files use '.ts' extension: 'app.ts'
+- CSS files use '.css' extension: 'styles.css'
 
 ---
 
@@ -94,7 +97,9 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 
 - Follow a logical structure in code organization
-- Make modular code that promotes reusability, separation of concerns, and single responsibility
+- **Single Responsibility Principle (SRP):** every module, class, and function has one
+  reason to change — split when responsibilities diverge
+- Make modular code that promotes reusability and separation of concerns
 - Break down complex functions into smaller, more manageable helper functions
 - Ensure functions have descriptive names and include type hints
 - Provide docstrings following Google conventions
@@ -128,24 +133,24 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 
 
-- Use `_` to indicate non-public API in modules, classes, and functions
-- Module-level (global) names: prefix with `_` if intended for internal use only and not part of the public interface exported by the package
-- Class instance variables: prefix with `_` for internal attributes not meant for external access
-- Class methods: prefix with `_` for helper or internal methods not intended for external callers
-- Functions in modules: prefix with `_` when they are internal helpers and not part of the module's public API
-- Class variables: prefix with `_` for internal configuration/state not intended for external access
+- Use '_' prefix to indicate non-public API in modules, classes, and functions
+- Module-level (global) names: prefix with '_' if intended for internal use only and not part of the public interface exported by the package
+- Class instance variables: prefix with '_' for internal attributes not meant for external access
+- Class methods: prefix with '_' for helper or internal methods not intended for external callers
+- Functions in modules: prefix with '_' when they are internal helpers and not part of the module's public API
+- Class variables: prefix with '_' for internal configuration/state not intended for external access
 
 
-- Avoid `__name` unless you explicitly need Python's name mangling within inheritance; prefer single underscore `_name` for non-public
+- Avoid '__name' unless you explicitly need Python's name mangling within inheritance; prefer single underscore '_name' for non-public
 
 
 - Prefer public, UPPER_SNAKE_CASE for constants that are part of the public API
-- Use `_UPPER_SNAKE_CASE` for constants that are internal-only to a module or class
-- Do NOT use `Final` or `Final[type]` annotations on any constants — plain `UPPER_SNAKE_CASE` assignment is sufficient
-- The `UPPER_SNAKE_CASE` naming convention already signals immutability intent
+- Use '_UPPER_SNAKE_CASE' for constants that are internal-only to a module or class
+- Do NOT use 'Final' or 'Final[type]' annotations on any constants — plain UPPER_SNAKE_CASE assignment is sufficient
+- The UPPER_SNAKE_CASE naming convention already signals immutability intent
 
 
-- Clearly separate public vs. internal by imports in `__init__.py`; avoid `from module import *` and explicitly export public names via `__all__` when useful
+- Clearly separate public vs. internal by imports in '__init__.py'; avoid 'from module import *' and explicitly export public names via '__all__' when useful
 - Keep docstrings and documentation aligned: do not document underscored members as public features
 
 ---
@@ -161,36 +166,36 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 - Taskfile for task running
 
 
-- Prefer modern builtins (`list[int]`, `dict[str, object]`) over `typing` aliases
-- Do NOT import or use the `typing` module for basic built-in primitives or generic types unless you need advanced typing features not available as builtins (e.g., `TypedDict`, `Protocol`, `TypeVar`)
-- Never use `Any` as a type hint; use `object` as the fallback
+- Prefer modern builtins ('list[int]', 'dict[str, object]') over 'typing' aliases
+- Do NOT import or use the 'typing' module for basic built-in primitives or generic types unless you need advanced typing features not available as builtins (e.g., 'TypedDict', 'Protocol', 'TypeVar')
+- Never use 'Any' as a type hint; use 'object' as the fallback
 - Ensure functions have descriptive names and include precise type hints
 - When types become complex, prefer small type aliases, dataclasses, or pydantic models to keep signatures readable
 
 
 
-- Use `Annotated` from `typing` to add metadata to type hints
-- Particularly useful with Pydantic `Field` for validation constraints
+- Use 'Annotated' from 'typing' to add metadata to type hints
+- Particularly useful with Pydantic 'Field' for validation constraints
 
 
-- Define type aliases using `TypeAlias` from `typing` for complex, reusable types
-- Always annotate the alias variable with `TypeAlias` for clarity
+- Define type aliases using 'TypeAlias' from 'typing' for complex, reusable types
+- Always annotate the alias variable with 'TypeAlias' for clarity
 
 
-- Use `Literal` from `typing` for parameters that accept only specific values
+- Use 'Literal' from 'typing' for parameters that accept only specific values
 
 
-- Do NOT use `Final` or `Final[type]` from `typing` on any constants
-- Plain `UPPER_SNAKE_CASE` assignment is sufficient to signal immutability
-- `_UPPER_SNAKE_CASE` prefix signals internal-only scope; no `Final` needed
+- Do NOT use 'Final' or 'Final[type]' from 'typing' on any constants
+- Plain UPPER_SNAKE_CASE assignment is sufficient to signal immutability
+- '_UPPER_SNAKE_CASE' prefix signals internal-only scope; no 'Final' needed
 
 
-- Use `@final` from `typing` to prevent inheritance or method overriding
+- Use '@final' from 'typing' to prevent inheritance or method overriding
 - Apply to classes that should not be subclassed
 - Apply to methods that should not be overridden in subclasses
 
 
-- Use `NoReturn` from `typing` for functions that always raise exceptions or exit
+- Use 'NoReturn' from 'typing' for functions that always raise exceptions or exit
 
 
 - Always implement sensible rate limiting for API routes
@@ -198,30 +203,30 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 
 - Favor efficient choices by default: pick the data structure that matches the access pattern:
-  - `list`: ordered, indexable, mutable -- for indexing and appends
-  - `tuple`: immutable, lower overhead -- for fixed-size collections
-  - `set` / `frozenset`: fast membership and deduplication
-  - `dict`: optimized mapping for key-value lookups
-  - `collections.deque`: pops/pushes at both ends
+  - 'list': ordered, indexable, mutable -- for indexing and appends
+  - 'tuple': immutable, lower overhead -- for fixed-size collections
+  - 'set' / 'frozenset': fast membership and deduplication
+  - 'dict': optimized mapping for key-value lookups
+  - 'collections.deque': pops/pushes at both ends
 
 
-- Use `@dataclass` from `dataclasses` module for simple data structures
-- Always use `frozen=True` for immutable data classes to ensure thread safety and hashability
-- Always use `slots=True` to reduce memory overhead and improve attribute access speed
+- Use '@dataclass' from 'dataclasses' module for simple data structures
+- Always use 'frozen=True' for immutable data classes to ensure thread safety and hashability
+- Always use 'slots=True' to reduce memory overhead and improve attribute access speed
 - Prefer dataclasses over plain classes for data containers without complex behavior
 
 
-- Prefer `functools.lru_cache(maxsize=...)` for pure, deterministic functions called frequently with the same inputs
+- Prefer 'functools.lru_cache(maxsize=...)' for pure, deterministic functions called frequently with the same inputs
 - Do not cache functions that accept mutable arguments or depend on external mutable state
-- Always specify `maxsize` explicitly (never rely on defaults)
+- Always specify 'maxsize' explicitly (never rely on defaults)
 
 
-- Use `@cached_property` from `functools` for expensive computations that should be calculated once per instance
+- Use '@cached_property' from 'functools' for expensive computations that should be calculated once per instance
 - Cached properties are evaluated once on first access and then stored on the instance
 - Use for idempotent operations that may be expensive or involve I/O
 
 
-- I/O-bound tasks: prefer threading or async I/O (`threading`, `asyncio`)
+- I/O-bound tasks: prefer threading or async I/O ('threading', 'asyncio')
 - CPU-bound tasks: prefer multiprocessing or process pools
 - Minimize shared mutable state between threads/processes
 - Prefer vectorized operations before introducing parallelism
@@ -229,17 +234,17 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 - Always prefer structured logging over print statements
 - Use structured logging with structlog
-- Use `%s` string formatting for log messages, never f-strings or `.format()`
-- Use `exc_info=True` parameter when logging exceptions to include stack traces
-- For exception handlers, prefer `logger.exception()` which automatically includes `exc_info=True`
+- Use '%s' string formatting for log messages, never f-strings or '.format()'
+- Use 'exc_info=True' parameter when logging exceptions to include stack traces
+- For exception handlers, prefer 'logger.exception()' which automatically includes 'exc_info=True'
 - Never log sensitive data (passwords, tokens, PII)
 
 
-- Use `@tenacity.retry()` decorator for operations that may fail transiently
-- Define retry policies in a centralized location (e.g., `utils/retry_policies.py`)
+- Use '@tenacity.retry()' decorator for operations that may fail transiently
+- Define retry policies in a centralized location (e.g., 'utils/retry_policies.py')
 - Use exponential backoff with jitter for retry delays
 - Always set a maximum number of attempts to prevent infinite loops
-- Set `reraise=True` to propagate exceptions after exhausting retries
+- Set 'reraise=True' to propagate exceptions after exhausting retries
 - Only retry on transient errors (network issues, timeouts, rate limits)
 - Never retry on permanent errors (validation errors, authentication failures)
 
@@ -248,7 +253,7 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 
 - Never use raw SQL queries; always use ORM
-- Use SQLAlchemy 2.0+ syntax with `Mapped` and `mapped_column`
+- Use SQLAlchemy 2.0+ syntax with 'Mapped' and 'mapped_column'
 
 
 - Always add indices to columns used in:
@@ -257,80 +262,80 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
   - JOIN conditions
   - ORDER BY clauses
   - Frequently filtered fields (status, timestamps, user IDs)
-- Use `index=True` parameter in `mapped_column()` for single-column indices
-- For composite indices, use the `__table_args__` class attribute
+- Use 'index=True' parameter in 'mapped_column()' for single-column indices
+- For composite indices, use the '__table_args__' class attribute
 - Avoid over-indexing; each index adds overhead to write operations
 {% if database_backend == "postgresql" %}
-- Use PostgreSQL native enums with `sqlalchemy.dialects.postgresql.ENUM`
+- Use PostgreSQL native enums with 'sqlalchemy.dialects.postgresql.ENUM'
 {% elif database_backend == "sqlite" %}
-- Use `String` or `Enum` types (SQLite has no native enum support)
-- Always use Alembic batch mode (`render_as_batch=True`) — ALTER TABLE is limited in SQLite
+- Use 'String' or 'Enum' types (SQLite has no native enum support)
+- Always use Alembic batch mode ('render_as_batch=True') — ALTER TABLE is limited in SQLite
 - Avoid advanced PostgreSQL-specific types; prefer portable SQLAlchemy types
 {% endif %}
 
 
-- Use `server_default=func.now()` for creation timestamps
-- Use `onupdate=func.now()` for modification timestamps
+- Use 'server_default=func.now()' for creation timestamps
+- Use 'onupdate=func.now()' for modification timestamps
 - Always index timestamp fields used for querying
 
 ---
 
 
 
-- Always use `ConfigDict` to configure Pydantic models
-- Enable `str_strip_whitespace=True` to automatically strip whitespace
-- Enable `validate_assignment=True` to validate on attribute assignment
+- Always use 'ConfigDict' to configure Pydantic models
+- Enable 'str_strip_whitespace=True' to automatically strip whitespace
+- Enable 'validate_assignment=True' to validate on attribute assignment
 
 
-- Always use `Annotated` with `Field` for field metadata
-- Every field MUST have a `description` parameter
-- Every field MUST have `examples` parameter demonstrating valid values
-- Use `validation_alias` for accepting multiple input field names
-- Use `serialization_alias` for consistent output field names
+- Always use 'Annotated' with 'Field' for field metadata
+- Every field MUST have a 'description' parameter
+- Every field MUST have 'examples' parameter demonstrating valid values
+- Use 'validation_alias' for accepting multiple input field names
+- Use 'serialization_alias' for consistent output field names
 
 
-- Use appropriate validators in `Field`:
-  - `gt`, `ge`, `lt`, `le` for numeric bounds
-  - `min_length`, `max_length` for string/collection length
-  - `pattern` for regex validation
-
----
-
-
-
-- Use `@unique` decorator from `enum` module to prevent duplicate values
-- Use `StrEnum` for string-valued enums
-- Use `IntEnum` for integer-valued enums
-- Use `auto()` for automatic value assignment when exact values don't matter
-
-
-- Always use enum members, not raw values: `Environment.PROD` not `"prod"`
-- Access enum name with `.name` property and value with `.value` property
+- Use appropriate validators in 'Field':
+  - 'gt', 'ge', 'lt', 'le' for numeric bounds
+  - 'min_length', 'max_length' for string/collection length
+  - 'pattern' for regex validation
 
 ---
 
 
 
-- Always use `raise ... from e` to preserve exception context
-- Never use bare `raise` without proper exception chaining
-- Use `raise ... from None` only when you explicitly want to suppress the original exception
+- Use '@unique' decorator from 'enum' module to prevent duplicate values
+- Use 'StrEnum' for string-valued enums
+- Use 'IntEnum' for integer-valued enums
+- Use 'auto()' for automatic value assignment when exact values don't matter
 
 
-- Catch specific exceptions, not bare `except:`
+- Always use enum members, not raw values: 'Environment.PROD' not '"prod"'
+- Access enum name with '.name' property and value with '.value' property
+
+---
+
+
+
+- Always use 'raise ... from e' to preserve exception context
+- Never use bare 'raise' without proper exception chaining
+- Use 'raise ... from None' only when you explicitly want to suppress the original exception
+
+
+- Catch specific exceptions, not bare 'except:'
 - Log exceptions before re-raising or wrapping
-- Include relevant context in error messages using `%s` formatting
+- Include relevant context in error messages using '%s' formatting
 
 ---
 
 
 
-- Use `*` in function signatures to enforce keyword-only arguments
+- Use '*' in function signatures to enforce keyword-only arguments
 - Improves readability and prevents positional argument mistakes
 - Use for functions with multiple optional parameters or boolean flags
 
 
 - Positional arguments first (required parameters)
-- Then `*` to separate keyword-only arguments
+- Then '*' to separate keyword-only arguments
 - Then keyword-only arguments (optional parameters)
 - Follow conventional ordering: required, optional, flags, config
 
@@ -343,7 +348,7 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
   - Error messages (unless multiline)
 - DO use proper punctuation in:
   - Docstrings (complete sentences with periods)
-  - Multi-line descriptions in Pydantic `Field(description=...)`
+  - Multi-line descriptions in Pydantic 'Field(description=...)'
   - Documentation files (markdown, README)
   - User-facing messages
 
@@ -351,21 +356,21 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 {% if use_redis %}
 
 
-- Use the `redis` library for Redis operations
+- Use the 'redis' library for Redis operations
 - Create connection pools for efficient connection management
 - Always set appropriate timeouts
 - Set appropriate TTL (time-to-live) for all cached data
-- Use structured keys with prefixes: `app:resource:id`
+- Use structured keys with prefixes: 'app:resource:id'
 
 ---
 {% endif %}
 
 
 
-- Use `pytest` for unit and integration tests
-- Use `hypothesis` for property-based testing
-- Use `tox` for testing across multiple Python versions
-- Store tests in `backend/tests/` directory with structure mirroring `backend/src/`
+- Use 'pytest' for unit and integration tests
+- Use 'hypothesis' for property-based testing
+- Use 'tox' for testing across multiple Python versions
+- Store tests in 'backend/tests/' directory with structure mirroring 'backend/src/'
 
 
 - Always include test cases for critical paths of the application
@@ -381,18 +386,18 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 - Use Biome for linting, formatting, and import organization
 
 
-- Use `bun` for package management and JavaScript runtime
-- Install packages with: `bun install`
-- Add dependencies with: `bun add <package>`
+- Use 'bun' for package management and JavaScript runtime
+- Install packages with: 'bun install'
+- Add dependencies with: 'bun add <package>'
 
 ---
 
 
-- Maintain all naming constants in `registry/naming_registry.json`
-- Generate Python + TypeScript constants with `registry/generate_registry.py`
+- Maintain all naming constants in 'registry/naming_registry.json'
+- Generate Python + TypeScript constants with 'registry/generate_registry.py'
 - Never hardcode field/column names; always use registry constants
-- Update `naming_registry.json` for any new fields
-- Run `task registry:generate` after registry changes
+- Update 'naming_registry.json' for any new fields
+- Run 'task registry:generate' after registry changes
 
 ---
 
@@ -414,13 +419,13 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 
 - All shell scripts in this repository MUST be written for zsh and follow idiomatic zsh practices
-- Use the shebang: `#!/usr/bin/env zsh`
-- Reset to a known zsh state at the top of scripts: `emulate -L zsh`
-- Always set `setopt PIPE_FAIL` and `setopt ERR_EXIT` for safer scripting
-- Write functions that do not depend on the caller's environment using `emulate -L zsh`
-- All variables declared inside a function should use `local`
-- Use `zparseopts` for option parsing
+- Use the shebang: '#!/usr/bin/env zsh'
+- Reset to a known zsh state at the top of scripts: 'emulate -L zsh'
+- Always set 'setopt PIPE_FAIL' and 'setopt ERR_EXIT' for safer scripting
+- Write functions that do not depend on the caller's environment using 'emulate -L zsh'
+- All variables declared inside a function should use 'local'
+- Use 'zparseopts' for option parsing
 
 
-- Azure CLI scripts that are primarily collections of `az` commands should use the `.azcli` extension
-- `.azcli` files should also be valid zsh scripts (use the same zsh header and idioms)
+- Azure CLI scripts that are primarily collections of 'az' commands should use the '.azcli' extension
+- '.azcli' files should also be valid zsh scripts (use the same zsh header and idioms)

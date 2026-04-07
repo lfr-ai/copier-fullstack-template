@@ -93,23 +93,23 @@ utils/ ← (all layers may import; utils imports from NO project layer)
 | **ai/**                            | core/, application/, utils/, external AI libs (langchain, openai) | presentation/, config/, infrastructure/             |
 | **utils/**                         | stdlib ONLY                                                  | ALL other project layers               |
 
-**Note on ai/ vertical module:** Per decision D002, `ai/` is a separate top-level vertical module, not a Clean Architecture layer. Standard inner/outer layer restrictions don't apply to it. Both `application/` and `presentation/` may import ai/ models and services. The ai/ module itself must not import from `presentation/`, `config/`, or `infrastructure/`.
+**Note on ai/ vertical module:** Per decision D002, 'ai/' is a separate top-level vertical module, not a Clean Architecture layer. Standard inner/outer layer restrictions don't apply to it. Both 'application/' and 'presentation/' may import ai/ models and services. The ai/ module itself must not import from 'presentation/', 'config/', or 'infrastructure/'.
 
-**Known exception:** `presentation/graphql/permissions.py.jinja` directly imports `JWTAdapter` from `infrastructure/` (Presentation importing from Infrastructure) due to missing auth interface and DI wiring infrastructure. This is a documented FIXME pending proper auth DI implementation.
+**Known exception:** 'presentation/graphql/permissions.py.jinja' directly imports 'JWTAdapter' from 'infrastructure/' (Presentation importing from Infrastructure) due to missing auth interface and DI wiring infrastructure. This is a documented FIXME pending proper auth DI implementation.
 
 
 | Concern                                  | ONLY In                 |
 | ---------------------------------------- | ----------------------- |
-| HTTP status codes, request/response      | `presentation/api/`            |
-| CLI exit codes, terminal output          | `presentation/cli/`            |
-| HTML rendering, form handling            | `presentation/web/`            |
-| Business rules, domain invariants        | `core/`                 |
-| Use case orchestration, DTO mapping      | `application/`          |
-| Database queries, ORM, SQL, sessions     | `infrastructure/persistence/` |
-| Cache get/set/delete                     | `infrastructure/cache/`       |
-| Event publish/subscribe                  | `infrastructure/messaging/`   |
-| Environment variables, settings          | `config/settings.py`    |
-| Pure, framework-agnostic helpers         | `utils/`                |
+| HTTP status codes, request/response      | 'presentation/api/'            |
+| CLI exit codes, terminal output          | 'presentation/cli/'            |
+| HTML rendering, form handling            | 'presentation/web/'            |
+| Business rules, domain invariants        | 'core/'                 |
+| Use case orchestration, DTO mapping      | 'application/'          |
+| Database queries, ORM, SQL, sessions     | 'infrastructure/persistence/' |
+| Cache get/set/delete                     | 'infrastructure/cache/'       |
+| Event publish/subscribe                  | 'infrastructure/messaging/'   |
+| Environment variables, settings          | 'config/settings.py'    |
+| Pure, framework-agnostic helpers         | 'utils/'                |
 
 
 ```python
@@ -124,15 +124,33 @@ from {{ project_slug }}.presentation.api.routes import router              # cor
 
 ALL entry points use factory functions — no global mutable state:
 
-- `create_api_app() -> FastAPI` in `presentation/api/app.py`
-- `create_web_app() -> FastAPI` in `presentation/web/app.py`
-- `cli() -> click.Group` in `presentation/cli/app.py`
+- 'create_api_app() -> FastAPI' in 'presentation/api/app.py'
+- 'create_web_app() -> FastAPI' in 'presentation/web/app.py'
+- 'cli() -> click.Group' in 'presentation/cli/app.py'
 {%- if use_celery %}
-- `create_celery_app() -> Celery` in `config/celery.py`
+- 'create_celery_app() -> Celery' in 'config/celery.py'
 {%- endif %}
 
 
-- `composition/container.py` wires gateway/repository protocols to concrete implementations
+- 'composition/container.py' wires gateway/repository protocols to concrete implementations
 - Constructor injection via typed parameters
 - No service locator pattern, no global mutable state
-- Routes NEVER instantiate dependencies — use `presentation/api/dependencies.py`
+- Routes NEVER instantiate dependencies — use 'presentation/api/dependencies.py'
+
+## Verification Commands
+
+Run these commands to verify Clean Architecture compliance:
+
+**Verify core layer isolation (exit code 1 = pass):**
+```bash
+rg 'from.*\.(application|infrastructure|presentation|config|ai)' "template/backend/src/{{ project_slug }}/core/" --type py
+```
+Expected: Exit code 1 (no matches). Core layer must have zero outward dependencies.
+
+**Verify no infrastructure imports in application layer (exit code 1 = pass):**
+```bash
+rg 'from.*\.infrastructure' "template/backend/src/{{ project_slug }}/application/" --type py
+```
+Expected: Exit code 1 (no matches). Application layer must not import from infrastructure.
+
+**Note:** Exit code 1 from ripgrep indicates no matches found, which proves compliance with the dependency rule.
