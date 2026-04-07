@@ -65,6 +65,9 @@ class Container:
         self._session_factory = None
         self._cache: MemoryCacheAdapter | None = None
         self._event_bus: MemoryEventBus | None = None
+{% if use_ai %}
+        self._ai_config_loader = None
+{%- endif %}
         if self._settings.database_url:
             from {{ project_slug }}.infrastructure.persistence.session import (
                 create_engine,
@@ -123,6 +126,70 @@ class Container:
 
 
 {% if use_ai %}
+    def load_ai_config(self, config_path: str | None = None) -> object | None:
+        """Load AI configuration from YAML file using AIConfigLoader.
+
+        When a config file exists, uses AIConfigLoader for component
+        instantiation. Falls back to settings-based factory methods
+        (_create_llm, _create_embedding, etc.) when config is missing.
+
+        Args:
+            config_path (str | None): Path to ai_config.yaml. Defaults to
+                'config/ai_config.yaml' relative to project root.
+
+        Returns:
+            AIConfigLoader | None: Loader instance if config file exists,
+                None if falling back to settings-based instantiation.
+
+        Example:
+            loader = container.load_ai_config()
+            if loader:
+                pipeline = loader.create_pipeline("self_crag")
+            else:
+                # Fallback to settings-based instantiation
+                llm = container._create_llm()
+        """
+        from pathlib import Path
+
+        # Use default path if not provided
+        if config_path is None:
+            config_path = "config/ai_config.yaml"
+
+        config_file = Path(config_path)
+
+        # Check if config file exists
+        if not config_file.exists():
+            logger.debug(
+                "AI config file not found, falling back to settings-based instantiation",
+                config_path=str(config_file.absolute()),
+            )
+            return None
+
+        # Return cached loader if already initialized
+        if self._ai_config_loader is not None:
+            logger.debug("Returning cached AIConfigLoader")
+            return self._ai_config_loader
+
+        # Load config and create loader
+        try:
+            from {{ project_slug }}.ai.config_loader import AIConfigLoader
+
+            self._ai_config_loader = AIConfigLoader(config_path=config_file)
+            logger.info(
+                "AI config file loaded successfully",
+                config_path=str(config_file.absolute()),
+                sections=list(self._ai_config_loader._config.keys()),
+            )
+            return self._ai_config_loader
+
+        except Exception:
+            logger.exception(
+                "Failed to load AI config file, falling back to settings",
+                config_path=str(config_file.absolute()),
+            )
+            return None
+
+{% endif %}
     def _get_openai_key(self) -> str:
         """Return OpenAI API key from settings or raise."""
         key = getattr(self._settings, "openai_api_key", "")
@@ -631,6 +698,72 @@ class Container:
     def crewai_memory(self) -> object:
         """Create a shared CrewAI Memory instance."""
         from {{ project_slug }}.ai.crewai.memory import create_memory
+
+        embedder = self.crewai_embedder_config()
+        scoring = getattr(self._settings, "crewai_memory_scoring", "default")
+        return create_memory(embedder=embedder, scoring_preset=scoring)
+
+    def crewai_flow_registry(self) -> object:
+        """Create the CrewAI flow registry."""
+        from {{ project_slug }}.ai.crewai.flows import FlowRegistry
+
+        return FlowRegistry()
+
+    def crewai_hmas_supervisor(self) -> object:
+        """Create the CrewAI HMAS supervisor for hierarchical orchestration."""
+        from {{ project_slug }}.ai.crewai.hmas import CrewAIHMASSupervisor
+
+        llm = None
+        try:
+            llm = self._create_llm()
+        except (AttributeError, ImportError):
+            logger.debug("LLM not available for CrewAI HMAS supervisor")
+
+        kwargs: dict[str, object] = {"llm": llm}
+
+        return CrewAIHMASSupervisor(**kwargs)
+
+    def crewai_application_service(self) -> object:
+        """Create the CrewAI application-layer service."""
+        from {{ project_slug }}.application.services.crewai_service import CrewAIService
+
+        supervisor = None
+        try:
+            supervisor = self.crewai_hmas_supervisor()
+        except (AttributeError, ImportError):
+            logger.debug("CrewAI HMAS supervisor not available")
+
+        flow_registry = None
+        try:
+            flow_registry = self.crewai_flow_registry()
+        except (AttributeError, ImportError):
+            logger.debug("CrewAI flow registry not available")
+
+        embedder = None
+        try:
+            embedder = self.crewai_embedder_config()
+        except (AttributeError, ImportError):
+            logger.debug("CrewAI embedder config not available")
+
+        default_llm = getattr(self._settings, "crewai_default_model", "gpt-4o")
+        verbose = getattr(self._settings, "crewai_verbose", False)
+
+        return CrewAIService(
+            uow=self.unit_of_work(),
+            supervisor=supervisor,
+            flow_registry=flow_registry,
+            embedder=embedder,
+            default_llm=default_llm,
+            verbose=verbose,
+        )
+{%- endif %}
+
+
+@lru_cache(maxsize=1)
+def get_container() -> Container:
+    """Get singleton container instance."""
+    return Container()
+}.ai.crewai.memory import create_memory
 
         embedder = self.crewai_embedder_config()
         scoring = getattr(self._settings, "crewai_memory_scoring", "default")
