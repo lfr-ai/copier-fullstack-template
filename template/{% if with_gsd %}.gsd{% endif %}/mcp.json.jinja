@@ -1,16 +1,16 @@
 {
   "mcpServers": {
     "context7": {
-      "command": "bunx",
-      "args": ["--bun", "@upstash/context7-mcp@latest"]
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
     },
     "github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/"
     }{% if use_playwright %},
     "playwright": {
-      "command": "bunx",
-      "args": ["--bun", "@microsoft/mcp-server-playwright"]
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--headless"]
     }{% endif %}{% if cloud_provider == 'azure' %},
     "azure": {
       "type": "http",

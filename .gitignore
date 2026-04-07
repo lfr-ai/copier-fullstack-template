@@ -1,6 +1,8 @@
 
 # ── GSD baseline (auto-generated) ──
 .gsd
+.gsd.lock
+.bg-shell
 .DS_Store
 Thumbs.db
 *.swp

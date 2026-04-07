@@ -7,6 +7,22 @@ models:
   execution_simple: claude-haiku-4-5
   completion: claude-sonnet-4-6
   subagent: claude-sonnet-4-6
+skill_discovery: auto
+skill_staleness_days: 0
+always_use_skills:
+  - clean-architecture
+auto_supervisor:
+  soft_timeout_minutes: 20
+  idle_timeout_minutes: 10
+  hard_timeout_minutes: 30
+verification_commands:
+  - task test
+  - task lint
+  - task format
+  - task typecheck
+  - task registry:check
+verification_auto_fix: true
+verification_max_retries: 2
 dynamic_routing:
   enabled: false
   cross_provider: false
@@ -18,74 +34,418 @@ dynamic_routing:
 pre_dispatch_hooks:
   - { name: force-claude-standard, before: [executor_dispatch], action: set_model, when: { unit_type_in: [standard, simple] }, model: claude-sonnet-4-6 }
   - { name: force-claude-heavy, before: [executor_dispatch], action: set_model, when: { unit_type_in: [heavy, research, planning] }, model: claude-opus-4-6 }
+budget_ceiling: 50.00
+budget_enforcement: pause
+token_profile: balanced
+git:
+  auto_push: false
+  merge_strategy: squash
+  isolation: none
+  commit_docs: true
+  manage_gitignore: true
+  snapshots: true
+  pre_merge_check: auto
 custom_instructions:
   - "Never select gemini-2.5-pro. If unavailable model is requested, use claude-sonnet-4-6."
+  - "Follow Clean Architecture with strict Dependency Rule: core -> application -> presentation/infrastructure"
+  - "Use Python {{ python_version }}+ features, full type hints, keyword-only args with * separator"
+  - "Google-style docstrings on all public symbols; args/returns MUST include typehints"
+  - "Use single quotes in docstrings to reference identifiers, never backticks"
+  - "Docstring sentences NEVER start with articles (a, an, the)"
+  - "Single Responsibility Principle: every module, class, and function has one reason to change"
+  - "Structured logging with structlog; never print(), never f-strings in log calls"
+  - "No Any type; use object or proper generics"
+  - "No Final annotation on constants; plain UPPER_SNAKE_CASE is sufficient"
+  - "No magic numbers; define as named UPPER_SNAKE_CASE constants"
+  - "No raw SQL; always use SQLAlchemy ORM"
+  - "No emojis in code, comments, logs, or documentation"
+  - "StrEnum + @unique + auto() for string enums"
+  - "@final on all concrete leaf classes"
+  - "from __future__ import annotations only when TYPE_CHECKING blocks or forward references require it"
+  - "Keyword-only args with * separator for multi-parameter functions"
+  - "Never hardcode field/column names; use registry constants"
+  - "Shell scripts use .zsh extension with emulate -L zsh and setopt ERR_EXIT PIPE_FAIL"
+  - "TypeScript: strict mode, no any, functional components, Tailwind CSS v4"
+  - "Tests: pytest markers (unit/integration/property/performance/slow), factory-based data"
+  - "Coverage >= 80% on core + application layers"
+  - "raise ... from e to preserve exception context"
+  - "Catch specific exceptions, never bare except"
 ---
 
-# GSD-2 Preferences
+# GSD-2 Preferences — {{ project_name }}
+
+This file is the **authoritative, self-contained instruction source** for GSD behavior
+in this repository. All rules, conventions, and policies are written directly below.
+No external instruction files are required. Execution continues normally even if
+`.github/`, `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md` are absent.
 
 ## Project Overview
 
-- Name — {{ project_name }}
-- Type — Fullstack Python + TypeScript application
-- Backend — Python {{ python_version }}+ / FastAPI / SQLAlchemy 2.0+ / Clean Architecture
-- Frontend — TypeScript / Vite / React 19 / Tailwind CSS v4
-- Package Managers — UV (Python), Bun (frontend)
-- Container Runtime — {{ container_runtime }}
+- **Name** — {{ project_name }}
+- **Type** — Fullstack Python + TypeScript application
+- **Backend** — Python {{ python_version }}+ / FastAPI / SQLAlchemy 2.0+ / Clean Architecture
+- **Frontend** — TypeScript / Vite / React 19 / Tailwind CSS v4
+- **Package Managers** — UV (Python), Bun (frontend)
+- **Container Runtime** — {{ container_runtime }}
+- **Linting** — Ruff (Python), Biome (TypeScript/JS/CSS)
+- **Task Runner** — Taskfile (`task <command>`)
 
 ## Architecture
 
-Clean Architecture with strict Dependency Rule:
-- `core/` → Pure domain (entities, enums, interfaces) — ZERO external deps
-- `application/` → Use cases, services, DTOs — imports from core only
-- `infrastructure/` → DB repos, cache, HTTP clients — implements core interfaces
-- `presentation/` → API routes, CLI — FastAPI/Click allowed
-- `config/` → Settings, DI container
-- `utils/` → Shared helpers — stdlib + third-party only
+This project follows **Clean Architecture** with strict layering. The **Dependency Rule**
+is the fundamental invariant: source-code dependencies always point **inward**, never
+from core toward frameworks/infrastructure.
 
-Dependency direction: `infrastructure → presentation → application → core`
+### Layer Diagram
 
-## Conventions
+```text
+┌─────────────────────────────────────────┐
+│  Presentation (API routes, CLI, web)     │  ← Framework-specific entry points
+├─────────────────────────────────────────┤
+│  Application (services, commands, DTOs) │  ← Orchestration, use cases
+├─────────────────────────────────────────┤
+│  Core (entities, value objects, events) │  ← Pure domain, ZERO framework imports
+├─────────────────────────────────────────┤
+│  Infrastructure (DB, cache, HTTP, email)│  ← External integration implementations
+└─────────────────────────────────────────┘
+```
 
-- Python: type hints everywhere, Google-style docstrings, keyword-only args (`*`),
-  `from __future__ import annotations`, no `Any` type, structured logging with structlog
-- TypeScript: strict mode, no `any`, Tailwind CSS v4
-- Shell: `.zsh` extension, `emulate -L zsh`, `setopt ERR_EXIT PIPE_FAIL`
-- Constants: plain `UPPER_SNAKE_CASE` (no `Final` annotation)
-- Enums: `StrEnum` + `@unique` + `auto()`
+### Layer Responsibilities
+
+- `core/` → Pure domain (entities, enums, interfaces, value objects, events, specifications) — ZERO external deps
+- `application/` → Use cases, services, DTOs, commands, queries, mappers — imports from core only
+- `infrastructure/` → DB repos, cache, HTTP clients, auth, messaging — implements core interfaces
+- `presentation/` → API routes (FastAPI), CLI (Click), web controllers — framework-specific entry points
+- `config/` → Settings, DI container, logging configuration
+- `utils/` → Shared helpers — stdlib only, no project layer imports
+{%- if use_ai %}
+- `ai/` → AI agents, chains, RAG — vertical module per ADR D002
+{%- endif %}
+
+### Dependency Rule
+
+**Always inward**: `presentation/infrastructure → application → core`
+
+| Layer | May Import From | NEVER Imports From |
+| --- | --- | --- |
+| **core/** | stdlib, utils/ | application/, infrastructure/, presentation/, config/{% if use_ai %}, ai/{% endif %} |
+| **application/** | core/ (protocols + base classes){% if use_ai %}, ai/ (vertical){% endif %}, utils/ | infrastructure/, presentation/, config/ |
+| **infrastructure/** | core/ (protocols), application/ (DTOs, mappers), utils/, libs | presentation/{% if use_ai %}, ai/{% endif %} |
+| **presentation/** | application/ (services, DTOs), core/ (exceptions, enums, constants, interfaces), config/, utils/{% if use_ai %}, ai/{% endif %} | infrastructure/ (use DI) |
+| **config/** | core/enums/ (Environment), utils/, external libs | application/, infrastructure/, presentation/{% if use_ai %}, ai/{% endif %} |
+{%- if use_ai %}
+| **ai/** | core/, application/, utils/, external AI libs | presentation/, config/, infrastructure/ |
+{%- endif %}
+| **utils/** | stdlib ONLY | ALL other project layers |
+
+### Concern Boundaries
+
+| Concern | ONLY In |
+| --- | --- |
+| HTTP status codes, request/response | `presentation/api/` |
+| CLI exit codes, terminal output | `presentation/cli/` |
+| HTML rendering, form handling | `presentation/web/` |
+| Business rules, domain invariants | `core/` |
+| Use case orchestration, DTO mapping | `application/` |
+| Database queries, ORM, SQL, sessions | `infrastructure/persistence/` |
+| Cache get/set/delete | `infrastructure/cache/` |
+| Event publish/subscribe | `infrastructure/messaging/` |
+| Environment variables, settings | `config/settings.py` |
+| Pure, framework-agnostic helpers | `utils/` |
+
+### Entry Points and Dependency Injection
+
+ALL entry points use factory functions — no global mutable state:
+
+- `create_api_app() -> FastAPI` in `presentation/api/app.py`
+- `create_web_app() -> FastAPI` in `presentation/web/app.py`
+- `cli() -> click.Group` in `presentation/cli/app.py`
+{%- if use_celery %}
+- `create_celery_app() -> Celery` in `config/celery.py`
+{%- endif %}
+
+DI wiring:
+
+- `composition/container.py` wires gateway/repository protocols to concrete implementations
+- Constructor injection via typed parameters — no service locator, no global mutable state
+- Routes NEVER instantiate dependencies — use `Depends()` in `presentation/api/dependencies.py`
+- Application services inherit `BaseService`, depend on port protocols ONLY
+- Application services access persistence via UoW repository properties (e.g. `uow.users`), NEVER by importing concrete infrastructure classes
+
+### Domain Modeling Patterns
+
+- Domain entities: inherit `Entity` with `@dataclass(slots=True)`
+- Value objects: `@dataclass(frozen=True, slots=True)`
+- Domain events: `@dataclass(frozen=True, slots=True)`
+- Commands and queries: frozen dataclasses
+- `DomainError` hierarchy: `NotFound`, `Conflict`, `Validation`, `Authorization`
+- ORM: SQLAlchemy 2.0+ with `Mapped[]` + `mapped_column()`, single async session factory
+
+### Architecture Anti-Patterns (FORBIDDEN)
+
+- NO business logic in infrastructure, presentation, or middleware
+- NO ORM models in core — core uses pure dataclasses
+- NO Pydantic models in core — Pydantic is a port/adapter concern
+- NO circular dependencies between any modules
+- NO relative imports except within `__init__.py`
+- NO mutable default arguments
+
+## Python Conventions
+
+### Foundational Principles
+
+- **Single Responsibility Principle (SRP):** Every module, class, and function has one reason to change
+- **Clean Architecture Dependency Rule:** Dependencies point inward
+- Python {{ python_version }}+ syntax (`type` statements, `X | Y` unions, `match`)
+- Line length: 88 characters
+- `__all__` in `__init__.py` where the package exposes a public API
+
+### Type Hints and Modern Syntax
+
+- Full type hints on ALL functions, methods, and class attributes
+- EVERY function has return type (including `-> None`)
+- EVERY parameter has type annotation
+- No `Any` type — use proper generics or `object`
+- ZERO `typing.List`, `Dict`, `Tuple`, `Set`, `Optional`, `Union` — use builtins and `X | None`
+- `typing` imports ONLY for: `TypeVar`, `Protocol`, `TypeAlias`, `Annotated`, `Literal`, `NoReturn`, `Generic`, `runtime_checkable`, `TypedDict`, `final`, `overload`, `TYPE_CHECKING`, `Self`, `override`
+- `from __future__ import annotations` ONLY in files with `TYPE_CHECKING` blocks or forward references — Python {{ python_version }}+ does not need it elsewhere
+- Use `match/case` for multi-branch dispatch
+- Use `@override` on overriding methods
+- Use `Self` for fluent/builder return types
+- Use `pathlib.Path` over `os.path`
+- Use `datetime.UTC` for timezone-aware datetimes
+- Use `collections.abc` over `typing` for generic types
+
+### Constants and Enums
+
+- No `Final` annotation on constants — plain `UPPER_SNAKE_CASE` is sufficient
+- No magic numbers — define as named `UPPER_SNAKE_CASE` constants
+- `_UPPER_SNAKE_CASE` for ALL internal-only constants
+- `StrEnum` + `@unique` + `auto()` for string enums; `IntEnum` + `@unique` for integer enums
+- `auto()` unless exact value is external contract
+- Enum member names: `UPPER_SNAKE_CASE`; provide `from_str()` classmethod via `ParseableEnum`
+- NEVER use raw string literals where enum members should be
+- Never hardcode field/column names — use registry constants
+
+### Classes and Decorators
+
+- `@final` on ALL concrete leaf classes: frozen dataclasses, service implementations, middleware, Pydantic models, DTOs, mappers
+- `@final` NEVER on: `Protocol`, `ABC`, domain entity bases, extensible entities, enums, exception bases, settings, `TypedDict`, ORM bases
+- `@dataclass(frozen=True, slots=True)` for all immutable data structures
+- `@dataclass(slots=True)` for mutable entities
+
+### Keyword-Only Arguments
+
+All constructors and multi-parameter functions must use `*` to enforce keyword-only arguments.
+
+When `*` is REQUIRED:
+
+- 3+ params (excluding self/cls) where at least one has a default
+- ANY boolean flag parameter
+- ANY optional/config param (timeout, retries, limit, offset, ttl, mode)
+- ALL factory functions (`create_*`, `build_*`, `make_*`)
+- ALL public API functions in `presentation/`
+- ALL service methods in `application/services/`
+- ALL utility functions in `utils/`
+
+When `*` is NOT required:
+
+- 0-2 params with no defaults
+- ALL params required, distinct types, unambiguous ordering
+- Dunder methods following Python protocols
+- Callbacks matching external contracts (FastAPI DI)
+
+### Naming and Visibility
+
+- `_` prefix on ALL non-public module-level functions, methods, attributes
+- `_UPPER_SNAKE_CASE` on ALL internal-only constants
+- NO `__` name mangling unless explicitly justified
+- `__all__` in `__init__.py` files exporting public API
+- Files: `snake_case.py`; test files: `test_<module>.py`
+- Classes: `PascalCase`; functions/variables: `snake_case`
+
+### Docstrings
+
+- Google-style docstrings on EVERY public module, class, method, function
+- First line: imperative mood, ends with period, does NOT start with 'A'/'An'/'The'
+- `Args:` — each parameter with type in parentheses: `name (Type): Description.`
+- `Returns:` — format: `TypeName: Description.` (no parentheses)
+- `Raises:` — format: `ExceptionName: Description.` (no parentheses)
+- Use single quotes ('word') in docstrings to reference identifiers — NEVER backticks
+- ZERO emojis in docstrings, comments, logs, or documentation
+
+### Logging
+
+- Structured logging with `structlog`; never `print()` (CLI `rich.console` excepted)
+- ALL log messages use `%s` formatting — ZERO f-strings, `.format()`, `+` concatenation
+- ALL modules: `logger = logging.getLogger(__name__)`
+- ALL exception handlers: `logger.exception()` or `logger.error(..., exc_info=True)`
+- Log messages do NOT end with periods
+- ZERO sensitive data in logs (password, token, secret, key, credential)
+
+### Exceptions
+
+- `raise ... from e` to preserve exception context
+- `raise ... from None` ONLY with explicit justification comment
+- Catch specific exceptions, never bare `except:`
+- ZERO silent `except Exception:` without re-raise or explicit silencing comment
+- Exceptions logged BEFORE re-raising
+- Error messages use `%s` formatting, NOT f-strings
+- Domain exceptions at domain/application boundaries
+- HTTP exceptions ONLY in `presentation/api/`
+
+## Security Conventions
+
+- Never use `eval()`, `exec()`, `__import__()`, or `pickle.loads()` on untrusted input
+- Never use raw SQL queries — always use SQLAlchemy ORM with parameterized queries
+- Never log sensitive data (passwords, tokens, PII, secrets, API keys)
+- Never hardcode secrets — use environment variables or secret backends
+- Never commit `.env` files or private keys to source control
+- Never use `assert` for runtime input validation
+- Never expose stack traces in API error responses
+- Use `secrets` module for token generation, not `random`
+- Use CORS with explicit allow-lists, not wildcard `*`
+- Use rate limiting (`slowapi`) on all API endpoints
+- Validate all input at system boundaries (API routes, CLI, webhooks)
+- Use HMAC for signature verification, not simple string comparison
+- Container images run as non-root users
+- Dependencies audited for known CVEs regularly
+
+## Frontend Conventions
+
+- Strict TypeScript (`strict: true`) — no `any`, use `unknown` or proper generics
+- Functional components with typed props interfaces
+- Tailwind CSS v4 for styling (CSS-first `@theme {}`, `@layer components`)
+- Vite for build tooling with `manualChunks` vendor splitting; `lightningcss` for CSS
+- Bun as the JavaScript runtime and package manager
+- Biome for linting, formatting, and import organization
+- React: TanStack Query for server state, React Router for navigation, ErrorBoundary + Suspense for loading/error states
+- React Hook Form + Zod resolver for form validation
+- Named exports only — avoid default exports
+- Colocate types with their modules
+- Use `const` assertions for literal objects
+- Frontend tests: Vitest with happy-dom; mirror structure in `frontend/tests/unit/`
+{%- if use_storybook %}
+- Storybook for isolated component development and visual testing
+{%- endif %}
+
+## Shell Conventions
+
+- `.zsh` extension always — never `.sh` or `.bash`
+- `.azcli` extension for Azure CLI command collections (valid zsh)
+- Shebang: `#!/usr/bin/env zsh`
+- Reset state at top: `emulate -L zsh`
+- Safety options: `setopt PIPE_FAIL ERR_EXIT`
+- `local` for all variables inside functions
+- All variables double-quoted: `"${var}"`
+- `command -v` instead of `which` for executable detection
+- ShellCheck compliant; `trap` for cleanup on exit
+- Never use `sudo` without explicit justification
+
+## Testing Strategy
+
+### Test Hierarchy
+
+| Layer | Location | Runner | Purpose |
+| --- | --- | --- | --- |
+| Unit | `backend/tests/unit/` | pytest | Pure logic, no I/O, fast |
+| Integration | `backend/tests/integration/` | pytest | Real DB / cache / external services |
+| Property | `backend/tests/property/` | pytest | Hypothesis-based invariant testing |
+| Performance | `backend/tests/performance/` | pytest | Benchmarks and regression tests |
+| Registry | `registry/tests/` | pytest | Unit + property tests for the generator |
+| Frontend unit | `frontend/tests/unit/` | vitest | Component + utility tests (happy-dom) |
+{%- if use_playwright %}
+| Frontend e2e | `frontend/tests/e2e/` | playwright | Browser-based end-to-end tests |
+{%- endif %}
+
+### Test Rules
+
+- ALL test functions: `-> None` return type
+- ALL tests: AAA pattern (Arrange, Act, Assert) — blank line between each section
+- ZERO `print()` — use `capsys` or assertions
+- ZERO `time.sleep` — mock or async wait
+- Edge cases: empty inputs, `None`, boundary values, invalid types
+- Exception paths: `pytest.raises(ExcType, match=...)` with match verification
+- Coverage threshold: >= 80% on `core` + `application` layers
+
+### Markers
+
+```python
+@pytest.mark.unit          # Fast, isolated, no I/O
+@pytest.mark.integration   # Real DB or external service
+@pytest.mark.property      # Hypothesis property-based
+@pytest.mark.performance   # Benchmarks
+@pytest.mark.slow          # Takes > 5 seconds
+@pytest.mark.smoke         # Critical path — must pass before deploy
+```
+
+### Fixtures and Mocks
+
+- `conftest.py`: `async_session`, `async_engine`, `test_client` — defined ONCE at root
+- `@pytest.fixture` with explicit scope (`function` default, `session` for DB engine)
+- Factories: `tests/factories/` using `factory_boy`
+- Mock at the boundary (interfaces), NEVER inside core
+- Prefer dependency injection over monkey-patching
+- ZERO real DB/Redis in unit tests
+
+## Naming Registry
+
+The naming registry (`registry/naming_registry.json`) is the single source of truth for shared identifiers: service names, ports, route paths, enum values, and field mappings.
+
+Registry workflow:
+
+1. Edit `registry/naming_registry.json`
+2. Run `task registry:validate` — validate JSON structure
+3. Run `task registry:generate` — regenerate all constant files
+4. Run `task registry:check` — CI gate: fail if generated files are stale
+5. Run `task registry:test` — execute registry unit + property tests
+
+Rules:
+
+- Never hand-edit generated files — edit `naming_registry.json` then regenerate
+- The `--check` flag is a CI gate: it fails if generated files are stale
 
 ## Verification Commands
 
-```
-task test              # Run ALL tests
-task test:unit         # Backend unit tests
+```bash
+task test              # Run ALL tests (registry + backend + frontend)
+task test:unit         # Backend unit tests only
 task test:integration  # Integration tests
+task test:property     # Property-based tests
+task test:performance  # Performance / benchmark tests
 task test:coverage     # Tests with coverage report
 task lint              # All linters
 task format            # Format all code
 task typecheck         # Type checking
-task registry:check    # Verify generated constants are up to date
+task registry:generate # Regenerate all files from naming_registry.json
+task registry:validate # Validate registry JSON structure
+task registry:check    # CI gate — fail if generated files are stale
+task registry:test     # Run registry unit + property tests
+task registry:diff     # Dry-run diff of what generation would change
+task db:migrate        # Run Alembic migrations
 ```
 
 ## Model Preferences
 
-- Default: Claude Sonnet 4
-- Complex reasoning: Claude Opus 4
-- Quick edits: Claude Haiku
+- Default / execution: Claude Sonnet 4
+- Complex reasoning / research / planning: Claude Opus 4
+- Quick edits / simple tasks: Claude Haiku
 
-## Behavior
+## Behavior Rules
 
 - Always run `task lint` after editing Python files
 - Always run `task registry:check` after changing naming_registry.json
 - Never use `print()` — use structured logging
 - Never hardcode field/column names — use registry constants
 - Never use raw SQL — use SQLAlchemy ORM
+- Never use `Any` type — use proper generics or `object`
+- Never use `Final` annotation — plain UPPER_SNAKE_CASE is sufficient
+- No emojis in code, comments, logs, or documentation
+- Use Context7 tools first for official library/framework documentation
+- Use `gh_grep` tool for searching public GitHub code snippets and patterns
 
-## Agent Integration
+## Documentation Search Policy
 
-GSD shares the same conventions as the GitHub Copilot agents in `.github/agents/`:
-- Skills — `.github/skills/` (clean-architecture, python-conventions, testing-conventions, naming-registry)
-- Instructions — `.github/instructions/` (architecture, coding, frontend, security, shell, testing, scaffolding)
-- Hooks — `.github/hooks/` (tool-guardian, session-logger, secrets-scanner, auto-format, license-checker, context-saver)
-
-Both GSD and Copilot agents follow the same Clean Architecture rules and coding conventions.
+- When official library/framework documentation is needed, use Context7 tools first
+- When unsure about implementation patterns or wanting real-world examples, use `gh_grep` to search public GitHub snippets
+- Prefer Context7 for authoritative API/reference answers and `gh_grep` for practical code patterns
