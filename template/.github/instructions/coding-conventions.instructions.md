@@ -220,13 +220,13 @@ Run these commands to verify coding standards compliance:
 
 **Verify no Final[] annotations on constants (exit code 1 = pass):**
 ```bash
-rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" template/backend/src --type py
+rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" backend/src --type py
 ```
 Expected: Exit code 1 (no matches). Constants use plain UPPER_SNAKE_CASE without Final[].
 
 **Verify no emojis in codebase (exit code 1 = pass):**
 ```bash
-rg -uuu '[\x{1F300}-\x{1F9FF}]|[\x{2600}-\x{26FF}]|[\x{2700}-\x{27BF}]' template --type-add 'docs:*.{py,md,yaml,yml,toml}' -t docs
+rg -uuu '[\x{1F300}-\x{1F9FF}]|[\x{2600}-\x{26FF}]|[\x{2700}-\x{27BF}]' . --type-add 'docs:*.{py,md,yaml,yml,toml}' -t docs
 ```
 Expected: Exit code 1 (no matches). ZERO emojis in docstrings, comments, logs, or documentation.
 

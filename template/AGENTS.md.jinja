@@ -911,9 +911,9 @@ context pre-loading, git isolation, and crash recovery.
 The `.gsd/PREFERENCES.md` file has two parts:
 
 1. **YAML frontmatter** (between `---` markers): Machine-readable configuration
-   including `custom_instructions` (list of rules), `verification_commands`,
-   `always_use_skills`, `skill_discovery`, `verification_auto_fix`, and
-   `verification_max_retries`.
+   including `models` (per-phase model selection), `custom_instructions` (list of rules),
+   `verification_commands`, `always_use_skills`, `prefer_skills`, `skill_rules`,
+   `skill_discovery`, `verification_auto_fix`, and `verification_max_retries`.
 2. **Markdown body**: Human-readable project context covering architecture,
    conventions, model preferences, behavior expectations, and agent integration notes.
 

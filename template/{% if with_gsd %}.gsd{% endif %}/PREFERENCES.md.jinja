@@ -32,6 +32,11 @@ auto_supervisor:
   soft_timeout_minutes: 20
   idle_timeout_minutes: 10
   hard_timeout_minutes: 30
+phases:
+  skip_research: false
+  skip_reassess: false
+  skip_slice_research: false
+  reassess_after_slice: true
 verification_commands:
   - task test
   - task lint
@@ -58,8 +63,17 @@ git:
   manage_gitignore: true
   snapshots: true
   pre_merge_check: auto
+notifications:
+  enabled: true
+  on_complete: true
+  on_error: true
+  on_budget: true
+  on_milestone: true
+auto_report: true
+uat_dispatch: false
+unique_milestone_ids: false
+show_token_cost: true
 custom_instructions:
-  - "Never select gemini-2.5-pro. If unavailable model is requested, use claude-sonnet-4-6."
   - "Follow Clean Architecture with strict Dependency Rule: core -> application -> presentation/infrastructure"
   - "Use Python {{ python_version }}+ features, full type hints, keyword-only args with * separator"
   - "Google-style docstrings on all public symbols; args/returns MUST include typehints"

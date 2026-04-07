@@ -78,9 +78,9 @@ Apply structured planning by breaking tasks into discrete, verifiable steps:
 
 Validate that the plan respects Clean Architecture boundaries and the Dependency Rule:
 
-- **core/** → ZERO external imports. Only 'stdlib' and 'typing'. Pure dataclasses with
+- **core/** → ZERO framework/external imports. Only 'stdlib' and 'utils/'. Pure dataclasses with
   'frozen=True, slots=True'
-- **application/** → Imports from 'core' only. No framework imports. Services
+- **application/** → Imports from 'core/' (and 'utils/' + optional 'ai/' vertical). No framework imports. Services
   orchestrate use cases
 - **presentation/** → API routes, CLI, webhooks. FastAPI/Click allowed. Imports from
   'application' and 'core'
@@ -97,16 +97,15 @@ Validate that the plan respects Clean Architecture boundaries and the Dependency
 - ORM models in core (core uses pure dataclasses)
 - Pydantic models in core (Pydantic is a presentation/infrastructure concern)
 - Circular dependencies between modules
-- Missing 'from __future__ import annotations'
 - Relative imports outside '__init__.py'
 - Missing '__all__' in '__init__.py' that exposes a public API
 - Magic numbers without named constants
-- 'Any' type usage (use proper generics or 'Unknown')
+- 'Any' type usage (use proper generics or 'object')
 
 **Dependency Direction:**
 
 ```
-infrastructure → presentation → application → core
+presentation/infrastructure → application → core
 ```
 
 Present the consolidated plan to the user for approval.
@@ -117,8 +116,8 @@ Execute plan steps one at a time, following these coding standards:
 
 **Python Standards (MANDATORY):**
 
-- Python 3.12+ syntax ('type' statements, 'X | Y' unions, 'match')
-- 'from __future__ import annotations' in EVERY file
+- Python 3.11+ syntax ('type' statements, 'X | Y' unions, 'match')
+- 'from __future__ import annotations' only when TYPE_CHECKING or forward references require it
 - Full type hints on ALL functions, methods, class attributes
 - Google-style docstrings on all public modules, classes, functions, methods
 - Keyword-only arguments with '*' separator
@@ -286,7 +285,7 @@ Update relevant documentation to reflect changes:
 
 This is a fullstack project using:
 
-- **Backend**: Python 3.12+ / FastAPI / SQLAlchemy / Clean Architecture
+- **Backend**: Python 3.11+ / FastAPI / SQLAlchemy / Clean Architecture
 - **Frontend**: TypeScript / Vite
 - **Infrastructure**: Docker/Podman compose, optional Azure deployment
 - **Registry**: 'naming_registry.json' as single source of truth for shared identifiers
