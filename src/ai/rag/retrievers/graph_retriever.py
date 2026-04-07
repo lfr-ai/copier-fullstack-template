@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import structlog
-from typing import override, final
+from typing import final, TYPE_CHECKING
 
-from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
-from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
-from {{ project_slug }}.core.interfaces.llm import LLMGateway
-from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverGateway
+if TYPE_CHECKING:
+    from app.core.interfaces.knowledge_graph import KnowledgeGraphGateway
+    from app.core.interfaces.llm import LLMGateway
+    from app.core.interfaces.retriever import RetrievedContext
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+DEFAULT_GRAPH_NEIGHBOR_LIMIT = 10
 _ENTITY_EXTRACTION_MAX_TOKENS = 128
 _ENTITY_EXTRACTION_TEMPERATURE = 0.0
 _DEFAULT_GRAPH_DEPTH = 2
@@ -19,7 +21,7 @@ _RANK_OFFSET = 1
 
 
 @final
-class GraphRetriever(RetrieverGateway):
+class GraphRetriever:
     """Retriever that traverses a knowledge graph for context.
 
     Extracts entities from the query using the LLM, then
@@ -83,7 +85,6 @@ class GraphRetriever(RetrieverGateway):
             depth=depth,
         )
 
-    @override
     async def retrieve(
         self,
         *,
@@ -101,6 +102,8 @@ class GraphRetriever(RetrieverGateway):
         Returns:
             list[RetrievedContext]: Retrieved context from graph traversal.
         """
+        from app.core.interfaces.retriever import RetrievedContext
+
         # Extract entities from query via LLM
         extraction_prompt = (
             f"Extract the key entities (people, concepts, organizations, etc.) "
