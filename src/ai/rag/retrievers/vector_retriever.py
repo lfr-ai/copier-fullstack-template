@@ -7,16 +7,20 @@ and return matching context chunks.
 from __future__ import annotations
 
 import structlog
-from typing import override, final
+from typing import final, TYPE_CHECKING
 
-from {{ project_slug }}.ai.config import DEFAULT_SIMILARITY_TOP_K
-from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
-from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverGateway
-from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
+if TYPE_CHECKING:
+    from app.core.interfaces.embedding import EmbeddingGateway
+    from app.core.interfaces.retriever import RetrievedContext
+    from app.core.interfaces.vector_store import VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+DEFAULT_SIMILARITY_TOP_K = 5
+
+
 @final
-class VectorRetriever(RetrieverGateway):
+class VectorRetriever:
     """Retrieve context by embedding the query and searching the vector store."""
 
     __slots__ = ("_embedding", "_vector_store")
@@ -65,7 +69,6 @@ class VectorRetriever(RetrieverGateway):
             vector_store=vector_store,  # type: ignore[arg-type]
         )
 
-    @override
     async def retrieve(
         self,
         *,
@@ -83,6 +86,8 @@ class VectorRetriever(RetrieverGateway):
         Returns:
             list[RetrievedContext]: Ranked context chunks.
         """
+        from app.core.interfaces.retriever import RetrievedContext
+
         query_vector = await self._embedding.embed_text(query)
         results = await self._vector_store.search(
             query_vector=query_vector,
