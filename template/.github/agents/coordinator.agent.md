@@ -66,7 +66,7 @@ Apply structured planning by breaking tasks into discrete, verifiable steps:
 - Decompose the task into small, ordered, verifiable steps
 - Estimate complexity and identify risks for each step
 - Tasks MUST follow Clean Architecture layer ordering (Dependency Rule):
-  `core → application → presentation/infrastructure`
+  'core → application → presentation/infrastructure'
 - Each task MUST be independently verifiable
 - Reference specific files and line ranges when possible
 - Flag any changes that cross layer boundaries
@@ -78,12 +78,12 @@ Apply structured planning by breaking tasks into discrete, verifiable steps:
 
 Validate that the plan respects Clean Architecture boundaries and the Dependency Rule:
 
-- **core/** → ZERO external imports. Only `stdlib` and `typing`. Pure dataclasses with
-  `frozen=True, slots=True`
-- **application/** → Imports from `core` only. No framework imports. Services
+- **core/** → ZERO external imports. Only 'stdlib' and 'typing'. Pure dataclasses with
+  'frozen=True, slots=True'
+- **application/** → Imports from 'core' only. No framework imports. Services
   orchestrate use cases
 - **presentation/** → API routes, CLI, webhooks. FastAPI/Click allowed. Imports from
-  `application` and `core`
+  'application' and 'core'
 - **infrastructure/** → DB repos, cache, HTTP clients, low-level primitives.
   SQLAlchemy, httpx, redis allowed. Implements core interfaces
 - **composition/** → Dependency injection container. Wires protocols to concrete
@@ -97,11 +97,11 @@ Validate that the plan respects Clean Architecture boundaries and the Dependency
 - ORM models in core (core uses pure dataclasses)
 - Pydantic models in core (Pydantic is a presentation/infrastructure concern)
 - Circular dependencies between modules
-- Missing `from __future__ import annotations`
-- Relative imports outside `__init__.py`
-- Missing `__all__` in `__init__.py` that exposes a public API
+- Missing 'from __future__ import annotations'
+- Relative imports outside '__init__.py'
+- Missing '__all__' in '__init__.py' that exposes a public API
 - Magic numbers without named constants
-- `Any` type usage (use proper generics or `Unknown`)
+- 'Any' type usage (use proper generics or 'Unknown')
 
 **Dependency Direction:**
 
@@ -117,46 +117,46 @@ Execute plan steps one at a time, following these coding standards:
 
 **Python Standards (MANDATORY):**
 
-- Python 3.12+ syntax (`type` statements, `X | Y` unions, `match`)
-- `from __future__ import annotations` in EVERY file
+- Python 3.12+ syntax ('type' statements, 'X | Y' unions, 'match')
+- 'from __future__ import annotations' in EVERY file
 - Full type hints on ALL functions, methods, class attributes
 - Google-style docstrings on all public modules, classes, functions, methods
-- Keyword-only arguments with `*` separator
-- `frozen=True, slots=True` on all dataclasses
-- Structured logging with `structlog` (never `print()`, never f-strings in log calls)
-- No `Any` type — use generics or `object`
-- No relative imports except in `__init__.py`
-- `__all__` in `__init__.py` where the package exposes a public API
+- Keyword-only arguments with '*' separator
+- 'frozen=True, slots=True' on all dataclasses
+- Structured logging with 'structlog' (never 'print()', never f-strings in log calls)
+- No 'Any' type — use generics or 'object'
+- No relative imports except in '__init__.py'
+- '__all__' in '__init__.py' where the package exposes a public API
 - Line length: 88 characters
-- Constants: plain `UPPER_SNAKE_CASE` assignment (no `Final` annotation)
-- Enums: inherit from `ParseableEnum` with `@unique`
+- Constants: plain 'UPPER_SNAKE_CASE' assignment (no 'Final' annotation)
+- Enums: inherit from 'ParseableEnum' with '@unique'
 
 **TypeScript Standards:**
 
-- Strict mode (`strict: true`)
-- No `any` — use `unknown` or proper generics
+- Strict mode ('strict: true')
+- No 'any' — use 'unknown' or proper generics
 - Functional components with typed props
 - Tailwind CSS for styling
 
 **Shell Standards:**
 
-- `.zsh` extension with `#!/usr/bin/env zsh`
-- `emulate -L zsh` + `setopt ERR_EXIT PIPE_FAIL`
-- All variables quoted: `"${var}"`
+- '.zsh' extension with '#!/usr/bin/env zsh'
+- 'emulate -L zsh' + 'setopt ERR_EXIT PIPE_FAIL'
+- All variables quoted: '"${var}"'
 
 **Architecture Compliance:**
 
 When implementing, ALWAYS respect layer boundaries:
 
-- `core/` → NO framework imports, NO ORM, pure dataclasses
-- `application/` → NO FastAPI, NO SQLAlchemy, imports from `core` only
-- `presentation/` → FastAPI routes, imports from `application` + `core`
-- `infrastructure/` → SQLAlchemy repos, cache, imports from all inner layers
+- 'core/' → NO framework imports, NO ORM, pure dataclasses
+- 'application/' → NO FastAPI, NO SQLAlchemy, imports from 'core' only
+- 'presentation/' → FastAPI routes, imports from 'application' + 'core'
+- 'infrastructure/' → SQLAlchemy repos, cache, imports from all inner layers
 
 **Registry Awareness:**
 
-- If adding new fields, routes, or enum values → update `naming_registry.json`
-- If registry was updated → run `task registry:generate` afterward
+- If adding new fields, routes, or enum values → update 'naming_registry.json'
+- If registry was updated → run 'task registry:generate' afterward
 - NEVER hardcode field/column names — use registry constants
 
 Monitor progress and ensure each step completes before moving to the next.
@@ -169,29 +169,29 @@ Review implementation quality across these dimensions:
 
 - Does the code do what the plan specified?
 - Are edge cases handled (empty inputs, None values, boundary conditions)?
-- Is error handling complete with proper exception chaining (`raise ... from e`)?
+- Is error handling complete with proper exception chaining ('raise ... from e')?
 - Are async/await patterns correct?
 
 **2. Architecture Compliance:**
 
 - Do imports respect Clean Architecture boundaries and the Dependency Rule?
-- Are domain entities in `core/` free of framework dependencies?
-- Are Pydantic models confined to `presentation/` and `infrastructure/`?
-- Is business logic only in `application/` services?
-- Are interfaces defined in `core/` and implemented in `infrastructure/`?
+- Are domain entities in 'core/' free of framework dependencies?
+- Are Pydantic models confined to 'presentation/' and 'infrastructure/'?
+- Is business logic only in 'application/' services?
+- Are interfaces defined in 'core/' and implemented in 'infrastructure/'?
 
 **3. Type Safety:**
 
 - Are ALL functions fully typed (args + return)?
-- Is `from __future__ import annotations` present?
-- No `Any` usage — proper generics or `object` instead?
-- Are keyword-only arguments enforced with `*`?
+- Is 'from __future__ import annotations' present?
+- No 'Any' usage — proper generics or 'object' instead?
+- Are keyword-only arguments enforced with '*'?
 
 **4. Code Quality:**
 
 - Google-style docstrings on all public APIs?
 - Meaningful variable names (no single letters except in comprehensions)?
-- No magic numbers — named `UPPER_SNAKE_CASE` constants?
+- No magic numbers — named 'UPPER_SNAKE_CASE' constants?
 - No dead code or commented-out blocks?
 - DRY — no duplication of existing functionality?
 
@@ -202,7 +202,7 @@ sensitive data handling), delegate to the **SecurityAuditor** subagent.
 
 General security checks:
 
-- No `eval()`, `exec()`, `__import__()`, or `pickle.loads()` on untrusted input?
+- No 'eval()', 'exec()', '__import__()', or 'pickle.loads()' on untrusted input?
 - No sensitive data in log messages?
 - Input validation present on all external-facing endpoints?
 - Rate limiting configured for API routes?
@@ -220,16 +220,16 @@ General security checks:
 
 Generate thorough test suites following these conventions:
 
-- **Unit Tests** (`backend/tests/unit/`): Pure logic, NO I/O, fast execution. Mirror
-  source structure. Mark with `@pytest.mark.unit`. Use `factory_boy` factories from
-  `tests/factories/`. Parametrize with `@pytest.mark.parametrize` for multiple cases.
-- **Integration Tests** (`backend/tests/integration/`): Real DB/cache/external
-  services. Use `httpx.AsyncClient` with FastAPI `TestClient` transport. Mark with
-  `@pytest.mark.integration`. Use shared fixtures from `tests/fixtures/`.
-- **Property-Based Tests** (`backend/tests/property/`): Hypothesis-based invariant
-  testing. Mark with `@pytest.mark.property`. Focus on domain invariants and data
-  transformation correctness. Use `@given()` with appropriate strategies.
-- **Frontend Tests** (`frontend/tests/unit/`): Vitest unit tests with happy-dom.
+- **Unit Tests** ('backend/tests/unit/'): Pure logic, NO I/O, fast execution. Mirror
+  source structure. Mark with '@pytest.mark.unit'. Use 'factory_boy' factories from
+  'tests/factories/'. Parametrize with '@pytest.mark.parametrize' for multiple cases.
+- **Integration Tests** ('backend/tests/integration/'): Real DB/cache/external
+  services. Use 'httpx.AsyncClient' with FastAPI 'TestClient' transport. Mark with
+  '@pytest.mark.integration'. Use shared fixtures from 'tests/fixtures/'.
+- **Property-Based Tests** ('backend/tests/property/'): Hypothesis-based invariant
+  testing. Mark with '@pytest.mark.property'. Focus on domain invariants and data
+  transformation correctness. Use '@given()' with appropriate strategies.
+- **Frontend Tests** ('frontend/tests/unit/'): Vitest unit tests with happy-dom.
   Mirror source structure.
 
 For each function/class, generate tests for:
@@ -258,10 +258,10 @@ Update relevant documentation to reflect changes:
 **Documentation Checklist:**
 
 - [ ] All public functions have complete Google-style docstrings
-- [ ] API endpoints documented in `docs/API.md`
-- [ ] Architecture changes reflected in `docs/ARCHITECTURE.md`
-- [ ] Configuration changes in `docs/CONFIG.md`
-- [ ] New setup steps in `docs/SETUP.md`
+- [ ] API endpoints documented in 'docs/API.md'
+- [ ] Architecture changes reflected in 'docs/ARCHITECTURE.md'
+- [ ] Configuration changes in 'docs/CONFIG.md'
+- [ ] New setup steps in 'docs/SETUP.md'
 - [ ] CHANGELOG updated for user-visible changes following Keep a Changelog format
 - [ ] README updated if project scope changed
 
@@ -270,9 +270,9 @@ Update relevant documentation to reflect changes:
 - Sentences NEVER start with articles ("a", "an", "the")
 - Complete sentences with periods in docstrings
 - No punctuation in short comments or log messages
-- `Args:` section for all parameters
-- `Returns:` section if not `None`
-- `Raises:` section for all exceptions
+- 'Args:' section for all parameters
+- 'Returns:' section if not 'None'
+- 'Raises:' section for all exceptions
 
 ## Orchestration Rules
 
@@ -289,9 +289,9 @@ This is a fullstack project using:
 - **Backend**: Python 3.12+ / FastAPI / SQLAlchemy / Clean Architecture
 - **Frontend**: TypeScript / Vite
 - **Infrastructure**: Docker/Podman compose, optional Azure deployment
-- **Registry**: `naming_registry.json` as single source of truth for shared identifiers
+- **Registry**: 'naming_registry.json' as single source of truth for shared identifiers
 - **Testing**: pytest (unit/integration/property/performance) + Vitest + optional
   Playwright
 
 Always ensure changes respect Clean Architecture boundaries and the
-Dependency Rule: `core → application → presentation/infrastructure`
+Dependency Rule: 'core → application → presentation/infrastructure'

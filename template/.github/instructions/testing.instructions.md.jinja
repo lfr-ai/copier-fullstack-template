@@ -25,9 +25,9 @@ backend/tests/
 
 | Element         | Pattern                                       |
 | --------------- | --------------------------------------------- |
-| Test files      | `test_<module_name>.py`                       |
-| Test classes    | `TestClassName` (no `unittest.TestCase`)      |
-| Test functions  | `test_<action>_<scenario>_<expected_outcome>` |
+| Test files      | 'test_<module_name>.py'                       |
+| Test classes    | 'TestClassName' (no 'unittest.TestCase')      |
+| Test functions  | 'test_<action>_<scenario>_<expected_outcome>' |
 
 ```python
 def test_create_user_with_valid_email_returns_user_entity() -> None: ...
@@ -42,24 +42,24 @@ EVERY source module MUST have corresponding test(s):
 
 | Source                              | Test                                          |
 | ----------------------------------- | --------------------------------------------- |
-| `core/entities/*`                  | `unit/core/test_*_entity.py`                  |
-| `core/value_objects/*`             | `unit/core/test_value_objects.py`             |
-| `core/events/*`                    | `unit/core/test_events.py`                    |
-| `core/enums/*`                     | `unit/core/test_enums.py`                     |
-| `core/exceptions/*`               | `unit/core/test_exceptions.py`                |
-| `core/interfaces/*`               | `unit/core/test_interfaces.py`                |
-| `application/services/*`          | `unit/application/test_*_service.py`          |
-| `application/dtos/*`              | `unit/application/test_*_dto.py`              |
-| `application/mappers/*`           | `unit/application/test_*_mapper.py`           |
-| `infrastructure/persistence/repos/*` | `unit/infrastructure/test_*_repository.py`  |
-| `infrastructure/cache/*`          | `unit/infrastructure/test_*_cache.py`         |
-| `infrastructure/messaging/*`      | `unit/infrastructure/test_*_event_bus.py`     |
-| `presentation/api/routes/*`       | `integration/test_api_routes.py`              |
-| `presentation/api/middleware/*`   | `unit/presentation/test_middleware.py`         |
-| `utils/*`                          | `unit/utils/test_*.py` (one per util module)  |
-| `config/settings.py`              | `unit/config/test_settings.py`                |
+| 'core/entities/*'                  | 'unit/core/test_*_entity.py'                  |
+| 'core/value_objects/*'             | 'unit/core/test_value_objects.py'             |
+| 'core/events/*'                    | 'unit/core/test_events.py'                    |
+| 'core/enums/*'                     | 'unit/core/test_enums.py'                     |
+| 'core/exceptions/*'               | 'unit/core/test_exceptions.py'                |
+| 'core/interfaces/*'               | 'unit/core/test_interfaces.py'                |
+| 'application/services/*'          | 'unit/application/test_*_service.py'          |
+| 'application/dtos/*'              | 'unit/application/test_*_dto.py'              |
+| 'application/mappers/*'           | 'unit/application/test_*_mapper.py'           |
+| 'infrastructure/persistence/repos/*' | 'unit/infrastructure/test_*_repository.py'  |
+| 'infrastructure/cache/*'          | 'unit/infrastructure/test_*_cache.py'         |
+| 'infrastructure/messaging/*'      | 'unit/infrastructure/test_*_event_bus.py'     |
+| 'presentation/api/routes/*'       | 'integration/test_api_routes.py'              |
+| 'presentation/api/middleware/*'   | 'unit/presentation/test_middleware.py'         |
+| 'utils/*'                          | 'unit/utils/test_*.py' (one per util module)  |
+| 'config/settings.py'              | 'unit/config/test_settings.py'                |
 
-Target: ≥ 80% line coverage on `core` + `application` layers (enforced by `tox -e coverage-core`)
+Target: ≥ 80% line coverage on 'core' + 'application' layers (enforced by 'tox -e coverage-core')
 
 
 ```python
@@ -71,7 +71,7 @@ Target: ≥ 80% line coverage on `core` + `application` layers (enforced by `tox
 @pytest.mark.smoke         # Critical path — must pass before deploy
 ```
 
-Configure in `pyproject.toml`:
+Configure in 'pyproject.toml':
 
 ```toml
 [tool.pytest.ini_options]
@@ -86,21 +86,21 @@ markers = [
 ```
 
 
-- ALL test functions: `-> None` return type
+- ALL test functions: '-> None' return type
 - ALL tests: AAA pattern (Arrange, Act, Assert) — blank line between each
-- ALL async tests: `pytest-asyncio` correctly configured
-- ZERO `print()` — use `capsys` or assertions
-- ZERO `time.sleep` — mock or async wait
-- Edge cases: empty inputs, `None`, boundary values, invalid types
-- Exception paths: `pytest.raises(ExcType, match=...)` with match verification
-- `*` enforcement: tests confirming positional usage raises `TypeError`
+- ALL async tests: 'pytest-asyncio' correctly configured
+- ZERO 'print()' — use 'capsys' or assertions
+- ZERO 'time.sleep' — mock or async wait
+- Edge cases: empty inputs, 'None', boundary values, invalid types
+- Exception paths: 'pytest.raises(ExcType, match=...)' with match verification
+- '*' enforcement: tests confirming positional usage raises 'TypeError'
 
 
-- `conftest.py`: `async_session`, `async_engine`, `test_client` — defined ONCE at root
-- `@pytest.fixture` with explicit scope (`function` default, `session` for DB engine)
-- Fixture names describe what they return: `active_user`, `expired_token`
+- 'conftest.py': 'async_session', 'async_engine', 'test_client' — defined ONCE at root
+- '@pytest.fixture' with explicit scope ('function' default, 'session' for DB engine)
+- Fixture names describe what they return: 'active_user', 'expired_token'
 - Database fixtures transactional (rollback after each test)
-- Prefer `factory_boy` factories over raw fixture data
+- Prefer 'factory_boy' factories over raw fixture data
 
 
 - Mock at the boundary (interfaces), NEVER inside core
@@ -117,16 +117,16 @@ def test_enum_round_trip(member: MyEnum) -> None:
     assert MyEnum(member.value) == member
 ```
 
-- `tests/property/test_value_objects.py`: strategies for all VOs
-- `@given(st.sampled_from(MyEnum))` for enum-typed inputs
-- Configure `max_examples` and `deadline` for CI
+- 'tests/property/test_value_objects.py': strategies for all VOs
+- '@given(st.sampled_from(MyEnum))' for enum-typed inputs
+- Configure 'max_examples' and 'deadline' for CI
 - Test invariants (idempotency, round-trips, commutativity), not single examples
 
 
-- `tests/utils/assertion_helpers.py`: `assert_domain_error()`, custom helpers
-- `tests/utils/mock_builder.py`: `build_mock_repository()`, `build_mock_cache()`
-- `tests/utils/fixture_factory.py`: `build_entity_fixture()` with defaults + overrides
-- `tests/factories/`: per-entity test data factories
+- 'tests/utils/assertion_helpers.py': 'assert_domain_error()', custom helpers
+- 'tests/utils/mock_builder.py': 'build_mock_repository()', 'build_mock_cache()'
+- 'tests/utils/fixture_factory.py': 'build_entity_fixture()' with defaults + overrides
+- 'tests/factories/': per-entity test data factories
 
 
 - Remove tests testing framework behavior (not your code)

@@ -2,7 +2,7 @@
 
 Collects domain events from tracked entities after commit and
 publishes them through the event bus, completing the domain event
-lifecycle that begins with ``Entity.register_event()``.
+lifecycle that begins with 'Entity.register_event()'.
 """
 
 from __future__ import annotations
@@ -25,9 +25,9 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class SQLAlchemyUnitOfWork:
     """SQLAlchemy-based Unit of Work with domain event dispatch.
 
-    When an ``EventBus`` is provided, ``commit()`` will collect and
+    When an 'EventBus' is provided, 'commit()' will collect and
     publish pending domain events from all entities that were
-    registered during the transaction via ``collect_entity()``.
+    registered during the transaction via 'collect_entity()'.
     """
 
     def __init__(

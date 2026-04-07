@@ -15,9 +15,9 @@ class UnitOfWork(Protocol):
 
     Provides repository access, transactional commit/rollback,
     and domain event collection.  Application services use
-    ``async with uow:`` to open a transaction, access ``uow.users``
-    for persistence, track entities with ``uow.collect_entity()``,
-    and call ``await uow.commit()`` which also dispatches pending
+    'async with uow:' to open a transaction, access 'uow.users'
+    for persistence, track entities with 'uow.collect_entity()',
+    and call 'await uow.commit()' which also dispatches pending
     domain events.
     """
 
@@ -54,7 +54,7 @@ class UnitOfWork(Protocol):
     async def check_connection(self) -> bool:
         """Verify the underlying store is reachable.
 
-        Returns ``True`` if the connection is healthy.
+        Returns 'True' if the connection is healthy.
         Health-check endpoints should call this instead of
         accessing session internals directly.
         """

@@ -1,7 +1,7 @@
 """Base Specification pattern for composable business rule evaluation.
 
 Specifications encapsulate a single business rule as a predicate and
-can be combined with ``&`` (and), ``|`` (or), and ``~`` (not) operators,
+can be combined with '&' (and), '|' (or), and '~' (not) operators,
 allowing complex domain rules to be built from simple, testable pieces.
 
 Example::

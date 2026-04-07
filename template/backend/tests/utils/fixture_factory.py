@@ -46,8 +46,8 @@ class BaseFixtureFactory(ABC, Generic[T]):
         """Build fixture instance.
 
         Args:
-            sequence: Sequence number for unique values.
-            attrs: Attribute values.
+            sequence (int): Sequence number for unique values.
+            attrs (dict[str, object]): Attribute values.
 
         Returns:
             Fixture instance.
@@ -57,7 +57,7 @@ class BaseFixtureFactory(ABC, Generic[T]):
         """Create multiple fixtures.
 
         Args:
-            count: Number of fixtures to create.
+            count (int): Number of fixtures to create.
             **overrides: Override values (applied to all instances).
 
         Returns:

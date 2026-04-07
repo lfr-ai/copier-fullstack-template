@@ -41,8 +41,8 @@ class MockBuilder:
         """Add method to mock.
 
         Args:
-            return_value: Method return value.
-            side_effect: Exception to raise.
+            return_value (object): Method return value.
+            side_effect (Exception | None): Exception to raise.
         """
         if side_effect:
             self._side_effects[name] = side_effect

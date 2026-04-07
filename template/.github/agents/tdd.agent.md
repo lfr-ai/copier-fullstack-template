@@ -40,7 +40,7 @@ Write tests that define the desired behavior BEFORE any implementation exists.
 - Follow project test conventions (pytest markers, factories, parametrize)
 - Each test should test ONE behavior
 - Include edge cases and error paths from the start
-- Use descriptive test names: `test_<action>_<condition>_<expected_result>`
+- Use descriptive test names: 'test_<action>_<condition>_<expected_result>'
 - Run tests to confirm they fail → verify they fail for the right reason
 
 **Test Conventions:**
@@ -93,13 +93,13 @@ Write the MINIMUM code needed to make all failing tests pass. No over-engineerin
 **Coding Standards:**
 
 - Python 3.12+ syntax
-- `from __future__ import annotations` in EVERY file
+- 'from __future__ import annotations' in EVERY file
 - Full type hints on ALL functions, methods, class attributes
 - Google-style docstrings on all public modules, classes, functions, methods
-- Keyword-only arguments with `*` separator
-- `frozen=True, slots=True` on all dataclasses
-- Structured logging with `structlog`
-- No `Any` type — use generics or `object`
+- Keyword-only arguments with '*' separator
+- 'frozen=True, slots=True' on all dataclasses
+- Structured logging with 'structlog'
+- No 'Any' type — use generics or 'object'
 
 ### Phase 3: Refactor — Improve Code Quality
 
@@ -134,27 +134,27 @@ Improve code quality WITHOUT changing behavior. All tests must stay green.
 
 ## Project Test Categories
 
-### Unit Tests (`backend/tests/unit/`)
+### Unit Tests ('backend/tests/unit/')
 
 - Pure logic, NO I/O, fast execution
-- Mirror source structure: `tests/unit/core/`, `tests/unit/application/`, etc.
-- Mark with `@pytest.mark.unit`
-- Use `factory_boy` factories from `tests/factories/`
-- Parametrize with `@pytest.mark.parametrize` for multiple cases
+- Mirror source structure: 'tests/unit/core/', 'tests/unit/application/', etc.
+- Mark with '@pytest.mark.unit'
+- Use 'factory_boy' factories from 'tests/factories/'
+- Parametrize with '@pytest.mark.parametrize' for multiple cases
 
-### Integration Tests (`backend/tests/integration/`)
+### Integration Tests ('backend/tests/integration/')
 
 - Real DB/cache/external services
-- Use `httpx.AsyncClient` with FastAPI `TestClient` transport
-- Mark with `@pytest.mark.integration`
-- Use shared fixtures from `tests/fixtures/`
+- Use 'httpx.AsyncClient' with FastAPI 'TestClient' transport
+- Mark with '@pytest.mark.integration'
+- Use shared fixtures from 'tests/fixtures/'
 
-### Property-Based Tests (`backend/tests/property/`)
+### Property-Based Tests ('backend/tests/property/')
 
 - Hypothesis-based invariant testing
-- Mark with `@pytest.mark.property`
+- Mark with '@pytest.mark.property'
 - Focus on domain invariants and data transformation correctness
-- Use `@given()` with appropriate strategies
+- Use '@given()' with appropriate strategies
 
 ## Running Tests
 

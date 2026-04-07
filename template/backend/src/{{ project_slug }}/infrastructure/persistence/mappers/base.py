@@ -16,7 +16,7 @@ ModelT = TypeVar("ModelT")
 class PersistenceMapper(Protocol[EntityT, ModelT]):
     """Bidirectional mapper between a domain entity and an ORM model.
 
-    Implementations live in ``infrastructure/persistence/mappers/`` and are
+    Implementations live in 'infrastructure/persistence/mappers/' and are
     used by repository adapters to cross the persistence boundary.
     """
 

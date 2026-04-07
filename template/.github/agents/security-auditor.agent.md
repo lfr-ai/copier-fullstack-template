@@ -30,14 +30,14 @@ vulnerabilities and risks. You NEVER modify files.
 ### 1. Input Validation
 
 - Are all user inputs validated before processing?
-- Are Pydantic models used for request validation in `presentation/`?
+- Are Pydantic models used for request validation in 'presentation/'?
 - Are string lengths, numeric bounds, and patterns enforced?
 - Is there protection against oversized payloads?
 
 ### 2. Injection Attacks
 
 - NO raw SQL queries (must use SQLAlchemy ORM)
-- NO `eval()`, `exec()`, `__import__()`, or `pickle.loads()` on untrusted input
+- NO 'eval()', 'exec()', '__import__()', or 'pickle.loads()' on untrusted input
 - NO template injection via unsanitized user input
 - NO command injection in shell commands
 - Are query parameters properly parameterized?
@@ -61,23 +61,23 @@ vulnerabilities and risks. You NEVER modify files.
 ### 5. Infrastructure Security
 
 - Are database connections using SSL/TLS?
-- Are CORS policies restrictive (not `*`)?
+- Are CORS policies restrictive (not '*')?
 - Are security headers present (CSP, HSTS, X-Frame-Options)?
 - Are container images using non-root users?
 - Are dependencies free of known CVEs?
 
 ### 6. Rate Limiting & DoS Protection
 
-- Are API routes rate-limited (`slowapi`)?
+- Are API routes rate-limited ('slowapi')?
 - Are file upload sizes restricted?
 - Is there pagination on list endpoints?
 - Are background tasks bounded in execution time?
 
 ### 7. Cryptography
 
-- Is `secrets` module used for token generation (not `random`)?
+- Is 'secrets' module used for token generation (not 'random')?
 - Are encryption keys of adequate length?
-- Is `datetime.UTC` used for time-sensitive operations?
+- Is 'datetime.UTC' used for time-sensitive operations?
 - Are HMAC signatures properly verified?
 
 ## Audit Output Format

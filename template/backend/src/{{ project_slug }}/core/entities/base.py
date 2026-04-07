@@ -77,7 +77,7 @@ class AggregateRoot(Entity):
     during business operations, and the Unit of Work collects
     and dispatches them after a successful commit.
 
-    Use ``AggregateRoot`` for entities that:
+    Use 'AggregateRoot' for entities that:
     - Are referenced directly by repositories
     - Enforce transactional invariants over child entities
     - Serve as the sole entry point for a cluster of objects

@@ -1,13 +1,37 @@
+---
+version: 1
+models:
+  research: claude-opus-4-6
+  planning: claude-opus-4-6
+  execution: claude-sonnet-4-6
+  execution_simple: claude-haiku-4-5
+  completion: claude-sonnet-4-6
+  subagent: claude-sonnet-4-6
+dynamic_routing:
+  enabled: false
+  cross_provider: false
+  budget_pressure: false
+  tier_models:
+    cheap: claude-haiku-4-5
+    balanced: claude-sonnet-4-6
+    premium: claude-opus-4-6
+pre_dispatch_hooks:
+  - { name: force-claude-standard, before: [executor_dispatch], action: set_model, when: { unit_type_in: [standard, simple] }, model: claude-sonnet-4-6 }
+  - { name: force-claude-heavy, before: [executor_dispatch], action: set_model, when: { unit_type_in: [heavy, research, planning] }, model: claude-opus-4-6 }
+custom_instructions:
+  - "Never select gemini-2.5-pro. If unavailable model is requested, use claude-sonnet-4-6."
+---
+
 # GSD-2 Preferences
 
 ## Project Overview
 
-- **Name**: {{ project_name }}
-- **Type**: Fullstack Python + TypeScript application
-- **Backend**: Python {{ python_version }}+ / FastAPI / SQLAlchemy 2.0+ / Clean Architecture
-- **Frontend**: TypeScript / Vite / React 19 / Tailwind CSS v4
-- **Package Managers**: UV (Python), Bun (frontend)
-- **Container Runtime**: {{ container_runtime }}
+- Name — {{ project_name }}
+- Type — Fullstack Python + TypeScript application
+- Backend — Python {{ python_version }}+ / FastAPI / SQLAlchemy 2.0+ / Clean Architecture
+- Frontend — TypeScript / Vite / React 19 / Tailwind CSS v4
+- Package Managers — UV (Python), Bun (frontend)
+- Container Runtime — {{ container_runtime }}
 
 ## Architecture
 
@@ -60,8 +84,8 @@ task registry:check    # Verify generated constants are up to date
 ## Agent Integration
 
 GSD shares the same conventions as the GitHub Copilot agents in `.github/agents/`:
-- **Skills**: `.github/skills/` (clean-architecture, python-conventions, testing-conventions, naming-registry)
-- **Instructions**: `.github/instructions/` (architecture, coding, frontend, security, shell, testing, scaffolding)
-- **Hooks**: `.github/hooks/` (tool-guardian, session-logger, secrets-scanner, auto-format, license-checker, context-saver)
+- Skills — `.github/skills/` (clean-architecture, python-conventions, testing-conventions, naming-registry)
+- Instructions — `.github/instructions/` (architecture, coding, frontend, security, shell, testing, scaffolding)
+- Hooks — `.github/hooks/` (tool-guardian, session-logger, secrets-scanner, auto-format, license-checker, context-saver)
 
 Both GSD and Copilot agents follow the same Clean Architecture rules and coding conventions.
