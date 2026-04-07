@@ -1,0 +1,225 @@
+"""Integration tests for multi-environment schema routing."""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+from sqlalchemy import text
+{%- if database_backend == "postgresql" %}
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from {{ project_slug }}.core.enums.environment import Environment
+from {{ project_slug }}.infrastructure.persistence.session import (
+    create_engine,
+    schema_for_environment,
+)
+{%- endif %}
+
+
+pytestmark = pytest.mark.integration
+
+
+{%- if database_backend == "postgresql" %}
+
+
+@pytest.fixture
+def test_database_url() -> str:
+    """Provide test database URL for schema routing tests."""
+    return "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+
+
+
+def test_schema_for_environment_mapping() -> None:
+    """Verify Environment enum maps to correct schema names."""
+    assert schema_for_environment(Environment.LOCAL) == "public"
+    assert schema_for_environment(Environment.DEV) == "dev_schema"
+    assert schema_for_environment(Environment.TEST) == "test_schema"
+    assert schema_for_environment(Environment.STAGING) == "staging_schema"
+    assert schema_for_environment(Environment.PROD) == "prod_schema"
+
+
+@pytest.mark.asyncio
+async def test_schema_routing_local_environment(
+    test_database_url: str,
+) -> None:
+    """Test that LOCAL environment routes to public schema."""
+    from {{ project_slug }}.config.settings import get_settings
+
+    # Clear settings cache
+    get_settings.cache_clear()
+    original_env = os.environ.get("{{ project_slug | upper }}_ENVIRONMENT")
+
+    try:
+        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "local"
+        get_settings.cache_clear()
+
+        engine: AsyncEngine = create_engine(test_database_url, echo=False)
+
+        async with engine.begin() as conn:
+            result = await conn.execute(text("SHOW search_path"))
+            search_path = result.scalar()
+            assert "public" in search_path.lower()
+
+        await engine.dispose()
+    finally:
+        if original_env:
+            os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = original_env
+        else:
+            os.environ.pop("{{ project_slug | upper }}_ENVIRONMENT", None)
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_schema_routing_dev_environment(
+    test_database_url: str,
+) -> None:
+    """Test that DEV environment routes to dev_schema."""
+    from {{ project_slug }}.config.settings import get_settings
+
+    # Clear settings cache
+    get_settings.cache_clear()
+    original_env = os.environ.get("{{ project_slug | upper }}_ENVIRONMENT")
+
+    try:
+        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "dev"
+        get_settings.cache_clear()
+
+        engine: AsyncEngine = create_engine(test_database_url, echo=False)
+
+        async with engine.begin() as conn:
+            result = await conn.execute(text("SHOW search_path"))
+            search_path = result.scalar()
+            assert "dev_schema" in search_path.lower()
+
+        await engine.dispose()
+    finally:
+        if original_env:
+            os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = original_env
+        else:
+            os.environ.pop("{{ project_slug | upper }}_ENVIRONMENT", None)
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_schema_routing_test_environment(
+    test_database_url: str,
+) -> None:
+    """Test that TEST environment routes to test_schema."""
+    from {{ project_slug }}.config.settings import get_settings
+
+    # Clear settings cache
+    get_settings.cache_clear()
+    original_env = os.environ.get("{{ project_slug | upper }}_ENVIRONMENT")
+
+    try:
+        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "test"
+        get_settings.cache_clear()
+
+        engine: AsyncEngine = create_engine(test_database_url, echo=False)
+
+        async with engine.begin() as conn:
+            result = await conn.execute(text("SHOW search_path"))
+            search_path = result.scalar()
+            assert "test_schema" in search_path.lower()
+
+        await engine.dispose()
+    finally:
+        if original_env:
+            os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = original_env
+        else:
+            os.environ.pop("{{ project_slug | upper }}_ENVIRONMENT", None)
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_schema_routing_persists_across_connections(
+    test_database_url: str,
+) -> None:
+    """Test that schema routing is applied to all connections from the pool."""
+    from {{ project_slug }}.config.settings import get_settings
+
+    # Clear settings cache
+    get_settings.cache_clear()
+    original_env = os.environ.get("{{ project_slug | upper }}_ENVIRONMENT")
+
+    try:
+        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "dev"
+        get_settings.cache_clear()
+
+        engine: AsyncEngine = create_engine(test_database_url, echo=False)
+
+        # Check multiple connections from the pool
+        for _ in range(3):
+            async with engine.begin() as conn:
+                result = await conn.execute(text("SHOW search_path"))
+                search_path = result.scalar()
+                assert "dev_schema" in search_path.lower()
+
+        await engine.dispose()
+    finally:
+        if original_env:
+            os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = original_env
+        else:
+            os.environ.pop("{{ project_slug | upper }}_ENVIRONMENT", None)
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_schema_routing_with_transactions(
+    test_database_url: str,
+) -> None:
+    """Test that schema routing works correctly within transactions."""
+    from {{ project_slug }}.config.settings import get_settings
+
+    # Clear settings cache
+    get_settings.cache_clear()
+    original_env = os.environ.get("{{ project_slug | upper }}_ENVIRONMENT")
+
+    try:
+        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "staging"
+        get_settings.cache_clear()
+
+        engine: AsyncEngine = create_engine(test_database_url, echo=False)
+
+        async with engine.begin() as conn:
+            # Verify search_path within transaction
+            result = await conn.execute(text("SHOW search_path"))
+            search_path = result.scalar()
+            assert "staging_schema" in search_path.lower()
+
+            # Transaction operations should use the correct schema
+            # (actual table operations will be tested in T02 with Alembic)
+
+        await engine.dispose()
+    finally:
+        if original_env:
+            os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = original_env
+        else:
+            os.environ.pop("{{ project_slug | upper }}_ENVIRONMENT", None)
+        get_settings.cache_clear()
+
+
+{%- elif database_backend == "sqlite" %}
+
+
+def test_schema_routing_noop_for_sqlite() -> None:
+    """SQLite does not support schemas - ensure no errors occur."""
+    from {{ project_slug }}.infrastructure.persistence.session import create_engine
+
+    # SQLite should create engine without errors
+    engine = create_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    assert engine is not None
+    # No schema routing for SQLite - this test just ensures it doesn't crash
+
+
+{%- else %}
+
+
+def test_schema_routing_placeholder() -> None:
+    """Placeholder test for non-PostgreSQL backends."""
+    # Schema routing is only implemented for PostgreSQL
+    assert True
+
+
+{%- endif %}
