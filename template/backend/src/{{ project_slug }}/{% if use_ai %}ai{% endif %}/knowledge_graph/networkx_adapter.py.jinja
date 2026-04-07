@@ -164,6 +164,55 @@ class NetworkXKnowledgeGraph(KnowledgeGraphGateway):
         """Return the total number of triplets (edges) in the graph."""
         return self._graph.number_of_edges()
 
+    async def traverse(self, node_id: object) -> list[object]:
+        """Traverse the knowledge graph starting from the specified node.
+
+        Uses BFS (breadth-first search) to traverse the graph from the
+        starting node and returns a list of node identifiers in traversal order.
+
+        Args:
+            node_id (object): The starting node identifier.
+
+        Returns:
+            list[object]: A list of node identifiers in BFS traversal order.
+        """
+        from collections import deque
+
+        if not isinstance(node_id, str):
+            node_id = str(node_id)
+
+        if node_id not in self._graph:
+            logger.warning("Node '%s' not found in knowledge graph", node_id)
+            return [node_id]  # Return just the starting node
+
+        # BFS traversal
+        visited: set[str] = set()
+        queue: deque[str] = deque([node_id])
+        traversal_path: list[object] = []
+
+        while queue:
+            current = queue.popleft()
+            if current in visited:
+                continue
+
+            visited.add(current)
+            traversal_path.append(current)
+
+            # Add neighbors to queue (both successors and predecessors)
+            for neighbor in self._graph.successors(current):
+                if neighbor not in visited:
+                    queue.append(neighbor)
+            for neighbor in self._graph.predecessors(current):
+                if neighbor not in visited:
+                    queue.append(neighbor)
+
+        logger.debug(
+            "BFS traversal from node '%s' visited %d nodes",
+            node_id,
+            len(traversal_path),
+        )
+        return traversal_path
+
     def save(self, path: str) -> None:
         """Persist graph to JSON adjacency format.
 

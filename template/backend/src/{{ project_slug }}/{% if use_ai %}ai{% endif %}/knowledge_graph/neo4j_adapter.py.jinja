@@ -178,3 +178,29 @@ class Neo4jKnowledgeGraph(KnowledgeGraphGateway):
             result = await session.run(query)
             record = await result.single()
             return record["cnt"] if record else 0
+
+    async def traverse(self, node_id: object) -> list[object]:
+        """Traverse the knowledge graph starting from the specified node.
+
+        Delegates to 'query_neighbors()' to get adjacent nodes and
+        returns a list of node identifiers representing the traversal path.
+
+        Args:
+            node_id (object): The starting node identifier.
+
+        Returns:
+            list[object]: A list of node identifiers in the traversal path.
+        """
+        if not isinstance(node_id, str):
+            node_id = str(node_id)
+
+        neighbors = await self.query_neighbors(
+            entity=node_id,
+            depth=1,
+            limit=DEFAULT_NEIGHBOR_LIMIT,
+        )
+        # Extract node IDs from neighbor results
+        traversal_path = [node_id]  # Start with the current node
+        traversal_path.extend(neighbor["entity"] for neighbor in neighbors)
+        logger.debug("Traversed from node '%s' to %d neighbors", node_id, len(neighbors))
+        return traversal_path
