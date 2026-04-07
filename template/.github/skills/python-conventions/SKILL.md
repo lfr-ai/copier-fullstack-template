@@ -21,10 +21,10 @@ maintainability.
 ## Rules
 
 - Use Python {{ python_version }}+ features and full type hints
-- Add `from __future__ import annotations` in each Python module
-- Use keyword-only args (`*`) for multi-parameter constructors/functions
-- Use structured logging, not `print()`
-- Avoid `Any`; prefer precise types or `object`
+- Add 'from __future__ import annotations' in each Python module
+- Use keyword-only args ('*') for multi-parameter constructors/functions
+- Use structured logging, not 'print()'
+- Avoid 'Any'; prefer precise types or 'object'
 - Keep line length <= 88
 
 ## Quick Checklist

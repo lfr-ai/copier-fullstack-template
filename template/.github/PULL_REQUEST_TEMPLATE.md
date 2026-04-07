@@ -14,10 +14,10 @@ Brief description of changes.
 - Change 2
 
 
-- [ ] Unit tests pass (`task test:unit`)
-- [ ] Integration tests pass (`task test:integration`)
-- [ ] Linters pass (`task lint`)
-- [ ] Type checks pass (`task typecheck`)
+- [ ] Unit tests pass ('task test:unit')
+- [ ] Integration tests pass ('task test:integration')
+- [ ] Linters pass ('task lint')
+- [ ] Type checks pass ('task typecheck')
 
 
 - [ ] My code follows the project coding conventions

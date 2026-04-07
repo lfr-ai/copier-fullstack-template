@@ -7,8 +7,8 @@ tools: ['run_in_terminal', 'get_terminal_output']
 Follow the Conventional Commits specification to create standardized, descriptive commit messages.
 
 
-1. Run `git status` to review changed files.
-2. Run `git diff --cached` to inspect staged changes.
+1. Run 'git status' to review changed files.
+2. Run 'git diff --cached' to inspect staged changes.
 3. Construct the commit message using the structure below.
 4. Execute the commit command in the terminal.
 
@@ -24,17 +24,17 @@ type(scope): description
 
 | Type | Description |
 |---|---|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `style` | Formatting, missing semicolons, etc. |
-| `refactor` | Code change that neither fixes a bug nor adds a feature |
-| `perf` | Performance improvement |
-| `test` | Adding missing or correcting existing tests |
-| `build` | Changes to build system or dependencies |
-| `ci` | CI configuration changes |
-| `chore` | Other changes that don't modify src or test files |
-| `revert` | Reverts a previous commit |
+| 'feat' | New feature |
+| 'fix' | Bug fix |
+| 'docs' | Documentation only |
+| 'style' | Formatting, missing semicolons, etc. |
+| 'refactor' | Code change that neither fixes a bug nor adds a feature |
+| 'perf' | Performance improvement |
+| 'test' | Adding missing or correcting existing tests |
+| 'build' | Changes to build system or dependencies |
+| 'ci' | CI configuration changes |
+| 'chore' | Other changes that don't modify src or test files |
+| 'revert' | Reverts a previous commit |
 
 
 ```
