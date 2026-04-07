@@ -1,0 +1,265 @@
+# AI Component Configuration
+#
+# This file defines AI components (LLMs, embeddings, vector stores, knowledge graphs,
+# retrievers, pipelines) that can be loaded dynamically via AIConfigLoader.
+#
+# Features:
+# - Environment variable substitution: ${VAR_NAME}
+# - Reference resolution: component_type.component_name (e.g., llms.gpt4)
+# - Component caching: Prevents duplicate instantiation
+# - Factory pattern: All components instantiate via from_config() methods
+#
+# Usage:
+#   from {{ project_slug }}.ai.config_loader import AIConfigLoader
+#   loader = AIConfigLoader(config_path="config/ai_config.yaml")
+#   pipeline = loader.create_pipeline("self_crag")
+
+# ============================================================================
+# Embeddings
+# ============================================================================
+embeddings:
+  default:
+    type: litellm
+    model: text-embedding-3-small
+    api_key: ${OPENAI_API_KEY}
+    dimension: 1536
+
+  large:
+    type: litellm
+    model: text-embedding-3-large
+    api_key: ${OPENAI_API_KEY}
+    dimension: 3072
+
+  azure_small:
+    type: litellm
+    model: azure/text-embedding-3-small
+    api_key: ${AZURE_OPENAI_API_KEY}
+    api_base: ${AZURE_OPENAI_ENDPOINT}
+    api_version: 2025-04-01-preview
+    dimension: 1536
+
+# ============================================================================
+# Language Models
+# ============================================================================
+llms:
+  gpt4:
+    type: litellm
+    model: gpt-4o
+    api_key: ${OPENAI_API_KEY}
+    temperature: 0.7
+    max_tokens: 2000
+
+  gpt4_mini:
+    type: litellm
+    model: gpt-4o-mini
+    api_key: ${OPENAI_API_KEY}
+    temperature: 0.7
+    max_tokens: 1000
+
+  azure_gpt4:
+    type: litellm
+    model: azure/${AZURE_OPENAI_DEPLOYMENT}
+    api_key: ${AZURE_OPENAI_API_KEY}
+    api_base: ${AZURE_OPENAI_ENDPOINT}
+    api_version: 2025-04-01-preview
+    temperature: 0.7
+    max_tokens: 2000
+
+  reasoning:
+    type: litellm
+    model: gpt-4o
+    api_key: ${OPENAI_API_KEY}
+    temperature: 0.2
+    max_tokens: 4000
+
+# ============================================================================
+# Vector Stores
+# ============================================================================
+vector_stores:
+  faiss_default:
+    type: faiss
+    dimension: 1536
+    persist_dir: ./data/faiss
+
+  faiss_large:
+    type: faiss
+    dimension: 3072
+    persist_dir: ./data/faiss_large
+
+  # Example: Azure AI Search (requires use_ai_search=true in template)
+  # azure_search:
+  #   type: azure_ai_search
+  #   endpoint: ${AZURE_AI_SEARCH_ENDPOINT}
+  #   api_key: ${AZURE_AI_SEARCH_API_KEY}
+  #   index_name: {{ project_slug }}-index
+  #   dimension: 1536
+
+  # Example: Pgvector (requires use_pgvector=true in template)
+  # pgvector:
+  #   type: pgvector
+  #   database_url: ${DATABASE_URL}
+  #   table_name: vector_embeddings
+  #   dimension: 1536
+
+# ============================================================================
+# Knowledge Graphs
+# ============================================================================
+knowledge_graphs:
+  networkx_default:
+    type: networkx
+    persist_path: ./data/kg/graph.pkl
+
+  # Example: Neo4j (requires use_knowledge_graph=true in template)
+  # neo4j:
+  #   type: neo4j
+  #   uri: ${NEO4J_URI}
+  #   username: ${NEO4J_USER}
+  #   password: ${NEO4J_PASSWORD}
+  #   database: ${NEO4J_DATABASE}
+
+  # Example: RDFLib (requires use_knowledge_graph=true in template)
+  # rdflib:
+  #   type: rdflib
+  #   persist_path: ./data/kg/graph.ttl
+
+# ============================================================================
+# Retrievers
+# ============================================================================
+retrievers:
+  # Basic vector retriever
+  vector_default:
+    type: vector
+    embedding_ref: embeddings.default
+    vector_store_ref: vector_stores.faiss_default
+    top_k: 5
+
+  # Large embedding vector retriever
+  vector_large:
+    type: vector
+    embedding_ref: embeddings.large
+    vector_store_ref: vector_stores.faiss_large
+    top_k: 5
+
+  # Graph-based retriever
+  graph_default:
+    type: graph
+    kg_backend_ref: knowledge_graphs.networkx_default
+    llm_ref: llms.reasoning
+    depth: 2
+
+  # Ensemble retriever combining vector and graph
+  ensemble_default:
+    type: ensemble
+    retriever_refs:
+      - ref: retrievers.vector_default
+        weight: 0.7
+      - ref: retrievers.graph_default
+        weight: 0.3
+
+  # Heavy ensemble with large embeddings
+  ensemble_large:
+    type: ensemble
+    retriever_refs:
+      - ref: retrievers.vector_large
+        weight: 0.6
+      - ref: retrievers.graph_default
+        weight: 0.4
+
+# ============================================================================
+# Rerankers
+# ============================================================================
+rerankers:
+  cross_encoder:
+    type: cross_encoder
+    model: cross-encoder/ms-marco-MiniLM-L-6-v2
+    top_k: 3
+
+# ============================================================================
+# Pipelines
+# ============================================================================
+pipelines:
+  # Self-Corrective RAG (Self-CRAG) Pipeline
+  # Uses retrieval-grounded generation with self-correction
+  self_crag:
+    type: self_crag
+    llm_ref: llms.gpt4
+    retriever_ref: retrievers.vector_default
+    relevance_threshold: 0.7
+    max_iterations: 3
+
+  # Self-CRAG with ensemble retriever
+  self_crag_ensemble:
+    type: self_crag
+    llm_ref: llms.gpt4
+    retriever_ref: retrievers.ensemble_default
+    relevance_threshold: 0.75
+    max_iterations: 3
+
+  # Self-CRAG with large embeddings and reasoning model
+  self_crag_advanced:
+    type: self_crag
+    llm_ref: llms.reasoning
+    retriever_ref: retrievers.ensemble_large
+    relevance_threshold: 0.8
+    max_iterations: 5
+
+  # Azure-based Self-CRAG pipeline
+  self_crag_azure:
+    type: self_crag
+    llm_ref: llms.azure_gpt4
+    retriever_ref: retrievers.vector_default
+    relevance_threshold: 0.7
+    max_iterations: 3
+
+# ============================================================================
+# Workflows (LangGraph Multi-Hop)
+# ============================================================================
+workflows:
+  # DeepRAG / Multi-Hop Workflow
+  # Uses knowledge graph traversal with iterative retrieval
+  deep_rag:
+    type: multi_hop
+    kg_backend_ref: knowledge_graphs.networkx_default
+    retriever_ref: retrievers.vector_default
+    max_hops: 5
+
+  # Advanced DeepRAG with ensemble retriever
+  deep_rag_advanced:
+    type: multi_hop
+    kg_backend_ref: knowledge_graphs.networkx_default
+    retriever_ref: retrievers.ensemble_default
+    max_hops: 7
+
+  # Lightweight DeepRAG with fewer hops
+  deep_rag_fast:
+    type: multi_hop
+    kg_backend_ref: knowledge_graphs.networkx_default
+    retriever_ref: retrievers.vector_default
+    max_hops: 3
+
+# ============================================================================
+# Example Usage Patterns
+# ============================================================================
+#
+# 1. Load a specific pipeline:
+#    loader = AIConfigLoader(config_path="config/ai_config.yaml")
+#    pipeline = loader.create_pipeline("self_crag")
+#    result = pipeline.run(query="What is quantum computing?")
+#
+# 2. Load a workflow:
+#    workflow = loader.create_workflow("deep_rag")
+#    result = workflow.run(query="Explain neural networks")
+#
+# 3. Get individual components:
+#    llm = loader.get_component("llms.gpt4")
+#    embedding = loader.get_component("embeddings.default")
+#    retriever = loader.get_component("retrievers.ensemble_default")
+#
+# 4. Custom configuration at runtime:
+#    config = {
+#        "embeddings": {"custom": {"type": "litellm", "model": "...", ...}},
+#        "llms": {"custom": {"type": "litellm", "model": "...", ...}},
+#        ...
+#    }
+#    loader = AIConfigLoader(config_dict=config)
+#    pipeline = loader.create_pipeline("self_crag")
