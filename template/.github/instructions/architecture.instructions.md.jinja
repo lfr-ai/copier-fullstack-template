@@ -95,8 +95,6 @@ utils/ ← (all layers may import; utils imports from NO project layer)
 
 **Note on ai/ vertical module:** Per decision D002, 'ai/' is a separate top-level vertical module, not a Clean Architecture layer. Standard inner/outer layer restrictions don't apply to it. Both 'application/' and 'presentation/' may import ai/ models and services. The ai/ module itself must not import from 'presentation/', 'config/', or 'infrastructure/'.
 
-**Known exception:** 'presentation/graphql/permissions.py.jinja' directly imports 'JWTAdapter' from 'infrastructure/' (Presentation importing from Infrastructure) due to missing auth interface and DI wiring infrastructure. This is a documented FIXME pending proper auth DI implementation.
-
 
 | Concern                                  | ONLY In                 |
 | ---------------------------------------- | ----------------------- |
@@ -143,13 +141,13 @@ Run these commands to verify Clean Architecture compliance:
 
 **Verify core layer isolation (exit code 1 = pass):**
 ```bash
-rg 'from.*\.(application|infrastructure|presentation|config|ai)' "template/backend/src/{{ project_slug }}/core/" --type py
+rg 'from.*\.(application|infrastructure|presentation|config|ai)' "backend/src/{{ project_slug }}/core/" --type py
 ```
 Expected: Exit code 1 (no matches). Core layer must have zero outward dependencies.
 
 **Verify no infrastructure imports in application layer (exit code 1 = pass):**
 ```bash
-rg 'from.*\.infrastructure' "template/backend/src/{{ project_slug }}/application/" --type py
+rg 'from.*\.infrastructure' "backend/src/{{ project_slug }}/application/" --type py
 ```
 Expected: Exit code 1 (no matches). Application layer must not import from infrastructure.
 

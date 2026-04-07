@@ -92,8 +92,8 @@ Write the MINIMUM code needed to make all failing tests pass. No over-engineerin
 
 **Coding Standards:**
 
-- Python 3.12+ syntax
-- 'from __future__ import annotations' in EVERY file
+- Python 3.11+ syntax
+- 'from __future__ import annotations' only when TYPE_CHECKING or forward references require it
 - Full type hints on ALL functions, methods, class attributes
 - Google-style docstrings on all public modules, classes, functions, methods
 - Keyword-only arguments with '*' separator

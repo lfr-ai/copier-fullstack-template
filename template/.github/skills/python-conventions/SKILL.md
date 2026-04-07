@@ -21,11 +21,16 @@ maintainability.
 ## Rules
 
 - Use Python {{ python_version }}+ features and full type hints
-- Add 'from __future__ import annotations' in each Python module
+- 'from __future__ import annotations' ONLY in files with TYPE_CHECKING blocks or forward references
 - Use keyword-only args ('*') for multi-parameter constructors/functions
 - Use structured logging, not 'print()'
 - Avoid 'Any'; prefer precise types or 'object'
 - Keep line length <= 88
+- Google-style docstrings on all public symbols; args/returns MUST include typehints
+- StrEnum + @unique + auto() for string enums
+- @final on all concrete leaf classes
+- raise ... from e to preserve exception context; catch specific exceptions only
+- No emojis in code, comments, logs, or documentation
 
 ## Quick Checklist
 
