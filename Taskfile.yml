@@ -28,14 +28,14 @@ tasks:
     desc: Verify type annotations and architecture documentation
     cmds:
       - echo "Verifying architecture documentation..."
-      - grep -q '## Verification Commands' template/.github/instructions/architecture.instructions.md.jinja
+      - powershell -Command "if (Select-String -Path 'template/.github/instructions/architecture.instructions.md.jinja' -Pattern '## Verification Commands' -Quiet) { exit 0 } else { exit 1 }"
       - echo "✓ Architecture verification commands documented"
 
   registry:check:
     desc: Verify coding conventions documentation
     cmds:
       - echo "Verifying coding conventions documentation..."
-      - grep -q '## Verification Commands' template/.github/instructions/coding-conventions.instructions.md
+      - powershell -Command "if (Select-String -Path 'template/.github/instructions/coding-conventions.instructions.md' -Pattern '## Verification Commands' -Quiet) { exit 0 } else { exit 1 }"
       - echo "✓ Coding conventions verification commands documented"
 
   verify-all:
