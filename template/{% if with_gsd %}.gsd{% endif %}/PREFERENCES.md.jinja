@@ -3,14 +3,31 @@ version: 1
 models:
   research: claude-opus-4-6
   planning: claude-opus-4-6
+  discuss: claude-opus-4-6
   execution: claude-sonnet-4-6
   execution_simple: claude-haiku-4-5
   completion: claude-sonnet-4-6
+  validation: claude-opus-4-6
   subagent: claude-sonnet-4-6
 skill_discovery: auto
 skill_staleness_days: 0
 always_use_skills:
   - clean-architecture
+prefer_skills:
+  - python-conventions
+  - testing-conventions
+  - naming-registry
+skill_rules:
+  - when: working on backend Python code, services, or domain logic
+    use:
+      - python-conventions
+      - clean-architecture
+  - when: writing or modifying tests
+    use:
+      - testing-conventions
+  - when: adding routes, fields, enum values, or shared identifiers
+    use:
+      - naming-registry
 auto_supervisor:
   soft_timeout_minutes: 20
   idle_timeout_minutes: 10
@@ -28,12 +45,9 @@ dynamic_routing:
   cross_provider: false
   budget_pressure: false
   tier_models:
-    cheap: claude-haiku-4-5
-    balanced: claude-sonnet-4-6
-    premium: claude-opus-4-6
-pre_dispatch_hooks:
-  - { name: force-claude-standard, before: [executor_dispatch], action: set_model, when: { unit_type_in: [standard, simple] }, model: claude-sonnet-4-6 }
-  - { name: force-claude-heavy, before: [executor_dispatch], action: set_model, when: { unit_type_in: [heavy, research, planning] }, model: claude-opus-4-6 }
+    light: claude-haiku-4-5
+    standard: claude-sonnet-4-6
+    heavy: claude-opus-4-6
 budget_ceiling: 50.00
 budget_enforcement: pause
 token_profile: balanced
@@ -41,7 +55,6 @@ git:
   auto_push: false
   merge_strategy: squash
   isolation: none
-  commit_docs: true
   manage_gitignore: true
   snapshots: true
   pre_merge_check: auto
@@ -116,7 +129,8 @@ from core toward frameworks/infrastructure.
 - `application/` → Use cases, services, DTOs, commands, queries, mappers — imports from core only
 - `infrastructure/` → DB repos, cache, HTTP clients, auth, messaging — implements core interfaces
 - `presentation/` → API routes (FastAPI), CLI (Click), web controllers — framework-specific entry points
-- `config/` → Settings, DI container, logging configuration
+- `composition/` → DI container wiring (wires protocols to concrete implementations)
+- `config/` → Settings, logging configuration
 - `utils/` → Shared helpers — stdlib only, no project layer imports
 {%- if use_ai %}
 - `ai/` → AI agents, chains, RAG — vertical module per ADR D002
@@ -294,6 +308,28 @@ When `*` is NOT required:
 - Domain exceptions at domain/application boundaries
 - HTTP exceptions ONLY in `presentation/api/`
 
+### Performance Patterns
+
+- `functools.lru_cache(maxsize=...)` for pure, deterministic functions — always specify `maxsize`
+- `@cached_property` for expensive computations calculated once per instance
+- I/O-bound tasks: prefer threading or async I/O; CPU-bound: multiprocessing
+- Use `@tenacity.retry()` with exponential backoff for transient errors; set `reraise=True`
+- Prefer vectorized operations before introducing parallelism
+
+### Database Patterns
+
+- SQLAlchemy 2.0+ syntax with `Mapped[]` and `mapped_column()`
+- Always add indices to columns used in: foreign keys, WHERE clauses, JOIN conditions, ORDER BY, frequently filtered fields
+- `server_default=func.now()` for creation timestamps; `onupdate=func.now()` for modification timestamps
+- Always index timestamp fields used for querying
+
+### Pydantic Patterns
+
+- Always use `ConfigDict` with `str_strip_whitespace=True` and `validate_assignment=True`
+- Always use `Annotated` with `Field` for field metadata
+- Every field MUST have `description` and `examples` parameters
+- Use `validation_alias` for accepting multiple input names; `serialization_alias` for consistent output
+
 ## Security Conventions
 
 - Never use `eval()`, `exec()`, `__import__()`, or `pickle.loads()` on untrusted input
@@ -360,12 +396,15 @@ When `*` is NOT required:
 
 ### Test Rules
 
+- EVERY source module MUST have corresponding test(s)
 - ALL test functions: `-> None` return type
 - ALL tests: AAA pattern (Arrange, Act, Assert) — blank line between each section
+- ALL async tests: `pytest-asyncio` correctly configured
 - ZERO `print()` — use `capsys` or assertions
 - ZERO `time.sleep` — mock or async wait
 - Edge cases: empty inputs, `None`, boundary values, invalid types
 - Exception paths: `pytest.raises(ExcType, match=...)` with match verification
+- `*` enforcement: tests confirming positional usage raises `TypeError`
 - Coverage threshold: >= 80% on `core` + `application` layers
 
 ### Markers
@@ -387,6 +426,22 @@ When `*` is NOT required:
 - Mock at the boundary (interfaces), NEVER inside core
 - Prefer dependency injection over monkey-patching
 - ZERO real DB/Redis in unit tests
+
+### Property-Based Testing
+
+- Hypothesis-based invariant tests in `tests/property/`
+- `@given(st.sampled_from(MyEnum))` for enum-typed inputs
+- Configure `max_examples` and `deadline` for CI
+- Test invariants (idempotency, round-trips, commutativity), not single examples
+
+### Anti-Patterns to Avoid
+
+- Remove tests testing framework behavior (not your code)
+- Remove tests only testing mock configuration
+- Remove tests with no assertions
+- Fix tests passing for wrong reasons (swallowed exceptions)
+- Fix order-dependent tests
+- Fix tests sharing mutable state
 
 ## Naming Registry
 

@@ -585,7 +585,7 @@ task db:migrate       # Run Alembic migrations
 | `.github/agents/*.agent.md` | GitHub Copilot agent definitions |
 | `.github/hooks/*.json` | Copilot agent hook configurations |
 | `.github/hooks/scripts/` | Hook implementation scripts (`.sh` + `.ps1`) |
-| `.github/skills/*/SKILL.md` | Agent skill definitions |
+| `.github/skills/*/SKILL.md` | Agent skill definitions (Copilot); GSD resolves from `~/.agents/skills/` |
 | `.github/prompts/*.prompt.md` | Reusable prompt templates |{% if with_gsd %}
 | `.gsd/PREFERENCES.md` | GSD-2 project preferences (YAML frontmatter + markdown body) |
 | `.gsd/mcp.json` | GSD-2 MCP server configuration |
@@ -813,9 +813,15 @@ The GitHub MCP server provides repository context:
 ## Agent Skills
 
 Agent skills provide domain knowledge that agents reference automatically. Each skill
-is a directory under `.github/skills/` containing a `SKILL.md` file following the
+is a directory containing a `SKILL.md` file following the
 [Agent Skills standard](https://agentskills.io/). Skills can also be invoked as slash
 commands.
+
+Skills are stored in two locations for cross-agent compatibility:
+
+- `.github/skills/` — GitHub Copilot (VS Code) reads skills from here
+- `~/.agents/skills/` — GSD, Claude Code, and industry-standard agents resolve bare
+  skill names from this global directory
 
 | Skill | Directory | Scope | Key Rules |
 | --- | --- | --- | --- |
@@ -937,12 +943,14 @@ agents in `.github/agents/`.
 
 GSD and Copilot agents share the same conventions:
 
-- **Skills** — `.github/skills/` (clean-architecture, python-conventions,
-  testing-conventions, naming-registry)
+- **Skills** — `.github/skills/` (Copilot) and `~/.agents/skills/` (GSD) both contain
+  clean-architecture, python-conventions, testing-conventions, naming-registry
 - **Instructions** — `.github/instructions/` (architecture, coding, frontend,
   security, shell, testing, scaffolding)
 - **Custom instructions** — GSD's `custom_instructions` in PREFERENCES.md mirror
   the rules from Copilot's `.github/copilot-instructions.md` and scoped instructions
+- **Skill routing** — GSD's `always_use_skills`, `prefer_skills`, and `skill_rules`
+  in PREFERENCES.md match the skill set defined in `.github/skills/`
 
 Both agent systems enforce the same Clean Architecture rules, coding conventions,
 and quality gates.
