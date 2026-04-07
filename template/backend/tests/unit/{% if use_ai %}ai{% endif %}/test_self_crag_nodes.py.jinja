@@ -1,0 +1,520 @@
+"""Unit tests for Self-CRAG LangGraph nodes and routing logic."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock
+
+import pytest
+
+from {{ project_slug }}.ai.rag.self_crag_nodes import (
+    generate_answer_node,
+    grade_documents_node,
+    initial_retrieve_node,
+    re_retrieve_node,
+    rewrite_query_node,
+    route_after_grading,
+)
+from {{ project_slug }}.ai.rag.self_crag_state import (
+    MAX_QUERY_REWRITES,
+    RELEVANCE_THRESHOLD,
+    SelfCRAGState,
+)
+from {{ project_slug }}.core.interfaces.retriever import RetrievedContext
+
+
+@pytest.fixture
+def mock_retriever() -> AsyncMock:
+    """Mock RetrieverGateway."""
+    retriever = AsyncMock()
+    retriever.retrieve.return_value = [
+        RetrievedContext(content="document 1", source="doc1.txt"),
+        RetrievedContext(content="document 2", source="doc2.txt"),
+    ]
+    return retriever
+
+
+@pytest.fixture
+def mock_llm() -> AsyncMock:
+    """Mock LLMGateway."""
+    llm = AsyncMock()
+    llm.complete.return_value = "0.8"
+    return llm
+
+
+@pytest.mark.unit
+class TestInitialRetrieveNode:
+    """Tests for initial_retrieve_node."""
+
+    @pytest.mark.asyncio
+    async def test_retrieves_documents_for_query(
+        self,
+        mock_retriever: AsyncMock,
+    ) -> None:
+        """Initial retrieve should call retriever and return docs."""
+        state: SelfCRAGState = {
+            "query": "What is Python?",
+            "original_query": "",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await initial_retrieve_node(state, retriever=mock_retriever)
+
+        assert len(result["docs"]) == 2
+        assert result["docs"][0].content == "document 1"
+        assert result["docs"][1].content == "document 2"
+        assert result["original_query"] == "What is Python?"
+        assert result["cycle_count"] == 0
+        mock_retriever.retrieve.assert_awaited_once_with(query="What is Python?")
+
+    @pytest.mark.asyncio
+    async def test_initializes_cycle_count(
+        self,
+        mock_retriever: AsyncMock,
+    ) -> None:
+        """Initial retrieve should set cycle_count to 0."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await initial_retrieve_node(state, retriever=mock_retriever)
+
+        assert result["cycle_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_preserves_original_query(
+        self,
+        mock_retriever: AsyncMock,
+    ) -> None:
+        """Initial retrieve should store original query for fallback."""
+        state: SelfCRAGState = {
+            "query": "original question",
+            "original_query": "",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await initial_retrieve_node(state, retriever=mock_retriever)
+
+        assert result["original_query"] == "original question"
+
+
+@pytest.mark.unit
+class TestGradeDocumentsNode:
+    """Tests for grade_documents_node."""
+
+    @pytest.mark.asyncio
+    async def test_grades_all_documents(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Grade documents should call LLM for each document."""
+        mock_llm.complete.side_effect = ["0.8", "0.6"]
+        state: SelfCRAGState = {
+            "query": "What is Python?",
+            "original_query": "What is Python?",
+            "docs": [
+                RetrievedContext(content="Python is a language", source="doc1.txt"),
+                RetrievedContext(content="Unrelated content", source="doc2.txt"),
+            ],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await grade_documents_node(state, llm=mock_llm)
+
+        assert len(result["scores"]) == 2
+        assert result["scores"][0] == 0.8
+        assert result["scores"][1] == 0.6
+        assert mock_llm.complete.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_handles_unparseable_scores(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Grade documents should assign 0.0 for invalid scores."""
+        mock_llm.complete.side_effect = ["invalid_score", "0.7"]
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [
+                RetrievedContext(content="doc 1", source="doc1.txt"),
+                RetrievedContext(content="doc 2", source="doc2.txt"),
+            ],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await grade_documents_node(state, llm=mock_llm)
+
+        assert result["scores"][0] == 0.0
+        assert result["scores"][1] == 0.7
+
+    @pytest.mark.asyncio
+    async def test_clamps_scores_to_valid_range(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Grade documents should clamp scores to [0.0, 1.0]."""
+        mock_llm.complete.side_effect = ["1.5", "-0.2"]
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [
+                RetrievedContext(content="doc 1", source="doc1.txt"),
+                RetrievedContext(content="doc 2", source="doc2.txt"),
+            ],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await grade_documents_node(state, llm=mock_llm)
+
+        assert result["scores"][0] == 1.0
+        assert result["scores"][1] == 0.0
+
+    @pytest.mark.asyncio
+    async def test_uses_zero_temperature(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Grade documents should use temperature=0.0 for deterministic grading."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [
+                RetrievedContext(content="doc 1", source="doc1.txt"),
+            ],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        await grade_documents_node(state, llm=mock_llm)
+
+        # Check that temperature=0.0 was used in the call
+        call_kwargs = mock_llm.complete.call_args.kwargs
+        assert call_kwargs["temperature"] == 0.0
+
+
+@pytest.mark.unit
+class TestRewriteQueryNode:
+    """Tests for rewrite_query_node."""
+
+    @pytest.mark.asyncio
+    async def test_rewrites_query(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Rewrite query should call LLM and update query."""
+        mock_llm.complete.return_value = "Python programming language basics"
+        state: SelfCRAGState = {
+            "query": "What is Python?",
+            "original_query": "What is Python?",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await rewrite_query_node(state, llm=mock_llm)
+
+        assert result["query"] == "Python programming language basics"
+        mock_llm.complete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_increments_cycle_count(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Rewrite query should increment cycle_count."""
+        mock_llm.complete.return_value = "rewritten query"
+        state: SelfCRAGState = {
+            "query": "original query",
+            "original_query": "original query",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 1,
+            "answer": "",
+        }
+
+        result = await rewrite_query_node(state, llm=mock_llm)
+
+        assert result["cycle_count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_strips_whitespace(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Rewrite query should strip whitespace from LLM response."""
+        mock_llm.complete.return_value = "  rewritten query  \n"
+        state: SelfCRAGState = {
+            "query": "original query",
+            "original_query": "original query",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await rewrite_query_node(state, llm=mock_llm)
+
+        assert result["query"] == "rewritten query"
+
+    @pytest.mark.asyncio
+    async def test_uses_creative_temperature(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Rewrite query should use temperature=0.3 for creativity."""
+        state: SelfCRAGState = {
+            "query": "original query",
+            "original_query": "original query",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        await rewrite_query_node(state, llm=mock_llm)
+
+        call_kwargs = mock_llm.complete.call_args.kwargs
+        assert call_kwargs["temperature"] == 0.3
+
+
+@pytest.mark.unit
+class TestReRetrieveNode:
+    """Tests for re_retrieve_node."""
+
+    @pytest.mark.asyncio
+    async def test_retrieves_with_rewritten_query(
+        self,
+        mock_retriever: AsyncMock,
+    ) -> None:
+        """Re-retrieve should use rewritten query."""
+        state: SelfCRAGState = {
+            "query": "rewritten query",
+            "original_query": "original query",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 1,
+            "answer": "",
+        }
+
+        result = await re_retrieve_node(state, retriever=mock_retriever)
+
+        assert len(result["docs"]) == 2
+        mock_retriever.retrieve.assert_awaited_once_with(query="rewritten query")
+
+    @pytest.mark.asyncio
+    async def test_returns_new_documents(
+        self,
+        mock_retriever: AsyncMock,
+    ) -> None:
+        """Re-retrieve should return fresh documents."""
+        mock_retriever.retrieve.return_value = [
+            RetrievedContext(content="new doc 1", source="new1.txt"),
+            RetrievedContext(content="new doc 2", source="new2.txt"),
+            RetrievedContext(content="new doc 3", source="new3.txt"),
+        ]
+        state: SelfCRAGState = {
+            "query": "rewritten query",
+            "original_query": "original query",
+            "docs": [
+                RetrievedContext(content="old doc", source="old.txt"),
+            ],
+            "scores": [],
+            "cycle_count": 1,
+            "answer": "",
+        }
+
+        result = await re_retrieve_node(state, retriever=mock_retriever)
+
+        assert len(result["docs"]) == 3
+        assert result["docs"][0].content == "new doc 1"
+
+
+@pytest.mark.unit
+class TestGenerateAnswerNode:
+    """Tests for generate_answer_node."""
+
+    @pytest.mark.asyncio
+    async def test_generates_answer_from_documents(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Generate answer should format context and call LLM."""
+        mock_llm.complete.return_value = "Python is a high-level programming language."
+        state: SelfCRAGState = {
+            "query": "What is Python?",
+            "original_query": "What is Python?",
+            "docs": [
+                RetrievedContext(content="Python is a language", source="doc1.txt"),
+            ],
+            "scores": [0.9],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await generate_answer_node(state, llm=mock_llm)
+
+        assert result["answer"] == "Python is a high-level programming language."
+        mock_llm.complete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_includes_scores_in_context(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Generate answer should include relevance scores in formatted context."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [
+                RetrievedContext(content="doc 1", source="doc1.txt"),
+                RetrievedContext(content="doc 2", source="doc2.txt"),
+            ],
+            "scores": [0.8, 0.6],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        await generate_answer_node(state, llm=mock_llm)
+
+        # Check that the prompt includes scores
+        call_args = mock_llm.complete.call_args
+        prompt = call_args.kwargs["prompt"]
+        assert "relevance=0.80" in prompt
+        assert "relevance=0.60" in prompt
+
+    @pytest.mark.asyncio
+    async def test_handles_missing_scores(
+        self,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Generate answer should handle missing scores gracefully."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [
+                RetrievedContext(content="doc 1", source="doc1.txt"),
+            ],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        result = await generate_answer_node(state, llm=mock_llm)
+
+        assert "answer" in result
+        mock_llm.complete.assert_awaited_once()
+
+
+@pytest.mark.unit
+class TestRouteAfterGrading:
+    """Tests for route_after_grading routing function."""
+
+    def test_routes_to_rewrite_when_low_relevance(self) -> None:
+        """Should route to rewrite_query when relevance is below threshold."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [],
+            "scores": [0.3, 0.4],  # Overall = 0.35 < 0.6
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        route = route_after_grading(state)
+
+        assert route == "rewrite_query"
+
+    def test_routes_to_generate_when_high_relevance(self) -> None:
+        """Should route to generate_answer when relevance is above threshold."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [],
+            "scores": [0.8, 0.9],  # Overall = 0.85 > 0.6
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        route = route_after_grading(state)
+
+        assert route == "generate_answer"
+
+    def test_routes_to_generate_when_max_rewrites_reached(self) -> None:
+        """Should route to generate_answer when max rewrites exhausted."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [],
+            "scores": [0.3, 0.4],  # Low relevance
+            "cycle_count": MAX_QUERY_REWRITES,  # Max rewrites reached
+            "answer": "",
+        }
+
+        route = route_after_grading(state)
+
+        assert route == "generate_answer"
+
+    def test_routes_to_rewrite_when_under_limit(self) -> None:
+        """Should route to rewrite_query when under rewrite limit."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [],
+            "scores": [0.3, 0.4],  # Low relevance
+            "cycle_count": MAX_QUERY_REWRITES - 1,  # Under limit
+            "answer": "",
+        }
+
+        route = route_after_grading(state)
+
+        assert route == "rewrite_query"
+
+    def test_handles_empty_scores(self) -> None:
+        """Should handle empty scores by routing to generate_answer."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [],
+            "scores": [],
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        route = route_after_grading(state)
+
+        # Empty scores = 0.0 overall relevance, should rewrite
+        assert route == "rewrite_query"
+
+    def test_boundary_case_exactly_at_threshold(self) -> None:
+        """Should route to generate_answer when exactly at threshold."""
+        state: SelfCRAGState = {
+            "query": "test query",
+            "original_query": "test query",
+            "docs": [],
+            "scores": [RELEVANCE_THRESHOLD],  # Exactly at threshold
+            "cycle_count": 0,
+            "answer": "",
+        }
+
+        route = route_after_grading(state)
+
+        assert route == "generate_answer"
