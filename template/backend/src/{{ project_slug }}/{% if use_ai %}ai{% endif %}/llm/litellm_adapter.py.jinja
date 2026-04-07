@@ -145,6 +145,57 @@ class LiteLLMAdapter(BaseLLMAdapter):
             if delta and delta.content:
                 yield delta.content
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> LiteLLMAdapter:
+        """Create a LiteLLMAdapter instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "model": "gpt-4o",
+                "api_key": "sk-...",            # optional
+                "api_base": "https://...",      # optional
+                "api_version": "2024-02-01",    # optional
+                "timeout": 30.0,                # optional
+                "num_retries": 2,               # optional (default: 2)
+                "drop_params": True,            # optional (default: True)
+                "extra_kwarg_name": "value",    # optional extras
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            LiteLLMAdapter: Configured adapter instance.
+        """
+        model = str(config.get("model", DEFAULT_CHAT_MODEL))
+        api_key = config.get("api_key")
+        api_base = config.get("api_base")
+        api_version = config.get("api_version")
+        timeout = config.get("timeout")
+        num_retries = int(config.get("num_retries", _DEFAULT_NUM_RETRIES))
+        drop_params = bool(config.get("drop_params", True))
+
+        # Collect any extra kwargs not already handled
+        handled_keys = {
+            "model", "api_key", "api_base", "api_version",
+            "timeout", "num_retries", "drop_params",
+        }
+        extra_kwargs = {
+            k: v for k, v in config.items() if k not in handled_keys
+        }
+
+        return cls(
+            model=model,
+            api_key=str(api_key) if api_key is not None else None,
+            api_base=str(api_base) if api_base is not None else None,
+            api_version=str(api_version) if api_version is not None else None,
+            timeout=float(timeout) if timeout is not None else None,
+            num_retries=num_retries,
+            drop_params=drop_params,
+            **extra_kwargs,
+        )
+
     @staticmethod
     def _build_messages(
         prompt: str,

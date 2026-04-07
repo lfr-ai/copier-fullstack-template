@@ -27,6 +27,28 @@ class NetworkXKnowledgeGraph:
 
         self._graph: nx.DiGraph = nx.DiGraph()
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> NetworkXKnowledgeGraph:
+        """Create a NetworkXKnowledgeGraph instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "persist_path": "/path/to/graph.json",  # optional
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            NetworkXKnowledgeGraph: Configured knowledge graph instance.
+        """
+        persist_path = config.get("persist_path")
+
+        return cls(
+            persist_path=str(persist_path) if persist_path is not None else None,
+        )
+
     async def add_triplet(
         self,
         *,

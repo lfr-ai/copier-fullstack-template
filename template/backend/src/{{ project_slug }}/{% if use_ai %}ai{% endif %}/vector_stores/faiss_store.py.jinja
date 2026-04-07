@@ -34,6 +34,31 @@ class FaissVectorStore(VectorStoreGateway):
         if persist_dir:
             self._load_if_exists(persist_dir)
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> FaissVectorStore:
+        """Create a FaissVectorStore instance from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "dimension": 1536,
+                "persist_dir": "/path/to/faiss/index",  # optional
+            }
+
+        Args:
+            config (dict[str, object]): Configuration dictionary.
+
+        Returns:
+            FaissVectorStore: Configured vector store instance.
+        """
+        dimension = int(config["dimension"])
+        persist_dir = config.get("persist_dir")
+
+        return cls(
+            dimension=dimension,
+            persist_dir=str(persist_dir) if persist_dir is not None else None,
+        )
+
     async def add_vectors(
         self,
         *,
