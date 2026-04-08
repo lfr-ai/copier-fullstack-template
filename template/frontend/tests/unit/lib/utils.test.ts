@@ -1,8 +1,7 @@
 /**
  * Unit tests for shared utility functions.
  *
- * Moved from co-located src/lib/utils.test.ts to follow
- * the centralized tests/unit/ convention.
+ * cn() uses clsx + tailwind-merge for class deduplication.
  */
 import { describe, it, expect } from 'vitest';
 import { cn, formatDate } from '../../../src/lib/utils';
@@ -26,6 +25,14 @@ describe('cn', () => {
 
   it('handles all falsy', () => {
     expect(cn(false, null, undefined)).toBe('');
+  });
+
+  it('merges conflicting Tailwind classes (last wins)', () => {
+    expect(cn('px-2', 'px-4')).toBe('px-4');
+  });
+
+  it('supports conditional object syntax', () => {
+    expect(cn('base', { active: true, hidden: false })).toBe('base active');
   });
 });
 

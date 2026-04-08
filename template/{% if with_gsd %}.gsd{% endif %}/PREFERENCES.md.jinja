@@ -13,10 +13,12 @@ skill_discovery: auto
 skill_staleness_days: 0
 always_use_skills:
   - clean-architecture
+  - shadcn-frontend
 prefer_skills:
   - python-conventions
   - testing-conventions
   - naming-registry
+  - shadcn-frontend
 skill_rules:
   - when: working on backend Python code, services, or domain logic
     use:
@@ -28,6 +30,15 @@ skill_rules:
   - when: adding routes, fields, enum values, or shared identifiers
     use:
       - naming-registry
+  - when: working on frontend React, TypeScript, Vite, Tailwind, or UI components
+    use:
+      - shadcn-frontend
+  - when: implementing React Router navigation, route structure, or url/search params
+    use:
+      - shadcn-frontend
+  - when: implementing React Hook Form, Zod validation, or form field composition
+    use:
+      - shadcn-frontend
 auto_supervisor:
   soft_timeout_minutes: 20
   idle_timeout_minutes: 10
@@ -93,6 +104,14 @@ custom_instructions:
   - "Never hardcode field/column names; use registry constants"
   - "Shell scripts use .zsh extension with emulate -L zsh and setopt ERR_EXIT PIPE_FAIL"
   - "TypeScript: strict mode, no any, functional components, Tailwind CSS v4"
+  - "For frontend tasks, use Context7, shadcn MCP, or official shadcn/ui, React Router, and React Hook Form documentation before coding"
+  - "Frontend UI: prefer shadcn/ui primitives over custom styled markup"
+  - "Frontend routing: prefer React Router NavLink for active primary nav and Link for non-active links"
+  - "Frontend router default scaffold should remain declarative unless loader/action data APIs are explicitly needed"
+  - "Frontend forms: use React Hook Form + Zod and prefer Controller for controlled shadcn/radix inputs"
+  - "Derive form types from Zod schemas with z.infer to keep runtime validation and TS types aligned"
+  - "Use semantic theme tokens (bg-background, text-foreground, border-border) instead of raw color classes"
+  - "Use named exports for React pages/components and keep lazy imports at module scope"
   - "Tests: pytest markers (unit/integration/property/performance/slow), factory-based data"
   - "Coverage >= 80% on core + application layers"
   - "raise ... from e to preserve exception context"
@@ -111,7 +130,7 @@ No external instruction files are required. Execution continues normally even if
 - **Name** — {{ project_name }}
 - **Type** — Fullstack Python + TypeScript application
 - **Backend** — Python {{ python_version }}+ / FastAPI / SQLAlchemy 2.0+ / Clean Architecture
-- **Frontend** — TypeScript / Vite / React 19 / Tailwind CSS v4
+- **Frontend** — TypeScript / Vite / React 19 / shadcn/ui / Tailwind CSS v4
 - **Package Managers** — UV (Python), Bun (frontend)
 - **Container Runtime** — {{ container_runtime }}
 - **Linting** — Ruff (Python), Biome (TypeScript/JS/CSS)
