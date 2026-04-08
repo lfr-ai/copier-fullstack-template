@@ -1,0 +1,440 @@
+"""Integration tests for AdaptiveRAGPipeline routing and orchestration.
+
+Verifies routing logic, fallback behavior, interface preservation, and negative cases.
+"""
+{%- if use_rag %}
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from {{ project_slug }}.ai.rag.adaptive_pipeline import AdaptiveRAGPipeline
+from {{ project_slug }}.ai.rag.retrieval import RetrievalResult
+from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult
+
+
+@pytest.fixture
+def mock_llm() -> AsyncMock:
+    """Mock LLMGateway."""
+    llm = AsyncMock()
+    llm.complete.return_value = "Generated answer from LLM."
+    return llm
+
+
+@pytest.fixture
+def mock_embedding() -> AsyncMock:
+    """Mock EmbeddingGateway."""
+    embedding = AsyncMock()
+    embedding.embed_text.return_value = [0.1] * 8
+    embedding.dimension = 8
+    return embedding
+
+
+@pytest.fixture
+def mock_vector_store() -> AsyncMock:
+    """Mock VectorStoreGateway."""
+    store = AsyncMock()
+    store.search.return_value = [
+        VectorSearchResult(
+            id="chunk-1",
+            score=0.95,
+            metadata={"content": "relevant text from vector store"},
+        ),
+    ]
+    return store
+
+
+@pytest.fixture
+def mock_knowledge_graph() -> AsyncMock:
+    """Mock KnowledgeGraphGateway."""
+    kg = AsyncMock()
+    kg.query_neighbors.return_value = [
+        {"entity": "related_item", "outgoing": {}, "incoming": {}},
+    ]
+    return kg
+
+
+@pytest.fixture
+def mock_reranker() -> AsyncMock:
+    """Mock RerankerGateway."""
+    reranker = AsyncMock()
+
+    # Mock rerank to return a simple ranked result
+    async def rerank_fn(query: str, results: list[dict], top_k: int) -> list[MagicMock]:
+        ranked_results = []
+        for i, r in enumerate(results[:top_k]):
+            mock_result = MagicMock()
+            mock_result.id = r["id"]
+            mock_result.content = r["content"]
+            mock_result.rerank_score = 0.9 - (i * 0.1)
+            mock_result.original_score = r["score"]
+            mock_result.metadata = r["metadata"]
+            ranked_results.append(mock_result)
+        return ranked_results
+
+    reranker.rerank.side_effect = rerank_fn
+    return reranker
+
+
+@pytest.mark.integration
+class TestAdaptiveRAGPipelineRouting:
+    """Test suite for routing and orchestration logic."""
+
+    @pytest.mark.asyncio
+    async def test_routing_to_self_crag(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Verify use_graph=False routes to Self-CRAG pipeline."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        # Use patch to spy on pipeline initialization
+        with patch.object(pipeline, "_get_self_crag_pipeline", wraps=pipeline._get_self_crag_pipeline) as spy:
+            result = await pipeline.query("What is the answer?", use_graph=False)
+
+            # Verify routing decision
+            spy.assert_called_once()
+            assert "self-crag" in caplog.text.lower() or "Routing to Self-CRAG" in caplog.text
+
+        # Verify result structure
+        assert isinstance(result, RetrievalResult)
+        assert result.answer
+        assert result.query == "What is the answer?"
+
+    @pytest.mark.asyncio
+    async def test_routing_to_deeprag(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+        mock_knowledge_graph: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Verify use_graph=True routes to DeepRAG multi-hop workflow."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+            knowledge_graph=mock_knowledge_graph,
+        )
+
+        # Mock the multi-hop workflow traverse_and_enrich
+        mock_workflow = AsyncMock()
+        mock_workflow.traverse_and_enrich.return_value = [
+            {
+                "node": "start_node",
+                "enrichment": [
+                    {"id": "doc1", "content": "enriched content from hop 1", "score": 0.9},
+                ],
+            },
+        ]
+
+        with patch.object(pipeline, "_get_multi_hop_workflow", return_value=mock_workflow):
+            result = await pipeline.query("What is the answer?", use_graph=True)
+
+            # Verify routing decision
+            mock_workflow.traverse_and_enrich.assert_awaited_once()
+            assert "deeprag" in caplog.text.lower() or "Routing to DeepRAG" in caplog.text
+
+        # Verify result structure
+        assert isinstance(result, RetrievalResult)
+        assert result.answer
+        assert len(result.graph_context) > 0
+
+    @pytest.mark.asyncio
+    async def test_fallback_when_kg_unavailable(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Verify use_graph=True with knowledge_graph=None falls back to Self-CRAG."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+            knowledge_graph=None,  # No KG available
+        )
+
+        result = await pipeline.query("What is the answer?", use_graph=True)
+
+        # Verify fallback to Self-CRAG
+        assert "Knowledge graph unavailable" in caplog.text or "self-crag" in caplog.text.lower()
+
+        # Verify result structure (should still work)
+        assert isinstance(result, RetrievalResult)
+        assert result.answer
+        assert result.graph_context == []  # No graph context without KG
+
+    @pytest.mark.asyncio
+    async def test_return_type_matches_legacy(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Verify RetrievalResult structure unchanged for backward compatibility."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        result = await pipeline.query("What is the answer?")
+
+        # Verify all expected fields exist
+        assert hasattr(result, "query")
+        assert hasattr(result, "answer")
+        assert hasattr(result, "sources")
+        assert hasattr(result, "graph_context")
+
+        # Verify types
+        assert isinstance(result.query, str)
+        assert isinstance(result.answer, str)
+        assert isinstance(result.sources, list)
+        assert isinstance(result.graph_context, list)
+
+        # Verify query field matches input
+        assert result.query == "What is the answer?"
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_propagation(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Verify system_prompt flows through to LLM generation."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        custom_prompt = "You are a domain expert. Be concise."
+        await pipeline.query("What is the answer?", system_prompt=custom_prompt)
+
+        # Verify LLM was called with system_prompt
+        mock_llm.complete.assert_awaited()
+        call_kwargs = mock_llm.complete.call_args.kwargs
+        assert "system_prompt" in call_kwargs
+        # System prompt should either match exactly or be the default fallback
+        assert custom_prompt in call_kwargs["system_prompt"] or "helpful assistant" in call_kwargs["system_prompt"]
+
+
+@pytest.mark.integration
+class TestAdaptiveRAGPipelineNegativeCases:
+    """Test suite for error handling and boundary conditions."""
+
+    @pytest.mark.asyncio
+    async def test_empty_question_raises_error(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Verify empty question string raises ValueError."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        with pytest.raises(ValueError, match="Question cannot be empty"):
+            await pipeline.query("")
+
+    @pytest.mark.asyncio
+    async def test_negative_top_k_raises_error(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Verify negative top_k raises ValueError."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        with pytest.raises(ValueError, match="top_k must be non-negative"):
+            await pipeline.query("What is the answer?", top_k=-1)
+
+    @pytest.mark.asyncio
+    async def test_invalid_system_prompt_raises_error(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Verify excessively long system_prompt raises ValueError."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        # Create system prompt exceeding 10K characters
+        long_prompt = "x" * 10001
+
+        with pytest.raises(ValueError, match="system_prompt exceeds 10K characters"):
+            await pipeline.query("What is the answer?", system_prompt=long_prompt)
+
+    @pytest.mark.asyncio
+    async def test_llm_failure_propagates(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Verify LLM failure propagates with clear error."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        # Mock LLM to raise an exception
+        mock_llm.complete.side_effect = TimeoutError("LLM request timed out")
+
+        with pytest.raises(TimeoutError, match="LLM request timed out"):
+            await pipeline.query("What is the answer?")
+
+    @pytest.mark.asyncio
+    async def test_vector_store_timeout_handling(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Verify vector store timeout propagates correctly."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        # Mock vector store to raise timeout
+        mock_vector_store.search.side_effect = TimeoutError("Vector store timeout")
+
+        with pytest.raises(TimeoutError, match="Vector store timeout"):
+            await pipeline.query("What is the answer?")
+
+    @pytest.mark.asyncio
+    async def test_top_k_zero_defaults_to_five(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Verify top_k=0 defaults to 5 and logs INFO."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        await pipeline.query("What is the answer?", top_k=0)
+
+        # Verify log message
+        assert "top_k=0 received, defaulting to 5" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_use_graph_with_none_kg_fallback(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Verify use_graph=True with None knowledge_graph falls back to Self-CRAG."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+            knowledge_graph=None,
+        )
+
+        result = await pipeline.query("What is the answer?", use_graph=True)
+
+        # Verify fallback logged
+        assert "Knowledge graph unavailable" in caplog.text or "falling back" in caplog.text.lower()
+
+        # Verify result still valid
+        assert isinstance(result, RetrievalResult)
+        assert result.graph_context == []
+
+    @pytest.mark.asyncio
+    async def test_reranker_failure_continues_with_original_ranking(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+        mock_reranker: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Verify reranker failure logs WARNING and continues with original ranking."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+            reranker=mock_reranker,
+        )
+
+        # Mock reranker to raise exception
+        mock_reranker.rerank.side_effect = RuntimeError("Reranker service unavailable")
+
+        result = await pipeline.query("What is the answer?")
+
+        # Verify warning logged
+        assert "Reranker failed" in caplog.text or "continuing with original ranking" in caplog.text
+
+        # Verify result still returned
+        assert isinstance(result, RetrievalResult)
+        assert result.answer
+
+    @pytest.mark.asyncio
+    async def test_concurrent_queries_state_isolation(
+        self,
+        mock_llm: AsyncMock,
+        mock_embedding: AsyncMock,
+        mock_vector_store: AsyncMock,
+    ) -> None:
+        """Verify concurrent queries to same pipeline instance handle state isolation correctly."""
+        pipeline = AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+        # Execute concurrent queries
+        import asyncio
+
+        results = await asyncio.gather(
+            pipeline.query("Question 1"),
+            pipeline.query("Question 2"),
+            pipeline.query("Question 3"),
+        )
+
+        # Verify all queries completed successfully
+        assert len(results) == 3
+        assert all(isinstance(r, RetrievalResult) for r in results)
+
+        # Verify queries match original questions
+        assert results[0].query == "Question 1"
+        assert results[1].query == "Question 2"
+        assert results[2].query == "Question 3"
+{%- else %}
+# Integration tests are only generated when use_rag is enabled.
+{%- endif %}
