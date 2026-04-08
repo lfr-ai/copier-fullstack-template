@@ -1,4 +1,4 @@
-"""Evaluator gateway — abstract interface for LLM output evaluation.
+"""Evaluator gateway -- abstract interface for LLM output evaluation.
 
 Supports automated quality assessment of LLM outputs using
 rubric-based scoring, LLM-as-judge patterns, and custom metrics.

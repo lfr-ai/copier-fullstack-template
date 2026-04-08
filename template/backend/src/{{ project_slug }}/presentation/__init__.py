@@ -1,2 +1,2 @@
-"""Presentation layer — API, CLI, and web entry points."""
+"""Presentation layer -- API, CLI, and web entry points."""
 

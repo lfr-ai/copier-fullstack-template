@@ -45,7 +45,7 @@ class IsAuthenticated(BasePermission):
 {%- if use_auth %}
         token = auth_header.removeprefix("Bearer ").strip()
         try:
-            # FIXME: imports concrete adapter directly — should inject via DI container
+            # FIXME: imports concrete adapter directly -- should inject via DI container
             from {{ project_slug }}.infrastructure.auth.jwt_adapter import JWTAdapter
 
             jwt = JWTAdapter(secret_key=info.context.settings.jwt_secret_key)
@@ -56,7 +56,7 @@ class IsAuthenticated(BasePermission):
             return False
 {%- else %}
         # SECURITY: Without the auth module this only checks for token
-        # presence — it does NOT validate the token.  Enable `use_auth`
+        # presence -- it does NOT validate the token.  Enable `use_auth`
         # before exposing this to untrusted networks.
         return bool(auth_header.removeprefix("Bearer ").strip())
 {%- endif %}

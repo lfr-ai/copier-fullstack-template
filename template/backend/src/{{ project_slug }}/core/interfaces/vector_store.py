@@ -1,4 +1,4 @@
-"""Vector store gateway — abstract interface for similarity search backends.
+"""Vector store gateway -- abstract interface for similarity search backends.
 
 Concrete adapters: FAISS, Azure AI Search, Chroma, Pinecone, etc.
 """

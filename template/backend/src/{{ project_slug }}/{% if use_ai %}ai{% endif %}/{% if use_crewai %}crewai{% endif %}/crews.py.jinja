@@ -1,4 +1,4 @@
-"""CrewAI crew factory — assembles agents + tasks into executable crews.
+"""CrewAI crew factory -- assembles agents + tasks into executable crews.
 
 Supports both 'Process.sequential' and 'Process.hierarchical'
 execution, with optional planning, memory, streaming, and custom
@@ -61,7 +61,7 @@ def build_crew(spec: CrewSpec) -> Crew:
 
     For hierarchical processes, a 'manager_llm' or 'manager_agent'
     is required. The manager coordinates task delegation and validates
-    outcomes—implementing the HMAS supervisor pattern natively.
+    outcomes--implementing the HMAS supervisor pattern natively.
 
     Args:
         spec (CrewSpec): Crew specification with agents, tasks, and execution strategy.

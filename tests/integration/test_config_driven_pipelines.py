@@ -1,7 +1,7 @@
 """Integration tests for end-to-end config-driven pipeline instantiation.
 
 Verifies that:
-- Self-CRAG and MultiHopWorkflow can be loaded from YAML config
+- Self-CRAG and DeepRAG pipelines can be loaded from YAML config
 - Container.load_ai_config() works with real config files
 - Environment variable substitution works correctly
 - Reference resolution (llm_ref, retriever_ref, kg_backend_ref) works
@@ -104,7 +104,7 @@ class TestConfigDrivenPipelines:
         embedding1 = loader.get_component("embeddings.test_embedding")
         assert embedding1 is not None
 
-        # Verify caching — second request should return same instance
+        # Verify caching -- second request should return same instance
         embedding2 = loader.get_component("embeddings.test_embedding")
         assert embedding2 is embedding1
 
@@ -217,29 +217,41 @@ class TestConfigValidation:
         with pytest.raises(ValueError, match="llm_ref is required"):
             loader.create_pipeline("bad_pipeline")
 
-    @XFAIL_KG_BACKEND_TYPE
-    def test_missing_required_reference_in_workflow(
+    def test_create_deep_rag_workflow(
         self, test_env_vars: None
     ) -> None:
-        """AIConfigLoader should handle workflows with optional references."""
+        """AIConfigLoader should handle deep_rag workflow creation."""
         from ai.config_loader import AIConfigLoader
 
-        # Config with minimal workflow (optional references)
-        minimal_config = {
+        config = {
+            "llms": {
+                "default": {
+                    "type": "litellm",
+                    "model": "gpt-4o",
+                },
+            },
+            "retrievers": {
+                "default": {
+                    "type": "chroma",
+                    "embedding_ref": "embeddings.default",
+                },
+            },
+            "embeddings": {
+                "default": {
+                    "type": "litellm",
+                    "model": "text-embedding-3-small",
+                    "dimension": 1536,
+                },
+            },
             "workflows": {
-                "minimal_workflow": {
-                    "type": "multi_hop",
-                    "max_hops": 3,
-                    # kg_backend_ref and retriever_ref are optional
-                }
+                "deep_rag": {
+                    "type": "deep_rag",
+                    "llm_ref": "llms.default",
+                    "retriever_ref": "retrievers.default",
+                },
             },
         }
 
-        loader = AIConfigLoader(config_dict=minimal_config)
-
-        # Should succeed — references are optional for MultiHopWorkflow
-        workflow = loader.create_workflow("minimal_workflow")
-        assert workflow is not None
-        assert workflow._kg_backend is None
-        assert workflow._retriever is None
-        assert workflow._max_hops == 3
+        loader = AIConfigLoader(config_dict=config)
+        pipeline = loader.create_workflow("deep_rag")
+        assert pipeline is not None

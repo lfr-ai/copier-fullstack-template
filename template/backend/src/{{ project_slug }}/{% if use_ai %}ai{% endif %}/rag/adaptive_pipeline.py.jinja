@@ -28,8 +28,8 @@ class AdaptiveRAGPipeline:
     """Adaptive RAG pipeline with Self-CRAG and DeepRAG routing.
 
     Routes queries to appropriate workflow based on complexity:
-    - use_graph=False → Self-CRAG (self-corrective retrieval-grading cycles)
-    - use_graph=True → DeepRAG (MDP-based step-by-step retrieval)
+    - use_graph=False -> Self-CRAG (self-corrective retrieval-grading cycles)
+    - use_graph=True -> DeepRAG (MDP-based step-by-step retrieval)
 
     Integrates reranking, hallucination detection, and preserves
     RetrievalResult interface for backward compatibility.
@@ -188,7 +188,7 @@ class AdaptiveRAGPipeline:
             Reranked results (or original results if reranker unavailable).
         """
         if self._reranker is None:
-            logger.debug("Reranker unavailable — skipping reranking")
+            logger.debug("Reranker unavailable -- skipping reranking")
             return results[:top_k]
 
         try:
@@ -229,7 +229,7 @@ class AdaptiveRAGPipeline:
 
         except Exception as exc:
             logger.warning(
-                "Reranker failed — continuing with original ranking",
+                "Reranker failed -- continuing with original ranking",
                 workflow="adaptive-rag",
                 error=str(exc),
                 error_type=type(exc).__name__,
@@ -257,7 +257,7 @@ class AdaptiveRAGPipeline:
         # Simple heuristic: if no sources, likely hallucinated
         if not sources:
             logger.warning(
-                "Hallucination detected — no sources provided",
+                "Hallucination detected -- no sources provided",
                 workflow="adaptive-rag",
                 question_len=len(question),
                 answer_len=len(answer),
@@ -361,7 +361,7 @@ class AdaptiveRAGPipeline:
 
         if is_hallucinated:
             logger.warning(
-                "Hallucination detected — re-generating answer",
+                "Hallucination detected -- re-generating answer",
                 workflow="adaptive-rag",
             )
             result = RetrievalResult(

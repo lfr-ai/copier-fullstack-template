@@ -1,4 +1,4 @@
-"""AI model gateway — routes requests across multiple LLM providers."""
+"""AI model gateway -- routes requests across multiple LLM providers."""
 
 from __future__ import annotations
 
@@ -80,7 +80,7 @@ class AIGateway(BaseLLMAdapter):
                 )
                 logger.debug("Completion served by provider: %s", provider_name)
                 return result
-            except Exception as e:  # noqa: BLE001 — top-level error boundary
+            except Exception as e:  # noqa: BLE001 -- top-level error boundary
                 error_msg = f"{provider_name}: {e}"
                 errors.append(error_msg)
                 logger.warning("Provider %s failed: %s", provider_name, e)
@@ -123,7 +123,7 @@ class AIGateway(BaseLLMAdapter):
                 for chunk in buffered:
                     yield chunk
                 return
-            except Exception as e:  # noqa: BLE001 — top-level error boundary
+            except Exception as e:  # noqa: BLE001 -- top-level error boundary
                 errors.append(f"{provider_name}: {e}")
                 logger.warning("Stream provider %s failed: %s", provider_name, e)
 

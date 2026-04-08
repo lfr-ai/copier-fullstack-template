@@ -43,7 +43,7 @@ class MemoryEventBus:
         for handler in handlers:
             try:
                 await handler(event)
-            except Exception:  # noqa: BLE001 — intentional fault-tolerance for event handlers
+            except Exception:  # noqa: BLE001 -- intentional fault-tolerance for event handlers
                 logger.exception(
                     "Handler failed for event %s",
                     event_type.__name__,

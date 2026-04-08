@@ -1,4 +1,4 @@
-"""Storage gateway — contract for binary object storage."""
+"""Storage gateway -- contract for binary object storage."""
 
 from __future__ import annotations
 

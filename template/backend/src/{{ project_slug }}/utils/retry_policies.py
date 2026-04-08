@@ -1,6 +1,6 @@
 """Centralized retry policies using tenacity."""
 
-import logging  # noqa: LOG001 — stdlib logger required by tenacity before_sleep_log
+import logging  # noqa: LOG001 -- stdlib logger required by tenacity before_sleep_log
 
 from tenacity import (
     before_sleep_log,

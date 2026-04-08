@@ -52,20 +52,19 @@ def test_ai_config_self_crag_pipeline():
     assert "retriever_ref" in self_crag
 
 
-def test_ai_config_deep_rag_workflow():
-    """Test that ai_config.yaml has DeepRAG workflow configuration."""
+def test_ai_config_deep_rag_pipeline():
+    """Test that ai_config.yaml has DeepRAG pipeline configuration."""
     config_path = Path("template/backend/config/ai_config.yaml")
     with config_path.open("r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    workflows = config.get("workflows", {})
-    assert "deep_rag" in workflows
+    pipelines = config.get("pipelines", {})
+    assert "deep_rag" in pipelines
 
-    deep_rag = workflows["deep_rag"]
-    assert deep_rag["type"] == "multi_hop"
-    assert "kg_backend_ref" in deep_rag
+    deep_rag = pipelines["deep_rag"]
+    assert deep_rag["type"] == "deep_rag"
+    assert "llm_ref" in deep_rag
     assert "retriever_ref" in deep_rag
-    assert "max_hops" in deep_rag
 
 
 def test_ai_config_reference_resolution():

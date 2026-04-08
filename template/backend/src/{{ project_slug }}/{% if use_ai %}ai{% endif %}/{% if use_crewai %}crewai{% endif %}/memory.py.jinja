@@ -1,13 +1,13 @@
-"""CrewAI memory — unified memory configuration for crews, agents, and flows.
+"""CrewAI memory -- unified memory configuration for crews, agents, and flows.
 
 Wraps CrewAI's unified 'Memory' system with application-aware
 defaults, hierarchical scope helpers, and embedder configuration
 aligned with the project's LiteLLM embedding adapters.
 
 Usage patterns:
-  * **With Crews** — 'Crew(memory=True)' or 'Crew(memory=create_memory(...))'
-  * **With Agents** — 'Agent(memory=scoped_memory.scope("/agent/researcher"))'
-  * **With Flows** — 'self.remember()', 'self.recall()' built-in methods
+  * **With Crews** -- 'Crew(memory=True)' or 'Crew(memory=create_memory(...))'
+  * **With Agents** -- 'Agent(memory=scoped_memory.scope("/agent/researcher"))'
+  * **With Flows** -- 'self.remember()', 'self.recall()' built-in methods
 
 The unified Memory uses LanceDB for vector storage, supports
 hierarchical scopes, composite scoring (semantic + recency + importance),
@@ -28,7 +28,7 @@ SPRINT_SCORING = {
     "importance_weight": 0.2,
     "recency_half_life_days": 7,
 }
-"""Scoring tuned for fast-moving sprints — favor recent memories."""
+"""Scoring tuned for fast-moving sprints -- favor recent memories."""
 
 KNOWLEDGE_BASE_SCORING = {
     "recency_weight": 0.1,
@@ -36,7 +36,7 @@ KNOWLEDGE_BASE_SCORING = {
     "importance_weight": 0.4,
     "recency_half_life_days": 180,
 }
-"""Scoring tuned for long-lived knowledge bases — favor importance."""
+"""Scoring tuned for long-lived knowledge bases -- favor importance."""
 
 DEFAULT_SCORING = {
     "recency_weight": 0.3,

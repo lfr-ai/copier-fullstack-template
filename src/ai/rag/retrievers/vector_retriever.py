@@ -1,4 +1,4 @@
-"""Vector retriever — implements 'RetrieverGateway' using embeddings + vector store.
+"""Vector retriever -- implements 'RetrieverGateway' using embeddings + vector store.
 
 The default retrieval strategy: embed the query, search the vector store,
 and return matching context chunks.
@@ -7,12 +7,12 @@ and return matching context chunks.
 from __future__ import annotations
 
 import structlog
-from typing import final, TYPE_CHECKING
+from typing import TYPE_CHECKING, cast, final
 
 if TYPE_CHECKING:
-    from app.core.interfaces.embedding import EmbeddingGateway
-    from app.core.interfaces.retriever import RetrievedContext
-    from app.core.interfaces.vector_store import VectorStoreGateway
+    from core.interfaces.embedding import EmbeddingGateway
+    from core.interfaces.retriever import RetrievedContext
+    from core.interfaces.vector_store import VectorStoreGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -65,8 +65,8 @@ class VectorRetriever:
             raise ValueError(msg)
 
         return cls(
-            embedding=embedding,  # type: ignore[arg-type]
-            vector_store=vector_store,  # type: ignore[arg-type]
+            embedding=cast("EmbeddingGateway", embedding),
+            vector_store=cast("VectorStoreGateway", vector_store),
         )
 
     async def retrieve(
@@ -86,7 +86,7 @@ class VectorRetriever:
         Returns:
             list[RetrievedContext]: Ranked context chunks.
         """
-        from app.core.interfaces.retriever import RetrievedContext
+        from core.interfaces.retriever import RetrievedContext
 
         query_vector = await self._embedding.embed_text(query)
         results = await self._vector_store.search(

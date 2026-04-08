@@ -1,4 +1,4 @@
-"""Sentence-transformers embedding adapter — implements 'EmbeddingGateway'.
+"""Sentence-transformers embedding adapter -- implements 'EmbeddingGateway'.
 
 Uses local sentence-transformer models for embedding generation,
 running entirely on CPU without external API calls.
@@ -32,7 +32,7 @@ class SentenceTransformerEmbeddingAdapter(EmbeddingGateway):
 
             self._model = SentenceTransformer(model_name)
         except ImportError as exc:
-            msg = "sentence-transformers is required — pip install sentence-transformers"
+            msg = "sentence-transformers is required -- pip install sentence-transformers"
             raise ImportError(msg) from exc
         self._model_name = model_name
         self._dimension = self._model.get_sentence_embedding_dimension()

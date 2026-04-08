@@ -41,7 +41,7 @@ class MCPClientAdapter:
         try:
             from mcp import ClientSession  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "mcp[cli]>=1.30 is required — pip install 'mcp[cli]>=1.30'"
+            msg = "mcp[cli]>=1.30 is required -- pip install 'mcp[cli]>=1.30'"
             raise ImportError(msg) from exc
 
         self._exit_stack = AsyncExitStack()

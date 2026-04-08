@@ -1,4 +1,4 @@
-"""Retriever gateway — abstract interface for RAG retrieval strategies.
+"""Retriever gateway -- abstract interface for RAG retrieval strategies.
 
 Concrete adapters may implement simple vector search, hybrid search
 (vector + keyword), or re-ranking strategies.

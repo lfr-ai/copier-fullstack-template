@@ -1,4 +1,4 @@
-"""Prompt template manager — backward-compatibility alias.
+"""Prompt template manager -- backward-compatibility alias.
 
 from typing import final
 

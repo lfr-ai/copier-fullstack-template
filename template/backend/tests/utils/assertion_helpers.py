@@ -93,5 +93,5 @@ def assert_raises_with_message(
             raise AssertionError(
                 f"Exception message '{e}' does not contain '{message_substring}'"
             ) from e
-    except Exception as e:  # noqa: BLE001 — top-level error boundary
+    except Exception as e:  # noqa: BLE001 -- top-level error boundary
         raise AssertionError(f"Unexpected exception {type(e).__name__}: {e}") from e

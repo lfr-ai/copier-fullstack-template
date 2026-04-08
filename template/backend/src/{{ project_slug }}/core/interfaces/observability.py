@@ -1,4 +1,4 @@
-"""Observability gateway — abstract interface for AI tracing and telemetry.
+"""Observability gateway -- abstract interface for AI tracing and telemetry.
 
 Concrete adapters may use LangSmith, OpenTelemetry, Phoenix (Arize),
 or custom tracing backends.

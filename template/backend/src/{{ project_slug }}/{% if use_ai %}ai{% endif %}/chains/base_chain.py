@@ -1,4 +1,4 @@
-"""Base chain — abstract foundation for LLM chain compositions."""
+"""Base chain -- abstract foundation for LLM chain compositions."""
 
 from typing import final
 

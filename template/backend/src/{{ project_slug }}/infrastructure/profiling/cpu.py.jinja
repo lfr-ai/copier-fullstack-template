@@ -58,7 +58,7 @@ async def cpu_profile(
     try:
         from pyinstrument import Profiler
     except ImportError:
-        logger.warning("pyinstrument not installed — skipping CPU profile", label=label)
+        logger.warning("pyinstrument not installed -- skipping CPU profile", label=label)
         yield CpuProfileResult(label=label, duration_s=0, html_path=None, console_output="")
         return
 
@@ -89,7 +89,7 @@ async def cpu_profile(
                 duration_s=round(duration, 4),
                 path=str(html_path),
             )
-        except Exception:  # noqa: BLE001 — top-level error boundary
+        except Exception:  # noqa: BLE001 -- top-level error boundary
             logger.exception("cpu_profile_save_failed", label=label)
 
         # Replace the frozen dataclass via object.__setattr__

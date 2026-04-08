@@ -1,4 +1,4 @@
-"""Guardrail gateway — abstract interface for AI safety guardrails.
+"""Guardrail gateway -- abstract interface for AI safety guardrails.
 
 Concrete adapters may use NeMo Guardrails, custom rule-based
 validators, or LLM-based content moderation.

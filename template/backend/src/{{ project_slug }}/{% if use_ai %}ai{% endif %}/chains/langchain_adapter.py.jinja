@@ -1,4 +1,4 @@
-"""LangChain LLM adapter — wraps LangChain's 'init_chat_model' as an 'LLMGateway'.
+"""LangChain LLM adapter -- wraps LangChain's 'init_chat_model' as an 'LLMGateway'.
 
 Uses LangChain's universal 'init_chat_model("provider:model")' factory
 to instantiate any supported chat model. Parameters are passed via
@@ -27,7 +27,7 @@ class LangChainLLMAdapter(BaseLLMAdapter):
             self._model_name = f"{provider}:{model}"
             self._chat_model = init_chat_model(self._model_name, **kwargs)
         except ImportError as exc:
-            msg = "langchain and langchain-openai are required — pip install langchain langchain-openai"
+            msg = "langchain and langchain-openai are required -- pip install langchain langchain-openai"
             raise ImportError(msg) from exc
 
     @classmethod

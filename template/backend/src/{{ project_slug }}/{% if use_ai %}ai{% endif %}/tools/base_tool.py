@@ -1,4 +1,4 @@
-"""Base tool — abstract foundation for agent tools."""
+"""Base tool -- abstract foundation for agent tools."""
 
 from typing import final
 

@@ -1,4 +1,4 @@
-"""Database query tool — natural language to SQL via LLM."""
+"""Database query tool -- natural language to SQL via LLM."""
 
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ class DatabaseQueryTool(BaseTool):
                 f"Convert this question to a PostgreSQL SELECT query.{schema_ctx}\n\n"
                 f"Question: {question}\n\n"
                 f"Return ONLY the SQL query, nothing else. "
-                f"Use only SELECT statements — no mutations."
+                f"Use only SELECT statements -- no mutations."
             ),
             system_prompt=(
                 "You are a SQL expert. Generate only safe, read-only SELECT statements. "
@@ -133,7 +133,7 @@ class DatabaseQueryTool(BaseTool):
                 content="\n".join(lines),
                 metadata={"row_count": len(rows)},
             )
-        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+        except Exception as exc:  # noqa: BLE001 -- top-level error boundary
             logger.warning("Database query failed: %s", type(exc).__name__)
             return ToolResult(error="Query execution failed. Check logs for details.")
         finally:

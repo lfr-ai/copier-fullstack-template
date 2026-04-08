@@ -86,7 +86,7 @@ class Jinja2PromptTemplate(PromptTemplateGateway):
         try:
             from jinja2 import BaseLoader, Environment
         except ImportError as exc:
-            msg = "jinja2 is required — pip install jinja2"
+            msg = "jinja2 is required -- pip install jinja2"
             raise ImportError(msg) from exc
 
         env = Environment(loader=BaseLoader(), autoescape=False)  # noqa: S701

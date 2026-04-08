@@ -1,4 +1,4 @@
-"""Tool gateway — abstract interface for agent-callable tools.
+"""Tool gateway -- abstract interface for agent-callable tools.
 
 Concrete adapters implement specific tools (web search, code execution,
 database query, etc.) that agents can invoke during planning/execution.

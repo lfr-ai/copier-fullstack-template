@@ -1,4 +1,4 @@
-"""Universal embedding adapter via LiteLLM — one adapter for all providers.
+"""Universal embedding adapter via LiteLLM -- one adapter for all providers.
 
 Uses 'litellm.aembedding()' to route embedding requests to OpenAI,
 Azure OpenAI, Cohere, Bedrock, Vertex AI, and other providers based

@@ -65,8 +65,6 @@ z: list[int]
 - Use 'Self' for fluent/builder return types
 
 ```python
-MAX_RETRIES: Final[int] = 3
-
 MAX_RETRIES = 3
 
 _INTERNAL_BUFFER_SIZE = 4096

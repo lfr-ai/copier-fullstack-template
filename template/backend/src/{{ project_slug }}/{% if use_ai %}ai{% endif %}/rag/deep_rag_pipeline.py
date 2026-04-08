@@ -1,4 +1,4 @@
-"""DeepRAG pipeline — step-by-step retrieval via MDP-modeled reasoning.
+"""DeepRAG pipeline -- step-by-step retrieval via MDP-modeled reasoning.
 
 Orchestrates the DeepRAG workflow using LangGraph StateGraph:
 - Iterative query decomposition into atomic sub-queries
@@ -10,7 +10,7 @@ The pipeline models retrieval-augmented reasoning as a Markov Decision
 Process (MDP), dynamically determining at each step whether to retrieve
 or rely on the LLM parametric knowledge.
 
-Reference: DeepRAG (Guan et al., 2025) — arXiv:2502.01142
+Reference: DeepRAG (Guan et al., 2025) -- arXiv:2502.01142
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from typing import Any, final
 
 import structlog
 
+from ...core.interfaces.knowledge_graph import KnowledgeGraphGateway
 from ...core.interfaces.llm import LLMGateway
 from ...core.interfaces.retriever import RetrieverGateway
 from ...core.interfaces.vector_store import VectorSearchResult
@@ -52,22 +53,25 @@ class DeepRAGPipeline:
     for accumulating sub-query results and reasoning traces.
     """
 
-    __slots__ = ("_graph", "_llm", "_retriever")
+    __slots__ = ("_graph", "_knowledge_graph", "_llm", "_retriever")
 
     def __init__(
         self,
         *,
         llm: LLMGateway,
         retriever: RetrieverGateway,
+        knowledge_graph: KnowledgeGraphGateway | None = None,
     ) -> None:
         """Initialize the DeepRAG pipeline.
 
         Args:
             llm: LLM gateway for decomposition, decisions, and synthesis.
             retriever: Retriever gateway for external document retrieval.
+            knowledge_graph: Optional KG gateway for graph-enhanced retrieval.
         """
         self._llm = llm
         self._retriever = retriever
+        self._knowledge_graph = knowledge_graph
         self._graph: object | None = None
 
     @classmethod
@@ -79,6 +83,7 @@ class DeepRAGPipeline:
             {
                 "llm": <LLMGateway instance>,
                 "retriever": <RetrieverGateway instance>,
+                "knowledge_graph": <KnowledgeGraphGateway | None>,  # optional
             }
 
         Args:
@@ -100,7 +105,11 @@ class DeepRAGPipeline:
             msg = "retriever is required"
             raise ValueError(msg)
 
-        return cls(llm=llm, retriever=retriever)  # type: ignore[arg-type]
+        return cls(
+            llm=llm,  # type: ignore[arg-type]
+            retriever=retriever,  # type: ignore[arg-type]
+            knowledge_graph=config.get("knowledge_graph"),  # type: ignore[arg-type]
+        )
 
     def _build_graph(self) -> object:
         """Lazily build the LangGraph StateGraph for DeepRAG workflow.
@@ -127,7 +136,12 @@ class DeepRAGPipeline:
             return await atomic_decision_node(state, llm=self._llm)
 
         async def retrieve_wrapper(state: DeepRAGState) -> dict[str, Any]:
-            return await retrieve_node(state, retriever=self._retriever, llm=self._llm)
+            return await retrieve_node(
+                state,
+                retriever=self._retriever,
+                llm=self._llm,
+                knowledge_graph=self._knowledge_graph,
+            )
 
         async def parametric_wrapper(state: DeepRAGState) -> dict[str, Any]:
             return await parametric_answer_node(state, llm=self._llm)
@@ -223,7 +237,6 @@ class DeepRAGPipeline:
         sub_queries = final_state.get("sub_queries", [])
         retrieval_count = final_state.get("retrieval_count", 0)
         step_count = final_state.get("step_count", 0)
-        reasoning_trace = final_state.get("reasoning_trace", [])
 
         # Collect all retrieved documents as sources
         sources: list[VectorSearchResult] = []

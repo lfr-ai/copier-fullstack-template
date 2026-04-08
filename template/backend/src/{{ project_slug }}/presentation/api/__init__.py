@@ -1,2 +1,2 @@
-"""REST API port — FastAPI application."""
+"""REST API port -- FastAPI application."""
 

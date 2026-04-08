@@ -6,10 +6,9 @@ Implements the node functions for the self-corrective RAG pipeline:
 - rewrite_query_node: Query optimization for re-retrieval
 - re_retrieve_node: Re-retrieval with rewritten query
 - generate_answer_node: Final answer generation
-- route_after_grading: Routing function for grade → rewrite vs. generate
+- route_after_grading: Routing function for grade -> rewrite vs. generate
 """
 
-import json
 from typing import Any
 
 import structlog
@@ -49,7 +48,8 @@ async def initial_retrieve_node(
     log = logger.bind(node="initial_retrieve", query_len=len(query))
     log.debug("initial_retrieve_node: entry")
     
-    docs = await retriever.retrieve(query=query)
+    top_k = state.get("top_k", 5)
+    docs = await retriever.retrieve(query=query, top_k=top_k)
     
     log.debug(
         "initial_retrieve_node: exit",
@@ -188,7 +188,8 @@ async def re_retrieve_node(
     log = logger.bind(node="re_retrieve", query_len=len(query))
     log.debug("re_retrieve_node: entry")
     
-    docs = await retriever.retrieve(query=query)
+    top_k = state.get("top_k", 5)
+    docs = await retriever.retrieve(query=query, top_k=top_k)
     
     log.debug(
         "re_retrieve_node: exit",

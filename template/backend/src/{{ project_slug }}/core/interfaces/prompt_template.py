@@ -1,4 +1,4 @@
-"""Prompt template gateway — abstract interface for structured prompt management.
+"""Prompt template gateway -- abstract interface for structured prompt management.
 
 Concrete adapters may use LangChain's 'ChatPromptTemplate',
 LlamaIndex's prompt system, or simple f-string templates.

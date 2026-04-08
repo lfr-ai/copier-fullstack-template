@@ -1,54 +1,39 @@
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
-from {{ project_slug }}.ai.langgraph_workflows.multi_hop_workflow import MultiHopWorkflow
-from core.interfaces.knowledge_graph import SlidingWindowKnowledgeGraph
-import unittest
+"""Unit tests for DeepRAGPipeline -- construction, from_config, and graph build."""
 
-class TestMultiHopWorkflow(unittest.TestCase):
+import pytest
+from unittest.mock import AsyncMock, MagicMock
 
-    def setUp(self):
-        self.kg_backend = SlidingWindowKnowledgeGraph(window_size=5)
-        self.vector_store = None  # Simulate a dummy vector store
-        self.multi_hop_workflow = MultiHopWorkflow(
-            kg_backend=self.kg_backend, vector_store=self.vector_store, max_hops=5
-        )
+from {{ project_slug }}.ai.rag.deep_rag_pipeline import DeepRAGPipeline
 
-    def test_traverse_and_enrich_with_kg(self):
-        start_node = "Node-Start"
-        trace = self.multi_hop_workflow.traverse_and_enrich(start_node)
-        
-        # Test that the trace includes up to max_hops
-        self.assertEqual(len(trace), 5)
-        
-        # Verify enrichment structure
-        for step in trace:
-            self.assertIn("node", step)
-            self.assertIn("enrichment", step)
-            self.assertIn("embedding", step["enrichment"])
 
-    def test_traverse_and_enrich_vector_fallback(self):
-        fallback_workflow = MultiHopWorkflow(kg_backend=None, vector_store=self.vector_store, max_hops=5)
-        start_node = "Node-Start"
-        trace = fallback_workflow.traverse_and_enrich(start_node)
-        
-        # Test that the trace includes up to max_hops
-        self.assertEqual(len(trace), 5)
+class TestDeepRAGPipeline:
+    """Test DeepRAGPipeline construction and factory methods."""
 
-        # Verify enrichment structure
-        for step in trace:
-            self.assertIn("node", step)
-            self.assertIn("enrichment", step)
-            self.assertIn("embedding", step["enrichment"])
+    def test_constructor_requires_llm_and_retriever(self) -> None:
+        mock_llm = AsyncMock()
+        mock_retriever = AsyncMock()
+        pipeline = DeepRAGPipeline(llm=mock_llm, retriever=mock_retriever)
+        assert pipeline._llm is mock_llm
+        assert pipeline._retriever is mock_retriever
 
-    def test_vector_only_traversal(self):
-        start_node = "Node-Start"
-        nodes = self.multi_hop_workflow.simulate_vector_only_traversal(start_node)
-        
-        # Verify that the fallback traversal creates simulated nodes
-        self.assertEqual(len(nodes), 5)
-        for i, node in enumerate(nodes):
-            self.assertEqual(node, f"Vector-{i + 1}")
+    def test_from_config_creates_pipeline(self) -> None:
+        mock_llm = AsyncMock()
+        mock_retriever = AsyncMock()
+        pipeline = DeepRAGPipeline.from_config({
+            "llm": mock_llm,
+            "retriever": mock_retriever,
+        })
+        assert pipeline._llm is mock_llm
+        assert pipeline._retriever is mock_retriever
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_from_config_missing_llm_raises(self) -> None:
+        with pytest.raises(ValueError, match="llm is required"):
+            DeepRAGPipeline.from_config({"retriever": AsyncMock()})
+
+    def test_from_config_missing_retriever_raises(self) -> None:
+        with pytest.raises(ValueError, match="retriever is required"):
+            DeepRAGPipeline.from_config({"llm": AsyncMock()})
+
+    def test_graph_is_lazily_built(self) -> None:
+        pipeline = DeepRAGPipeline(llm=AsyncMock(), retriever=AsyncMock())
+        assert pipeline._graph is None

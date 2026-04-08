@@ -9,13 +9,14 @@ Implements node functions for the DeepRAG pipeline modeled as an MDP:
 - route_after_decision: Route based on atomic decision
 - route_termination: Decide whether to continue decomposing or finalize
 
-Reference: DeepRAG (Guan et al., 2025) — arXiv:2502.01142
+Reference: DeepRAG (Guan et al., 2025) -- arXiv:2502.01142
 """
 
 from typing import Any
 
 import structlog
 
+from ...core.interfaces.knowledge_graph import KnowledgeGraphGateway
 from ...core.interfaces.llm import LLMGateway
 from ...core.interfaces.retriever import RetrieverGateway
 from ..prompts.rag_prompts import (
@@ -165,13 +166,18 @@ async def retrieve_node(
     *,
     retriever: RetrieverGateway,
     llm: LLMGateway,
+    knowledge_graph: KnowledgeGraphGateway | None = None,
 ) -> dict[str, Any]:
     """Retrieve external documents and generate intermediate answer.
+
+    Optionally enriches retrieval with knowledge graph neighbors when
+    a KG gateway is provided.
 
     Args:
         state: Current workflow state.
         retriever: Retriever gateway for document retrieval.
         llm: LLM gateway for answer generation with retrieved context.
+        knowledge_graph: Optional KG gateway for graph-enhanced context.
 
     Returns:
         State update with retrieved docs, intermediate answer, and incremented retrieval_count.
@@ -191,12 +197,30 @@ async def retrieve_node(
     # Retrieve documents
     docs = await retriever.retrieve(query=sub_query, top_k=3)
 
+    # Optionally enrich with KG neighbors
+    kg_context = ""
+    if knowledge_graph is not None:
+        try:
+            # Extract key entities from the sub-query to look up in the graph
+            neighbors = await knowledge_graph.query_neighbors(entity=sub_query, depth=1, limit=5)
+            if neighbors:
+                kg_context = "\n".join(
+                    f"[KG] {n.get('subject', '')} --{n.get('predicate', '')}--> {n.get('object', '')}"
+                    for n in neighbors
+                    if isinstance(n, dict)
+                )
+                log.debug("retrieve_node: KG enrichment", neighbor_count=len(neighbors))
+        except Exception:  # noqa: BLE001 -- graceful fallback if KG query fails
+            log.debug("retrieve_node: KG enrichment failed, continuing without")
+
     # Build context from retrieved docs
     context = "\n\n".join(
         f"[Document {i + 1}]: {doc.content}"
         for i, doc in enumerate(docs)
         if doc.content
     )
+    if kg_context:
+        context = f"{context}\n\n{kg_context}"
 
     # Generate intermediate answer using retrieved context
     prompt = RAG_QUERY_PROMPT.format(

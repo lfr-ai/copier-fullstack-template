@@ -1,2 +1,2 @@
-"""Shared utilities — stdlib and third-party helpers only."""
+"""Shared utilities -- stdlib and third-party helpers only."""
 
