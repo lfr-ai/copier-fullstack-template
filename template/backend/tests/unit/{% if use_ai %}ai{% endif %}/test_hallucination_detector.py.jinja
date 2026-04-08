@@ -1,0 +1,281 @@
+"""Unit tests for HallucinationDetector."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock
+
+import pytest
+
+from {{ project_slug }}.core.adapters.llm_hallucination_detector import HallucinationDetector
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+
+
+@pytest.fixture
+def mock_llm() -> AsyncMock:
+    """Create a mock LLM gateway for testing.
+
+    Returns:
+        AsyncMock: Mock LLM gateway with stubbed complete method.
+    """
+    llm = AsyncMock(spec=LLMGateway)
+    return llm
+
+
+@pytest.fixture
+def detector(mock_llm: AsyncMock) -> HallucinationDetector:
+    """Create HallucinationDetector instance with mock LLM.
+
+    Args:
+        mock_llm: Mock LLM gateway fixture.
+
+    Returns:
+        HallucinationDetector: Detector instance for testing.
+    """
+    return HallucinationDetector(llm_gateway=mock_llm)
+
+
+@pytest.mark.unit
+class TestHallucinationDetector:
+    """Unit tests for hallucination detection logic."""
+
+    @pytest.mark.asyncio
+    async def test_detect_hallucination_when_not_grounded(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should detect hallucination when LLM response contains 'not grounded'.
+
+        Scenario:
+        - User query: "What is Python?"
+        - Context: ["Python is a programming language"]
+        - LLM response: "Python is a fruit"
+        - Verification result: "The response is not grounded in the context"
+
+        Expected:
+        - detect_hallucination returns True
+        - LLM gateway called once with verification prompt
+        """
+        mock_llm.complete.return_value = "The response is not grounded in the context"
+
+        result = await detector.detect_hallucination(
+            user_query="What is Python?",
+            context=["Python is a programming language"],
+            llm_response="Python is a fruit",
+        )
+
+        assert result is True
+        mock_llm.complete.assert_awaited_once()
+        call_args = mock_llm.complete.call_args
+        assert "What is Python?" in call_args.kwargs["prompt"]
+        assert "Python is a fruit" in call_args.kwargs["prompt"]
+
+    @pytest.mark.asyncio
+    async def test_detect_hallucination_case_insensitive(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should detect 'not grounded' case-insensitively.
+
+        Scenario:
+        - LLM returns "NOT GROUNDED" in uppercase
+
+        Expected:
+        - detect_hallucination returns True
+        """
+        mock_llm.complete.return_value = "The response is NOT GROUNDED in the provided context"
+
+        result = await detector.detect_hallucination(
+            user_query="test query",
+            context=["test context"],
+            llm_response="test response",
+        )
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_no_hallucination_when_grounded(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should return False when LLM verifies response is grounded.
+
+        Scenario:
+        - LLM response: "The response is factually grounded"
+
+        Expected:
+        - detect_hallucination returns False (no hallucination)
+        """
+        mock_llm.complete.return_value = "The response is factually grounded in the provided context"
+
+        result = await detector.detect_hallucination(
+            user_query="What is Python?",
+            context=["Python is a programming language"],
+            llm_response="Python is a programming language",
+        )
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_false_positive_prevention(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should avoid false positives when response mentions grounding but is valid.
+
+        Scenario:
+        - LLM response: "Yes, grounded correctly"
+        - Should NOT trigger on word 'grounded' alone
+
+        Expected:
+        - detect_hallucination returns False
+        """
+        mock_llm.complete.return_value = "Yes, the response is grounded and accurate"
+
+        result = await detector.detect_hallucination(
+            user_query="test",
+            context=["test"],
+            llm_response="test",
+        )
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_empty_context_handling(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should handle empty context list gracefully.
+
+        Scenario:
+        - Context is empty list
+        - Should still call LLM and process result
+
+        Expected:
+        - No exception raised
+        - LLM gateway called
+        - Returns detection result based on LLM response
+        """
+        mock_llm.complete.return_value = "The response is not grounded without context"
+
+        result = await detector.detect_hallucination(
+            user_query="What is Python?",
+            context=[],
+            llm_response="Python is a fruit",
+        )
+
+        assert result is True
+        mock_llm.complete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_empty_response_handling(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should handle empty LLM response gracefully.
+
+        Scenario:
+        - llm_response parameter is empty string
+
+        Expected:
+        - No exception raised
+        - LLM gateway called with empty response in prompt
+        """
+        mock_llm.complete.return_value = "Cannot verify empty response, not grounded"
+
+        result = await detector.detect_hallucination(
+            user_query="What is Python?",
+            context=["Python is a programming language"],
+            llm_response="",
+        )
+
+        assert result is True
+        mock_llm.complete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_llm_gateway_error_propagation(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should propagate LLM gateway errors without catching.
+
+        Scenario:
+        - LLM gateway raises an exception (e.g., network error, API error)
+
+        Expected:
+        - Exception propagates to caller
+        - No internal error handling that swallows exceptions
+        """
+        mock_llm.complete.side_effect = RuntimeError("LLM API connection failed")
+
+        with pytest.raises(RuntimeError, match="LLM API connection failed"):
+            await detector.detect_hallucination(
+                user_query="test",
+                context=["test"],
+                llm_response="test",
+            )
+
+        mock_llm.complete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_multiple_context_items(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should handle multiple context items correctly.
+
+        Scenario:
+        - Context has multiple strings
+        - Should pass all context to LLM verification
+
+        Expected:
+        - LLM called with verification prompt
+        - Returns correct detection result
+        """
+        mock_llm.complete.return_value = "Response is grounded"
+
+        result = await detector.detect_hallucination(
+            user_query="What is Python?",
+            context=[
+                "Python is a programming language",
+                "Python was created by Guido van Rossum",
+                "Python is used for web development",
+            ],
+            llm_response="Python is a programming language created by Guido",
+        )
+
+        assert result is False
+        mock_llm.complete.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_partial_match_detection(
+        self,
+        detector: HallucinationDetector,
+        mock_llm: AsyncMock,
+    ) -> None:
+        """Should detect 'not grounded' even when embedded in longer response.
+
+        Scenario:
+        - LLM response: "After careful analysis, the statement is not grounded in reality"
+
+        Expected:
+        - detect_hallucination returns True
+        """
+        mock_llm.complete.return_value = (
+            "After careful analysis, the statement is not grounded in reality"
+        )
+
+        result = await detector.detect_hallucination(
+            user_query="test",
+            context=["test"],
+            llm_response="test",
+        )
+
+        assert result is True
