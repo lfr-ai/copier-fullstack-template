@@ -461,6 +461,90 @@ Rules:
 - Co-located registry tests live in `registry/tests/` (unit + property)
 - Registry property tests also exist in `backend/tests/property/test_generate_registry.py`
 - Generated constant tests live in `backend/tests/unit/core/test_registry_constants.py`
+{%- if use_ai %}
+
+---
+
+## AI / RAG Architecture
+
+### Retrieval Pipelines
+
+The project ships two retrieval-augmented generation pipelines, orchestrated via
+**LangGraph StateGraph**:
+
+| Pipeline | Module | Strategy |
+| --- | --- | --- |
+| **Self-CRAG** | `ai/rag/self_crag_pipeline.py` | Self-corrective RAG with LLM-based relevance grading, bounded query rewriting, and re-retrieval cycles |
+| **DeepRAG** | `ai/rag/deep_rag_pipeline.py` | MDP-modeled retrieval -- decomposes queries into sub-queries, makes atomic decisions (retrieve vs parametric), bounded by retrieval budget |
+
+**AdaptiveRAGPipeline** (`ai/rag/adaptive_pipeline.py`) routes between the two based on
+the `use_graph` flag, applies optional reranking, and runs hallucination detection.
+
+### DeepRAG MDP Formulation
+
+DeepRAG models retrieval as a Markov Decision Process:
+
+- **States**: Partial answers with accumulated sub-query results
+- **Actions**: Terminate, retrieve (external), or use parametric knowledge (LLM-only)
+- **Transitions**: Sub-query decomposition → atomic decision → retrieval/parametric → loop
+- **Bounds**: `_MAX_REASONING_STEPS` and `_MAX_RETRIEVAL_BUDGET` cap exploration
+
+Reference: *DeepRAG* (Guan et al., 2025) -- arXiv:2502.01142
+
+### Key Modules
+
+```
+ai/
+├── rag/
+│   ├── adaptive_pipeline.py    # Routes between Self-CRAG and DeepRAG
+│   ├── self_crag_pipeline.py   # Self-corrective RAG (LangGraph)
+│   ├── self_crag_state.py      # Self-CRAG state schema
+│   ├── self_crag_nodes.py      # Self-CRAG LangGraph nodes
+│   ├── deep_rag_pipeline.py    # DeepRAG MDP pipeline (LangGraph)
+│   ├── deep_rag_state.py       # DeepRAG state schema with Annotated reducers
+│   ├── deep_rag_nodes.py       # DeepRAG LangGraph node functions
+│   ├── retrieval.py            # Shared RetrievalResult dataclass
+│   ├── ingestion.py            # Document ingestion pipeline
+│   └── retrievers/             # Vector, Graph, Ensemble retrievers
+├── document_loaders/           # File, Web, Azure Doc Intelligence, LlamaIndex
+├── text_splitters/             # Recursive, LlamaIndex SentenceSplitter
+├── embeddings/                 # LiteLLM, SentenceTransformer
+├── llm/                        # LiteLLM, Anthropic adapters
+├── knowledge_graph/            # NetworkX, Neo4j adapters
+├── vector_stores/              # FAISS, pgvector, Azure AI Search
+├── prompts/                    # Prompt templates (RAG, DeepRAG, agents)
+├── tools/                      # Agent tools (search, ingest, KG query)
+└── services/                   # RAG orchestration service
+```
+
+### Configuration
+
+Pipelines can be loaded from YAML config via `AIConfigLoader.create_pipeline()`:
+
+```yaml
+pipelines:
+  self_crag:
+    type: self_crag
+    llm_ref: llms.gpt4
+    retriever_ref: retrievers.vector
+
+  deep_rag:
+    type: deep_rag
+    llm_ref: llms.gpt4
+    retriever_ref: retrievers.vector
+```
+
+All pipeline and adapter classes expose a `from_config(config)` classmethod factory.
+
+### LlamaIndex Integration
+
+LlamaIndex adapters implement existing gateway protocols:
+
+- `LlamaIndexSentenceSplitter` implements `TextSplitterGateway` (sentence-aware chunking)
+- `LlamaIndexDirectoryLoader` implements `DocumentLoaderGateway` (multi-format loading)
+
+Add `llama-index-core` to dependencies to use these adapters.
+{%- endif %}
 
 ---
 

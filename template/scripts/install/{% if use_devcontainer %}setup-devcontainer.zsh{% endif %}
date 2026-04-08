@@ -32,7 +32,7 @@ verify_devcontainer_config() {
     local config_path=".devcontainer/devcontainer.json"
 
     if [[ ! -f "${config_path}" ]]; then
-        print "WARNING: ${config_path} not found — will be created on first devcontainer build"
+        print "WARNING: ${config_path} not found -- will be created on first devcontainer build"
         return 0
     fi
 

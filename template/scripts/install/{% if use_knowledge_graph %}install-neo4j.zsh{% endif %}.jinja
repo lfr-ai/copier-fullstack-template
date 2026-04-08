@@ -51,7 +51,7 @@ if command -v java &>/dev/null; then
 local java_ver
 java_ver="$(java -version 2>&1 | head -1 | sed 's/.*"\([0-9]*\).*/\1/')"
 if (( java_ver >= 21 )); then
-print "Java ${java_ver} detected — OK"
+print "Java ${java_ver} detected -- OK"
 return 0
 fi
 fi
@@ -79,7 +79,7 @@ print "Installing Neo4j on Linux..."
 _ensure_java21
 
 if command -v apt-get &>/dev/null; then
-# Debian/Ubuntu — Official Neo4j apt repository
+# Debian/Ubuntu -- Official Neo4j apt repository
 # Reference: https://neo4j.com/docs/operations-manual/current/installation/linux/debian/
 if [[ ! -f /etc/apt/sources.list.d/neo4j.list ]]; then
 sudo mkdir -p /etc/apt/keyrings
@@ -93,7 +93,7 @@ sudo apt-get update -qq
 sudo apt-get install -y neo4j
 
 elif command -v dnf &>/dev/null; then
-# RHEL/CentOS/Fedora — Official Neo4j RPM repository
+# RHEL/CentOS/Fedora -- Official Neo4j RPM repository
 # Reference: https://neo4j.com/docs/operations-manual/current/installation/linux/rpm/
 sudo rpm --import https://debian.neo4j.com/neotechnology.gpg.key 2>/dev/null || true
 if [[ ! -f /etc/yum.repos.d/neo4j.repo ]]; then
@@ -150,7 +150,7 @@ sudo tee /etc/yum.repos.d/neo4j.repo > /dev/null <<'REPO' [neo4j] name=Neo4j RPM
 
     print "Neo4j started on bolt://localhost:7687 (user: neo4j, password: changeme)"
     print "Web UI: http://localhost:7474"
-    print "WARNING: Default credentials — change NEO4J_AUTH for any non-local environment!"
+    print "WARNING: Default credentials -- change NEO4J_AUTH for any non-local environment!"
     }
 
     _install_python_driver() {

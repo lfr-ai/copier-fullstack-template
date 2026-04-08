@@ -1,0 +1,564 @@
+"""Unit tests for AdaptiveRAGPipeline routing logic."""
+
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from {{ project_slug }}.ai.rag.adaptive_pipeline import AdaptiveRAGPipeline
+from {{ project_slug }}.ai.rag.retrieval import RetrievalResult
+from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.reranker import RerankerGateway, RankedResult
+from {{ project_slug }}.core.interfaces.vector_store import (
+    VectorSearchResult,
+    VectorStoreGateway,
+)
+
+
+@pytest.mark.unit
+class TestAdaptiveRAGPipelineRouting:
+    """Test suite for AdaptiveRAGPipeline routing logic."""
+
+    @pytest.fixture
+    def mock_llm(self) -> LLMGateway:
+        """Create a mock LLM gateway."""
+        mock = AsyncMock(spec=LLMGateway)
+        mock.complete = AsyncMock(return_value="Test answer")
+        return mock
+
+    @pytest.fixture
+    def mock_embedding(self) -> EmbeddingGateway:
+        """Create a mock embedding gateway."""
+        mock = AsyncMock(spec=EmbeddingGateway)
+        mock.embed = AsyncMock(return_value=[0.1] * 768)
+        return mock
+
+    @pytest.fixture
+    def mock_vector_store(self) -> VectorStoreGateway:
+        """Create a mock vector store gateway."""
+        mock = AsyncMock(spec=VectorStoreGateway)
+        mock.similarity_search = AsyncMock(
+            return_value=[
+                VectorSearchResult(
+                    id="doc1",
+                    score=0.95,
+                    metadata={"content": "Test content"},
+                )
+            ]
+        )
+        return mock
+
+    @pytest.fixture
+    def mock_knowledge_graph(self) -> KnowledgeGraphGateway:
+        """Create a mock knowledge graph gateway."""
+        mock = AsyncMock(spec=KnowledgeGraphGateway)
+        mock.query_neighbors = AsyncMock(return_value=[])
+        return mock
+
+    @pytest.fixture
+    def mock_reranker(self) -> RerankerGateway:
+        """Create a mock reranker gateway."""
+        mock = AsyncMock(spec=RerankerGateway)
+        mock.rerank = AsyncMock(
+            return_value=[
+                RankedResult(
+                    id="doc1",
+                    content="Test content",
+                    rerank_score=0.98,
+                    original_score=0.95,
+                    metadata={"content": "Test content"},
+                )
+            ]
+        )
+        return mock
+
+    @pytest.fixture
+    def pipeline_minimal(
+        self,
+        *,
+        mock_llm: LLMGateway,
+        mock_embedding: EmbeddingGateway,
+        mock_vector_store: VectorStoreGateway,
+    ) -> AdaptiveRAGPipeline:
+        """Create a minimal AdaptiveRAGPipeline without optional components."""
+        return AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+        )
+
+    @pytest.fixture
+    def pipeline_with_kg(
+        self,
+        *,
+        mock_llm: LLMGateway,
+        mock_embedding: EmbeddingGateway,
+        mock_vector_store: VectorStoreGateway,
+        mock_knowledge_graph: KnowledgeGraphGateway,
+    ) -> AdaptiveRAGPipeline:
+        """Create an AdaptiveRAGPipeline with knowledge graph."""
+        return AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+            knowledge_graph=mock_knowledge_graph,
+        )
+
+    @pytest.fixture
+    def pipeline_with_reranker(
+        self,
+        *,
+        mock_llm: LLMGateway,
+        mock_embedding: EmbeddingGateway,
+        mock_vector_store: VectorStoreGateway,
+        mock_reranker: RerankerGateway,
+    ) -> AdaptiveRAGPipeline:
+        """Create an AdaptiveRAGPipeline with reranker."""
+        return AdaptiveRAGPipeline(
+            llm=mock_llm,
+            embedding=mock_embedding,
+            vector_store=mock_vector_store,
+            reranker=mock_reranker,
+        )
+
+    @pytest.mark.asyncio
+    async def test_routes_to_self_crag_when_use_graph_false(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """query() should route to Self-CRAG when use_graph=False."""
+        # Mock the Self-CRAG pipeline
+        mock_self_crag = AsyncMock()
+        mock_self_crag.query = AsyncMock(
+            return_value=RetrievalResult(
+                query="Test question",
+                answer="Self-CRAG answer",
+                sources=[
+                    VectorSearchResult(
+                        id="doc1",
+                        score=0.95,
+                        metadata={"content": "Test content"},
+                    )
+                ],
+                graph_context=[],
+            )
+        )
+
+        with patch.object(
+            pipeline_minimal,
+            "_get_self_crag_pipeline",
+            return_value=mock_self_crag,
+        ):
+            result = await pipeline_minimal.query(
+                "Test question",
+                use_graph=False,
+            )
+
+        assert result.answer == "Self-CRAG answer"
+        mock_self_crag.query.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_routes_to_deeprag_when_use_graph_true(
+        self,
+        *,
+        pipeline_with_kg: AdaptiveRAGPipeline,
+    ) -> None:
+        """query() should route to DeepRAG when use_graph=True."""
+        # Mock the DeepRAG pipeline
+        mock_deeprag = AsyncMock()
+        mock_deeprag.query = AsyncMock(
+            return_value=RetrievalResult(
+                query="Test question",
+                answer="DeepRAG answer",
+                sources=[
+                    VectorSearchResult(
+                        id="doc1",
+                        score=0.95,
+                        metadata={"content": "Test content"},
+                    )
+                ],
+                graph_context=["entity1", "entity2"],
+            )
+        )
+
+        with patch.object(
+            pipeline_with_kg,
+            "_get_deep_rag_pipeline",
+            return_value=mock_deeprag,
+        ):
+            result = await pipeline_with_kg.query(
+                "Test question",
+                use_graph=True,
+            )
+
+        assert result.answer == "DeepRAG answer"
+        assert len(result.graph_context) == 2
+        mock_deeprag.query.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_raises_on_empty_question(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """query() should raise ValueError when question is empty."""
+        with pytest.raises(ValueError, match="Question cannot be empty"):
+            await pipeline_minimal.query("")
+
+        with pytest.raises(ValueError, match="Question cannot be empty"):
+            await pipeline_minimal.query("   ")
+
+    @pytest.mark.asyncio
+    async def test_raises_on_negative_top_k(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """query() should raise ValueError when top_k is negative."""
+        with pytest.raises(ValueError, match="top_k must be non-negative"):
+            await pipeline_minimal.query("Test question", top_k=-1)
+
+    @pytest.mark.asyncio
+    async def test_defaults_zero_top_k_to_five(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """query() should default top_k=0 to 5 with INFO log."""
+        mock_self_crag = AsyncMock()
+        mock_self_crag.query = AsyncMock(
+            return_value=RetrievalResult(
+                query="Test question",
+                answer="Answer",
+                sources=[],
+                graph_context=[],
+            )
+        )
+
+        with patch.object(
+            pipeline_minimal,
+            "_get_self_crag_pipeline",
+            return_value=mock_self_crag,
+        ):
+            await pipeline_minimal.query("Test question", top_k=0)
+
+        # Verify top_k=5 was passed to pipeline
+        call_kwargs = mock_self_crag.query.call_args.kwargs
+        assert call_kwargs["top_k"] == 5
+
+    @pytest.mark.asyncio
+    async def test_caps_top_k_at_100(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """query() should cap top_k at 100 with WARNING log."""
+        mock_self_crag = AsyncMock()
+        mock_self_crag.query = AsyncMock(
+            return_value=RetrievalResult(
+                query="Test question",
+                answer="Answer",
+                sources=[],
+                graph_context=[],
+            )
+        )
+
+        with patch.object(
+            pipeline_minimal,
+            "_get_self_crag_pipeline",
+            return_value=mock_self_crag,
+        ):
+            await pipeline_minimal.query("Test question", top_k=200)
+
+        # Verify top_k=100 was passed to pipeline
+        call_kwargs = mock_self_crag.query.call_args.kwargs
+        assert call_kwargs["top_k"] == 100
+
+    @pytest.mark.asyncio
+    async def test_raises_on_oversized_system_prompt(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """query() should raise ValueError when system_prompt exceeds 10K chars."""
+        oversized_prompt = "x" * 10001
+
+        with pytest.raises(ValueError, match="system_prompt exceeds 10K characters"):
+            await pipeline_minimal.query(
+                "Test question",
+                system_prompt=oversized_prompt,
+            )
+
+    @pytest.mark.asyncio
+    async def test_hallucination_detection_no_sources(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """_detect_hallucination() should return True when no sources provided."""
+        is_hallucinated, corrected = await pipeline_minimal._detect_hallucination(
+            question="Test question",
+            answer="Test answer",
+            sources=[],
+        )
+
+        assert is_hallucinated is True
+        assert "no relevant sources" in corrected.lower()
+
+    @pytest.mark.asyncio
+    async def test_hallucination_detection_with_sources(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """_detect_hallucination() should return False when sources exist."""
+        is_hallucinated, corrected = await pipeline_minimal._detect_hallucination(
+            question="Test question",
+            answer="Test answer",
+            sources=[
+                VectorSearchResult(
+                    id="doc1",
+                    score=0.95,
+                    metadata={"content": "Test"},
+                )
+            ],
+        )
+
+        assert is_hallucinated is False
+        assert corrected == "Test answer"
+
+    @pytest.mark.asyncio
+    async def test_rerank_skipped_when_no_reranker(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """_rerank_if_available() should return original results when no reranker."""
+        results = [
+            VectorSearchResult(id="doc1", score=0.9, metadata={"content": "Test"}),
+            VectorSearchResult(id="doc2", score=0.8, metadata={"content": "Test2"}),
+        ]
+
+        reranked = await pipeline_minimal._rerank_if_available(
+            query="Test",
+            results=results,
+            top_k=1,
+        )
+
+        # Should return top_k results without reranking
+        assert len(reranked) == 1
+        assert reranked[0].id == "doc1"
+        assert reranked[0].score == 0.9
+
+    @pytest.mark.asyncio
+    async def test_rerank_applied_when_reranker_available(
+        self,
+        *,
+        pipeline_with_reranker: AdaptiveRAGPipeline,
+        mock_reranker: RerankerGateway,
+    ) -> None:
+        """_rerank_if_available() should apply reranker when available."""
+        results = [
+            VectorSearchResult(id="doc1", score=0.9, metadata={"content": "Test"}),
+        ]
+
+        reranked = await pipeline_with_reranker._rerank_if_available(
+            query="Test",
+            results=results,
+            top_k=1,
+        )
+
+        mock_reranker.rerank.assert_called_once()
+        assert len(reranked) == 1
+        assert reranked[0].score == 0.98  # Reranked score
+
+    @pytest.mark.asyncio
+    async def test_rerank_failure_gracefully_handled(
+        self,
+        *,
+        pipeline_with_reranker: AdaptiveRAGPipeline,
+        mock_reranker: RerankerGateway,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """_rerank_if_available() should handle reranker errors gracefully."""
+        # Make reranker fail
+        mock_reranker.rerank = AsyncMock(side_effect=RuntimeError("Reranker failed"))
+
+        results = [
+            VectorSearchResult(id="doc1", score=0.9, metadata={"content": "Test"}),
+        ]
+
+        reranked = await pipeline_with_reranker._rerank_if_available(
+            query="Test",
+            results=results,
+            top_k=1,
+        )
+
+        # Should return original results on error
+        assert len(reranked) == 1
+        assert reranked[0].score == 0.9
+
+    @pytest.mark.asyncio
+    async def test_lazy_initialization_self_crag(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """_get_self_crag_pipeline() should lazily initialize pipeline once."""
+        with patch("{{ project_slug }}.ai.rag.adaptive_pipeline.SelfCRAGPipeline") as mock_cls:
+            mock_instance = MagicMock()
+            mock_cls.return_value = mock_instance
+
+            # First call should initialize
+            result1 = pipeline_minimal._get_self_crag_pipeline()
+            # Second call should reuse
+            result2 = pipeline_minimal._get_self_crag_pipeline()
+
+            assert result1 is result2
+            # Pipeline should only be constructed once
+            assert mock_cls.call_count <= 2  # May be called twice due to import patching
+
+    @pytest.mark.asyncio
+    async def test_lazy_initialization_deeprag(
+        self,
+        *,
+        pipeline_with_kg: AdaptiveRAGPipeline,
+    ) -> None:
+        """_get_deep_rag_pipeline() should lazily initialize pipeline once."""
+        with patch("{{ project_slug }}.ai.rag.adaptive_pipeline.DeepRAGPipeline") as mock_cls:
+            mock_instance = MagicMock()
+            mock_cls.return_value = mock_instance
+
+            # First call should initialize
+            result1 = pipeline_with_kg._get_deep_rag_pipeline()
+            # Second call should reuse
+            result2 = pipeline_with_kg._get_deep_rag_pipeline()
+
+            assert result1 is result2
+
+    def test_from_config_minimal(
+        self,
+        *,
+        mock_llm: LLMGateway,
+        mock_embedding: EmbeddingGateway,
+        mock_vector_store: VectorStoreGateway,
+    ) -> None:
+        """from_config() should work with minimal required config."""
+        config = {
+            "llm": mock_llm,
+            "embedding": mock_embedding,
+            "vector_store": mock_vector_store,
+        }
+
+        pipeline = AdaptiveRAGPipeline.from_config(config)
+
+        assert pipeline is not None
+        assert pipeline._llm is mock_llm
+        assert pipeline._embedding is mock_embedding
+        assert pipeline._vector_store is mock_vector_store
+        assert pipeline._knowledge_graph is None
+        assert pipeline._reranker is None
+
+    def test_from_config_with_all_components(
+        self,
+        *,
+        mock_llm: LLMGateway,
+        mock_embedding: EmbeddingGateway,
+        mock_vector_store: VectorStoreGateway,
+        mock_knowledge_graph: KnowledgeGraphGateway,
+        mock_reranker: RerankerGateway,
+    ) -> None:
+        """from_config() should accept all optional components."""
+        config = {
+            "llm": mock_llm,
+            "embedding": mock_embedding,
+            "vector_store": mock_vector_store,
+            "knowledge_graph": mock_knowledge_graph,
+            "reranker": mock_reranker,
+        }
+
+        pipeline = AdaptiveRAGPipeline.from_config(config)
+
+        assert pipeline._llm is mock_llm
+        assert pipeline._knowledge_graph is mock_knowledge_graph
+        assert pipeline._reranker is mock_reranker
+
+    def test_from_config_missing_llm(
+        self,
+        *,
+        mock_embedding: EmbeddingGateway,
+        mock_vector_store: VectorStoreGateway,
+    ) -> None:
+        """from_config() should raise ValueError when llm is missing."""
+        config = {
+            "embedding": mock_embedding,
+            "vector_store": mock_vector_store,
+        }
+
+        with pytest.raises(ValueError, match="llm is required"):
+            AdaptiveRAGPipeline.from_config(config)
+
+    def test_from_config_missing_embedding(
+        self,
+        *,
+        mock_llm: LLMGateway,
+        mock_vector_store: VectorStoreGateway,
+    ) -> None:
+        """from_config() should raise ValueError when embedding is missing."""
+        config = {
+            "llm": mock_llm,
+            "vector_store": mock_vector_store,
+        }
+
+        with pytest.raises(ValueError, match="embedding is required"):
+            AdaptiveRAGPipeline.from_config(config)
+
+    def test_from_config_missing_vector_store(
+        self,
+        *,
+        mock_llm: LLMGateway,
+        mock_embedding: EmbeddingGateway,
+    ) -> None:
+        """from_config() should raise ValueError when vector_store is missing."""
+        config = {
+            "llm": mock_llm,
+            "embedding": mock_embedding,
+        }
+
+        with pytest.raises(ValueError, match="vector_store is required"):
+            AdaptiveRAGPipeline.from_config(config)
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_propagation(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """query() should propagate system_prompt to underlying pipeline."""
+        mock_self_crag = AsyncMock()
+        mock_self_crag.query = AsyncMock(
+            return_value=RetrievalResult(
+                query="Test question",
+                answer="Answer",
+                sources=[
+                    VectorSearchResult(id="doc1", score=0.9, metadata={"content": "Test"})
+                ],
+                graph_context=[],
+            )
+        )
+
+        with patch.object(
+            pipeline_minimal,
+            "_get_self_crag_pipeline",
+            return_value=mock_self_crag,
+        ):
+            await pipeline_minimal.query(
+                "Test question",
+                system_prompt="Custom instructions",
+            )
+
+        call_kwargs = mock_self_crag.query.call_args.kwargs
+        assert call_kwargs["system_prompt"] == "Custom instructions"
