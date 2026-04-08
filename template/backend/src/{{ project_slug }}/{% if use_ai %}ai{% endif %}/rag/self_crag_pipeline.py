@@ -131,12 +131,14 @@ class SelfCRAGPipeline:
         question: str,
         *,
         top_k: int = 5,
+        system_prompt: str | None = None,
     ) -> RetrievalResult:
         """Execute a Self-CRAG query with adaptive retrieval.
 
         Args:
             question: User's natural language question.
             top_k: Number of source chunks to retrieve (passed to retriever).
+            system_prompt: Optional custom system prompt for LLM instructions.
 
         Returns:
             RetrievalResult with answer and workflow metadata.
@@ -158,6 +160,7 @@ class SelfCRAGPipeline:
             "scores": [],
             "cycle_count": 0,
             "answer": "",
+            "system_prompt": system_prompt,
         }
 
         # Invoke graph with initial state

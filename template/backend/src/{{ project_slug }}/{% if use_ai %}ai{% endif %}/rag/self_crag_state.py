@@ -27,6 +27,7 @@ class SelfCRAGState(TypedDict, total=False):
         scores: List of LLM-graded relevance scores (0.0-1.0) for each doc.
         cycle_count: Number of query rewrite cycles executed (0-MAX_QUERY_REWRITES).
         answer: Final generated answer (populated at workflow end).
+        system_prompt: Optional custom system prompt for LLM instructions.
     """
     
     query: str
@@ -35,3 +36,4 @@ class SelfCRAGState(TypedDict, total=False):
     scores: list[float]
     cycle_count: int
     answer: str
+    system_prompt: str | None
