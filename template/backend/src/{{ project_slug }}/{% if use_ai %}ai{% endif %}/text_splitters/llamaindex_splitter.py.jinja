@@ -1,0 +1,108 @@
+"""LlamaIndex text splitter adapter -- implements TextSplitterGateway.
+
+Wraps LlamaIndex SentenceSplitter for sentence-aware chunking with
+configurable chunk size and overlap. Add 'llama-index-core' to project
+dependencies before using.
+"""
+
+from __future__ import annotations
+
+from typing import final, override
+
+import structlog
+
+from {{ project_slug }}.core.entities.document import Chunk, Document
+from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+@final
+class LlamaIndexSentenceSplitter(TextSplitterGateway):
+    """Sentence-aware text splitter backed by LlamaIndex SentenceSplitter.
+
+    Provides better chunk boundaries than character-level splitting
+    by respecting sentence structure and token counts.
+    """
+
+    __slots__ = ("_splitter",)
+
+    def __init__(
+        self,
+        *,
+        chunk_size: int = 512,
+        chunk_overlap: int = 64,
+    ) -> None:
+        """Initialize the LlamaIndex sentence splitter.
+
+        Args:
+            chunk_size: Target chunk size in tokens.
+            chunk_overlap: Overlap between consecutive chunks in tokens.
+        """
+        try:
+            from llama_index.core.node_parser import SentenceSplitter  # type: ignore[import-untyped]
+        except ImportError as exc:
+            msg = "llama-index-core is required -- pip install llama-index-core"
+            raise ImportError(msg) from exc
+
+        self._splitter = SentenceSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+        logger.info(
+            "LlamaIndex SentenceSplitter initialized",
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> LlamaIndexSentenceSplitter:
+        """Create from configuration dictionary.
+
+        Args:
+            config: Configuration with optional chunk_size and chunk_overlap.
+
+        Returns:
+            Configured splitter instance.
+        """
+        return cls(
+            chunk_size=int(config.get("chunk_size", 512)),
+            chunk_overlap=int(config.get("chunk_overlap", 64)),
+        )
+
+    @override
+    def split(self, document: Document) -> list[Chunk]:
+        """Split a document into sentence-aware chunks.
+
+        Args:
+            document: Source document to split.
+
+        Returns:
+            Ordered chunks with provenance metadata.
+        """
+        from llama_index.core import Document as LlamaDocument  # type: ignore[import-untyped]
+
+        llama_doc = LlamaDocument(text=document.content, metadata=document.metadata)
+        nodes = self._splitter.get_nodes_from_documents([llama_doc])
+
+        chunks: list[Chunk] = []
+        for i, node in enumerate(nodes):
+            chunk = Chunk(
+                document_id=document.id,
+                content=node.get_content(),
+                index=i,
+                metadata={
+                    **document.metadata,
+                    "source": document.source,
+                    "start_char_idx": getattr(node, "start_char_idx", None),
+                    "end_char_idx": getattr(node, "end_char_idx", None),
+                },
+            )
+            chunks.append(chunk)
+
+        logger.debug(
+            "LlamaIndex split complete",
+            document_id=document.id,
+            chunk_count=len(chunks),
+        )
+        return chunks

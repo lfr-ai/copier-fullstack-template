@@ -1,0 +1,129 @@
+"""LlamaIndex document loader adapter -- implements DocumentLoaderGateway.
+
+Wraps LlamaIndex SimpleDirectoryReader for loading documents from
+directories with automatic format detection. Add 'llama-index-core'
+to project dependencies before using.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import final, override
+
+import structlog
+
+from {{ project_slug }}.core.entities.document import Document
+from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+@final
+class LlamaIndexDirectoryLoader(DocumentLoaderGateway):
+    """Document loader backed by LlamaIndex SimpleDirectoryReader.
+
+    Supports PDF, DOCX, TXT, CSV, Markdown, and many other formats
+    via LlamaIndex built-in readers. Loads all files from a directory
+    or a single file path.
+    """
+
+    __slots__ = ("_num_workers", "_recursive")
+
+    def __init__(
+        self,
+        *,
+        recursive: bool = True,
+        num_workers: int = 1,
+    ) -> None:
+        """Initialize the LlamaIndex directory loader.
+
+        Args:
+            recursive: Whether to recursively load from subdirectories.
+            num_workers: Number of parallel workers for file loading.
+        """
+        try:
+            from llama_index.core import SimpleDirectoryReader  # type: ignore[import-untyped]  # noqa: F401
+        except ImportError as exc:
+            msg = "llama-index-core is required -- pip install llama-index-core"
+            raise ImportError(msg) from exc
+
+        self._recursive = recursive
+        self._num_workers = num_workers
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> LlamaIndexDirectoryLoader:
+        """Create from configuration dictionary.
+
+        Args:
+            config: Configuration with optional recursive and num_workers.
+
+        Returns:
+            Configured loader instance.
+        """
+        return cls(
+            recursive=bool(config.get("recursive", True)),
+            num_workers=int(config.get("num_workers", 1)),
+        )
+
+    @override
+    async def load(self, source: str) -> list[Document]:
+        """Load documents from a file or directory path.
+
+        Args:
+            source: File path or directory path to load.
+
+        Returns:
+            List of loaded documents.
+        """
+        from llama_index.core import SimpleDirectoryReader  # type: ignore[import-untyped]
+
+        path = Path(source)
+        if not path.exists():
+            msg = f"Path not found: {source}"
+            raise FileNotFoundError(msg)
+
+        if path.is_dir():
+            reader = SimpleDirectoryReader(
+                input_dir=str(path),
+                recursive=self._recursive,
+                num_files_limit=None,
+            )
+        else:
+            reader = SimpleDirectoryReader(input_files=[str(path)])
+
+        llama_docs = reader.load_data(num_workers=self._num_workers)
+
+        documents: list[Document] = []
+        for llama_doc in llama_docs:
+            doc_metadata = llama_doc.metadata or {}
+            documents.append(
+                Document(
+                    content=llama_doc.get_content(),
+                    source=doc_metadata.get("file_path", source),
+                    content_type=doc_metadata.get("file_type", "text/plain"),
+                    metadata=doc_metadata,
+                )
+            )
+
+        logger.info(
+            "LlamaIndex loader complete",
+            source=source,
+            document_count=len(documents),
+        )
+        return documents
+
+    @override
+    async def load_many(self, sources: list[str]) -> list[Document]:
+        """Load documents from multiple file/directory paths.
+
+        Args:
+            sources: List of file or directory paths.
+
+        Returns:
+            All loaded documents across all sources.
+        """
+        all_docs: list[Document] = []
+        for source in sources:
+            docs = await self.load(source)
+            all_docs.extend(docs)
+        return all_docs
