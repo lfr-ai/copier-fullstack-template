@@ -13,6 +13,10 @@ Cline, OpenCode, etc.) working within this codebase.
     - `use the gh_grep tool`
 - Prefer Context7 for authoritative API/reference answers and `gh_grep` for practical
   code patterns.
+- For frontend tasks, check official docs first (shadcn/ui, React Router,
+  React Hook Form) before proposing component or routing patterns.
+- For shadcn work, prefer registry/CLI-driven composition and documented primitives
+  over bespoke markup.
 
 ---
 
@@ -296,14 +300,19 @@ When `*` is NOT required:
 
 - Strict TypeScript (`strict: true`) — no `any`, use `unknown` or proper generics
 - Functional components with typed props interfaces
+- Prefer shadcn/ui (Radix-based) primitives before custom-styled components
 - Tailwind CSS v4 for styling (CSS-first `@theme {}`, `@layer components`)
 - Vite for build tooling with `manualChunks` vendor splitting; `lightningcss` for CSS
 - Bun as the JavaScript runtime and package manager (replaces Node.js + pnpm)
 - Biome for linting, formatting, and import organization (replaces ESLint + Prettier)
 - React: TanStack Query for server state, React Router for navigation,
   ErrorBoundary + Suspense for loading/error states
+- React Router: use `NavLink` for primary navigation active states; reserve
+  `useNavigate` for programmatic transitions only
 - React Hook Form + Zod resolver for form validation
-- React Aria components for accessible UI primitives{% if use_storybook %}
+- React Hook Form: use `Controller` for controlled shadcn/radix inputs,
+  maintain stable `defaultValues`, and surface accessible field errors
+- Use React Aria only when no shadcn equivalent primitive exists{% if use_storybook %}
 - Storybook for isolated component development and visual testing{% endif %}
 - Named exports only — avoid default exports
 - Colocate types with their modules
@@ -721,7 +730,8 @@ files (`applyTo: "**"`) and covers:
 - File naming conventions (`.py`, `.zsh`, `.azcli`, `.jinja`)
 - Python coding standards (type hints, constants, enums, `@final`, `@override`,
   logging, exceptions, keyword-only args, docstrings, visibility, naming)
-- Frontend conventions (TypeScript, Vite, Bun, Biome, Tailwind v4)
+- Frontend conventions (shadcn/ui-first, React, TypeScript, Vite, Bun, Biome,
+  Tailwind v4)
 - Shell conventions (zsh, `.azcli` for Azure CLI)
 - Naming registry workflow
 - Testing standards (pytest, hypothesis, vitest)
@@ -913,9 +923,12 @@ Skills are stored in two locations for cross-agent compatibility:
 | **Python Conventions** | `python-conventions/` | Naming, typing, async patterns | Type hints, structured logging, keyword-only args |
 | **Testing Conventions** | `testing-conventions/` | Pytest structure, coverage | Markers, factories, fixtures, >= 80% coverage |
 | **Naming Registry** | `naming-registry/` | Registry-first constants | Edit JSON → validate → generate → check → test |
+| **Shadcn Frontend** | `shadcn-frontend/` | Frontend UI and design-system work | Prefer shadcn/ui primitives, semantic tokens, strict React + TS patterns |
 
 The `clean-architecture` skill is **MANDATORY** for all backend Python work — agents
 MUST apply it regardless of task scope.
+
+For frontend work, the `shadcn-frontend` skill should be applied first.
 
 ---
 
@@ -1028,7 +1041,8 @@ agents in `.github/agents/`.
 GSD and Copilot agents share the same conventions:
 
 - **Skills** — `.github/skills/` (Copilot) and `~/.agents/skills/` (GSD) both contain
-  clean-architecture, python-conventions, testing-conventions, naming-registry
+  clean-architecture, python-conventions, testing-conventions, naming-registry,
+  shadcn-frontend
 - **Instructions** — `.github/instructions/` (architecture, coding, frontend,
   security, shell, testing, scaffolding)
 - **Custom instructions** — GSD's `custom_instructions` in PREFERENCES.md mirror

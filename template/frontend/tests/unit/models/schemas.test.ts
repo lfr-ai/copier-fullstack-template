@@ -12,7 +12,7 @@ import {
   HealthResponseSchema,
   PaginatedResponseSchema,
   UserSchema,
-} from '@/models/schemas/index';
+} from '@/domain/models/schemas';
 
 describe('UserSchema', () => {
   it('accepts a valid user', () => {

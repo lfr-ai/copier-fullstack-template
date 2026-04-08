@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import { dirname, resolve } from 'path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react-swc';
@@ -8,59 +8,59 @@ import { visualizer } from 'rollup-plugin-visualizer';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-plugins: [
-tailwindcss(),
-react(),
-// Bundle analysis — activate with ANALYZE=true environment variable
-...(process.env.ANALYZE === 'true'
-? [
-visualizer({
-filename: 'dist/stats.html',
-open: false,
-gzipSize: true,
-brotliSize: true,
-template: 'treemap',
-}),
-]
-: []),
-],
-root: '.',
-build: {
-outDir: 'dist',
-sourcemap: true,
-target: 'es2022',
-cssMinify: 'lightningcss',
-rollupOptions: {
-input: {
-main: resolve(__dirname, 'index.html'),
-},
-output: {
-manualChunks: {
-'react-vendor': ['react', 'react-dom', 'react-router'],
-'query-vendor': ['@tanstack/react-query'],
-'form-vendor': ['react-hook-form', '@hookform/resolvers'],
-'validation': ['zod'],
-},
-},
-},
-},
-resolve: {
-alias: {
-'@': resolve(__dirname, 'src'),
-},
-},
-server: {
-port: 3000,
-strictPort: true,
-proxy: {
-'/api': {
-target: 'http://localhost:8000',
-changeOrigin: true,
-},
-},
-},
-preview: {
-port: 3001,
-strictPort: true,
-},
+	plugins: [
+		tailwindcss(),
+		react(),
+		// Bundle analysis - activate with ANALYZE=true
+		...(process.env.ANALYZE === 'true'
+			? [
+					visualizer({
+						filename: 'dist/stats.html',
+						open: false,
+						gzipSize: true,
+						brotliSize: true,
+						template: 'treemap',
+					}),
+				]
+			: []),
+	],
+	root: '.',
+	build: {
+		outDir: 'dist',
+		sourcemap: true,
+		target: 'es2022',
+		cssMinify: 'lightningcss',
+		rollupOptions: {
+			input: {
+				main: resolve(__dirname, 'index.html'),
+			},
+			output: {
+				manualChunks: {
+					'react-vendor': ['react', 'react-dom', 'react-router'],
+					'query-vendor': ['@tanstack/react-query'],
+					'form-vendor': ['react-hook-form', '@hookform/resolvers'],
+					validation: ['zod'],
+				},
+			},
+		},
+	},
+	resolve: {
+		alias: {
+			'@': resolve(__dirname, 'src'),
+		},
+	},
+	server: {
+		port: 3000,
+		strictPort: true,
+		proxy: {
+			'/api': {
+				target: 'http://localhost:8000',
+				changeOrigin: true,
+			},
+		},
+	},
+	preview: {
+		port: 3001,
+		strictPort: true,
+	},
 });

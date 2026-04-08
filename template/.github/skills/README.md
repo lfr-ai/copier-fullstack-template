@@ -12,6 +12,7 @@ repository. Each skill is a directory containing a 'SKILL.md' file following the
 | 'python-conventions/'     | Enforce Python standards, typing, logging, and signatures                                      |
 | 'testing-conventions/'    | Apply test structure, markers, and coverage expectations                                       |
 | 'naming-registry/'        | Registry-first workflow for shared constants and CI checks                                     |
+| 'shadcn-frontend/'        | shadcn/ui-first frontend workflows for React Router + React Hook Form + Vite + TypeScript     |
 
 ## How to Use
 
@@ -24,6 +25,8 @@ When working on a task, apply skills in this order:
 2. Implementation ('python-conventions')
 3. Registry contract ('naming-registry')
 4. Verification ('testing-conventions')
+
+For frontend work, use 'shadcn-frontend' first.
 
 Global rules are loaded from:
 

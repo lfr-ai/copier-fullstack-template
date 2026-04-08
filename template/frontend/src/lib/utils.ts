@@ -2,11 +2,17 @@
  * Shared utility functions for the frontend.
  */
 
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
 /**
- * Conditionally join CSS class names.
+ * Merge Tailwind CSS classes with conflict resolution.
+ *
+ * Combines clsx for conditional class joining with tailwind-merge
+ * for intelligent Tailwind class deduplication.
  */
-export function cn(...classes: (string | false | null | undefined)[]): string {
-  return classes.filter(Boolean).join(' ');
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
 }
 
 /**

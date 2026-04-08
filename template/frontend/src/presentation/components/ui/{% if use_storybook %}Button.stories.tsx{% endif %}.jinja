@@ -1,63 +1,78 @@
 {% if use_storybook %}import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Button } from './Button';
+import { Button } from './button';
 
 const meta = {
-title: 'UI/Button',
-component: Button,
-argTypes: {
-variant: {
-control: 'select',
-options: ['primary', 'secondary', 'destructive', 'ghost'],
-},
-isLoading: { control: 'boolean' },
-disabled: { control: 'boolean' },
-},
+  title: 'UI/Button',
+  component: Button,
+  argTypes: {
+    variant: {
+      control: 'select',
+      options: ['default', 'secondary', 'destructive', 'outline', 'ghost', 'link'],
+    },
+    size: {
+      control: 'select',
+      options: ['default', 'sm', 'lg', 'icon'],
+    },
+    disabled: { control: 'boolean' },
+  },
 } satisfies Meta<typeof Button>;
 
-    export default meta;
-    type Story = StoryObj<typeof meta>;
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-        export const Primary: Story = {
-        args: {
-        children: 'Button',
-        variant: 'primary',
-        },
-        };
+export const Default: Story = {
+  args: {
+    children: 'Button',
+    variant: 'default',
+  },
+};
 
-        export const Secondary: Story = {
-        args: {
-        children: 'Button',
-        variant: 'secondary',
-        },
-        };
+export const Secondary: Story = {
+  args: {
+    children: 'Secondary',
+    variant: 'secondary',
+  },
+};
 
-        export const Destructive: Story = {
-        args: {
-        children: 'Delete',
-        variant: 'destructive',
-        },
-        };
+export const Destructive: Story = {
+  args: {
+    children: 'Delete',
+    variant: 'destructive',
+  },
+};
 
-        export const Ghost: Story = {
-        args: {
-        children: 'Cancel',
-        variant: 'ghost',
-        },
-        };
+export const Outline: Story = {
+  args: {
+    children: 'Outline',
+    variant: 'outline',
+  },
+};
 
-        export const Loading: Story = {
-        args: {
-        children: 'Saving…',
-        variant: 'primary',
-        isLoading: true,
-        },
-        };
+export const Ghost: Story = {
+  args: {
+    children: 'Ghost',
+    variant: 'ghost',
+  },
+};
 
-        export const Disabled: Story = {
-        args: {
-        children: 'Disabled',
-        variant: 'primary',
-        disabled: true,
-        },
-        };
-        {% endif %}
+export const Link: Story = {
+  args: {
+    children: 'Link',
+    variant: 'link',
+  },
+};
+
+export const Small: Story = {
+  args: {
+    children: 'Small',
+    size: 'sm',
+  },
+};
+
+export const Large: Story = {
+  args: {
+    children: 'Large',
+    size: 'lg',
+  },
+};
+{% endif %}

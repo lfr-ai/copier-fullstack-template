@@ -16,12 +16,16 @@ a directory containing a 'SKILL.md' file:
 - 'python-conventions/' for Python code quality and typing standards
 - 'testing-conventions/' for test strategy, markers, and coverage gates
 - 'naming-registry/' for registry-first constant/code generation workflow
+- 'shadcn-frontend/' for shadcn/ui-first React + Vite + TypeScript frontend work
 
 When a task clearly matches one of those domains, apply that skill guidance first,
 then apply the general conventions in this file.
 
 The 'clean-architecture/' skill is MANDATORY for all backend Python work — always
 apply it regardless of task scope.
+
+For frontend work (`frontend/**`), prefer 'shadcn-frontend/' first, then apply
+the scoped frontend instructions.
 
 ## Scoped Instructions ('.github/instructions/')
 
@@ -382,8 +386,14 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 
 - Use TypeScript for type safety when possible
+- Prefer shadcn/ui components before custom styled UI markup
 - Use Vite with SWC for build tooling and hot module replacement
+- Use semantic Tailwind tokens from the shared theme (`bg-background`, `text-foreground`, `border-border`)
 - Use Biome for linting, formatting, and import organization
+- Use React Router `NavLink` for active main navigation; use `Link` for static links;
+  reserve `useNavigate` for non-click programmatic flows
+- Build forms with React Hook Form + Zod and prefer `Controller` for controlled
+  shadcn/radix inputs
 
 
 - Use 'bun' for package management and JavaScript runtime
