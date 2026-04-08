@@ -53,6 +53,9 @@ from {{ project_slug }}.ai.llm.litellm_adapter import LiteLLMAdapter
 from {{ project_slug }}.ai.rag.retrievers.ensemble_retriever import EnsembleRetriever
 from {{ project_slug }}.ai.rag.retrievers.graph_retriever import GraphRetriever
 from {{ project_slug }}.ai.rag.retrievers.vector_retriever import VectorRetriever
+{%- if use_llamaindex %}
+from {{ project_slug }}.ai.rag.retrievers.llamaindex_retriever import LlamaIndexRetrieverAdapter
+{%- endif %}
 from {{ project_slug }}.ai.rag.deep_rag_pipeline import DeepRAGPipeline
 from {{ project_slug }}.ai.rag.self_crag_pipeline import SelfCRAGPipeline
 from {{ project_slug }}.ai.vector_stores.faiss_store import FaissVectorStore
@@ -92,7 +95,7 @@ class ComponentConfig(BaseModel):
 class PipelineConfig(BaseModel):
     """Configuration for pipeline/workflow components."""
 
-    type: str = Field(..., description="Pipeline type (self_crag, deep_rag, multi_hop)")
+    type: str = Field(..., description="Pipeline type (self_crag, deep_rag)")
     llm_ref: str | None = Field(None, description="Reference to LLM component")
     retriever_ref: str | None = Field(None, description="Reference to retriever component")
     kg_backend_ref: str | None = Field(None, description="Reference to knowledge graph backend")
@@ -376,6 +379,27 @@ class AIConfigLoader:
                 "embedding": embedding,
                 "vector_store": vector_store,
             })
+
+{%- if use_llamaindex %}
+        if comp_type == "llamaindex":
+            embedding_ref = config.get("embedding_ref")
+            vector_store_ref = config.get("vector_store_ref")
+
+            if not embedding_ref:
+                msg = "embedding_ref is required for llamaindex retriever"
+                raise ValueError(msg)
+            if not vector_store_ref:
+                msg = "vector_store_ref is required for llamaindex retriever"
+                raise ValueError(msg)
+
+            embedding = self._resolve_reference(embedding_ref)
+            vector_store = self._resolve_reference(vector_store_ref)
+
+            return LlamaIndexRetrieverAdapter.from_config({
+                "embedding": embedding,
+                "vector_store": vector_store,
+            })
+{%- endif %}
 
         if comp_type == "graph":
             # Resolve references
