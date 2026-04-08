@@ -280,7 +280,7 @@ class AIConfigLoader:
         if comp_type == "litellm":
             from ai.llm.litellm_adapter import LiteLLMAdapter
 
-            return LiteLLMAdapter.from_config(config)
+            return cast("LLMGateway", LiteLLMAdapter.from_config(config))
 
         msg = f"Unsupported LLM type: {comp_type}"
         raise ValueError(msg)
@@ -372,6 +372,30 @@ class AIConfigLoader:
                 "vector_store": vector_store,
             })
 
+        if comp_type == "chroma":
+            # Backward-compatible alias for simple vector retrieval.
+            embedding_ref = config.get("embedding_ref")
+            if not embedding_ref:
+                msg = "embedding_ref is required for chroma retriever"
+                raise ValueError(msg)
+
+            embedding = self._resolve_reference(embedding_ref)
+
+            vector_store_ref = config.get("vector_store_ref")
+            if vector_store_ref:
+                vector_store = self._resolve_reference(vector_store_ref)
+            else:
+                # Fallback for lightweight configs/tests that specify only an embedding.
+                from ai.vector_stores.faiss_store import FaissVectorStore
+
+                dimension = int(getattr(embedding, "dimension", 1536))
+                vector_store = FaissVectorStore.from_config({"dimension": dimension})
+
+            return VectorRetriever.from_config({
+                "embedding": embedding,
+                "vector_store": vector_store,
+            })
+
         if comp_type == "graph":
             # Resolve references
             kg_ref = config.get("kg_backend_ref")
@@ -444,6 +468,10 @@ class AIConfigLoader:
             raise ValueError(msg)
 
         validated = PipelineConfig(**pipeline_config)
+
+        if validated.type not in {"self_crag", "deep_rag"}:
+            msg = f"Unsupported pipeline type: {validated.type} (expected self_crag or deep_rag)"
+            raise ValueError(msg)
 
         if not validated.llm_ref:
             msg = f"llm_ref is required for {validated.type} pipeline"
