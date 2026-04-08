@@ -11,21 +11,21 @@ setopt PIPE_FAIL ERR_EXIT NO_UNSET
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="${SCRIPT_DIR}/../.."
 
-print "╔══════════════════════════════════════════╗"
-print "║ AI Infrastructure Setup ║"
-print "╚══════════════════════════════════════════╝"
+print "=========================================="
+print " AI Infrastructure Setup"
+print "=========================================="
 print ""
 
 # ── 1. Validate Python AI dependencies ────────────────────────
-print "▸ Checking AI Python packages..."
+print "- Checking AI Python packages..."
 
 check_package() {
 local pkg="${1}"
 if python -c "import ${pkg}" 2>/dev/null; then
-print " ✓ ${pkg}"
+print " [OK] ${pkg}"
 return 0
 else
-print " ✗ ${pkg} (not installed)"
+print " [FAIL] ${pkg} (not installed)"
 return 1
 fi
 }
@@ -88,7 +88,7 @@ print ""
 print "▸ Initialising FAISS persist directory..."
 FAISS_DIR="${PROJECT_ROOT}/backend/.faiss_data"
 mkdir -p "${FAISS_DIR}"
-print " ✓ ${FAISS_DIR}"
+print " [OK] ${FAISS_DIR}"
 {% endif %}
 
 {% if use_knowledge_graph %}
@@ -97,7 +97,7 @@ print ""
 print "▸ Initialising knowledge graph data directory..."
 KG_DIR="${PROJECT_ROOT}/backend/.kg_data"
 mkdir -p "${KG_DIR}"
-print " ✓ ${KG_DIR}"
+print " [OK] ${KG_DIR}"
 {% endif %}
 
 {% if use_rag %}
@@ -106,7 +106,7 @@ print ""
 print "▸ Creating document ingestion directory..."
 DOCS_DIR="${PROJECT_ROOT}/backend/.rag_documents"
 mkdir -p "${DOCS_DIR}"
-print " ✓ ${DOCS_DIR}"
+print " [OK] ${DOCS_DIR}"
 {% endif %}
 
 # ── 5. Validate environment variables ─────────────────────────
@@ -117,13 +117,13 @@ check_env() {
 local var="${1}"
 local required="${2:-false}"
 if [[ -n "${(P)var:-}" ]]; then
-print " ✓ ${var} (set)"
+print " [OK] ${var} (set)"
 return 0
 elif [[ "${required}" == "true" ]]; then
-print " ✗ ${var} (REQUIRED — not set)"
+print " [FAIL] ${var} (REQUIRED -- not set)"
 return 1
 else
-print " ○ ${var} (optional — not set)"
+print " [--] ${var} (optional -- not set)"
 return 0
 fi
 }
@@ -160,12 +160,12 @@ from {{ project_slug }}.config.settings import get_settings
 settings = get_settings()
 print(f' AI settings loaded OK')
 " 2>/dev/null; then
-print " ✓ AI configuration validated successfully"
+print " [OK] AI configuration validated successfully"
 else
 print " [WARN] AI configuration validation failed (check settings/deps)"
 fi
 
 print ""
-print "════════════════════════════════════════════"
+print "=========================================="
 print " AI setup complete"
 print "════════════════════════════════════════════"

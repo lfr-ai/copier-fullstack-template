@@ -35,6 +35,11 @@ Example YAML structure::
         type: self_crag
         llm_ref: llms.gpt4
         retriever_ref: retrievers.vector
+
+      deep_rag:
+        type: deep_rag
+        llm_ref: llms.gpt4
+        retriever_ref: retrievers.vector
 """
 
 from __future__ import annotations
@@ -54,6 +59,7 @@ if TYPE_CHECKING:
     from core.interfaces.llm import LLMGateway
     from core.interfaces.retriever import RetrieverGateway
     from core.interfaces.vector_store import VectorStoreGateway
+    from ai.rag.deep_rag_pipeline import DeepRAGPipeline
     from ai.rag.self_crag_pipeline import SelfCRAGPipeline
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -80,11 +86,10 @@ class ComponentConfig(BaseModel):
 class PipelineConfig(BaseModel):
     """Configuration for pipeline/workflow components."""
 
-    type: str = Field(..., description="Pipeline type (self_crag, multi_hop)")
+    type: str = Field(..., description="Pipeline type (self_crag, deep_rag)")
     llm_ref: str | None = Field(None, description="Reference to LLM component")
     retriever_ref: str | None = Field(None, description="Reference to retriever component")
     kg_backend_ref: str | None = Field(None, description="Reference to knowledge graph backend")
-    max_hops: int | None = Field(None, description="Max hops for multi-hop workflow")
 
 
 @final
@@ -414,20 +419,20 @@ class AIConfigLoader:
         msg = f"Unsupported retriever type: {comp_type}"
         raise ValueError(msg)
 
-    def create_pipeline(self, pipeline_name: str) -> SelfCRAGPipeline:
-        """Create a SelfCRAGPipeline from config.
+    def create_pipeline(self, pipeline_name: str) -> SelfCRAGPipeline | DeepRAGPipeline:
+        """Create a pipeline from config.
+
+        Supports pipeline types: self_crag, deep_rag.
 
         Args:
-            pipeline_name (str): Pipeline name in the config.
+            pipeline_name: Pipeline name in the config.
 
         Returns:
-            SelfCRAGPipeline: Configured pipeline instance.
+            Configured pipeline instance.
 
         Raises:
             ValueError: If pipeline doesn't exist or configuration is invalid.
         """
-        from ai.rag.self_crag_pipeline import SelfCRAGPipeline
-
         pipelines_section = self._config.get("pipelines")
         if pipelines_section is None:
             msg = "No pipelines section in config"
@@ -438,47 +443,65 @@ class AIConfigLoader:
             msg = f"Pipeline not found: {pipeline_name}"
             raise ValueError(msg)
 
-        # Validate with Pydantic
         validated = PipelineConfig(**pipeline_config)
 
-        if validated.type != "self_crag":
-            msg = f"Pipeline type must be 'self_crag', got: {validated.type}"
-            raise ValueError(msg)
-
         if not validated.llm_ref:
-            msg = "llm_ref is required for SelfCRAGPipeline"
+            msg = f"llm_ref is required for {validated.type} pipeline"
             raise ValueError(msg)
         if not validated.retriever_ref:
-            msg = "retriever_ref is required for SelfCRAGPipeline"
+            msg = f"retriever_ref is required for {validated.type} pipeline"
             raise ValueError(msg)
 
-        # Resolve references
         llm = self._resolve_reference(validated.llm_ref)
         retriever = self._resolve_reference(validated.retriever_ref)
 
-        logger.info(
-            "SelfCRAGPipeline created",
-            pipeline_name=pipeline_name,
-            llm_type=type(llm).__name__,
-            retriever_type=type(retriever).__name__,
-        )
+        if validated.type == "self_crag":
+            from ai.rag.self_crag_pipeline import SelfCRAGPipeline
 
-        return SelfCRAGPipeline(llm=llm, retriever=retriever)
+            logger.info(
+                "SelfCRAGPipeline created",
+                pipeline_name=pipeline_name,
+                llm_type=type(llm).__name__,
+                retriever_type=type(retriever).__name__,
+            )
+            return SelfCRAGPipeline(llm=llm, retriever=retriever)
+
+        if validated.type == "deep_rag":
+            from ai.rag.deep_rag_pipeline import DeepRAGPipeline
+
+            logger.info(
+                "DeepRAGPipeline created",
+                pipeline_name=pipeline_name,
+                llm_type=type(llm).__name__,
+                retriever_type=type(retriever).__name__,
+            )
+            return DeepRAGPipeline(llm=llm, retriever=retriever)
+
+        msg = f"Unsupported pipeline type: {validated.type} (expected self_crag or deep_rag)"
+        raise ValueError(msg)
 
     def create_workflow(self, workflow_name: str) -> Any:
-        """Create a MultiHopWorkflow from config.
+        """Create a workflow from config.
+
+        .. deprecated::
+            Use ``create_pipeline`` with type ``deep_rag`` instead.
 
         Args:
-            workflow_name (str): Workflow name in the config.
+            workflow_name: Workflow name in the config.
 
         Returns:
-            MultiHopWorkflow: Configured workflow instance.
+            Configured workflow instance.
 
         Raises:
             ValueError: If workflow doesn't exist or configuration is invalid.
         """
-        # Dynamic import to avoid circular dependencies
-        from ai.langgraph_workflows.multi_hop_workflow import MultiHopWorkflow
+        import warnings
+
+        warnings.warn(
+            "create_workflow is deprecated -- use create_pipeline with type 'deep_rag' instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         workflows_section = self._config.get("workflows")
         if workflows_section is None:
@@ -490,37 +513,28 @@ class AIConfigLoader:
             msg = f"Workflow not found: {workflow_name}"
             raise ValueError(msg)
 
-        # Validate with Pydantic
         validated = PipelineConfig(**workflow_config)
 
-        if validated.type != "multi_hop":
-            msg = f"Workflow type must be 'multi_hop', got: {validated.type}"
+        if not validated.llm_ref:
+            msg = "llm_ref is required for workflow"
+            raise ValueError(msg)
+        if not validated.retriever_ref:
+            msg = "retriever_ref is required for workflow"
             raise ValueError(msg)
 
-        # Resolve optional references
-        kg_backend = None
-        if validated.kg_backend_ref:
-            kg_backend = self._resolve_reference(validated.kg_backend_ref)
+        llm = self._resolve_reference(validated.llm_ref)
+        retriever = self._resolve_reference(validated.retriever_ref)
 
-        retriever = None
-        if validated.retriever_ref:
-            retriever = self._resolve_reference(validated.retriever_ref)
-
-        max_hops = validated.max_hops or 5
+        from ai.rag.deep_rag_pipeline import DeepRAGPipeline
 
         logger.info(
-            "MultiHopWorkflow created",
+            "DeepRAGPipeline created (via deprecated create_workflow)",
             workflow_name=workflow_name,
-            kg_backend_type=type(kg_backend).__name__ if kg_backend else None,
-            retriever_type=type(retriever).__name__ if retriever else None,
-            max_hops=max_hops,
+            llm_type=type(llm).__name__,
+            retriever_type=type(retriever).__name__,
         )
 
-        return MultiHopWorkflow(
-            kg_backend=kg_backend,
-            retriever=retriever,
-            max_hops=max_hops,
-        )
+        return DeepRAGPipeline(llm=llm, retriever=retriever)
 
     def get_component(self, ref: str) -> Any:
         """Get a component by reference (public API).

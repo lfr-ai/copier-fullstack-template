@@ -25,8 +25,11 @@ class StagingSettings(BaseAppSettings):
     environment: Environment = Environment.STAGING
     debug: bool = False
     log_level: str = "INFO"
-    host: str = "0.0.0.0"  # noqa: S104  – intentional: container networking
+    host: str = "0.0.0.0"  # noqa: S104  -- intentional: container networking
     database_echo: bool = False
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+    database_schema: str = "staging_schema"
+{%- endif %}
 
     @model_validator(mode="after")
     def _validate_secret_key(self) -> "StagingSettings":

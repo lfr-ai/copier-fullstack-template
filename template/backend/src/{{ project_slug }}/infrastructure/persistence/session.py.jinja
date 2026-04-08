@@ -15,20 +15,31 @@ from sqlalchemy.pool import StaticPool
 {%- endif %}
 
 from {{ project_slug }}.config.settings import get_settings
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
 from {{ project_slug }}.core.enums.environment import Environment
+{%- endif %}
 
 _logger = structlog.get_logger(__name__)
+
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
 
 
 def schema_for_environment(env: Environment) -> str:
     """Map environment to PostgreSQL schema name.
 
+    Reads the ``database_schema`` setting if available, falling back
+    to a convention-based mapping.
+
     Args:
-        env (Environment): Deployment environment.
+        env: Deployment environment.
 
     Returns:
-        str: PostgreSQL schema name for the environment.
+        PostgreSQL schema name for the environment.
     """
+    settings = get_settings()
+    if hasattr(settings, "database_schema") and settings.database_schema:
+        return settings.database_schema
+
     match env:
         case Environment.LOCAL:
             return "public"
@@ -40,6 +51,7 @@ def schema_for_environment(env: Environment) -> str:
             return "staging_schema"
         case Environment.PROD:
             return "prod_schema"
+{%- endif %}
 
 
 def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
