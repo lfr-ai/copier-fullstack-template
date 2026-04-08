@@ -2,7 +2,7 @@
  * Unit tests for the HTTP API client.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { apiRequest } from '../../../src/api/client';
+import { apiRequest } from '../../../src/infrastructure/api/client';
 
 describe('apiRequest', () => {
   beforeEach(() => {
