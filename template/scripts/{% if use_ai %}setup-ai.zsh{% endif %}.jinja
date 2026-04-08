@@ -85,7 +85,7 @@ fi
 {% if use_faiss %}
 # ── 2. Initialise FAISS persist directory ─────────────────────
 print ""
-print "▸ Initialising FAISS persist directory..."
+print "-> Initialising FAISS persist directory..."
 FAISS_DIR="${PROJECT_ROOT}/backend/.faiss_data"
 mkdir -p "${FAISS_DIR}"
 print " [OK] ${FAISS_DIR}"
@@ -94,7 +94,7 @@ print " [OK] ${FAISS_DIR}"
 {% if use_knowledge_graph %}
 # ── 3. Initialise knowledge graph data directory ──────────────
 print ""
-print "▸ Initialising knowledge graph data directory..."
+print "-> Initialising knowledge graph data directory..."
 KG_DIR="${PROJECT_ROOT}/backend/.kg_data"
 mkdir -p "${KG_DIR}"
 print " [OK] ${KG_DIR}"
@@ -103,7 +103,7 @@ print " [OK] ${KG_DIR}"
 {% if use_rag %}
 # ── 4. Create document ingestion directory ────────────────────
 print ""
-print "▸ Creating document ingestion directory..."
+print "-> Creating document ingestion directory..."
 DOCS_DIR="${PROJECT_ROOT}/backend/.rag_documents"
 mkdir -p "${DOCS_DIR}"
 print " [OK] ${DOCS_DIR}"
@@ -111,7 +111,7 @@ print " [OK] ${DOCS_DIR}"
 
 # ── 5. Validate environment variables ─────────────────────────
 print ""
-print "▸ Checking required environment variables..."
+print "-> Checking required environment variables..."
 
 check_env() {
 local var="${1}"
@@ -152,7 +152,7 @@ fi
 
 # ── 6. Run quick validation ───────────────────────────────────
 print ""
-print "▸ Running AI configuration validation..."
+print "-> Running AI configuration validation..."
 
 cd "${PROJECT_ROOT}/backend"
 if python -c "
