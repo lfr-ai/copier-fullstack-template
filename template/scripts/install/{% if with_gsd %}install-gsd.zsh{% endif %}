@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Install GSD-2 — AI coding agent CLI
+# Install GSD-2 -- AI coding agent CLI
 # Requires Bun (install via install-bun.zsh first)
 emulate -L zsh
 setopt ERR_EXIT PIPE_FAIL

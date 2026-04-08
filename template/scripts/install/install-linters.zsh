@@ -77,7 +77,7 @@ main() {
         if command -v hadolint &>/dev/null; then
             success "hadolint installed successfully"
         else
-            fail "hadolint installation failed — see ${LOG_FILE}"
+            fail "hadolint installation failed -- see ${LOG_FILE}"
         fi
     fi
 
@@ -100,7 +100,7 @@ main() {
         if command -v shellcheck &>/dev/null; then
             success "shellcheck installed successfully"
         else
-            fail "shellcheck installation failed — see ${LOG_FILE}"
+            fail "shellcheck installation failed -- see ${LOG_FILE}"
         fi
     fi
 
@@ -116,7 +116,7 @@ main() {
         if command -v yamllint &>/dev/null; then
             success "yamllint installed successfully"
         else
-            warn "yamllint installation failed — install manually"
+            warn "yamllint installation failed -- install manually"
         fi
     fi
 
