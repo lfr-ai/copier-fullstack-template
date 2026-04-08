@@ -208,7 +208,7 @@ async def generate_answer_node(
     """Generate answer node: synthesize final answer from graded documents.
     
     Args:
-        state: Current workflow state containing query, docs, and scores.
+        state: Current workflow state containing query, docs, scores, and optional system_prompt.
         llm: LLM gateway for answer generation.
         
     Returns:
@@ -217,12 +217,14 @@ async def generate_answer_node(
     query = state["query"]
     docs = state["docs"]
     scores = state.get("scores", [])
+    system_prompt = state.get("system_prompt")
     
     log = logger.bind(
         node="generate_answer",
         query_len=len(query),
         doc_count=len(docs),
         scores_count=len(scores),
+        has_system_prompt=system_prompt is not None,
     )
     log.debug("generate_answer_node: entry")
     
@@ -234,10 +236,17 @@ async def generate_answer_node(
     
     context = "\n\n".join(context_parts)
     
-    prompt = RAG_QUERY_PROMPT.format(
+    # Build base prompt
+    base_prompt = RAG_QUERY_PROMPT.format(
         context=context,
         question=query,
     )
+    
+    # Prepend system_prompt if provided
+    if system_prompt:
+        prompt = f"{system_prompt}\n\n{base_prompt}"
+    else:
+        prompt = base_prompt
     
     # Call LLM to generate answer
     answer = await llm.complete(
