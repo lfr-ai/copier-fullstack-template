@@ -14,12 +14,13 @@ from {{ project_slug }}.ai.models import (
     VectorSearchRequest,
     VectorSearchResponse,
 )
+from {{ project_slug }}.ai.rag.adaptive_pipeline import AdaptiveRAGPipeline
 from {{ project_slug }}.ai.rag.ingestion import IngestionPipeline
-from {{ project_slug }}.ai.rag.retrieval import RetrievalPipeline
 from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
 from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
 from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
 from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.reranker import RerankerGateway
 from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
 from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
@@ -39,6 +40,7 @@ class RAGService:
         loader: DocumentLoaderGateway,
         splitter: TextSplitterGateway,
         knowledge_graph: KnowledgeGraphGateway | None = None,
+        reranker: RerankerGateway | None = None,
     ) -> None:
         self._ingestion = IngestionPipeline(
             loader=loader,
@@ -46,11 +48,12 @@ class RAGService:
             embedding=embedding,
             vector_store=vector_store,
         )
-        self._retrieval = RetrievalPipeline(
+        self._retrieval = AdaptiveRAGPipeline(
             llm=llm,
             embedding=embedding,
             vector_store=vector_store,
             knowledge_graph=knowledge_graph,
+            reranker=reranker,
         )
         self._embedding = embedding
         self._vector_store = vector_store
