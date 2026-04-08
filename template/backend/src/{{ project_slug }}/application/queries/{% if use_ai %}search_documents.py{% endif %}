@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, override
+from typing import override
 
 import structlog
 
@@ -14,7 +14,7 @@ from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 logger = structlog.get_logger(__name__)
 
-_DEFAULT_TOP_K: Final[int] = 10
+_DEFAULT_TOP_K = 10
 
 
 @dataclass(frozen=True, slots=True)

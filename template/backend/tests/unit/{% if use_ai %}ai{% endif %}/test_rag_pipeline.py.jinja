@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from {{ project_slug }}.ai.rag.ingestion import IngestionPipeline
-from {{ project_slug }}.ai.rag.retrieval import RetrievalPipeline
+from {{ project_slug }}.ai.rag.deep_rag_pipeline import DeepRAGPipeline
 from {{ project_slug }}.core.entities.document import Chunk, Document
 from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult
 
@@ -115,72 +115,37 @@ class TestIngestionPipeline:
         assert chunks[1].embedding == [0.2] * 8
 
 
-class TestRetrievalPipeline:
-    """Tests for the retrieval pipeline."""
+class TestDeepRAGPipeline:
+    """Tests for the DeepRAG pipeline."""
 
     @pytest.mark.asyncio
-    async def test_query_returns_answer_with_sources(
+    async def test_pipeline_initializes_from_config(
         self,
         mock_llm: AsyncMock,
-        mock_embedding: AsyncMock,
-        mock_vector_store: AsyncMock,
     ) -> None:
-        """RAG query should embed, search, and generate answer."""
-        pipeline = RetrievalPipeline(
-            llm=mock_llm,
-            embedding=mock_embedding,
-            vector_store=mock_vector_store,
-        )
+        """DeepRAGPipeline.from_config should create a working instance."""
+        mock_retriever = AsyncMock()
 
-        result = await pipeline.query("What is the answer?")
+        pipeline = DeepRAGPipeline.from_config({
+            "llm": mock_llm,
+            "retriever": mock_retriever,
+        })
 
-        assert result.answer == "Generated answer based on context."
-        assert len(result.sources) == 1
-        assert result.sources[0].id == "chunk-1"
-        mock_embedding.embed_text.assert_awaited_once_with("What is the answer?")
-        mock_vector_store.search.assert_awaited_once()
-        mock_llm.complete.assert_awaited_once()
+        assert pipeline is not None
 
     @pytest.mark.asyncio
-    async def test_query_without_graph(
-        self,
-        mock_llm: AsyncMock,
-        mock_embedding: AsyncMock,
-        mock_vector_store: AsyncMock,
-    ) -> None:
-        """Query without graph should still work."""
-        pipeline = RetrievalPipeline(
-            llm=mock_llm,
-            embedding=mock_embedding,
-            vector_store=mock_vector_store,
-        )
+    async def test_from_config_requires_llm(self) -> None:
+        """from_config should raise ValueError when llm is missing."""
+        mock_retriever = AsyncMock()
 
-        result = await pipeline.query("question", use_graph=False)
-
-        assert result.graph_context == []
-        assert result.answer
+        with pytest.raises(ValueError, match="llm is required"):
+            DeepRAGPipeline.from_config({"retriever": mock_retriever})
 
     @pytest.mark.asyncio
-    async def test_query_with_graph_enrichment(
+    async def test_from_config_requires_retriever(
         self,
         mock_llm: AsyncMock,
-        mock_embedding: AsyncMock,
-        mock_vector_store: AsyncMock,
     ) -> None:
-        """Query with knowledge graph should include graph context."""
-        mock_kg = AsyncMock()
-        mock_kg.query_neighbors.return_value = [
-            {"entity": "related_item", "outgoing": {}, "incoming": {}},
-        ]
-
-        pipeline = RetrievalPipeline(
-            llm=mock_llm,
-            embedding=mock_embedding,
-            vector_store=mock_vector_store,
-            knowledge_graph=mock_kg,
-        )
-
-        result = await pipeline.query("question", use_graph=True)
-
-        assert len(result.graph_context) == 1
-        mock_kg.query_neighbors.assert_awaited_once()
+        """from_config should raise ValueError when retriever is missing."""
+        with pytest.raises(ValueError, match="retriever is required"):
+            DeepRAGPipeline.from_config({"llm": mock_llm})

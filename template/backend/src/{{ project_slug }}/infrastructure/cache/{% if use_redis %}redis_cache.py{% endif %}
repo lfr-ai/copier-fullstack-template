@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Final
-
 import structlog
 from redis.asyncio import Redis
 
@@ -11,7 +9,7 @@ from {{ project_slug }}.config.constants import DEFAULT_CACHE_TTL_SECONDS
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-CACHE_KEY_PREFIX: Final[str] = "app:cache"
+CACHE_KEY_PREFIX = "app:cache"
 
 
 class RedisCacheAdapter:

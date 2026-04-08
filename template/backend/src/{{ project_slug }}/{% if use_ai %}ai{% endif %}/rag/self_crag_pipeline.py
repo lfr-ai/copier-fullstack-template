@@ -63,6 +63,38 @@ class SelfCRAGPipeline:
         self._retriever = retriever
         self._graph = None
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> SelfCRAGPipeline:
+        """Create a SelfCRAGPipeline from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "llm": <LLMGateway instance>,
+                "retriever": <RetrieverGateway instance>,
+            }
+
+        Args:
+            config: Configuration dictionary.
+
+        Returns:
+            Configured pipeline instance.
+
+        Raises:
+            ValueError: If required parameters are missing.
+        """
+        llm = config.get("llm")
+        if llm is None:
+            msg = "llm is required"
+            raise ValueError(msg)
+
+        retriever = config.get("retriever")
+        if retriever is None:
+            msg = "retriever is required"
+            raise ValueError(msg)
+
+        return cls(llm=llm, retriever=retriever)  # type: ignore[arg-type]
+
     def _build_graph(self) -> object:
         """Lazily build the LangGraph StateGraph for Self-CRAG workflow.
 

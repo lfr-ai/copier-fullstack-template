@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, override
+from typing import override
 
 import structlog
 
@@ -15,8 +15,8 @@ from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
-_DEFAULT_CHUNK_SIZE: Final[int] = 512
-_DEFAULT_CHUNK_OVERLAP: Final[int] = 64
+_DEFAULT_CHUNK_SIZE = 512
+_DEFAULT_CHUNK_OVERLAP = 64
 
 logger = structlog.get_logger(__name__)
 

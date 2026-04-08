@@ -54,3 +54,58 @@ QUERY_REWRITE_PROMPT = (
     "- Return ONLY the rewritten query, no explanations.\n\n"
     "Rewritten query:"
 )
+
+# DeepRAG prompts (arXiv:2502.01142)
+
+DEEPRAG_DECOMPOSE_PROMPT = (
+    "You are a question decomposition agent. Your task is to break down "
+    "complex questions into atomic sub-queries that can be answered independently.\n\n"
+    "Original question: {question}\n\n"
+    "Previous reasoning steps:\n{previous_context}\n\n"
+    "This is step {step_number}. Generate the next atomic sub-query that, "
+    "when answered, will help build toward the final answer.\n\n"
+    "Instructions:\n"
+    "- Generate exactly ONE concise, specific sub-query.\n"
+    "- The sub-query should be self-contained and answerable.\n"
+    "- Build on information from previous steps.\n"
+    "- If all necessary information has been gathered, output ONLY: DONE\n"
+    "- Return ONLY the sub-query text, no explanations.\n\n"
+    "Sub-query:"
+)
+
+DEEPRAG_ATOMIC_DECISION_PROMPT = (
+    "You must decide whether to RETRIEVE external documents or use your "
+    "PARAMETRIC knowledge to answer a sub-query.\n\n"
+    "Original question: {question}\n"
+    "Current sub-query: {sub_query}\n\n"
+    "Instructions:\n"
+    "- If the sub-query requires specific facts, dates, numbers, or recent "
+    "information that you may not know accurately, output: RETRIEVE\n"
+    "- If the sub-query asks about well-known general knowledge, definitions, "
+    "or reasoning that you can confidently answer, output: PARAMETRIC\n"
+    "- Output ONLY one word: RETRIEVE or PARAMETRIC\n\n"
+    "Decision:"
+)
+
+DEEPRAG_PARAMETRIC_ANSWER_PROMPT = (
+    "Answer the following sub-query using your knowledge.\n\n"
+    "Sub-query: {sub_query}\n\n"
+    "Instructions:\n"
+    "- Provide a concise, factual answer.\n"
+    "- If you are uncertain, state your uncertainty.\n"
+    "- Be brief (1-3 sentences).\n\n"
+    "Answer:"
+)
+
+DEEPRAG_SYNTHESIZE_PROMPT = (
+    "You are a synthesis agent. Combine the reasoning chain below into "
+    "a coherent final answer to the original question.\n\n"
+    "Original question: {question}\n\n"
+    "Reasoning chain:\n{reasoning_chain}\n\n"
+    "Instructions:\n"
+    "- Synthesize all intermediate answers into a single coherent response.\n"
+    "- Ensure factual consistency across all steps.\n"
+    "- If any intermediate answer is uncertain, reflect that in your final answer.\n"
+    "- Be comprehensive but concise.\n\n"
+    "Final answer:"
+)

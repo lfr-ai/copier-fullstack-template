@@ -1,10 +1,10 @@
-"""Adaptive RAG pipeline — routes to Self-CRAG or DeepRAG based on query complexity.
+"""Adaptive RAG pipeline -- routes to Self-CRAG or DeepRAG based on query complexity.
 
 Orchestrates adaptive retrieval by:
-1. Routing queries to Self-CRAG (simple) or DeepRAG (complex graph traversal)
+1. Routing queries to Self-CRAG (simple) or DeepRAG (MDP-based retrieval)
 2. Integrating reranking before grading for improved relevance
 3. Applying hallucination detection after generation
-4. Preserving legacy RetrievalResult interface for backward compatibility
+4. Preserving RetrievalResult interface for backward compatibility
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ class AdaptiveRAGPipeline:
 
     Routes queries to appropriate workflow based on complexity:
     - use_graph=False → Self-CRAG (self-corrective retrieval-grading cycles)
-    - use_graph=True → DeepRAG (multi-hop graph traversal with enrichment)
+    - use_graph=True → DeepRAG (MDP-based step-by-step retrieval)
 
     Integrates reranking, hallucination detection, and preserves
     RetrievalResult interface for backward compatibility.
@@ -42,7 +42,7 @@ class AdaptiveRAGPipeline:
         "_knowledge_graph",
         "_reranker",
         "_self_crag_pipeline",
-        "_multi_hop_workflow",
+        "_deep_rag_pipeline",
     )
 
     def __init__(
@@ -71,7 +71,7 @@ class AdaptiveRAGPipeline:
 
         # Lazy initialization of pipelines
         self._self_crag_pipeline = None
-        self._multi_hop_workflow = None
+        self._deep_rag_pipeline = None
 
         log = logger.bind(
             workflow="adaptive-rag",
@@ -82,6 +82,52 @@ class AdaptiveRAGPipeline:
             "AdaptiveRAGPipeline initialized",
             kg_available=knowledge_graph is not None,
             reranker_available=reranker is not None,
+        )
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> AdaptiveRAGPipeline:
+        """Create an AdaptiveRAGPipeline from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "llm": <LLMGateway>,
+                "embedding": <EmbeddingGateway>,
+                "vector_store": <VectorStoreGateway>,
+                "knowledge_graph": <KnowledgeGraphGateway | None>,  # optional
+                "reranker": <RerankerGateway | None>,  # optional
+            }
+
+        Args:
+            config: Configuration dictionary.
+
+        Returns:
+            Configured pipeline instance.
+
+        Raises:
+            ValueError: If required parameters are missing.
+        """
+        llm = config.get("llm")
+        if llm is None:
+            msg = "llm is required"
+            raise ValueError(msg)
+
+        embedding = config.get("embedding")
+        if embedding is None:
+            msg = "embedding is required"
+            raise ValueError(msg)
+
+        vector_store = config.get("vector_store")
+        if vector_store is None:
+            msg = "vector_store is required"
+            raise ValueError(msg)
+
+        return cls(
+            llm=llm,  # type: ignore[arg-type]
+            embedding=embedding,  # type: ignore[arg-type]
+            vector_store=vector_store,  # type: ignore[arg-type]
+            knowledge_graph=config.get("knowledge_graph"),  # type: ignore[arg-type]
+            reranker=config.get("reranker"),  # type: ignore[arg-type]
         )
 
     def _get_self_crag_pipeline(self) -> object:
@@ -104,16 +150,12 @@ class AdaptiveRAGPipeline:
         logger.info("Self-CRAG pipeline initialized")
         return self._self_crag_pipeline
 
-    def _get_multi_hop_workflow(self) -> object:
-        """Lazily initialize the multi-hop DeepRAG workflow."""
-        if self._multi_hop_workflow is not None:
-            return self._multi_hop_workflow
+    def _get_deep_rag_pipeline(self) -> object | None:
+        """Lazily initialize the DeepRAG pipeline."""
+        if self._deep_rag_pipeline is not None:
+            return self._deep_rag_pipeline
 
-        if self._knowledge_graph is None:
-            logger.warning("Knowledge graph unavailable — multi-hop workflow cannot be initialized")
-            return None
-
-        from {{ project_slug }}.ai.rag.multi_hop_workflow import MultiHopWorkflow
+        from {{ project_slug }}.ai.rag.deep_rag_pipeline import DeepRAGPipeline
         from {{ project_slug }}.ai.rag.retrievers.vector_retriever import VectorRetriever
 
         retriever = VectorRetriever(
@@ -121,13 +163,12 @@ class AdaptiveRAGPipeline:
             vector_store=self._vector_store,
         )
 
-        self._multi_hop_workflow = MultiHopWorkflow(
-            kg_backend=self._knowledge_graph,
+        self._deep_rag_pipeline = DeepRAGPipeline(
+            llm=self._llm,
             retriever=retriever,
-            max_hops=5,
         )
-        logger.info("Multi-hop workflow initialized", max_hops=5)
-        return self._multi_hop_workflow
+        logger.info("DeepRAG pipeline initialized")
+        return self._deep_rag_pipeline
 
     async def _rerank_if_available(
         self,
@@ -282,7 +323,7 @@ class AdaptiveRAGPipeline:
             raise ValueError(msg)
 
         # Determine routing decision
-        routing_decision = "deeprag" if (use_graph and self._knowledge_graph is not None) else "self-crag"
+        routing_decision = "deeprag" if use_graph else "self-crag"
 
         log = logger.bind(
             workflow="adaptive-rag",
@@ -380,7 +421,7 @@ class AdaptiveRAGPipeline:
         top_k: int,
         system_prompt: str | None,
     ) -> RetrievalResult:
-        """Route query to DeepRAG multi-hop workflow.
+        """Route query to DeepRAG MDP pipeline.
 
         Args:
             question: User's natural language question.
@@ -389,101 +430,36 @@ class AdaptiveRAGPipeline:
 
         Returns:
             RetrievalResult from DeepRAG workflow with graph context.
-
-        Raises:
-            ValueError: If knowledge graph is not available.
         """
         logger.info("Routing to DeepRAG", workflow="adaptive-rag")
 
-        workflow = self._get_multi_hop_workflow()
-        if workflow is None:
-            logger.warning(
-                "Knowledge graph unavailable — falling back to Self-CRAG",
-                workflow="adaptive-rag",
-            )
-            return await self._route_to_self_crag(
-                question=question,
-                top_k=top_k,
-                system_prompt=system_prompt,
-            )
-
-        # Execute multi-hop traversal
-        trace = await workflow.traverse_and_enrich(start_node=question)
-
-        # Assemble context from trace
-        context_parts: list[str] = []
-        sources: list[VectorSearchResult] = []
-
-        for i, hop in enumerate(trace):
-            node = hop.get("node", "")
-            enrichment = hop.get("enrichment", [])
-
-            context_parts.append(f"Hop {i+1}: {node}")
-
-            for doc in enrichment:
-                content = str(doc.get("content", ""))
-                doc_id = str(doc.get("id", f"hop{i}_doc{len(sources)}"))
-                score = float(doc.get("score", 0.0))
-
-                context_parts.append(content)
-                sources.append(
-                    VectorSearchResult(
-                        id=doc_id,
-                        score=score,
-                        metadata={
-                            "content": content,
-                            "hop": i + 1,
-                            "node": str(node),
-                        },
-                    )
-                )
+        pipeline = self._get_deep_rag_pipeline()
+        result = await pipeline.query(
+            question,
+            top_k=top_k,
+            system_prompt=system_prompt,
+        )
 
         # Apply reranking if available
-        if self._reranker is not None:
-            sources = await self._rerank_if_available(
+        if self._reranker is not None and result.sources:
+            reranked = await self._rerank_if_available(
                 query=question,
-                results=sources,
+                results=result.sources,
                 top_k=top_k,
             )
-
-        # Build prompt and generate answer
-        context = "\n\n".join(context_parts)
-        prompt = self._build_prompt(question, context)
-
-        answer = await self._llm.complete(
-            prompt=prompt,
-            system_prompt=system_prompt or "You are a helpful assistant. Answer based on the provided context.",
-        )
+            result = RetrievalResult(
+                query=result.query,
+                answer=result.answer,
+                sources=reranked,
+                graph_context=result.graph_context,
+            )
 
         logger.info(
-            "DeepRAG workflow completed",
+            "DeepRAG pipeline completed",
             workflow="adaptive-rag",
-            hop_count=len(trace),
-            source_count=len(sources),
+            source_count=len(result.sources),
         )
 
-        return RetrievalResult(
-            query=question,
-            answer=answer,
-            sources=sources,
-            graph_context=trace,
-        )
+        return result
 
-    @staticmethod
-    def _build_prompt(question: str, context: str) -> str:
-        """Build a prompt for answer generation.
 
-        Args:
-            question: User's natural language question.
-            context: Assembled context from retrieval/traversal.
-
-        Returns:
-            Formatted prompt string.
-        """
-        if context:
-            return (
-                f"Context:\n{context}\n\n"
-                f"Question: {question}\n\n"
-                f"Answer based on the context above:"
-            )
-        return f"Question: {question}\n\nAnswer:"

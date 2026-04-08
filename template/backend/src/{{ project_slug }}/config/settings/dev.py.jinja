@@ -19,5 +19,8 @@ class DevSettings(BaseAppSettings):
     environment: Environment = Environment.DEV
     debug: bool = True
     log_level: str = "DEBUG"
-    host: str = "0.0.0.0"  # noqa: S104  – intentional: container networking
+    host: str = "0.0.0.0"  # noqa: S104  -- intentional: container networking
     database_echo: bool = True
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+    database_schema: str = "dev_schema"
+{%- endif %}
