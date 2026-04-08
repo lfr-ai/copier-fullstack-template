@@ -15,9 +15,10 @@ class TestSettings(BaseAppSettings):
     environment: Environment = Environment.TEST
     debug: bool = False
     log_level: str = "WARNING"
-    host: str = "0.0.0.0"  # noqa: S104  – intentional: container networking
+    host: str = "0.0.0.0"  # noqa: S104  -- intentional: container networking
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
     database_url: str = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+    database_schema: str = "test_schema"
 {%- elif database_backend == 'sqlite' %}
     database_url: str = "sqlite+aiosqlite:///data/{{ project_slug }}_test.db"
 {%- else %}

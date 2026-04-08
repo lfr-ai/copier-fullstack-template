@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, override
+from typing import override
 
 import structlog
 
@@ -14,9 +14,9 @@ from {{ project_slug }}.core.interfaces.retriever import RetrieverGateway
 
 logger = structlog.get_logger(__name__)
 
-_RAG_TEMPERATURE: Final[float] = 0.3
-_DEFAULT_MAX_TOKENS: Final[int] = 2048
-_DEFAULT_SIMILARITY_TOP_K: Final[int] = 5
+_RAG_TEMPERATURE = 0.3
+_DEFAULT_MAX_TOKENS = 2048
+_DEFAULT_SIMILARITY_TOP_K = 5
 
 
 @dataclass(frozen=True, slots=True)

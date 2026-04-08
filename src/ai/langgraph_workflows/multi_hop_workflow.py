@@ -1,9 +1,11 @@
-"""Multi-hop workflow — DeepRAG graph traversal with vector enrichment.
+"""Multi-hop workflow -- DEPRECATED.
 
-Orchestrates multi-hop reasoning by:
-1. Traversing the knowledge graph from a starting node
-2. Enriching each hop with vector retrieval context
-3. Building a reasoning trace with combined graph and vector context
+.. deprecated::
+    This module is deprecated. Use ``ai.rag.deep_rag_pipeline.DeepRAGPipeline``
+    instead, which implements MDP-based adaptive retrieval (DeepRAG).
+
+Legacy multi-hop reasoning with KG traversal and vector enrichment.
+Kept for backward compatibility with existing tests.
 """
 
 from __future__ import annotations

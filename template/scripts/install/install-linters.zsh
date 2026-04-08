@@ -4,12 +4,12 @@ setopt ERR_EXIT PIPE_FAIL
 
 info() {
     emulate -L zsh
-    print -f "%s→ %s%s\n" "${CYAN}" "$1" "${RESET}" | tee -a "${LOG_FILE}"
+    print -f "%s-> %s%s\n" "${CYAN}" "$1" "${RESET}" | tee -a "${LOG_FILE}"
 }
 
 success() {
     emulate -L zsh
-    print -f "%s✓ %s%s\n" "${GREEN}" "$1" "${RESET}" | tee -a "${LOG_FILE}"
+    print -f "%s[OK] %s%s\n" "${GREEN}" "$1" "${RESET}" | tee -a "${LOG_FILE}"
 }
 
 warn() {
@@ -19,7 +19,7 @@ warn() {
 
 fail() {
     emulate -L zsh
-    print -f "%s✗ %s%s\n" "${RED}" "$1" "${RESET}" | tee -a "${LOG_FILE}"
+    print -f "%s[FAIL] %s%s\n" "${RED}" "$1" "${RESET}" | tee -a "${LOG_FILE}"
 }
 
 if [[ "${1:-}" == "--help" ]]; then

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, override
+from typing import override
 
 import structlog
 
@@ -12,7 +12,7 @@ from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGat
 
 logger = structlog.get_logger(__name__)
 
-_DEFAULT_QUERY_LIMIT: Final[int] = 50
+_DEFAULT_QUERY_LIMIT = 50
 
 
 @dataclass(frozen=True, slots=True)
