@@ -1,2 +1,2 @@
-"""RAG retriever adapters — implements 'RetrieverGateway'."""
+"""RAG retriever adapters -- implements 'RetrieverGateway'."""
 

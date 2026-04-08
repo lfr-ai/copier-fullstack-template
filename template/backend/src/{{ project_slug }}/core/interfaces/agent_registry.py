@@ -1,4 +1,4 @@
-"""Agent registry gateway — abstract interface for agent discovery and management."""
+"""Agent registry gateway -- abstract interface for agent discovery and management."""
 
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable, final

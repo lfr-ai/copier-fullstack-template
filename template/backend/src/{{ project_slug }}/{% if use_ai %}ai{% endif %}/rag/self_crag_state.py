@@ -28,6 +28,7 @@ class SelfCRAGState(TypedDict, total=False):
         cycle_count: Number of query rewrite cycles executed (0-MAX_QUERY_REWRITES).
         answer: Final generated answer (populated at workflow end).
         system_prompt: Optional custom system prompt for LLM instructions.
+        top_k: Number of documents to retrieve per cycle.
     """
     
     query: str
@@ -37,3 +38,4 @@ class SelfCRAGState(TypedDict, total=False):
     cycle_count: int
     answer: str
     system_prompt: str | None
+    top_k: int

@@ -39,7 +39,7 @@ def get_settings() -> BaseAppSettings:
         environment = Environment(env_name.lower())
     except ValueError:
         logger.warning(
-            "Invalid environment %r — falling back to LOCAL. "
+            "Invalid environment %r -- falling back to LOCAL. "
             "Valid values: %s",
             env_name,
             ", ".join(e.value for e in Environment),

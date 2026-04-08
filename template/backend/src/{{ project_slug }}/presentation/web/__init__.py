@@ -1,2 +1,2 @@
-"""Web port — server-rendered HTML."""
+"""Web port -- server-rendered HTML."""
 

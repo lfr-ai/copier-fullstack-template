@@ -1,4 +1,4 @@
-"""Domain services — cross-entity business logic.
+"""Domain services -- cross-entity business logic.
 
 Domain services encapsulate business rules that span multiple
 entities or that don't naturally belong to a single entity.

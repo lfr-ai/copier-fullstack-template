@@ -1,2 +1,2 @@
-"""AI agent framework — autonomous tool-calling agent orchestration."""
+"""AI agent framework -- autonomous tool-calling agent orchestration."""
 

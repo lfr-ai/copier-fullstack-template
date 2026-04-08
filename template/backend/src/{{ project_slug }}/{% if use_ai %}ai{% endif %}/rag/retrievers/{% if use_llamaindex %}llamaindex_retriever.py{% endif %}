@@ -41,6 +41,34 @@ class LlamaIndexRetrieverAdapter(RetrieverGateway):
         self._vector_store = vector_store
         self._index: object | None = None
 
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> LlamaIndexRetrieverAdapter:
+        """Create from configuration dictionary.
+
+        Args:
+            config: Configuration with 'embedding' and 'vector_store'.
+
+        Returns:
+            Configured adapter instance.
+
+        Raises:
+            ValueError: If required values are missing.
+        """
+        embedding = config.get("embedding")
+        if embedding is None:
+            msg = "embedding is required"
+            raise ValueError(msg)
+
+        vector_store = config.get("vector_store")
+        if vector_store is None:
+            msg = "vector_store is required"
+            raise ValueError(msg)
+
+        return cls(
+            embedding=embedding,  # type: ignore[arg-type]
+            vector_store=vector_store,  # type: ignore[arg-type]
+        )
+
     def _get_index(self) -> object:
         """Lazily initialize the LlamaIndex VectorStoreIndex."""
         if self._index is not None:

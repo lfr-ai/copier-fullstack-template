@@ -1,4 +1,4 @@
-"""Cross-encoder reranker adapter — implements 'RerankerGateway'.
+"""Cross-encoder reranker adapter -- implements 'RerankerGateway'.
 
 Uses 'sentence-transformers' cross-encoder models to rerank
 retrieval results by computing pairwise relevance scores.
@@ -56,7 +56,7 @@ class CrossEncoderReranker(RerankerGateway):
         try:
             from sentence_transformers import CrossEncoder
         except ImportError as exc:
-            msg = "sentence-transformers>=3.3 is required — pip install sentence-transformers"
+            msg = "sentence-transformers>=3.3 is required -- pip install sentence-transformers"
             raise ImportError(msg) from exc
 
         self._model = CrossEncoder(self._model_name)

@@ -1,5 +1,5 @@
 {%- if cloud_provider == 'azure' %}
-"""Azure Blob Storage adapter — upload, download, and manage binary objects."""
+"""Azure Blob Storage adapter -- upload, download, and manage binary objects."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ class AzureBlobStorageAdapter:
 Implements the 'StorageGateway' protocol defined in
 'core/interfaces/storage.py'.
 
-Requires 'azure-storage-blob' — already declared as a conditional
+Requires 'azure-storage-blob' -- already declared as a conditional
 dependency in 'pyproject.toml' when 'cloud_provider == azure'.
 """
 

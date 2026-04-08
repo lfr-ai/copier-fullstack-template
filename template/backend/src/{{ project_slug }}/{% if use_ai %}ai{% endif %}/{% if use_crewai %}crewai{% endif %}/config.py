@@ -1,4 +1,4 @@
-"""CrewAI configuration — constants and defaults for crew orchestration."""
+"""CrewAI configuration -- constants and defaults for crew orchestration."""
 
 
 # ── Crew defaults ───────────────────────────────────────────────────

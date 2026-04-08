@@ -33,7 +33,7 @@ class TestBaseDTO:
         assert dto.name == "hello"
 
     def test_frozen_prevents_mutation(self) -> None:
-        """Verify BaseDTO is frozen — attribute re-assignment raises."""
+        """Verify BaseDTO is frozen -- attribute re-assignment raises."""
 
         class _StrictDTO(BaseDTO):
             count: int

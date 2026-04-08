@@ -1,4 +1,4 @@
-"""User domain service — business rules that span User entity boundaries."""
+"""User domain service -- business rules that span User entity boundaries."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ class UserDomainService:
     """Domain service for user-related business rules.
 
     Contains invariant enforcement that doesn't belong inside the
-    'User' entity itself — e.g. uniqueness checks that require
+    'User' entity itself -- e.g. uniqueness checks that require
     repository access, or multi-entity coordination.
 
     Application services delegate to this service for domain logic,

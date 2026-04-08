@@ -34,7 +34,7 @@ class TestSelfCRAGPipeline:
         mock_llm: AsyncMock,
         mock_retriever: AsyncMock,
     ) -> None:
-        """Full workflow: low relevance triggers rewrite → re-retrieval → high relevance → answer.
+        """Full workflow: low relevance triggers rewrite -> re-retrieval -> high relevance -> answer.
 
         Scenario:
         1. Initial retrieval returns 2 docs

@@ -1,4 +1,4 @@
-"""Graph retriever — knowledge graph traversal for RAG retrieval."""
+"""Graph retriever -- knowledge graph traversal for RAG retrieval."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import structlog
 from typing import final, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.core.interfaces.knowledge_graph import KnowledgeGraphGateway
-    from app.core.interfaces.llm import LLMGateway
-    from app.core.interfaces.retriever import RetrievedContext
+    from core.interfaces.knowledge_graph import KnowledgeGraphGateway
+    from core.interfaces.llm import LLMGateway
+    from core.interfaces.retriever import RetrievedContext
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -102,7 +102,7 @@ class GraphRetriever:
         Returns:
             list[RetrievedContext]: Retrieved context from graph traversal.
         """
-        from app.core.interfaces.retriever import RetrievedContext
+        from core.interfaces.retriever import RetrievedContext
 
         # Extract entities from query via LLM
         extraction_prompt = (

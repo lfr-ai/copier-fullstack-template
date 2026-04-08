@@ -1,4 +1,4 @@
-"""Azure AI Search vector store adapter — implements 'VectorStoreGateway'.
+"""Azure AI Search vector store adapter -- implements 'VectorStoreGateway'.
 
 Uses Azure AI Search with vector search capabilities for dense
 vector storage and hybrid (vector + keyword) similarity search.
@@ -38,7 +38,7 @@ class AzureAISearchVectorStore(VectorStoreGateway):
             from azure.core.credentials import AzureKeyCredential
             from azure.search.documents import SearchClient
         except ImportError as exc:
-            msg = "azure-search-documents is required — pip install azure-search-documents"
+            msg = "azure-search-documents is required -- pip install azure-search-documents"
             raise ImportError(msg) from exc
 
         self._dimension = dimension

@@ -1,4 +1,4 @@
-"""RAG prompt templates — system, query, and synthesis prompts for RAG pipeline."""
+"""RAG prompt templates -- system, query, and synthesis prompts for RAG pipeline."""
 
 RAG_SYSTEM_PROMPT = (
     "You are a knowledgeable assistant. Answer questions accurately "

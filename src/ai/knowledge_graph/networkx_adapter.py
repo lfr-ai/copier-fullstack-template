@@ -1,4 +1,4 @@
-"""NetworkX knowledge graph adapter — test version."""
+"""NetworkX knowledge graph adapter -- test version."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class NetworkXKnowledgeGraph:
         try:
             import networkx as nx  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "networkx is required — pip install networkx"
+            msg = "networkx is required -- pip install networkx"
             raise ImportError(msg) from exc
 
         self._graph: nx.DiGraph = nx.DiGraph()

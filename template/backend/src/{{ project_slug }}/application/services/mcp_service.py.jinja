@@ -66,7 +66,7 @@ class MCPService(BaseService):
                 content="Direct tool invocation not supported on this MCP server.",
                 is_error=True,
             )
-        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+        except Exception as exc:  # noqa: BLE001 -- top-level error boundary
             self._logger.exception("mcp_tool_call_failed", tool=dto.tool)
             return MCPToolResultDTO(
                 tool=dto.tool,

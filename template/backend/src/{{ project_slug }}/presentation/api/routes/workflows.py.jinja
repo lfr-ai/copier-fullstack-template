@@ -1,4 +1,4 @@
-"""Workflow API routes — multi-agent graph execution and management."""
+"""Workflow API routes -- multi-agent graph execution and management."""
 
 from __future__ import annotations
 
@@ -104,7 +104,7 @@ async def execute_workflow(request: WorkflowExecuteRequest, container: Container
             try:
                 async for event in svc.execute_streaming(dto):
                     yield f"data: {json.dumps(event)}\n\n"
-            except Exception:  # noqa: BLE001 — SSE error event sent to client
+            except Exception:  # noqa: BLE001 -- SSE error event sent to client
                 _logger.exception("Workflow stream error")
                 yield f"data: {json.dumps({'error': 'stream_error', 'detail': 'An internal error occurred during streaming.'})}\n\n"
             yield "data: [DONE]\n\n"

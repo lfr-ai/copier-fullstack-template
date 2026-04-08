@@ -99,18 +99,12 @@ pipelines:
     relevance_threshold: 0.75
     max_iterations: 2
 
-# ============================================================================
-# Workflows
-# ============================================================================
-workflows:
   test_deep_rag:
-    type: multi_hop
-    kg_backend_ref: knowledge_graphs.test_networkx
+    type: deep_rag
+    llm_ref: llms.test_gpt4
     retriever_ref: retrievers.test_vector
-    max_hops: 3
 
   test_deep_rag_ensemble:
-    type: multi_hop
-    kg_backend_ref: knowledge_graphs.test_networkx
+    type: deep_rag
+    llm_ref: llms.test_mini
     retriever_ref: retrievers.test_ensemble
-    max_hops: 5

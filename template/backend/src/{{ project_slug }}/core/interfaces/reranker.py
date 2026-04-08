@@ -1,4 +1,4 @@
-"""Reranker gateway — abstract interface for search result reranking.
+"""Reranker gateway -- abstract interface for search result reranking.
 
 Concrete adapters may use Cohere, Cross-Encoder models, LLM-based
 reranking, or reciprocal rank fusion strategies.

@@ -23,7 +23,7 @@ T = TypeVar("T")
 
 
 class Specification(ABC, Generic[T]):
-    """Abstract specification — a predicate over domain objects."""
+    """Abstract specification -- a predicate over domain objects."""
 
     @abstractmethod
     def is_satisfied_by(self, candidate: T) -> bool:

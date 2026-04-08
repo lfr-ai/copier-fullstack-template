@@ -1,2 +1,2 @@
-"""Application layer — use cases, services, and DTOs."""
+"""Application layer -- use cases, services, and DTOs."""
 

@@ -1,4 +1,4 @@
-"""Chain gateway — abstract interface for LLM chain compositions.
+"""Chain gateway -- abstract interface for LLM chain compositions.
 
 Chains compose multiple LLM calls, retrieval operations, or
 tool invocations into multi-step pipelines. Concrete adapters

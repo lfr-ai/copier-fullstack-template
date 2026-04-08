@@ -1,4 +1,4 @@
-"""Universal LLM adapter via LiteLLM — one adapter for 100+ providers.
+"""Universal LLM adapter via LiteLLM -- one adapter for 100+ providers.
 
 LiteLLM provides a single 'completion()' / 'acompletion()' interface
 that routes to OpenAI, Anthropic, Azure, Bedrock, Vertex AI, Ollama,

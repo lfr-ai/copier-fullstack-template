@@ -51,7 +51,7 @@ async def memory_snapshot(
 ) -> AsyncIterator[MemoryProfileResult]:
     """Async context manager that captures memory usage of the enclosed block.
 
-    Uses 'tracemalloc' (stdlib) — works on all platforms including Windows.
+    Uses 'tracemalloc' (stdlib) -- works on all platforms including Windows.
 
     Yields:
         MemoryProfileResult: Populated after the 'with' block exits.

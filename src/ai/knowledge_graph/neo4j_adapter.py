@@ -1,4 +1,4 @@
-"""Neo4j knowledge graph adapter — test version."""
+"""Neo4j knowledge graph adapter -- test version."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ class Neo4jKnowledgeGraph:
         try:
             from neo4j import AsyncGraphDatabase  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "neo4j is required — pip install neo4j"
+            msg = "neo4j is required -- pip install neo4j"
             raise ImportError(msg) from exc
 
         self._driver = AsyncGraphDatabase.driver(uri, auth=(username, password))
