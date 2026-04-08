@@ -1,5 +1,10 @@
 """RAG retrieval pipeline — queries the knowledge base and generates responses.
 
+.. deprecated::
+    DEPRECATED: Use AdaptiveRAGPipeline instead. This module will be removed
+    in the next major version. AdaptiveRAGPipeline provides Self-CRAG and
+    DeepRAG routing with improved relevance grading and multi-hop reasoning.
+
 Handles: query embedding → vector search → context assembly → LLM generation.
 """
 
@@ -34,6 +39,11 @@ class RetrievalResult:
 @final
 class RetrievalPipeline:
     """Orchestrates retrieval-augmented generation.
+
+    .. deprecated::
+        This class is deprecated. Use AdaptiveRAGPipeline instead, which
+        provides Self-CRAG and DeepRAG routing with improved relevance
+        grading and multi-hop reasoning capabilities.
 
     Pipeline stages:
         1. Embed user query
