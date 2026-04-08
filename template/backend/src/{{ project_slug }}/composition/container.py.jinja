@@ -343,6 +343,7 @@ class Container:
 {%- else %}
             knowledge_graph=None,
 {%- endif %}
+            reranker=self.reranker(),
         )
 {%- endif %}
 {% if use_mcp %}
