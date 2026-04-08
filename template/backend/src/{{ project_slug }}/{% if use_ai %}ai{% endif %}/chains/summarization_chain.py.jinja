@@ -1,4 +1,4 @@
-"""Summarization chain — multi-document summarization via map-reduce."""
+"""Summarization chain -- multi-document summarization via map-reduce."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ class SummarizationChain(BaseChain):
         ]
 
         if len(chunks) <= 1:
-            # Single chunk — direct summarization
+            # Single chunk -- direct summarization
             summary = await self._llm.complete(
                 prompt=f"Summarize in {max_sentences} sentences or fewer:\n\n{input_text}",
                 system_prompt="You are a precise summarizer.",
@@ -63,7 +63,7 @@ class SummarizationChain(BaseChain):
             )
             return ChainResult(content=summary, metadata={"chunks": 1})
 
-        # Map step — summarize each chunk
+        # Map step -- summarize each chunk
         chunk_summaries: list[str] = []
         for i, chunk in enumerate(chunks):
             summary = await self._llm.complete(
@@ -75,7 +75,7 @@ class SummarizationChain(BaseChain):
             chunk_summaries.append(summary)
             logger.debug("Map step %d/%d complete", i + 1, len(chunks))
 
-        # Reduce step — consolidate summaries
+        # Reduce step -- consolidate summaries
         combined = "\n\n".join(
             f"Section {i + 1}: {s}" for i, s in enumerate(chunk_summaries)
         )

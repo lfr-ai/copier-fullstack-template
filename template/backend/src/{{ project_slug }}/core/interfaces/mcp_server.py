@@ -1,4 +1,4 @@
-"""MCP server gateway — abstract interface for Model Context Protocol server lifecycle."""
+"""MCP server gateway -- abstract interface for Model Context Protocol server lifecycle."""
 
 from typing import Protocol, runtime_checkable
 

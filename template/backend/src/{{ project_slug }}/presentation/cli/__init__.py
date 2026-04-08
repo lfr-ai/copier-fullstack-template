@@ -1,2 +1,2 @@
-"""CLI port — command-line interface."""
+"""CLI port -- command-line interface."""
 

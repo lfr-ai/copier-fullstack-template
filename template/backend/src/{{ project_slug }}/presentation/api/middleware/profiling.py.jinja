@@ -1,4 +1,4 @@
-"""On-demand CPU profiling middleware — append '?profile=1' with 'X-Profile-Secret' header."""
+"""On-demand CPU profiling middleware -- append '?profile=1' with 'X-Profile-Secret' header."""
 
 from __future__ import annotations
 
@@ -84,7 +84,7 @@ class ProfilingMiddleware(BaseHTTPMiddleware):
         try:
             profiler.write_html(html_path)
             response.headers["X-Profile-Saved"] = "true"
-        except Exception:  # noqa: BLE001 — profile save is non-critical
+        except Exception:  # noqa: BLE001 -- profile save is non-critical
             logger.exception("profile_save_failed")
 
         existing = response.headers.get("Server-Timing", "")

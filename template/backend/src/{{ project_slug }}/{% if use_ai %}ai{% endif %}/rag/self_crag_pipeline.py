@@ -1,4 +1,4 @@
-"""Self-CRAG retrieval pipeline — self-corrective RAG with LLM-based grading.
+"""Self-CRAG retrieval pipeline -- self-corrective RAG with LLM-based grading.
 
 Orchestrates the Self-CRAG workflow using LangGraph StateGraph:
 - Initial retrieval
@@ -107,7 +107,7 @@ class SelfCRAGPipeline:
         try:
             from langgraph.graph import END, START, StateGraph  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "langgraph is required — pip install langgraph"
+            msg = "langgraph is required -- pip install langgraph"
             raise ImportError(msg) from exc
 
         # Create graph with SelfCRAGState schema
@@ -193,6 +193,7 @@ class SelfCRAGPipeline:
             "cycle_count": 0,
             "answer": "",
             "system_prompt": system_prompt,
+            "top_k": top_k,
         }
 
         # Invoke graph with initial state

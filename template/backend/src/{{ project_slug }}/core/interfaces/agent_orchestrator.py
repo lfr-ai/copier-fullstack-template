@@ -1,4 +1,4 @@
-"""Agent orchestrator gateway — abstract interface for multi-agent workflow engines.
+"""Agent orchestrator gateway -- abstract interface for multi-agent workflow engines.
 
 Concrete adapters may use LangGraph, CrewAI,
 AutoGen, or custom orchestration implementations.

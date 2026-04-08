@@ -1,2 +1,2 @@
-"""Persistence data mappers — ORM model ↔ domain entity translation."""
+"""Persistence data mappers -- ORM model <-> domain entity translation."""
 

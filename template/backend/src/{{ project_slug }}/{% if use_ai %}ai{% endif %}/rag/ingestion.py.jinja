@@ -6,7 +6,7 @@ from typing import final
 
 import structlog
 
-from {{ project_slug }}.core.entities.document import Chunk, Document
+from {{ project_slug }}.core.entities.document import Chunk
 from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
 from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
 from {{ project_slug }}.core.interfaces.text_splitter import TextSplitterGateway
@@ -38,6 +38,55 @@ class IngestionPipeline:
         self._splitter = splitter
         self._embedding = embedding
         self._vector_store = vector_store
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> IngestionPipeline:
+        """Create an IngestionPipeline from a configuration dictionary.
+
+        Expected config structure::
+
+            {
+                "loader": <DocumentLoaderGateway instance>,
+                "splitter": <TextSplitterGateway instance>,
+                "embedding": <EmbeddingGateway instance>,
+                "vector_store": <VectorStoreGateway instance>,
+            }
+
+        Args:
+            config: Configuration dictionary.
+
+        Returns:
+            Configured pipeline instance.
+
+        Raises:
+            ValueError: If required parameters are missing.
+        """
+        loader = config.get("loader")
+        if loader is None:
+            msg = "loader is required"
+            raise ValueError(msg)
+
+        splitter = config.get("splitter")
+        if splitter is None:
+            msg = "splitter is required"
+            raise ValueError(msg)
+
+        embedding = config.get("embedding")
+        if embedding is None:
+            msg = "embedding is required"
+            raise ValueError(msg)
+
+        vector_store = config.get("vector_store")
+        if vector_store is None:
+            msg = "vector_store is required"
+            raise ValueError(msg)
+
+        return cls(
+            loader=loader,  # type: ignore[arg-type]
+            splitter=splitter,  # type: ignore[arg-type]
+            embedding=embedding,  # type: ignore[arg-type]
+            vector_store=vector_store,  # type: ignore[arg-type]
+        )
 
     async def ingest(self, source: str) -> list[Chunk]:
         """Ingest a single document source into the vector store.

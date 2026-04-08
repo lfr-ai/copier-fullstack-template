@@ -1,4 +1,4 @@
-"""Infrastructure constants — networking, API prefixes, pagination, security.
+"""Infrastructure constants -- networking, API prefixes, pagination, security.
 
 Domain validation constants (email lengths, password rules, etc.) live in
 'core.constants'.  Import them from there directly.

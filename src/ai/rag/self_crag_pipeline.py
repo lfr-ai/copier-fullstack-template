@@ -1,4 +1,4 @@
-"""Self-CRAG pipeline test version — minimal implementation for integration testing."""
+"""Self-CRAG pipeline test version -- minimal implementation for integration testing."""
 
 from __future__ import annotations
 

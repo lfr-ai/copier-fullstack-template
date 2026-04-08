@@ -1,4 +1,4 @@
-"""RDFLib knowledge graph adapter — implements 'KnowledgeGraphGateway' and 'SPARQLQueryGateway'.
+"""RDFLib knowledge graph adapter -- implements 'KnowledgeGraphGateway' and 'SPARQLQueryGateway'.
 
 Uses RDFLib for RDF graph storage with full SPARQL 1.1 query support.
 Suitable for standards-based knowledge representation using RDF triples
@@ -39,7 +39,7 @@ class RDFLibKnowledgeGraph(KnowledgeGraphGateway, SPARQLQueryGateway):
         try:
             from rdflib import Graph, Namespace  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "rdflib is required — pip install rdflib"
+            msg = "rdflib is required -- pip install rdflib"
             raise ImportError(msg) from exc
 
         self._graph: Graph = Graph()

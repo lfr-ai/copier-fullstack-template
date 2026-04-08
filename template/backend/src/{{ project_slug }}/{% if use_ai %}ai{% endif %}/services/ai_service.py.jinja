@@ -40,7 +40,7 @@ class AIService:
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
             )
-        except Exception:  # noqa: BLE001 — top-level error boundary
+        except Exception:  # noqa: BLE001 -- top-level error boundary
             logger.exception("AI completion failed")
             raise
 

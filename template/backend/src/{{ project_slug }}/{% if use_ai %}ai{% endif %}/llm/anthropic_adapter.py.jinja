@@ -1,4 +1,4 @@
-"""Anthropic Claude LLM adapter — convenience facade over LiteLLMAdapter.
+"""Anthropic Claude LLM adapter -- convenience facade over LiteLLMAdapter.
 
 Normalise the 'anthropic/' model prefix and expose Anthropic-specific
 constructor arguments.  LiteLLM routes Anthropic requests transparently
@@ -18,7 +18,7 @@ _DEFAULT_MAX_RETRIES = 3
 
 @final
 class AnthropicAdapter(LiteLLMAdapter):
-    """Anthropic Claude adapter — delegates to :class:`LiteLLMAdapter`.
+    """Anthropic Claude adapter -- delegates to :class:`LiteLLMAdapter`.
 
     Preserves the original constructor signature for drop-in
     replacement. Internally maps to the LiteLLM 'anthropic/' prefix.

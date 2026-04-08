@@ -1,16 +1,16 @@
-"""CrewAI Flows — event-driven, stateful workflow orchestration.
+"""CrewAI Flows -- event-driven, stateful workflow orchestration.
 
 Provides structured 'Flow' base classes and a 'FlowRunner'
 utility for executing flows with logging, error handling, and
 result extraction.
 
 CrewAI Flows key features:
-* '@start' — marks the entry-point method of a flow
-* '@listen' — reacts to the output of another method
-* '@router' — conditional branching based on method output
+* '@start' -- marks the entry-point method of a flow
+* '@listen' -- reacts to the output of another method
+* '@router' -- conditional branching based on method output
 * Structured state via Pydantic 'BaseModel' subclasses
 * 'Flow.kickoff()' / 'Flow.kickoff_async()' execution
-* Crew embedding — run full crews inside flow steps
+* Crew embedding -- run full crews inside flow steps
 
 Usage::
 
@@ -131,7 +131,7 @@ class FlowRunner:
                 result=result,
                 state=state,
             )
-        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+        except Exception as exc:  # noqa: BLE001 -- top-level error boundary
             logger.exception("crewai_flow_failed", flow=flow_name)
             return FlowRunResult(
                 flow_name=flow_name,
@@ -152,7 +152,7 @@ class FlowRunner:
                 result=result,
                 state=state,
             )
-        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+        except Exception as exc:  # noqa: BLE001 -- top-level error boundary
             logger.exception("crewai_flow_failed", flow=flow_name)
             return FlowRunResult(
                 flow_name=flow_name,

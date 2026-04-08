@@ -37,8 +37,8 @@ OUTPUT_TS = (
 )
 OUTPUT_ENV = _BASE_DIR / ".env.ports"
 
-_HEADER_PY: str = '"""Auto-generated registry constants — DO NOT EDIT MANUALLY."""\n'
-_HEADER_TS: str = "// Auto-generated registry constants — DO NOT EDIT MANUALLY.\n"
+_HEADER_PY: str = '"""Auto-generated registry constants -- DO NOT EDIT MANUALLY."""\n'
+_HEADER_TS: str = "// Auto-generated registry constants -- DO NOT EDIT MANUALLY.\n"
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ def _build_enum_import(members: list[str] | dict[str, int]) -> str:
     """Determine correct enum base class import.
 
     Args:
-        members (list[str] | dict[str, int]): Enum members — list for StrEnum, dict for IntEnum.
+        members (list[str] | dict[str, int]): Enum members -- list for StrEnum, dict for IntEnum.
 
     Returns:
         str: Import statement string.
@@ -414,7 +414,7 @@ def _generate_env_ports(ports: dict[str, int]) -> str:
     Returns:
         str: Env file content string.
     """
-    lines = ["# AUTO-GENERATED FILE — DO NOT EDIT MANUALLY.", ""]
+    lines = ["# AUTO-GENERATED FILE -- DO NOT EDIT MANUALLY.", ""]
     for name, value in ports.items():
         lines.append(f"PORT_{name}={value}")
     lines.append("")

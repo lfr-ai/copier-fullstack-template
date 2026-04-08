@@ -99,6 +99,9 @@ vector_stores:
   #   type: pgvector
   #   database_url: ${DATABASE_URL}
   #   table_name: vector_embeddings
+  #   schema_name: ${PGVECTOR_SCHEMA}          # optional; defaults to <environment>_schema
+  #   environment: ${APP_ENV}                  # optional; defaults from env vars
+  #   include_env_suffix: true                 # optional; appends _<env> to table name
   #   dimension: 1536
 
 # ============================================================================
@@ -165,6 +168,13 @@ retrievers:
       - ref: retrievers.graph_default
         weight: 0.4
 
+  # Example: LlamaIndex-backed retriever (requires use_llamaindex=true in template)
+  # llamaindex_default:
+  #   type: llamaindex
+  #   embedding_ref: embeddings.default
+  #   vector_store_ref: vector_stores.faiss_default
+  #   top_k: 5
+
 # ============================================================================
 # Rerankers
 # ============================================================================
@@ -211,31 +221,29 @@ pipelines:
     relevance_threshold: 0.7
     max_iterations: 3
 
-# ============================================================================
-# Workflows (LangGraph Multi-Hop)
-# ============================================================================
-workflows:
-  # DeepRAG / Multi-Hop Workflow
-  # Uses knowledge graph traversal with iterative retrieval
+  # DeepRAG with MDP-based adaptive retrieval
   deep_rag:
-    type: multi_hop
-    kg_backend_ref: knowledge_graphs.networkx_default
+    type: deep_rag
+    llm_ref: llms.reasoning
     retriever_ref: retrievers.vector_default
-    max_hops: 5
 
   # Advanced DeepRAG with ensemble retriever
   deep_rag_advanced:
-    type: multi_hop
-    kg_backend_ref: knowledge_graphs.networkx_default
+    type: deep_rag
+    llm_ref: llms.reasoning
     retriever_ref: retrievers.ensemble_default
-    max_hops: 7
 
-  # Lightweight DeepRAG with fewer hops
+  # Lightweight DeepRAG
   deep_rag_fast:
-    type: multi_hop
-    kg_backend_ref: knowledge_graphs.networkx_default
+    type: deep_rag
+    llm_ref: llms.gpt4_mini
     retriever_ref: retrievers.vector_default
-    max_hops: 3
+
+  # Example: DeepRAG + LlamaIndex-backed retrieval
+  # deep_rag_llamaindex:
+  #   type: deep_rag
+  #   llm_ref: llms.reasoning
+  #   retriever_ref: retrievers.llamaindex_default
 
 # ============================================================================
 # Example Usage Patterns
@@ -244,11 +252,11 @@ workflows:
 # 1. Load a specific pipeline:
 #    loader = AIConfigLoader(config_path="config/ai_config.yaml")
 #    pipeline = loader.create_pipeline("self_crag")
-#    result = pipeline.run(query="What is quantum computing?")
+#    result = await pipeline.query("What is quantum computing?")
 #
-# 2. Load a workflow:
-#    workflow = loader.create_workflow("deep_rag")
-#    result = workflow.run(query="Explain neural networks")
+# 2. Load a DeepRAG pipeline:
+#    pipeline = loader.create_pipeline("deep_rag")
+#    result = await pipeline.query("Explain neural networks")
 #
 # 3. Get individual components:
 #    llm = loader.get_component("llms.gpt4")

@@ -48,7 +48,7 @@ import os
 import re
 import structlog
 from pathlib import Path
-from typing import Any, final, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast, final
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -276,10 +276,10 @@ class AIConfigLoader:
         Raises:
             ValueError: If LLM type is unsupported.
         """
-        from ai.llm.litellm_adapter import LiteLLMAdapter
-
         comp_type = config.get("type")
         if comp_type == "litellm":
+            from ai.llm.litellm_adapter import LiteLLMAdapter
+
             return LiteLLMAdapter.from_config(config)
 
         msg = f"Unsupported LLM type: {comp_type}"
@@ -297,10 +297,10 @@ class AIConfigLoader:
         Raises:
             ValueError: If vector store type is unsupported.
         """
-        from ai.vector_stores.faiss_store import FaissVectorStore
-
         comp_type = config.get("type")
         if comp_type == "faiss":
+            from ai.vector_stores.faiss_store import FaissVectorStore
+
             return FaissVectorStore.from_config(config)
 
         msg = f"Unsupported vector store type: {comp_type}"
@@ -322,14 +322,14 @@ class AIConfigLoader:
 
         # Dynamic import to avoid circular dependencies
         if comp_type == "networkx":
-            from ai.knowledge_graph.networkx_adapter import NetworkXAdapter
+            from ai.knowledge_graph.networkx_adapter import NetworkXKnowledgeGraph
 
-            return NetworkXAdapter.from_config(config)
+            return cast("KnowledgeGraphGateway", NetworkXKnowledgeGraph.from_config(config))
 
         if comp_type == "neo4j":
-            from ai.knowledge_graph.neo4j_adapter import Neo4jAdapter
+            from ai.knowledge_graph.neo4j_adapter import Neo4jKnowledgeGraph
 
-            return Neo4jAdapter.from_config(config)
+            return cast("KnowledgeGraphGateway", Neo4jKnowledgeGraph.from_config(config))
 
         msg = f"Unsupported knowledge graph type: {comp_type}"
         raise ValueError(msg)
@@ -515,26 +515,30 @@ class AIConfigLoader:
 
         validated = PipelineConfig(**workflow_config)
 
-        if not validated.llm_ref:
-            msg = "llm_ref is required for workflow"
-            raise ValueError(msg)
-        if not validated.retriever_ref:
-            msg = "retriever_ref is required for workflow"
-            raise ValueError(msg)
+        if validated.type == "deep_rag":
+            if not validated.llm_ref:
+                msg = "llm_ref is required for deep_rag workflow"
+                raise ValueError(msg)
+            if not validated.retriever_ref:
+                msg = "retriever_ref is required for deep_rag workflow"
+                raise ValueError(msg)
 
-        llm = self._resolve_reference(validated.llm_ref)
-        retriever = self._resolve_reference(validated.retriever_ref)
+            llm = self._resolve_reference(validated.llm_ref)
+            retriever = self._resolve_reference(validated.retriever_ref)
 
-        from ai.rag.deep_rag_pipeline import DeepRAGPipeline
+            from ai.rag.deep_rag_pipeline import DeepRAGPipeline
 
-        logger.info(
-            "DeepRAGPipeline created (via deprecated create_workflow)",
-            workflow_name=workflow_name,
-            llm_type=type(llm).__name__,
-            retriever_type=type(retriever).__name__,
-        )
+            logger.info(
+                "DeepRAGPipeline created (via deprecated create_workflow)",
+                workflow_name=workflow_name,
+                llm_type=type(llm).__name__,
+                retriever_type=type(retriever).__name__,
+            )
 
-        return DeepRAGPipeline(llm=llm, retriever=retriever)
+            return DeepRAGPipeline(llm=llm, retriever=retriever)
+
+        msg = f"Unsupported workflow type: {validated.type} (expected deep_rag)"
+        raise ValueError(msg)
 
     def get_component(self, ref: str) -> Any:
         """Get a component by reference (public API).

@@ -1,2 +1,2 @@
-"""Security adapters — implements core security ports."""
+"""Security adapters -- implements core security ports."""
 

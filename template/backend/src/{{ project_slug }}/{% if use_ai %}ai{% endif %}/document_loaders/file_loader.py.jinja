@@ -1,4 +1,4 @@
-"""File-based document loader — implements 'DocumentLoaderGateway'.
+"""File-based document loader -- implements 'DocumentLoaderGateway'.
 
 Handles plain text, Markdown, PDF (via PyMuPDF), and DOCX files
 using a zero-dependency dispatcher with optional library support.
@@ -68,7 +68,7 @@ class FileDocumentLoader(DocumentLoaderGateway):
         try:
             import pymupdf  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "pymupdf is required for PDF loading — pip install pymupdf"
+            msg = "pymupdf is required for PDF loading -- pip install pymupdf"
             raise ImportError(msg) from exc
 
         doc = pymupdf.open(str(path))
@@ -83,7 +83,7 @@ class FileDocumentLoader(DocumentLoaderGateway):
         try:
             import docx  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "python-docx is required for DOCX loading — pip install python-docx"
+            msg = "python-docx is required for DOCX loading -- pip install python-docx"
             raise ImportError(msg) from exc
 
         document = docx.Document(str(path))

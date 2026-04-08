@@ -1,4 +1,4 @@
-"""Cryptographic hashing adapter — implements :class:`PasswordHasher` port."""
+"""Cryptographic hashing adapter -- implements :class:`PasswordHasher` port."""
 
 from typing import final
 

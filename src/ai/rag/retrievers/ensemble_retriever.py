@@ -1,4 +1,4 @@
-"""Ensemble retriever — weighted combination of multiple retriever strategies."""
+"""Ensemble retriever -- weighted combination of multiple retriever strategies."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ import structlog
 from typing import final, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.core.interfaces.retriever import RetrievedContext, RetrieverGateway
+    from core.interfaces.retriever import RetrievedContext, RetrieverGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-DEFAULT_GRAPH_NEIGHBOR_LIMIT = 10
+_DEFAULT_RETRIEVAL_TOP_K = 5
 _OVERSAMPLE_FACTOR = 2
 
 
@@ -20,7 +20,7 @@ def reciprocal_rank_fusion(
     top_k: int,
 ) -> list[RetrievedContext]:
     """Merge multiple ranked result lists using Reciprocal Rank Fusion."""
-    from app.core.interfaces.retriever import RetrievedContext
+    from core.interfaces.retriever import RetrievedContext
 
     scores: dict[str, float] = {}
     items: dict[str, RetrievedContext] = {}
@@ -114,7 +114,7 @@ class EnsembleRetriever:
         self,
         *,
         query: str,
-        top_k: int = DEFAULT_GRAPH_NEIGHBOR_LIMIT,
+        top_k: int = _DEFAULT_RETRIEVAL_TOP_K,
         filters: dict[str, object] | None = None,
     ) -> list[RetrievedContext]:
         """Retrieve and fuse results from all configured retrievers.
@@ -127,7 +127,7 @@ class EnsembleRetriever:
         Returns:
             list[RetrievedContext]: Fused and re-ranked retrieved context.
         """
-        from app.core.interfaces.retriever import RetrievedContext
+        from core.interfaces.retriever import RetrievedContext
 
         ranked_lists: list[tuple[list[RetrievedContext], float]] = []
         for retriever, weight in self._retrievers:

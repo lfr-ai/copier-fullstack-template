@@ -1,11 +1,11 @@
-"""CrewAI HMAS — Hierarchical Multi-Agent System supervisor.
+"""CrewAI HMAS -- Hierarchical Multi-Agent System supervisor.
 
 Implements a production-ready hierarchical supervisor that:
 
 1. Receives high-level goals from the application layer.
 2. Decomposes goals into sub-goals using an LLM planner.
 3. Routes sub-goals to **CrewAI crews** (local).
-4. Manages nested hierarchy — crews can delegate to sub-crews.
+4. Manages nested hierarchy -- crews can delegate to sub-crews.
 5. Aggregates results with conflict resolution and quality checks.
 
 .. code-block:: text
@@ -137,10 +137,10 @@ class CrewAIHMASSupervisor:
     ) -> str:
         """Execute the full HMAS orchestration loop.
 
-        1. **Plan** — decompose the goal into sub-goals.
-        2. **Route** — assign each sub-goal to the best target.
-        3. **Execute** — delegate to crews or workflows.
-        4. **Aggregate** — combine results into a unified response.
+        1. **Plan** -- decompose the goal into sub-goals.
+        2. **Route** -- assign each sub-goal to the best target.
+        3. **Execute** -- delegate to crews or workflows.
+        4. **Aggregate** -- combine results into a unified response.
 
         Args:
             goal (str): High-level task description.
@@ -243,7 +243,7 @@ class CrewAIHMASSupervisor:
                 goal=goal,
                 sub_goals=sub_goals or [SubGoal(id=str(uuid.uuid4()), description=goal)],
             )
-        except Exception:  # noqa: BLE001 — graceful fallback to simple plan
+        except Exception:  # noqa: BLE001 -- graceful fallback to simple plan
             logger.warning("hmas_llm_plan_failed", exc_info=True)
             return self._simple_plan(goal)
 
@@ -273,7 +273,7 @@ class CrewAIHMASSupervisor:
             ]
 
             if not ready:
-                # Deadlock — force remaining as failed
+                # Deadlock -- force remaining as failed
                 for sg in pending:
                     sg.state = SubGoalState.FAILED
                     sg.error = "Dependency deadlock"
@@ -314,7 +314,7 @@ class CrewAIHMASSupervisor:
                 id=sub_goal.id,
                 target=sub_goal.target_name,
             )
-        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+        except Exception as exc:  # noqa: BLE001 -- top-level error boundary
             sub_goal.state = SubGoalState.FAILED
             sub_goal.error = str(exc)
             logger.warning(
@@ -388,6 +388,6 @@ class CrewAIHMASSupervisor:
         try:
             response = await self._llm.complete(prompt)
             return response.content if hasattr(response, "content") else str(response)
-        except Exception:  # noqa: BLE001 — graceful fallback to concatenation
+        except Exception:  # noqa: BLE001 -- graceful fallback to concatenation
             logger.warning("hmas_llm_aggregate_failed", exc_info=True)
             return "\n\n".join(f"## {sg.description}\n{sg.result}" for sg in sub_goals)

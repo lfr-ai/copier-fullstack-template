@@ -119,7 +119,7 @@ class TestAdaptiveRAGPipelineRouting:
         mock_knowledge_graph: AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Verify use_graph=True routes to DeepRAG multi-hop workflow."""
+        """Verify use_graph=True routes to DeepRAG pipeline."""
         pipeline = AdaptiveRAGPipeline(
             llm=mock_llm,
             embedding=mock_embedding,
@@ -127,22 +127,20 @@ class TestAdaptiveRAGPipelineRouting:
             knowledge_graph=mock_knowledge_graph,
         )
 
-        # Mock the multi-hop workflow traverse_and_enrich
-        mock_workflow = AsyncMock()
-        mock_workflow.traverse_and_enrich.return_value = [
-            {
-                "node": "start_node",
-                "enrichment": [
-                    {"id": "doc1", "content": "enriched content from hop 1", "score": 0.9},
-                ],
-            },
-        ]
+        # Mock the DeepRAG pipeline query
+        mock_deep_rag = AsyncMock()
+        mock_deep_rag.query.return_value = RetrievalResult(
+            query="What is the answer?",
+            answer="The answer is 42.",
+            sources=[],
+            graph_context=[{"step": 1, "sub_query": "sub-query-1", "decision": "retrieve"}],
+        )
 
-        with patch.object(pipeline, "_get_multi_hop_workflow", return_value=mock_workflow):
+        with patch.object(pipeline, "_get_deep_rag_pipeline", return_value=mock_deep_rag):
             result = await pipeline.query("What is the answer?", use_graph=True)
 
             # Verify routing decision
-            mock_workflow.traverse_and_enrich.assert_awaited_once()
+            mock_deep_rag.query.assert_awaited_once()
             assert "deeprag" in caplog.text.lower() or "Routing to DeepRAG" in caplog.text
 
         # Verify result structure

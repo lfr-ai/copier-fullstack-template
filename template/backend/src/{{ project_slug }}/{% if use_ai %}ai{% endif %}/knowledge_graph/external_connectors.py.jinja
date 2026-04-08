@@ -1,4 +1,4 @@
-"""External knowledge graph connectors — Wikidata, DBpedia, ConceptNet."""
+"""External knowledge graph connectors -- Wikidata, DBpedia, ConceptNet."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ class _SPARQLMixin:
         try:
             from SPARQLWrapper import JSON, SPARQLWrapper  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "SPARQLWrapper is required — pip install SPARQLWrapper"
+            msg = "SPARQLWrapper is required -- pip install SPARQLWrapper"
             raise ImportError(msg) from exc
 
         sparql = SPARQLWrapper(self._endpoint)
@@ -41,7 +41,7 @@ class _SPARQLMixin:
 
         try:
             response = await asyncio.to_thread(lambda: sparql.query().convert())
-        except Exception as exc:  # noqa: BLE001 — top-level error boundary
+        except Exception as exc:  # noqa: BLE001 -- top-level error boundary
             logger.exception("SPARQL query failed on %s", self._endpoint)
             msg = f"SPARQL query failed against {self._endpoint}"
             raise RuntimeError(msg) from exc
@@ -311,7 +311,7 @@ class ConceptNetKnowledgeGraph(ExternalKnowledgeGraphGateway):
                 "id": edge.get("@id", ""),
                 "label": edge.get("surfaceText", edge.get("@id", "")),
                 "description": f"{edge.get('rel', {}).get('label', '')}: "
-                f"{edge.get('start', {}).get('label', '')} → "
+                f"{edge.get('start', {}).get('label', '')} -> "
                 f"{edge.get('end', {}).get('label', '')}",
                 "weight": edge.get("weight", 0.0),
                 "source": "conceptnet",

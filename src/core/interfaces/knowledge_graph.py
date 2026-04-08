@@ -1,4 +1,4 @@
-"""Knowledge graph gateway — abstract interface for graph-based knowledge storage.
+"""Knowledge graph gateway -- abstract interface for graph-based knowledge storage.
 
 Concrete adapters may use NetworkX, Neo4j, RDFLib, or external knowledge
 graphs (Wikidata, DBpedia) via SPARQL.

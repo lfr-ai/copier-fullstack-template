@@ -5,7 +5,7 @@ Each state represents a partial solution with sub-queries, intermediate
 answers, and atomic decisions about whether to retrieve or use parametric
 knowledge at each reasoning step.
 
-Reference: DeepRAG (Guan et al., 2025) — arXiv:2502.01142
+Reference: DeepRAG (Guan et al., 2025) -- arXiv:2502.01142
 """
 
 import operator
@@ -25,7 +25,7 @@ class SubQueryResult(TypedDict, total=False):
 
     Attributes:
         sub_query: Decomposed atomic sub-query.
-        decision: Atomic decision — 'retrieve' or 'parametric'.
+        decision: Atomic decision -- 'retrieve' or 'parametric'.
         retrieved_docs: Documents retrieved (empty if parametric).
         intermediate_answer: Answer for this sub-query step.
         confidence: LLM confidence in parametric answer (0.0-1.0).

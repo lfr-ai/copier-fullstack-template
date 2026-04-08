@@ -22,7 +22,7 @@ class FaissVectorStore(VectorStoreGateway):
         try:
             import faiss  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "faiss-cpu is required — pip install faiss-cpu"
+            msg = "faiss-cpu is required -- pip install faiss-cpu"
             raise ImportError(msg) from exc
 
         self._dimension = dimension

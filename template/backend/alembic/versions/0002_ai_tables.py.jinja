@@ -1,4 +1,4 @@
-"""Add AI tables — pgvector extension, document chunks, conversation history.
+"""Add AI tables -- pgvector extension, document chunks, conversation history.
 
 Revision ID: 0002_ai_tables
 Revises: 0001_initial
@@ -37,7 +37,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     {% if use_pgvector -%}
-    # Add vector column — dimension must match the configured embedding model.
+    # Add vector column -- dimension must match the configured embedding model.
     # Default 1536 matches OpenAI text-embedding-3-small; override via
     # EMBEDDING_DIMENSION environment variable at migration time if needed.
     import os as _os

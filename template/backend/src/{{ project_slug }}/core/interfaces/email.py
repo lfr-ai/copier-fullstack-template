@@ -1,4 +1,4 @@
-"""Email gateway — contract for sending email messages."""
+"""Email gateway -- contract for sending email messages."""
 
 from typing import Protocol, runtime_checkable
 

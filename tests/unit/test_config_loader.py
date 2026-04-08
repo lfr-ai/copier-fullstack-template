@@ -81,6 +81,11 @@ def full_config_dict() -> dict:
                 "type": "self_crag",
                 "llm_ref": "llms.gpt4",
                 "retriever_ref": "retrievers.vector",
+            },
+            "deep_rag": {
+                "type": "deep_rag",
+                "llm_ref": "llms.gpt4",
+                "retriever_ref": "retrievers.vector",
             }
         },
     }
@@ -397,6 +402,16 @@ class TestPipelineCreation:
         assert hasattr(pipeline, "_llm")
         assert hasattr(pipeline, "_retriever")
 
+    def test_create_deep_rag_pipeline(self, full_config_dict: dict) -> None:
+        """Test DeepRAG pipeline creation."""
+        from ai.config_loader import AIConfigLoader
+
+        loader = AIConfigLoader(config_dict=full_config_dict)
+        pipeline = loader.create_pipeline("deep_rag")
+        assert pipeline is not None
+        assert hasattr(pipeline, "_llm")
+        assert hasattr(pipeline, "_retriever")
+
     def test_create_pipeline_missing_section_raises_error(self, simple_config_dict: dict) -> None:
         """Test pipeline creation without pipelines section raises ValueError."""
         from ai.config_loader import AIConfigLoader
@@ -427,7 +442,7 @@ class TestPipelineCreation:
             }
         }
         loader = AIConfigLoader(config_dict=config)
-        with pytest.raises(ValueError, match="Pipeline type must be 'self_crag'"):
+        with pytest.raises(ValueError, match="Unsupported pipeline type"):
             loader.create_pipeline("wrong")
 
     def test_create_pipeline_missing_llm_ref_raises_error(self) -> None:
@@ -443,7 +458,7 @@ class TestPipelineCreation:
             }
         }
         loader = AIConfigLoader(config_dict=config)
-        with pytest.raises(ValueError, match="llm_ref is required for SelfCRAGPipeline"):
+        with pytest.raises(ValueError, match="llm_ref is required for self_crag pipeline"):
             loader.create_pipeline("incomplete")
 
     def test_create_pipeline_missing_retriever_ref_raises_error(self) -> None:
@@ -459,46 +474,48 @@ class TestPipelineCreation:
             }
         }
         loader = AIConfigLoader(config_dict=config)
-        with pytest.raises(ValueError, match="retriever_ref is required for SelfCRAGPipeline"):
+        with pytest.raises(ValueError, match="retriever_ref is required for self_crag pipeline"):
             loader.create_pipeline("incomplete")
 
 
 class TestWorkflowCreation:
     """Test workflow creation from config."""
 
-    def test_create_multi_hop_workflow_minimal(self) -> None:
-        """Test MultiHopWorkflow creation with minimal config."""
+    def test_create_deep_rag_workflow(self) -> None:
+        """Test DeepRAGPipeline creation via create_workflow."""
         from ai.config_loader import AIConfigLoader
 
         config = {
+            "llms": {
+                "default": {
+                    "type": "litellm",
+                    "model": "gpt-4o",
+                },
+            },
+            "retrievers": {
+                "default": {
+                    "type": "chroma",
+                    "embedding_ref": "embeddings.default",
+                },
+            },
+            "embeddings": {
+                "default": {
+                    "type": "litellm",
+                    "model": "text-embedding-3-small",
+                    "dimension": 1536,
+                },
+            },
             "workflows": {
-                "multi_hop": {
-                    "type": "multi_hop",
-                }
-            }
+                "deep_rag": {
+                    "type": "deep_rag",
+                    "llm_ref": "llms.default",
+                    "retriever_ref": "retrievers.default",
+                },
+            },
         }
         loader = AIConfigLoader(config_dict=config)
-        workflow = loader.create_workflow("multi_hop")
-        assert workflow is not None
-        assert workflow._kg_backend is None
-        assert workflow._retriever is None
-        assert workflow._max_hops == 5
-
-    def test_create_multi_hop_workflow_with_max_hops(self) -> None:
-        """Test MultiHopWorkflow creation with custom max_hops."""
-        from ai.config_loader import AIConfigLoader
-
-        config = {
-            "workflows": {
-                "multi_hop": {
-                    "type": "multi_hop",
-                    "max_hops": 3,
-                }
-            }
-        }
-        loader = AIConfigLoader(config_dict=config)
-        workflow = loader.create_workflow("multi_hop")
-        assert workflow._max_hops == 3
+        pipeline = loader.create_workflow("deep_rag")
+        assert pipeline is not None
 
     def test_create_workflow_missing_section_raises_error(self, simple_config_dict: dict) -> None:
         """Test workflow creation without workflows section raises ValueError."""
@@ -506,7 +523,7 @@ class TestWorkflowCreation:
 
         loader = AIConfigLoader(config_dict=simple_config_dict)
         with pytest.raises(ValueError, match="No workflows section in config"):
-            loader.create_workflow("multi_hop")
+            loader.create_workflow("deep_rag")
 
     def test_create_workflow_nonexistent_name_raises_error(self) -> None:
         """Test workflow creation with non-existent name raises ValueError."""
@@ -514,8 +531,8 @@ class TestWorkflowCreation:
 
         config = {
             "workflows": {
-                "multi_hop": {
-                    "type": "multi_hop",
+                "deep_rag": {
+                    "type": "deep_rag",
                 }
             }
         }
@@ -535,7 +552,7 @@ class TestWorkflowCreation:
             }
         }
         loader = AIConfigLoader(config_dict=config)
-        with pytest.raises(ValueError, match="Workflow type must be 'multi_hop'"):
+        with pytest.raises(ValueError, match="Unsupported workflow type"):
             loader.create_workflow("wrong")
 
 

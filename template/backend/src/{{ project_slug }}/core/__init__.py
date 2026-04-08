@@ -1,2 +1,2 @@
-"""Core domain layer — entities, value objects, and interfaces."""
+"""Core domain layer -- entities, value objects, and interfaces."""
 

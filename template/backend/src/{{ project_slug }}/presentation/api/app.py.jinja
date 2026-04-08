@@ -177,5 +177,5 @@ def _mount_mcp(app: FastAPI) -> None:
             mcp.mount(app, path="/mcp")
             logger.info("MCP server mounted at /mcp (legacy)")
     except ImportError:
-        logger.warning("MCP dependencies not installed — skipping MCP mount")
+        logger.warning("MCP dependencies not installed -- skipping MCP mount")
 {%- endif %}

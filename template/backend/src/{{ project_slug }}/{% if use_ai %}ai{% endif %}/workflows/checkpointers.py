@@ -24,7 +24,7 @@ def create_sqlite_checkpointer(
 ) -> object:
     """Create a SQLite-backed checkpointer for durable local execution.
 
-    Zero-infrastructure alternative to PostgreSQL — suitable for
+    Zero-infrastructure alternative to PostgreSQL -- suitable for
     local development and single-process deployments.
 
     Args:

@@ -1,4 +1,4 @@
-"""Neo4j knowledge graph adapter — implements 'KnowledgeGraphGateway'.
+"""Neo4j knowledge graph adapter -- implements 'KnowledgeGraphGateway'.
 
 Production-grade graph store backed by Neo4j for relationship storage,
 traversal, and Cypher-based queries. Suitable for large-scale knowledge
@@ -42,7 +42,7 @@ class Neo4jKnowledgeGraph(KnowledgeGraphGateway):
         try:
             from neo4j import AsyncGraphDatabase  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "neo4j is required — pip install neo4j"
+            msg = "neo4j is required -- pip install neo4j"
             raise ImportError(msg) from exc
 
         self._driver = AsyncGraphDatabase.driver(uri, auth=(username, password))

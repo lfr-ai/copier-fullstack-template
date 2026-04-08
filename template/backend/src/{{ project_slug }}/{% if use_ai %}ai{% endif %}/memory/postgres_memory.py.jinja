@@ -35,7 +35,7 @@ class PostgresConversationMemory(ConversationMemoryGateway):
             try:
                 import asyncpg  # type: ignore[import-untyped]
             except ImportError as exc:
-                msg = "asyncpg is required — pip install asyncpg"
+                msg = "asyncpg is required -- pip install asyncpg"
                 raise ImportError(msg) from exc
             self._pool = await asyncpg.create_pool(
                 self._database_url, min_size=DEFAULT_POOL_MIN_SIZE, max_size=DEFAULT_POOL_MAX_SIZE,

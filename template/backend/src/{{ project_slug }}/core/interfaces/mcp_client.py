@@ -1,4 +1,4 @@
-"""MCP client gateway — abstract interface for connecting to external MCP servers.
+"""MCP client gateway -- abstract interface for connecting to external MCP servers.
 
 Concrete adapters use the official MCP Python SDK to communicate
 via streamable-http, stdio, or SSE transports.

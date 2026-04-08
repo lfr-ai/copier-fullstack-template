@@ -54,6 +54,8 @@
     "editor.trimAutoWhitespace": true,
     "editor.autoIndentOnPaste": true,
     "editor.codeActionsOnSave": {
+      "source.fixAll.biome": "explicit",
+      "source.organizeImports.biome": "explicit",
       "source.fixAll.shellcheck": "explicit"
     },
     "diffEditor.ignoreTrimWhitespace": true,
@@ -73,16 +75,32 @@
 
     // ── JavaScript / TypeScript ──────────────────────────────────────
     "[javascript]": {
-      "editor.defaultFormatter": "biomejs.biome"
+      "editor.defaultFormatter": "biomejs.biome",
+      "editor.codeActionsOnSave": {
+        "source.fixAll.biome": "explicit",
+        "source.organizeImports.biome": "explicit"
+      }
     },
     "[typescript]": {
-      "editor.defaultFormatter": "biomejs.biome"
+      "editor.defaultFormatter": "biomejs.biome",
+      "editor.codeActionsOnSave": {
+        "source.fixAll.biome": "explicit",
+        "source.organizeImports.biome": "explicit"
+      }
     },
     "[javascriptreact]": {
-      "editor.defaultFormatter": "biomejs.biome"
+      "editor.defaultFormatter": "biomejs.biome",
+      "editor.codeActionsOnSave": {
+        "source.fixAll.biome": "explicit",
+        "source.organizeImports.biome": "explicit"
+      }
     },
     "[typescriptreact]": {
-      "editor.defaultFormatter": "biomejs.biome"
+      "editor.defaultFormatter": "biomejs.biome",
+      "editor.codeActionsOnSave": {
+        "source.fixAll.biome": "explicit",
+        "source.organizeImports.biome": "explicit"
+      }
     },
     "javascript.referencesCodeLens.enabled": true,
     "javascript.referencesCodeLens.showOnAllFunctions": true,
@@ -149,6 +167,7 @@
 
     // ── Extensions behaviour ─────────────────────────────────────────
     "extensions.ignoreRecommendations": true,
+    "biome.requireConfiguration": true,
 
     // ── Copilot / Chat ───────────────────────────────────────────────
     "chat.instructionsFilesLocations": {

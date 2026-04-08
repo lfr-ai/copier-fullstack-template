@@ -1,4 +1,4 @@
-"""Azure Document Intelligence loader — implements 'DocumentLoaderGateway'.
+"""Azure Document Intelligence loader -- implements 'DocumentLoaderGateway'.
 
 Uses Azure AI Document Intelligence (Form Recognizer) to extract
 text, tables, and structure from PDFs and scanned documents.
@@ -39,7 +39,7 @@ class AzureDocIntelligenceLoader(DocumentLoaderGateway):
             from azure.ai.documentintelligence.aio import DocumentIntelligenceClient
             from azure.core.credentials import AzureKeyCredential
         except ImportError as exc:
-            msg = "azure-ai-documentintelligence is required — pip install azure-ai-documentintelligence"
+            msg = "azure-ai-documentintelligence is required -- pip install azure-ai-documentintelligence"
             raise ImportError(msg) from exc
 
         self._model_id = model_id

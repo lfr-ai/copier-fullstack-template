@@ -1,13 +1,16 @@
-"""Ensemble retriever — weighted combination of multiple retriever strategies."""
+"""Ensemble retriever -- weighted combination of multiple retriever strategies."""
 
 from __future__ import annotations
 
 import structlog
 from typing import override, final
 
-from {{ project_slug }}.ai.config import DEFAULT_GRAPH_NEIGHBOR_LIMIT
 from {{ project_slug }}.ai.rag.retrievers._rrf import reciprocal_rank_fusion
-from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverGateway
+from {{ project_slug }}.core.interfaces.retriever import (
+    RetrievedContext,
+    RetrieverGateway,
+    _DEFAULT_RETRIEVAL_TOP_K,
+)
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _OVERSAMPLE_FACTOR = 2
@@ -84,7 +87,7 @@ class EnsembleRetriever(RetrieverGateway):
         self,
         *,
         query: str,
-        top_k: int = DEFAULT_GRAPH_NEIGHBOR_LIMIT,
+        top_k: int = _DEFAULT_RETRIEVAL_TOP_K,
         filters: dict[str, object] | None = None,
     ) -> list[RetrievedContext]:
         """Retrieve and fuse results from all configured retrievers.

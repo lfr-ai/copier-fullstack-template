@@ -1,4 +1,4 @@
-"""SMTP email adapter — sends real emails via an SMTP relay."""
+"""SMTP email adapter -- sends real emails via an SMTP relay."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ class SmtpEmailAdapter:
         self._password = password
 
     def _send_sync(self, msg: EmailMessage) -> None:
-        """Synchronous SMTP send — runs inside a thread.
+        """Synchronous SMTP send -- runs inside a thread.
 
         Args:
             msg (EmailMessage): Fully composed email message.

@@ -1,4 +1,4 @@
-"""Tool-calling agent — executes tools via structured function-calling.
+"""Tool-calling agent -- executes tools via structured function-calling.
 
 Unlike the ReAct agent which parses text-based tool invocations,
 this agent uses structured JSON tool-calling patterns compatible
@@ -120,7 +120,7 @@ class ToolCallingAgent(BaseAgent):
                     try:
                         result = await executor(**tool_args)
                         tool_result = json.dumps(result, default=str)
-                    except Exception as e:  # noqa: BLE001 — top-level error boundary
+                    except Exception as e:  # noqa: BLE001 -- top-level error boundary
                         tool_result = json.dumps({"error": str(e)})
                         logger.warning("Tool '%s' execution failed: %s", tool_name, e)
                 else:
@@ -132,7 +132,7 @@ class ToolCallingAgent(BaseAgent):
                     "args": tool_args,
                     "result": tool_result,
                 })
-                context += f"\nStep {step_num}: Called {tool_name} → {tool_result}\n"
+                context += f"\nStep {step_num}: Called {tool_name} -> {tool_result}\n"
             else:
                 context += f"\nStep {step_num}: {response}\n"
 

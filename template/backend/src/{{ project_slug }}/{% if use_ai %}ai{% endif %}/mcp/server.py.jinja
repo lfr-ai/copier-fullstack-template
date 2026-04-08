@@ -1,4 +1,4 @@
-"""MCP server definition — exposes AI tools, resources, and prompts.
+"""MCP server definition -- exposes AI tools, resources, and prompts.
 
 Uses the official MCP Python SDK's 'FastMCP' for registration and
 transport (streamable-http, stdio, or SSE).
@@ -132,7 +132,7 @@ def create_mcp_server(
     try:
         from mcp.server.fastmcp import FastMCP  # type: ignore[import-untyped]
     except ImportError as exc:
-        msg = "mcp[cli] is required — pip install 'mcp[cli]'"
+        msg = "mcp[cli] is required -- pip install 'mcp[cli]'"
         raise ImportError(msg) from exc
 
     @asynccontextmanager
@@ -273,7 +273,7 @@ def _register_tools(
 
     @mcp.tool(output_model=RAGOutput)
     async def run_rag_query(question: str, top_k: int = DEFAULT_SIMILARITY_TOP_K) -> RAGOutput:
-        """Execute a full RAG query — search, assemble context, and generate answer.
+        """Execute a full RAG query -- search, assemble context, and generate answer.
 
         Args:
             question (str): Natural language question.

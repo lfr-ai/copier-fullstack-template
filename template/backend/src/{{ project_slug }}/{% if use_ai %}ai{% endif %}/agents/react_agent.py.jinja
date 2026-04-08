@@ -1,4 +1,4 @@
-"""ReAct agent — implements reasoning + acting loop with LLM.
+"""ReAct agent -- implements reasoning + acting loop with LLM.
 
 Uses a simple ReAct (Reason-Act) pattern where the LLM alternates
 between thinking about the next step and executing tool calls.
@@ -110,7 +110,7 @@ class ReActAgent(BaseAgent):
                 if executor is not None:
                     try:
                         tool_result = str(await executor(**tool_input))
-                    except Exception as exc:  # noqa: BLE001 — top-level error boundary
+                    except Exception as exc:  # noqa: BLE001 -- top-level error boundary
                         tool_result = f"[Tool '{tool_name}' error: {exc}]"
                         logger.warning("Tool %s failed: %s", tool_name, exc)
                 else:

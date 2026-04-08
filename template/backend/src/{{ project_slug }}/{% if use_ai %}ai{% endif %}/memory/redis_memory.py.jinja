@@ -1,4 +1,4 @@
-"""Redis-backed conversation memory adapter — implements 'ConversationMemoryGateway'.
+"""Redis-backed conversation memory adapter -- implements 'ConversationMemoryGateway'.
 
 Uses Redis sorted sets for efficient time-ordered message storage
 with automatic TTL-based expiration.
@@ -36,7 +36,7 @@ class RedisConversationMemory(ConversationMemoryGateway):
 
             self._redis = aioredis.from_url(redis_url, decode_responses=True)
         except ImportError as exc:
-            msg = "redis is required — pip install redis"
+            msg = "redis is required -- pip install redis"
             raise ImportError(msg) from exc
         self._prefix = prefix
         self._ttl = ttl_seconds

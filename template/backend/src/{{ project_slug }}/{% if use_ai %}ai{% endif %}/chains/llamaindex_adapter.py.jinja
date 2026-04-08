@@ -1,4 +1,4 @@
-"""LlamaIndex integration adapter — bridges LlamaIndex to core ports.
+"""LlamaIndex integration adapter -- bridges LlamaIndex to core ports.
 
 Add 'llama-index' to project dependencies before using.
 """
@@ -33,7 +33,7 @@ class LlamaIndexDocumentLoader(DocumentLoaderGateway):
         try:
             from llama_index.core import SimpleDirectoryReader  # type: ignore[import-untyped]
         except ImportError as exc:
-            msg = "llama-index-core is required — pip install llama-index-core"
+            msg = "llama-index-core is required -- pip install llama-index-core"
             raise ImportError(msg) from exc
 
         reader = SimpleDirectoryReader(input_files=[source])
@@ -84,7 +84,7 @@ class LlamaIndexChunker:
                 chunk_overlap=chunk_overlap,
             )
         except ImportError as exc:
-            msg = "llama-index-core is required — pip install llama-index-core"
+            msg = "llama-index-core is required -- pip install llama-index-core"
             raise ImportError(msg) from exc
 
     def split(self, document: Document) -> list[Chunk]:

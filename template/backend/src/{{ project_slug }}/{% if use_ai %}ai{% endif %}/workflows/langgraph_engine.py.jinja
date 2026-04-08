@@ -69,7 +69,7 @@ class LangGraphWorkflowEngine(WorkflowEngineGateway):
         try:
             from langgraph.graph import END, START, StateGraph
         except ImportError as exc:
-            msg = "langgraph>=1.1 is required — pip install langgraph"
+            msg = "langgraph>=1.1 is required -- pip install langgraph"
             raise ImportError(msg) from exc
 
         graph = StateGraph(_GraphState)
@@ -175,7 +175,7 @@ class LangGraphWorkflowEngine(WorkflowEngineGateway):
 
         try:
             result = await compiled.ainvoke(state, config=run_config)
-        except Exception:  # noqa: BLE001 — returns error result, logged
+        except Exception:  # noqa: BLE001 -- returns error result, logged
             logger.exception("Workflow execution failed")
             elapsed = (time.monotonic() - start) * _MS_PER_SECOND
             return WorkflowResult(
@@ -251,7 +251,7 @@ class LangGraphWorkflowEngine(WorkflowEngineGateway):
             return WorkflowResult(
                 answer="",
                 success=False,
-                error="Checkpointer not configured — cannot resume.",
+                error="Checkpointer not configured -- cannot resume.",
             )
 
         try:
@@ -259,7 +259,7 @@ class LangGraphWorkflowEngine(WorkflowEngineGateway):
                 input_data or {},
                 config={"configurable": {"thread_id": checkpoint_id}},
             )
-        except Exception:  # noqa: BLE001 — returns error result, logged
+        except Exception:  # noqa: BLE001 -- returns error result, logged
             logger.exception("Workflow resume failed")
             return WorkflowResult(success=False, error="resume_failed")
 

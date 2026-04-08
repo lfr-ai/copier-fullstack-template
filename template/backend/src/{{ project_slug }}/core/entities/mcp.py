@@ -1,4 +1,4 @@
-"""MCP domain entities — tool definitions, resources, results."""
+"""MCP domain entities -- tool definitions, resources, results."""
 
 from typing import final
 
