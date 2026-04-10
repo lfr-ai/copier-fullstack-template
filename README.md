@@ -1,7 +1,7 @@
 # Copier Fullstack Template
 
 Production-ready project scaffolding for fullstack Python + TypeScript applications
-following clean / hexagonal architecture, modern best practices, and global standards.
+following Clean Architecture, modern best practices, and global standards.
 
 ---
 
@@ -178,7 +178,7 @@ After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 
 ## Features
 
-- **Clean / hexagonal (ports-and-adapters) architecture** with the Dependency Rule enforced
+- **Clean Architecture** with the Dependency Rule enforced (presentation/infrastructure → application → core)
 - **FastAPI** backend with Pydantic v2 strict validation and SQLAlchemy 2.0 async
 - **TypeScript frontend** (React 19) with Bun, Vite, SWC, Biome, Tailwind CSS v4, Vitest
 - **React Hook Form** + Zod schema validation, React Aria accessible UI primitives
@@ -214,16 +214,16 @@ my-project/
 │   ├── workflows/            # CI, deploy, CodeQL workflows
 │   └── agents/               # Copilot agent instructions
 ├── backend/
-│   ├── src/my_project/       # Backend (clean / hexagonal architecture)
-│   │   ├── adapters/         # Outbound: DB repos, cache, email, storage, auth
-│   │   ├── ai/               # LLM/agent tooling (conditional: use_ai)
-│   │   ├── application/      # Use cases, services, DTOs, commands, queries
-│   │   ├── config/           # Settings, constants, logging
-│   │   ├── composition/      # DI container, dependency wiring (Composition Root)
+│   ├── src/my_project/       # Backend (Clean Architecture)
 │   │   ├── core/             # Pure domain (entities, enums, interfaces, value objects)
-│   │   ├── ports/            # Inbound: API routes, CLI, web
+│   │   ├── application/      # Use cases, services, DTOs, commands, queries
+│   │   ├── infrastructure/   # Outbound: DB repos, cache, email, storage, auth
+│   │   ├── presentation/     # Inbound: API routes, CLI, web, GraphQL
 │   │   │   ├── api/middleware/ # CORS, auth, rate limiting, error handling
 │   │   │   └── graphql/      # Strawberry schema (conditional: graphql/both)
+│   │   ├── composition/      # DI container, dependency wiring (Composition Root)
+│   │   ├── config/           # Settings, constants, logging
+│   │   ├── ai/               # LLM/agent tooling (conditional: use_ai)
 │   │   └── utils/            # Shared utilities
 │   ├── tests/                # unit, integration, property, performance
 │   └── alembic/              # Database migrations

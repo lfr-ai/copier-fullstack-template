@@ -123,9 +123,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture guide
 **Key rules:**
 
 1. **Core layer** has no framework dependencies (only stdlib, typing, and intra-core imports)
-2. **Dependency direction** is always inward: adapters → ports → application → core
+2. **Dependency direction** is always inward: presentation/infrastructure → application → core
 3. **No circular dependencies** between modules
-4. **No business logic** in adapters, ports, infrastructure, or middleware
+4. **No business logic** in infrastructure, presentation, or middleware
 
 ---
 

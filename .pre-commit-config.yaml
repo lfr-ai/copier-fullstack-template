@@ -41,8 +41,8 @@ repos:
     rev: v1.38.0
     hooks:
       - id: yamllint
-        args: [-d, "{extends: relaxed, rules: {line-length: disable, truthy: disable}}"]
-        files: ^(copier\.yml|\.pre-commit-config\.yaml|\.markdownlint\.yaml|\.github/.+\.ya?ml)$
+        args: [-c, .yamllint.yml]
+        files: ^(copier\.yml|\.pre-commit-config\.yaml|\.markdownlint\.yaml|\.yamllint\.yml|\.github/.+\.ya?ml)$
 
   # ── Markdown linting ──
   - repo: https://github.com/DavidAnson/markdownlint-cli2
