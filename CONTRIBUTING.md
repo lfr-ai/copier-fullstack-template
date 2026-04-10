@@ -93,11 +93,11 @@ template/           # Everything inside here gets rendered by Copier
 ## Verification Tasks
 
 ```bash
-task verify-all        # Run all checks
-task test              # Clean Architecture boundary check
-task lint              # Coding conventions check
-task docs:architecture # Architecture docs verification
-task docs:conventions  # Coding conventions docs verification
+task verify-all              # Run all static checks
+task architecture:boundaries # Clean Architecture boundary check
+task conventions:no-final    # Coding conventions check
+task render                  # Render template and verify output
+task ci                      # Full CI suite (verify + render)
 ```
 
 ## Code Standards

@@ -2,55 +2,95 @@ version: '3'
 
 # Taskfile for copier-fullstack-template (template source verification)
 # Runs verification on the template itself, NOT on rendered projects.
-# Requires: ripgrep (rg), grep
+# Requires: ripgrep (rg), copier (via uvx)
+
+vars:
+  BACKEND_SRC: template/backend/src
 
 tasks:
-  test:
-    desc: Verify Clean Architecture boundaries (core has zero outward imports)
+  # ── Architecture checks ──
+
+  architecture:boundaries:
+    desc: Verify core layer has zero outward imports (Clean Architecture)
     preconditions:
       - sh: command -v rg
-        msg: "ripgrep (rg) is required — install via 'scoop install ripgrep' or 'brew install ripgrep'"
+        msg: "ripgrep (rg) is required -- install via 'scoop install ripgrep' or 'brew install ripgrep'"
     cmds:
-      - echo "Checking Clean Architecture boundaries..."
+      - echo "Checking Clean Architecture boundaries (.py + .py.jinja)..."
       - |
-        if rg "from.*\.(application|infrastructure|presentation|config|ai)" template/backend/src/ --type py --glob "**/core/**"; then
+        if rg "from.*\.(application|infrastructure|presentation|config|ai)" \
+              {{.BACKEND_SRC}}/ \
+              --glob "**/core/**" \
+              --type-add "pytpl:*.py.jinja" \
+              --type py --type pytpl; then
           echo "[FAIL] Core layer contains outward imports"
           exit 1
         fi
       - echo "[OK] Core layer has zero outward imports"
 
-  lint:
-    desc: Verify coding conventions (no Final[] on constants)
+  # ── Convention checks ──
+
+  conventions:no-final:
+    desc: Verify no Final[] type annotations on module-level constants
     preconditions:
       - sh: command -v rg
-        msg: "ripgrep (rg) is required — install via 'scoop install ripgrep' or 'brew install ripgrep'"
+        msg: "ripgrep (rg) is required -- install via 'scoop install ripgrep' or 'brew install ripgrep'"
     cmds:
-      - echo "Checking for forbidden Final[] type annotations on constants..."
+      - echo "Checking for forbidden Final[] on constants (.py + .py.jinja)..."
       - |
-        if rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" template/backend/src --type py; then
+        if rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" \
+              {{.BACKEND_SRC}} \
+              --type-add "pytpl:*.py.jinja" \
+              --type py --type pytpl; then
           echo "[FAIL] Found Final[] annotations on module-level constants"
           exit 1
         fi
       - echo "[OK] No Final[] type annotations on constants"
 
-  docs:architecture:
-    desc: Verify architecture documentation contains verification commands
-    cmds:
-      - echo "Checking architecture documentation..."
-      - grep -q "## Verification Commands" "template/.github/instructions/architecture.instructions.md.jinja"
-      - echo "[OK] Architecture verification commands documented"
+  # ── Render smoke test ──
 
-  docs:conventions:
-    desc: Verify coding conventions documentation contains verification commands
+  render:
+    desc: Render template with test defaults and verify output
+    preconditions:
+      - sh: command -v copier || command -v uvx
+        msg: "copier is required -- install via 'uv tool install copier' or use 'uvx copier'"
+    vars:
+      OUT_DIR:
+        sh: mktemp -d 2>/dev/null || echo "${TEMP:-/tmp}/copier-test-render"
     cmds:
-      - echo "Checking coding conventions documentation..."
-      - grep -q "## Verification Commands" "template/.github/instructions/coding-conventions.instructions.md"
-      - echo "[OK] Coding conventions verification commands documented"
+      - echo "Rendering template to {{.OUT_DIR}}..."
+      - |
+        uvx copier copy --trust --defaults \
+          -d project_name="Test Project" \
+          -d project_slug="test_project" \
+          -d project_description="Smoke test render" \
+          -d author_name="CI Bot" \
+          -d author_email="ci@test.local" \
+          -d github_username="ci-bot" \
+          . "{{.OUT_DIR}}"
+      - echo "[OK] Template rendered successfully"
+      - |
+        echo "Checking rendered output structure..."
+        for f in backend/pyproject.toml frontend/package.json Taskfile.yml .github/workflows/ci.yml; do
+          if [ ! -f "{{.OUT_DIR}}/$f" ]; then
+            echo "[FAIL] Missing expected file: $f"
+            exit 1
+          fi
+        done
+      - echo "[OK] All expected files present in rendered output"
+    status:
+      - "false"
+
+  # ── Aggregate ──
 
   verify-all:
     desc: Run all template verification checks
     cmds:
-      - task: test
-      - task: lint
-      - task: docs:architecture
-      - task: docs:conventions
+      - task: architecture:boundaries
+      - task: conventions:no-final
+
+  ci:
+    desc: Full CI suite (verify + render smoke test)
+    cmds:
+      - task: verify-all
+      - task: render
