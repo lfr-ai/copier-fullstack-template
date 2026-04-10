@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -51,11 +55,11 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8
+        uses: astral-sh/setup-uv@v8.0.0
 
       - name: Render template
         run: |
-          uvx copier copy --trust --defaults \
+          uvx copier copy --trust --defaults --vcs-ref HEAD \
             -d project_name="CI Test Project" \
             -d project_slug="ci_test_project" \
             -d project_description="CI smoke test" \
@@ -81,7 +85,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8
+        uses: astral-sh/setup-uv@v8.0.0
 
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: no-commit-to-branch
