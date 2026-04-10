@@ -22,8 +22,9 @@ generated from it.
 git clone https://github.com/<your-fork>/full-stack-copier-template.git
 cd full-stack-copier-template
 
-# 2. Install pre-commit hooks
+# 2. Install pre-commit hooks (including commit-msg for conventional commits)
 uvx pre-commit install
+uvx pre-commit install --hook-type commit-msg
 
 # 3. Test a local render
 uvx copier copy --trust . /tmp/test-project

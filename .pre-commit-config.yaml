@@ -6,7 +6,7 @@
 repos:
   # ── General file hygiene ──
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
@@ -27,7 +27,7 @@ repos:
 
   # ── YAML linting ──
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.37.0
+    rev: v1.38.0
     hooks:
       - id: yamllint
         args: [-d, "{extends: relaxed, rules: {line-length: {max: 120}, truthy: disable}}"]
@@ -35,7 +35,7 @@ repos:
 
   # ── Markdown linting ──
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.17.2
+    rev: v0.22.0
     hooks:
       - id: markdownlint-cli2
         args: ["--config", ".markdownlint.yaml"]
@@ -43,6 +43,13 @@ repos:
 
   # ── Secret scanning ──
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
+
+  # ── Conventional commit enforcement ──
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.13.9
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
