@@ -19,8 +19,8 @@ generated from it.
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/<your-fork>/full-stack-copier-template.git
-cd full-stack-copier-template
+git clone https://github.com/<your-fork>/copier-fullstack-template.git
+cd copier-fullstack-template
 
 # 2. Install pre-commit hooks (including commit-msg for conventional commits)
 uvx pre-commit install
@@ -126,7 +126,7 @@ uvx copier copy --trust . /tmp/test-render  # Render template and verify output
 
 ## Reporting Issues
 
-- Use [GitHub Issues](https://github.com/lfr-ai/full-stack-copier-template/issues)
+- Use [GitHub Issues](https://github.com/lfr-ai/copier-fullstack-template/issues)
 - Include steps to reproduce and expected vs. actual behavior
 - For security vulnerabilities, see [SECURITY.md](SECURITY.md)
 

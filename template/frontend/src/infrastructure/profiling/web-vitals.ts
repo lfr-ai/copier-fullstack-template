@@ -10,7 +10,7 @@
  *
  * Usage:
  * ```ts
- * import { reportWebVitals } from '@/lib/profiling';
+ * import { reportWebVitals } from '@/infrastructure/profiling';
  *
  * // Log to console in development
  * reportWebVitals(console.log);
@@ -21,7 +21,7 @@
  * });
  * ```
  *
- * @module lib/profiling/web-vitals
+ * @module infrastructure/profiling/web-vitals
  */
 import type { Metric } from 'web-vitals';
 
