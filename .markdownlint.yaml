@@ -1,0 +1,16 @@
+# markdownlint configuration for root-level markdown files only.
+# Template markdown (inside template/) is not linted here.
+
+line-length:
+  line_length: 120
+  heading_line_length: 120
+  code_block_line_length: 120
+
+no-duplicate-heading:
+  siblings_only: true
+
+# Allow HTML in markdown (badges, images)
+no-inline-html: false
+
+# Allow trailing punctuation in headings
+no-trailing-punctuation: false

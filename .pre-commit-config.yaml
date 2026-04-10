@@ -1,0 +1,48 @@
+# pre-commit hooks for the template repository itself.
+# Validates template source files before committing.
+# Install: uvx pre-commit install
+# Run all: uvx pre-commit run --all-files
+
+repos:
+  # ── General file hygiene ──
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents, --unsafe]
+        exclude: ^template/
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: no-commit-to-branch
+        args: [--branch=main]
+
+  # ── YAML linting ──
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.0
+    hooks:
+      - id: yamllint
+        args: [-d, "{extends: relaxed, rules: {line-length: {max: 120}, truthy: disable}}"]
+        files: ^(copier\.yml|\.github/.*\.ya?ml)$
+
+  # ── Markdown linting ──
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.17.2
+    hooks:
+      - id: markdownlint-cli2
+        args: ["--config", ".markdownlint.yaml"]
+        files: ^(README|CONTRIBUTING|CHANGELOG|SECURITY|CODE_OF_CONDUCT)\.md$
+
+  # ── Secret scanning ──
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks
