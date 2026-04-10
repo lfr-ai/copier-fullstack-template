@@ -1,2 +1,1 @@
 """Email adapter implementations."""
-

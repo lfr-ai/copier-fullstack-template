@@ -425,7 +425,7 @@ graph TD
     S05[S05: Documentation] --> S06[S06: Home Rewrite]
     S06 --> S03[S03: Playwright]
     S03 --> S07
-    
+
     style S05 fill:#e1f5e1
     style S07 fill:#ffe1e1
 ```
