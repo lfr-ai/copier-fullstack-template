@@ -1,0 +1,87 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "dictionaries": [
+    "python",
+    "typescript",
+    "node",
+    "html",
+    "css",
+    "bash",
+    "docker",
+    "softwareTerms"
+  ],
+  "words": [
+    "copier",
+    "jinja",
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "sqlalchemy",
+    "alembic",
+    "asyncpg",
+    "psycopg",
+    "httpx",
+    "structlog",
+    "celery",
+    "redis",
+    "tailwindcss",
+    "vitest",
+    "vite",
+    "biome",
+    "biomejs",
+    "ruff",
+    "hadolint",
+    "shellcheck",
+    "editorconfig",
+    "markdownlint",
+    "devcontainer",
+    "pyproject",
+    "fullstack",
+    "buildx",
+    "lychee",
+    "jscpd",
+    "yamllint",
+    "commitizen",
+    "gitleaks",
+    "postprocess",
+    "preprocess",
+    "xdist"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    ".venv/**",
+    "dist/**",
+    "build/**",
+    "htmlcov/**",
+    "coverage/**",
+    "*.lock",
+    "**/__pycache__/**",
+    ".tox/**",
+    ".ruff_cache/**",
+    ".ty/**",
+    ".lycheecache/**",
+    "logs/**",
+    "template/**/*.lock",
+    "CHANGELOG.md"
+  ],
+  "overrides": [
+    {
+      "filename": "**/*.py",
+      "language": "en",
+      "dictionaries": ["python"]
+    },
+    {
+      "filename": "**/*.{ts,tsx}",
+      "language": "en",
+      "dictionaries": ["typescript"]
+    },
+    {
+      "filename": "**/*.jinja",
+      "ignoreRegExpList": [
+        "\\{\\{[^}]+\\}\\}",
+        "\\{%[^%]+%\\}"
+      ]
+    }
+  ]
+}
