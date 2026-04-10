@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint template source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get install -y ripgrep
+
+      - name: Check Clean Architecture boundaries
+        run: |
+          if rg "from.*\.(application|infrastructure|presentation|config|ai)" \
+                template/backend/src/ \
+                --glob "**/core/**" \
+                --type-add "pytpl:*.py.jinja" \
+                --type py --type pytpl; then
+            echo "::error::Core layer contains outward imports"
+            exit 1
+          fi
+          echo "Clean Architecture boundaries OK"
+
+      - name: Check no Final[] on constants
+        run: |
+          if rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" \
+                template/backend/src \
+                --type-add "pytpl:*.py.jinja" \
+                --type py --type pytpl; then
+            echo "::error::Found Final[] annotations on module-level constants"
+            exit 1
+          fi
+          echo "Convention check OK"
+
+  render:
+    name: Render smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Render template
+        run: |
+          uvx copier copy --trust --defaults \
+            -d project_name="CI Test Project" \
+            -d project_slug="ci_test_project" \
+            -d project_description="CI smoke test" \
+            -d author_name="CI Bot" \
+            -d author_email="ci@test.local" \
+            -d github_username="ci-bot" \
+            . /tmp/ci-test-render
+
+      - name: Verify rendered output
+        run: |
+          for f in backend/pyproject.toml frontend/package.json .github/workflows/ci.yml; do
+            if [ ! -f "/tmp/ci-test-render/$f" ]; then
+              echo "::error::Missing expected file: $f"
+              exit 1
+            fi
+          done
+          echo "Render smoke test OK"
+
+  pre-commit:
+    name: Pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1

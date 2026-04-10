@@ -12,8 +12,7 @@ generated from it.
 |------|---------|
 | [uv](https://docs.astral.sh/uv/) | Python package manager |
 | [Copier](https://copier.readthedocs.io/) | Template engine (`uvx copier`) |
-| [go-task](https://taskfile.dev/) | Task runner |
-| [ripgrep](https://github.com/BurntSushi/ripgrep) | Fast search (used by verification tasks) |
+| [pre-commit](https://pre-commit.com/) | Git hook framework (`uvx pre-commit`) |
 | Git | Version control |
 
 ## Getting Started
@@ -23,8 +22,8 @@ generated from it.
 git clone https://github.com/<your-fork>/full-stack-copier-template.git
 cd full-stack-copier-template
 
-# 2. Run template verification
-task verify-all
+# 2. Install pre-commit hooks
+uvx pre-commit install
 
 # 3. Test a local render
 uvx copier copy --trust . /tmp/test-project
@@ -34,7 +33,6 @@ uvx copier copy --trust . /tmp/test-project
 
 ```
 copier.yml          # Copier engine configuration (questions, defaults, hooks)
-Taskfile.yml        # Template verification tasks
 template/           # Everything inside here gets rendered by Copier
   backend/          # Python backend (FastAPI, Clean Architecture)
   frontend/         # React + TypeScript frontend
@@ -43,7 +41,7 @@ template/           # Everything inside here gets rendered by Copier
 ```
 
 **Key rule**: only edit files inside `template/`. Root-level files (`copier.yml`,
-`Taskfile.yml`, `README.md`, etc.) are for the template repository itself.
+`README.md`, etc.) are for the template repository itself.
 
 ## Development Workflow
 
@@ -57,10 +55,10 @@ template/           # Everything inside here gets rendered by Copier
 
 2. Edit template files inside `template/`.
 
-3. Run verification to ensure nothing is broken:
+3. Run pre-commit checks to ensure nothing is broken:
 
    ```bash
-   task verify-all
+   uvx pre-commit run --all-files
    ```
 
 4. Test a local render to verify the generated output:
@@ -90,14 +88,11 @@ template/           # Everything inside here gets rendered by Copier
 
 **Scopes**: `backend`, `frontend`, `infra`, `ci`, `copier`, `docs`
 
-## Verification Tasks
+## Verification
 
 ```bash
-task verify-all              # Run all static checks
-task architecture:boundaries # Clean Architecture boundary check
-task conventions:no-final    # Coding conventions check
-task render                  # Render template and verify output
-task ci                      # Full CI suite (verify + render)
+uvx pre-commit run --all-files    # Run all pre-commit hooks
+uvx copier copy --trust . /tmp/test-render  # Render template and verify output
 ```
 
 ## Code Standards
@@ -124,7 +119,7 @@ task ci                      # Full CI suite (verify + render)
 ## Submitting a Pull Request
 
 1. Push your branch and open a PR against `main`.
-2. Ensure `task verify-all` passes.
+2. Ensure CI passes (pre-commit hooks + render smoke test).
 3. Describe what the change does and why.
 4. Link related issues if applicable.
 
