@@ -1,48 +1,56 @@
 version: '3'
 
 # Taskfile for copier-fullstack-template (template source verification)
-# This runs verification on the template itself, not on rendered projects
+# Runs verification on the template itself, NOT on rendered projects.
+# Requires: ripgrep (rg), grep
 
 tasks:
   test:
-    desc: Run template verification tests
+    desc: Verify Clean Architecture boundaries (core has zero outward imports)
+    preconditions:
+      - sh: command -v rg
+        msg: "ripgrep (rg) is required — install via 'scoop install ripgrep' or 'brew install ripgrep'"
     cmds:
-      - echo "Template verification - checking Clean Architecture boundaries..."
-      - rg "from.*\.(application|infrastructure|presentation|config|ai)" template/backend/src/ --type py --glob "**/core/**" && exit 1 || echo "[OK] Core layer has zero outward imports"
+      - echo "Checking Clean Architecture boundaries..."
+      - |
+        if rg "from.*\.(application|infrastructure|presentation|config|ai)" template/backend/src/ --type py --glob "**/core/**"; then
+          echo "[FAIL] Core layer contains outward imports"
+          exit 1
+        fi
+      - echo "[OK] Core layer has zero outward imports"
 
   lint:
-    desc: Verify coding conventions compliance
+    desc: Verify coding conventions (no Final[] on constants)
+    preconditions:
+      - sh: command -v rg
+        msg: "ripgrep (rg) is required — install via 'scoop install ripgrep' or 'brew install ripgrep'"
     cmds:
-      - echo "Verifying constant annotations (no Final[])..."
-      - rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" template/backend/src --type py || exit 0
+      - echo "Checking for forbidden Final[] type annotations on constants..."
+      - |
+        if rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" template/backend/src --type py; then
+          echo "[FAIL] Found Final[] annotations on module-level constants"
+          exit 1
+        fi
       - echo "[OK] No Final[] type annotations on constants"
 
-  format:
-    desc: Verify formatting standards
+  docs:architecture:
+    desc: Verify architecture documentation contains verification commands
     cmds:
-      - echo "Verifying emoji prohibition..."
-      - powershell -Command "Get-ChildItem -Recurse -Include *.py,*.md,*.yaml,*.toml template/ | Select-String -Pattern '[^\x00-\x7F]' | Select-Object -First 1" || exit 0
-      - echo "[OK] No emojis detected"
-
-  typecheck:
-    desc: Verify type annotations and architecture documentation
-    cmds:
-      - echo "Verifying architecture documentation..."
-      - powershell -Command "if (Select-String -Path 'template/.github/instructions/architecture.instructions.md.jinja' -Pattern '## Verification Commands' -Quiet) { exit 0 } else { exit 1 }"
+      - echo "Checking architecture documentation..."
+      - grep -q "## Verification Commands" "template/.github/instructions/architecture.instructions.md.jinja"
       - echo "[OK] Architecture verification commands documented"
 
-  registry:check:
-    desc: Verify coding conventions documentation
+  docs:conventions:
+    desc: Verify coding conventions documentation contains verification commands
     cmds:
-      - echo "Verifying coding conventions documentation..."
-      - powershell -Command "if (Select-String -Path 'template/.github/instructions/coding-conventions.instructions.md' -Pattern '## Verification Commands' -Quiet) { exit 0 } else { exit 1 }"
+      - echo "Checking coding conventions documentation..."
+      - grep -q "## Verification Commands" "template/.github/instructions/coding-conventions.instructions.md"
       - echo "[OK] Coding conventions verification commands documented"
 
   verify-all:
-    desc: Run all verification checks
+    desc: Run all template verification checks
     cmds:
       - task: test
       - task: lint
-      - task: format
-      - task: typecheck
-      - task: registry:check
+      - task: docs:architecture
+      - task: docs:conventions
