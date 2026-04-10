@@ -25,7 +25,7 @@ fail() {
 if [[ "${1:-}" == "--help" ]]; then
     print "Usage: zsh scripts/install/install-linters.zsh"
     print ""
-    print "Installs linting tools: hadolint, shellcheck, yamllint."
+    print "Installs linting tools: hadolint, shellcheck, yamllint, lychee."
     print "Skips tools that are already installed."
     exit 0
 fi
@@ -117,6 +117,33 @@ main() {
             success "yamllint installed successfully"
         else
             warn "yamllint installation failed -- install manually"
+        fi
+    fi
+
+    if command -v lychee &>/dev/null; then
+        success "lychee already installed ($(lychee --version 2>&1))"
+    else
+        info "Installing lychee..."
+        if [[ "${OS}" == "macos" ]]; then
+            brew install lychee >> "${LOG_FILE}" 2>&1
+        elif [[ "${OS}" == "linux" ]]; then
+            local ARCH
+            ARCH="$(uname -m)"
+            case "${ARCH}" in
+                x86_64)  ARCH="x86_64-unknown-linux-gnu" ;;
+                aarch64|arm64) ARCH="aarch64-unknown-linux-gnu" ;;
+                *) fail "Unsupported architecture for lychee: ${ARCH}"; return 1 ;;
+            esac
+            local LYCHEE_VERSION="v0.23.0"
+            local LYCHEE_URL="https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/lychee-${LYCHEE_VERSION}-${ARCH}.tar.gz"
+            curl -fsSL "${LYCHEE_URL}" | tar xz -C /tmp >> "${LOG_FILE}" 2>&1
+            sudo install /tmp/lychee /usr/local/bin/lychee >> "${LOG_FILE}" 2>&1
+            rm -f /tmp/lychee
+        fi
+        if command -v lychee &>/dev/null; then
+            success "lychee installed successfully"
+        else
+            warn "lychee installation failed -- install manually: https://github.com/lycheeverse/lychee"
         fi
     fi
 

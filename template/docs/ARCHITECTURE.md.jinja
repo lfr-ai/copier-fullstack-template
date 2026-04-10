@@ -62,7 +62,7 @@ in `core/interfaces/` — the innermost circle.
 - **Infrastructure / Outbound Protocols**: `Repository`, `UnitOfWork`,
   `CacheGateway`, `EventBus`, `StorageGateway`, `EmailGateway`,
   `PasswordHasher`, and all AI-related gateways. Implementations in
-  `infrastructure/` fulfil these.
+  `infrastructure/` fulfill these.
 - **Presentation / Inbound Protocols**: The Application Services themselves
   (`application/services/`) act as the inbound interface — they define what
   the outside world can do with the system. Controllers call them.
@@ -167,7 +167,7 @@ backend/src/{{ project_slug }}/
 2. Presentation resolves dependencies via **DI Container**
 3. Container injects **Application Service** with UoW (carrying repos)
 4. Service uses **Core Domain** entities and interface protocols
-5. **Infrastructure** fulfils interface contracts for persistence, cache, events
+5. **Infrastructure** fulfills interface contracts for persistence, cache, events
 6. Response flows back through the same path — DTOs at the boundary
 {%- if api_style in ('graphql', 'both') %}
 

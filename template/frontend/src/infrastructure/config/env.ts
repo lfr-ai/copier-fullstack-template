@@ -46,7 +46,7 @@ function resolveEnvironment(): AppEnvironment {
 /**
  * Singleton application configuration derived from build-time env vars.
  *
- * Import this wherever you need environment-aware behaviour:
+ * Import this wherever you need environment-aware behavior:
  * ```ts
  * import { config } from '@/infrastructure/config/env';
  * if (config.isDev) { ... }

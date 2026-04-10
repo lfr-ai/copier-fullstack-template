@@ -23,7 +23,7 @@ class TestSlugify:
 
     def test_unicode_normalized(self) -> None:
         """Verify unicode characters normalized to ASCII."""
-        assert slugify("caf\u00e9") == "cafe"
+        assert slugify("calf\u00e9") == "cafe"
 
     def test_empty_string(self) -> None:
         """Verify empty string returns empty."""

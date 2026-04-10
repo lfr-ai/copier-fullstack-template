@@ -11,19 +11,19 @@ from {{ project_slug }}.utils.json_utils import dumps, loads
 class TestDumps:
     """Test suite for dumps serialization function."""
 
-    def test_serialises_datetime(self) -> None:
+    def test_serializes_datetime(self) -> None:
         """Verify datetime objects serialize to ISO format."""
         dt = datetime.datetime(2024, 1, 15, 12, 0, 0, tzinfo=datetime.UTC)
         result = dumps({"ts": dt})
         assert "2024-01-15T12:00:00" in result
 
-    def test_serialises_uuid(self) -> None:
+    def test_serializes_uuid(self) -> None:
         """Verify UUID objects serialize to string representation."""
         uid = uuid.UUID("12345678-1234-5678-1234-567812345678")
         result = dumps({"id": uid})
         assert "12345678-1234-5678-1234-567812345678" in result
 
-    def test_serialises_set_sorted(self) -> None:
+    def test_serializes_set_sorted(self) -> None:
         """Verify sets serialize as sorted lists."""
         result = dumps({"tags": {"b", "a", "c"}})
         assert loads(result)["tags"] == ["a", "b", "c"]

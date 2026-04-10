@@ -139,7 +139,7 @@ class TestGradeDocumentsNode:
         assert mock_llm.complete.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_handles_unparseable_scores(
+    async def test_handles_unparsable_scores(
         self,
         mock_llm: AsyncMock,
     ) -> None:

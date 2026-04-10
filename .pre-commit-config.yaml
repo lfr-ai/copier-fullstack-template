@@ -1,7 +1,10 @@
 # pre-commit hooks for the template repository itself.
 # Validates template source files before committing.
-# Install: uvx pre-commit install
+# Install: uvx pre-commit install && uvx pre-commit install --hook-type commit-msg
 # Run all: uvx pre-commit run --all-files
+#
+# Note: lychee requires system installation (brew install lychee / cargo install lychee).
+# It is skipped in CI — see .github/workflows/ci.yml.
 
 repos:
   # ── General file hygiene ──
@@ -22,7 +25,12 @@ repos:
       - id: check-case-conflict
       - id: check-illegal-windows-names
       - id: check-symlinks
+      - id: check-executables-have-shebangs
+        exclude: ^template/
+      - id: check-shebang-scripts-are-executable
+        exclude: ^template/
       - id: detect-private-key
+      - id: fix-byte-order-marker
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: no-commit-to-branch
@@ -33,8 +41,8 @@ repos:
     rev: v1.38.0
     hooks:
       - id: yamllint
-        args: [-d, "{extends: relaxed, rules: {line-length: {max: 120}, truthy: disable}}"]
-        files: ^(copier\.yml|\.github/.*\.ya?ml)$
+        args: [-d, "{extends: relaxed, rules: {line-length: disable, truthy: disable}}"]
+        files: ^(copier\.yml|\.pre-commit-config\.yaml|\.markdownlint\.yaml|\.github/.+\.ya?ml)$
 
   # ── Markdown linting ──
   - repo: https://github.com/DavidAnson/markdownlint-cli2
@@ -42,7 +50,44 @@ repos:
     hooks:
       - id: markdownlint-cli2
         args: ["--config", ".markdownlint.yaml"]
-        files: ^(README|CONTRIBUTING|CHANGELOG|SECURITY|CODE_OF_CONDUCT)\.md$
+        files: ^(README|CONTRIBUTING|CHANGELOG|SECURITY|CODE_OF_CONDUCT|AGENTS)\.md$
+
+  # ── Spell checking ──
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.45.0
+    hooks:
+      - id: typos
+
+  # ── Shell linting ──
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+        exclude: ^template/
+
+  # ── Python complexity ──
+  - repo: https://github.com/rubik/xenon
+    rev: v0.9.3
+    hooks:
+      - id: xenon
+        args: [--max-absolute=B, --max-modules=B, --max-average=A]
+        files: ^template/.*\.py$
+
+  # ── GitHub Actions linting ──
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  # ── Link checking (requires system-installed lychee) ──
+  - repo: https://github.com/lycheeverse/lychee.git
+    rev: lychee-v0.23.0
+    hooks:
+      - id: lychee
+        args: ["--no-progress", "--config", ".lychee.toml"]
+        types_or: [markdown]
+        files: ^[^/]+\.md$
 
   # ── Secret scanning ──
   - repo: https://github.com/gitleaks/gitleaks

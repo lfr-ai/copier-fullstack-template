@@ -1,0 +1,42 @@
+# Lychee link checker configuration for root-level documentation.
+# Template markdown (inside template/) contains Jinja2 URLs and is excluded.
+# Docs: https://github.com/lycheeverse/lychee
+# Run:  lychee --config .lychee.toml *.md
+
+# ── Caching ─────────────────────────────────────────────────────────
+cache = true
+max_cache_age = "1d"
+
+# ── Network ─────────────────────────────────────────────────────────
+max_concurrency = 8
+timeout = 30
+max_retries = 3
+max_redirects = 10
+retry_wait_time = 5
+
+# ── Accept ──────────────────────────────────────────────────────────
+# 403: some sites block bots; 429: rate limited
+accept = [200, 204, 301, 302, 403, 429]
+
+# ── Excludes ────────────────────────────────────────────────────────
+exclude_path = ["template/", "CHANGELOG.md", "logs/"]
+
+exclude = [
+    # Localhost / loopback
+    "^https?://localhost",
+    "^https?://127\\.0\\.0\\.1",
+    "^https?://0\\.0\\.0\\.0",
+    # Placeholder URLs in documentation
+    "^https?://example\\.com",
+    "<your-fork>",
+    "<your-username>",
+    # GitHub login/auth (not real link targets)
+    "^https?://github\\.com/login",
+    # Rate-limited / bot-unfriendly
+    "^https?://twitter\\.com",
+    "^https?://x\\.com",
+    "^https?://www\\.linkedin\\.com",
+]
+
+# Don't check email addresses
+include_mail = false

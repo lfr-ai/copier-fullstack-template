@@ -1,59 +1,73 @@
 ---
-description: Prompt and workflow for generating conventional commit messages
+description: 'Prompt and workflow for generating conventional commit messages using a structured XML format. Guides users to create standardized, descriptive commit messages in line with the Conventional Commits specification, including instructions, examples, and validation.'
 tools: ['run_in_terminal', 'get_terminal_output']
 ---
 
+### Instructions
 
-Follow the Conventional Commits specification to create standardized, descriptive commit messages.
-
-
-1. Run 'git status' to review changed files.
-2. Run 'git diff --cached' to inspect staged changes.
-3. Construct the commit message using the structure below.
-4. Execute the commit command in the terminal.
-
-
-```
-type(scope): description
-
-[optional body]
-
-[optional footer(s)]
+```xml
+	<description>This file contains a prompt template for generating conventional commit messages. It provides instructions, examples, and formatting guidelines to help users write standardized, descriptive commit messages in accordance with the Conventional Commits specification.</description>
+	<note>
 ```
 
+### Workflow
 
-| Type | Description |
-|---|---|
-| 'feat' | New feature |
-| 'fix' | Bug fix |
-| 'docs' | Documentation only |
-| 'style' | Formatting, missing semicolons, etc. |
-| 'refactor' | Code change that neither fixes a bug nor adds a feature |
-| 'perf' | Performance improvement |
-| 'test' | Adding missing or correcting existing tests |
-| 'build' | Changes to build system or dependencies |
-| 'ci' | CI configuration changes |
-| 'chore' | Other changes that don't modify src or test files |
-| 'revert' | Reverts a previous commit |
+**Follow these steps:**
 
-
-```
-feat(parser): add ability to parse arrays
-fix(ui): correct button alignment
-docs: update README with usage instructions
-refactor: improve performance of data processing
-chore: update dependencies
-feat!: send email on registration (BREAKING CHANGE: email service required)
-```
-
-
-- **type**: Must be one of the allowed types
-- **scope**: Optional but recommended for clarity
-- **description**: Required, use imperative mood ("add", not "added")
-- **body**: Optional, use for additional context
-- **footer**: Use for breaking changes or issue references
-
+1. Run `git status` to review changed files.
+2. Run `git diff` or `git diff --cached` to inspect changes.
+3. Stage your changes with `git add <file>`.
+4. Construct your commit message using the following XML structure.
+5. After generating your commit message, Copilot will automatically run the following command in your integrated terminal (no confirmation needed):
 
 ```bash
 git commit -m "type(scope): description"
+```
+
+6. Just execute this prompt and Copilot will handle the commit for you in the terminal.
+
+### Commit Message Structure
+
+```xml
+<commit-message>
+	<type>feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert</type>
+	<scope>template|backend|frontend|infra|ci|copier|hooks|agents</scope>
+	<description>A short, imperative summary of the change</description>
+	<body>(optional: more detailed explanation)</body>
+	<footer>(optional: e.g. BREAKING CHANGE: details, or issue references)</footer>
+</commit-message>
+```
+
+### Examples
+
+```xml
+<examples>
+	<example>feat(template): add Caddy reverse proxy support</example>
+	<example>fix(backend): correct Jinja2 conditional in pyproject.toml</example>
+	<example>docs: update README with usage instructions</example>
+	<example>refactor(copier): simplify question defaults</example>
+	<example>chore: update pre-commit hook versions</example>
+	<example>feat!: rename project_name variable (BREAKING CHANGE: existing answers files incompatible)</example>
+</examples>
+```
+
+### Validation
+
+```xml
+<validation>
+	<type>Must be one of the allowed types. See <reference>https://www.conventionalcommits.org/en/v1.0.0/#specification</reference></type>
+	<scope>Optional, but recommended for clarity.</scope>
+	<description>Required. Use the imperative mood (e.g., "add", not "added").</description>
+	<body>Optional. Use for additional context.</body>
+	<footer>Use for breaking changes or issue references.</footer>
+</validation>
+```
+
+### Final Step
+
+```xml
+<final-step>
+	<cmd>git commit -m "type(scope): description"</cmd>
+	<note>Replace with your constructed message. Include body and footer if needed.</note>
+</final-step>
 ```

@@ -7,7 +7,7 @@ class BaseSchema(BaseModel):
     """Base schema with shared API configuration.
 
     Public-facing API schemas inherit from 'BaseSchema'
-    for consistent behaviour (whitespace stripping, etc.).
+    for consistent behavior (whitespace stripping, etc.).
     """
 
     model_config = ConfigDict(

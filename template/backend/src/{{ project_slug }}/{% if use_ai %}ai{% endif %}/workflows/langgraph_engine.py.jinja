@@ -150,7 +150,7 @@ class LangGraphWorkflowEngine(WorkflowEngineGateway):
     ) -> WorkflowResult:
         cfg = config or WorkflowConfig()
 
-        # Honour per-request max_iterations, falling back to constructor default.
+        # Honor per-request max_iterations, falling back to constructor default.
         effective_max = cfg.max_iterations or self._max_iterations
         saved = self._max_iterations
         self._max_iterations = effective_max

@@ -4,7 +4,7 @@ setopt PIPE_FAIL ERR_EXIT NO_UNSET
 
 # ──────────────────────────────────────────────────────────────
 # AI infrastructure setup script
-# Validates AI dependencies, initialises FAISS indices,
+# Validates AI dependencies, initializes FAISS indices,
 # vector store tables, and knowledge graph backends.
 # ──────────────────────────────────────────────────────────────
 
@@ -83,18 +83,18 @@ print ""
 fi
 
 {% if use_faiss %}
-# ── 2. Initialise FAISS persist directory ─────────────────────
+# ── 2. Initialize FAISS persist directory ─────────────────────
 print ""
-print "-> Initialising FAISS persist directory..."
+print "-> Initializing FAISS persist directory..."
 FAISS_DIR="${PROJECT_ROOT}/backend/.faiss_data"
 mkdir -p "${FAISS_DIR}"
 print " [OK] ${FAISS_DIR}"
 {% endif %}
 
 {% if use_knowledge_graph %}
-# ── 3. Initialise knowledge graph data directory ──────────────
+# ── 3. Initialize knowledge graph data directory ──────────────
 print ""
-print "-> Initialising knowledge graph data directory..."
+print "-> Initializing knowledge graph data directory..."
 KG_DIR="${PROJECT_ROOT}/backend/.kg_data"
 mkdir -p "${KG_DIR}"
 print " [OK] ${KG_DIR}"
