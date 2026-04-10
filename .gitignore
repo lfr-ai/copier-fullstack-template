@@ -53,5 +53,8 @@ tmp/
 .gsd.lock
 .bg-shell
 
+# ── Copilot hooks ──
+logs/copilot/
+
 # ── Copier / rendering ──
 /test-render/

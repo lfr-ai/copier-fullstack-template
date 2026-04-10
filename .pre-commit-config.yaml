@@ -19,6 +19,9 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=500]
+      - id: check-case-conflict
+      - id: check-illegal-windows-names
+      - id: check-symlinks
       - id: detect-private-key
       - id: mixed-line-ending
         args: [--fix=lf]
