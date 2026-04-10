@@ -1,0 +1,153 @@
+version: '3'
+
+# Taskfile for copier-fullstack-template (template source verification)
+# Runs verification on the template itself, NOT on rendered projects.
+# Requires: ripgrep (rg), copier (via uvx)
+
+vars:
+  BACKEND_SRC: template/backend/src
+
+tasks:
+  # ── Architecture checks ──
+
+  architecture:boundaries:
+    desc: Verify core layer has zero outward imports (Clean Architecture)
+    preconditions:
+      - sh: command -v rg
+        msg: "ripgrep (rg) is required -- install via 'scoop install ripgrep' or 'brew install ripgrep'"
+    cmds:
+      - echo "Checking Clean Architecture boundaries (.py + .py.jinja)..."
+      - |
+        if rg "from.*\.(application|infrastructure|presentation|config|ai)" \
+              {{.BACKEND_SRC}}/ \
+              --glob "**/core/**" \
+              --type-add "pytpl:*.py.jinja" \
+              --type py --type pytpl; then
+          echo "[FAIL] Core layer contains outward imports"
+          exit 1
+        fi
+      - echo "[OK] Core layer has zero outward imports"
+
+  # ── Convention checks ──
+
+  conventions:no-final:
+    desc: Verify no Final[] type annotations on module-level constants
+    preconditions:
+      - sh: command -v rg
+        msg: "ripgrep (rg) is required -- install via 'scoop install ripgrep' or 'brew install ripgrep'"
+    cmds:
+      - echo "Checking for forbidden Final[] on constants (.py + .py.jinja)..."
+      - |
+        if rg "^[A-Z_][A-Z0-9_]*\s*:\s*Final" \
+              {{.BACKEND_SRC}} \
+              --type-add "pytpl:*.py.jinja" \
+              --type py --type pytpl; then
+          echo "[FAIL] Found Final[] annotations on module-level constants"
+          exit 1
+        fi
+      - echo "[OK] No Final[] type annotations on constants"
+
+  github:alignment:
+    desc: Enforce core template/.github alignment with claim_handler_v3 conventions
+    cmds:
+      - echo "Checking .github core alignment (agents/hooks/instructions/prompts/skills)..."
+      - |
+        set -eu
+        required_files="
+        template/.github/CODEOWNERS.jinja
+        template/.github/agents/coordinator.agent.md
+        template/.github/agents/debug.agents.md
+        template/.github/agents/deep-thinking.agent.md
+        template/.github/agents/security-auditor.agent.md
+        template/.github/agents/tdd.agent.md
+        template/.github/hooks/dependency-license-checker.json
+        template/.github/hooks/tool-guardian.json
+        template/.github/instructions/coding-conventions.instructions.md
+        template/.github/instructions/frontend.instructions.md
+        template/.github/instructions/security.instructions.md
+        template/.github/instructions/shell.instructions.md
+        template/.github/instructions/architecture.instructions.md.jinja
+        template/.github/instructions/testing.instructions.md.jinja
+        template/.github/prompts/conventional-commit.prompt.md
+        template/.github/skills/README.md
+        template/.github/skills/clean-architecture/SKILL.md
+        template/.github/skills/frontend-react-stack/SKILL.md
+        template/.github/skills/naming-registry/SKILL.md
+        template/.github/skills/python-conventions/SKILL.md
+        template/.github/skills/testing-conventions/SKILL.md
+        "
+
+        missing=0
+        for f in $required_files; do
+          if [ ! -f "$f" ]; then
+            echo "[FAIL] Missing required alignment file: $f"
+            missing=1
+          fi
+        done
+
+        if [ -f "template/.github/agents/debug.agent.md" ]; then
+          echo "[FAIL] Legacy agent file found: template/.github/agents/debug.agent.md (use debug.agents.md)"
+          missing=1
+        fi
+
+        if [ -f "template/.github/skills/shadcn-frontend/SKILL.md" ]; then
+          echo "[FAIL] Legacy skill file found: template/.github/skills/shadcn-frontend/SKILL.md (use frontend-react-stack/SKILL.md)"
+          missing=1
+        fi
+
+        if [ -f "template/.github/hooks/scripts/check-licenses.ps1" ] || [ -f "template/.github/hooks/scripts/check-licenses.sh" ] || [ -f "template/.github/hooks/scripts/guard-tool.ps1" ] || [ -f "template/.github/hooks/scripts/guard-tool.sh" ]; then
+          echo "[FAIL] Legacy hook script files found; reference setup keeps only JSON hook configs"
+          missing=1
+        fi
+
+        [ "$missing" -eq 0 ] || exit 1
+      - echo "[OK] .github core alignment checks passed"
+
+  # ── Render smoke test ──
+
+  render:
+    desc: Render template with test defaults and verify output
+    preconditions:
+      - sh: command -v copier || command -v uvx
+        msg: "copier is required -- install via 'uv tool install copier' or use 'uvx copier'"
+    vars:
+      OUT_DIR:
+        sh: mktemp -d 2>/dev/null || echo "${TEMP:-/tmp}/copier-test-render"
+    cmds:
+      - echo "Rendering template to {{.OUT_DIR}}..."
+      - |
+        uvx copier copy --trust --defaults \
+          -d project_name="Test Project" \
+          -d project_slug="test_project" \
+          -d project_description="Smoke test render" \
+          -d author_name="CI Bot" \
+          -d author_email="ci@test.local" \
+          -d github_username="ci-bot" \
+          . "{{.OUT_DIR}}"
+      - echo "[OK] Template rendered successfully"
+      - |
+        echo "Checking rendered output structure..."
+        for f in backend/pyproject.toml frontend/package.json Taskfile.yml .github/workflows/ci.yml; do
+          if [ ! -f "{{.OUT_DIR}}/$f" ]; then
+            echo "[FAIL] Missing expected file: $f"
+            exit 1
+          fi
+        done
+      - echo "[OK] All expected files present in rendered output"
+    status:
+      - "false"
+
+  # ── Aggregate ──
+
+  verify-all:
+    desc: Run all template verification checks
+    cmds:
+      - task: architecture:boundaries
+      - task: conventions:no-final
+      - task: github:alignment
+
+  ci:
+    desc: Full CI suite (verify + render smoke test)
+    cmds:
+      - task: verify-all
+      - task: render

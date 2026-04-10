@@ -51,6 +51,8 @@ venv/
 .dmypy.json
 dmypy.json
 .ty/
+.pre-commit-cache/
+.cache/pre-commit/
 .tox/
 .nox/
 .pytest_cache/

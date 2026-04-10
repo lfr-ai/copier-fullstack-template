@@ -5,94 +5,67 @@ requires = tox-uv>=1.16
 
 [testenv]
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 pytest tests/unit tests/property -v --tb=short -q {posargs}
 
 [testenv:property]
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 pytest tests/property -v --tb=short {posargs}
 
 [testenv:integration]
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 pytest tests/integration -v --tb=short {posargs}
 
 [testenv:performance]
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 pytest tests/performance -v --tb=short -m performance {posargs}
 
 [testenv:lint]
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 ruff check src/ tests/
 ruff format --check src/ tests/
 
 [testenv:typecheck]
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 ty check src/
 
 [testenv:security]
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 ruff check --select S src/
 pip-audit
 
 [testenv:coverage]
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 pytest tests/unit tests/property --cov --cov-report=html --cov-report=term-missing {posargs}
 
 [testenv:coverage-core]
 description = Coverage gate for domain + application layers (>= 80%)
 runner = uv-venv-lock-runner
-changedir = backend
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 pytest tests/unit tests/property \
 --cov={{ project_slug }}.core \
@@ -103,21 +76,17 @@ pytest tests/unit tests/property \
 [testenv:registry-check]
 description = CI gate — verify generated files are up-to-date with the registry
 runner = uv-venv-lock-runner
-changedir = {toxinidir}
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+changedir = {toxinidir}/..
+uv_sync_flags = --link-mode=copy
 commands =
 python registry/generate_registry.py --check
 
 [testenv:registry-test]
 description = Run registry unit + property tests
 runner = uv-venv-lock-runner
-changedir = {toxinidir}
+changedir = {toxinidir}/..
 dependency_groups = dev
-uv_sync_flags =
---directory={toxinidir}/backend
---link-mode=copy
+uv_sync_flags = --link-mode=copy
 commands =
 pytest registry/tests/ -v --tb=short {posargs}
 
@@ -125,7 +94,7 @@ pytest registry/tests/ -v --tb=short {posargs}
 description = Check for broken links with lychee
 skip_install = true
 allowlist_externals = lychee
-changedir = {toxinidir}
+changedir = {toxinidir}/..
 commands =
 lychee --config .lychee.toml .
 
@@ -133,6 +102,6 @@ lychee --config .lychee.toml .
 description = Detect copy-paste code with jscpd
 skip_install = true
 allowlist_externals = bunx
-changedir = {toxinidir}
+changedir = {toxinidir}/..
 commands =
 bunx jscpd --config .jscpd.json .
