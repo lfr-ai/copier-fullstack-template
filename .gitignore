@@ -1,30 +1,54 @@
-
-# ── GSD baseline (auto-generated) ──
-.gsd
-.gsd.lock
-.bg-shell
+# ── OS ──
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+# ── Editors / IDEs ──
+.idea/
+*.code-workspace
 *.swp
 *.swo
 *~
-.idea/
-.vscode/
-*.code-workspace
+
+# ── Secrets / env ──
 .env
 .env.*
 !.env.example
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+
+# ── Test / coverage ──
+.coverage
+.coverage.*
+htmlcov/
+coverage/
+.pytest_cache/
+.tox/
+
+# ── JS / Node ──
 node_modules/
 .next/
 dist/
 build/
-__pycache__/
-*.pyc
-.venv/
-venv/
+.cache/
+
+# ── Build artifacts ──
 target/
 vendor/
-*.log
-coverage/
-.cache/
 tmp/
+*.log
+
+# ── GSD / tooling ──
+.gsd
+.gsd.lock
+.bg-shell
