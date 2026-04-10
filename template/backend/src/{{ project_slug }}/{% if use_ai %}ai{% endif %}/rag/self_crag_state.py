@@ -19,7 +19,7 @@ MAX_QUERY_REWRITES = 2
 
 class SelfCRAGState(TypedDict, total=False):
     """State schema for Self-CRAG LangGraph workflow.
-    
+
     Attributes:
         query: Current query string (may be rewritten during cycles).
         original_query: The initial user query (preserved for fallback).
@@ -30,7 +30,7 @@ class SelfCRAGState(TypedDict, total=False):
         system_prompt: Optional custom system prompt for LLM instructions.
         top_k: Number of documents to retrieve per cycle.
     """
-    
+
     query: str
     original_query: str
     docs: list[RetrievedContext]

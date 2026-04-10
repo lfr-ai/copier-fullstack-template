@@ -96,7 +96,7 @@ class TestValidateRegistry:
             max_size=3,
         ),
     )
-    @settings(max_examples=50)  
+    @settings(max_examples=50)
     def test_extra_keys_do_not_cause_errors(self, extra_keys: dict) -> None:
         """Unknown top-level keys should be tolerated."""
         registry = {**self._VALID_BASE, **extra_keys}

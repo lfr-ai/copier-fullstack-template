@@ -1,2 +1,1 @@
 """CQRS command handlers."""
-
