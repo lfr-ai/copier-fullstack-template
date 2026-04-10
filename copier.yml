@@ -4,7 +4,6 @@ _templates_suffix: ".jinja"
 
 _exclude:
   - "copier.yml"
-  - "copier.yaml"
   - "~*"
   - "*.py[co]"
   - "__pycache__"

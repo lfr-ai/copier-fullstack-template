@@ -245,8 +245,7 @@ my-project/
 ├── Containerfile             # Multi-stage production build
 ├── docker-bake.hcl           # Docker Buildx Bake orchestration (multi-image builds)
 ├── docker-bake.override.hcl  # Local Bake cache overrides
-├── Taskfile.yml              # go-task commands (includes tasks/*.yml)
-└── tox.ini                   # Tox configuration for backend test matrices
+└── Taskfile.yml              # go-task commands (includes tasks/*.yml)
 ```
 
 ---

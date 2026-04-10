@@ -55,7 +55,7 @@ Active hooks for the Copilot coding agent:
 | Copier template files | `*.jinja` (appended to real ext) | `pyproject.toml.jinja` |
 | Copier conditional dirs | `{% if var %}dirname{% endif %}/` | `{% if use_caddy %}caddy{% endif %}/` |
 | Markdown | `.md` | `README.md` |
-| YAML | `.yml` | `copier.yml` |
+| YAML | `.yaml` (default), `.yml` (tool-conventional exceptions) | `.yamllint.yaml`, `copier.yml` |
 | JSON | `.json` | `cspell.json` |
 
 ## Jinja2 Template Rules

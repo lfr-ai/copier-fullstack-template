@@ -7,4 +7,3 @@ ignores:
   - '.venv/**'
   - 'htmlcov/**'
   - 'frontend/dist/**'
-  - '**/CHANGELOG.md'

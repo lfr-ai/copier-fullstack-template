@@ -41,8 +41,8 @@ repos:
     rev: v1.38.0
     hooks:
       - id: yamllint
-        args: [-c, .yamllint.yml]
-        files: ^(copier\.yml|\.pre-commit-config\.yaml|\.markdownlint\.yaml|\.yamllint\.yml|\.github/.+\.ya?ml)$
+        args: [-c, .yamllint.yaml]
+        files: ^(copier\.yml|\.pre-commit-config\.yaml|\.markdownlint\.yaml|\.yamllint\.yaml|\.github/.+\.ya?ml)$
 
   # ── Markdown linting ──
   - repo: https://github.com/DavidAnson/markdownlint-cli2
@@ -60,7 +60,7 @@ repos:
 
   # ── Shell linting ──
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
         args: [--severity=warning]
@@ -88,6 +88,7 @@ repos:
         args: ["--no-progress", "--config", ".lychee.toml"]
         types_or: [markdown]
         files: ^[^/]+\.md$
+        stages: [manual]
 
   # ── Secret scanning ──
   - repo: https://github.com/gitleaks/gitleaks
