@@ -156,6 +156,11 @@ with_gsd:
   help: "Include GSD-2 configuration (.gsd/ directory with preferences and MCP config)"
   default: false
 
+with_opencode:
+  type: bool
+  help: "Include OpenCode configuration (.opencode/ directory with project context)"
+  default: false
+
 container_runtime:
   type: str
   help: "Container runtime"
