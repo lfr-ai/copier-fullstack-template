@@ -289,7 +289,7 @@ resource firewallRule 'Microsoft.Cache/redis/firewallRules@2024-11-01' = [
 
 // ── Diagnostic settings ──────────────────────────────────────────
 // Streams Redis metrics and connection logs to Log Analytics for
-// monitoring, alerting, and cost-optimisation dashboards.
+// monitoring, alerting, and cost-optimization dashboards.
 
 resource diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (enabled && enableDiagnostics && !empty(logAnalyticsWorkspaceId)) {
   name: '${redisName}-diag'

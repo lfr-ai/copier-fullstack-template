@@ -9,6 +9,9 @@ This is a **Copier template repository**, NOT a generated project. All template 
 files live under `template/` and use the `.jinja` suffix. The root directory contains
 only template development tooling.
 
+> **GitHub Copilot users**: See `.github/copilot-instructions.md` for detailed,
+> Copilot-specific instructions including scoped instructions, hooks, and Jinja2 rules.
+
 ## Documentation and Code-Example Search Policy
 
 - When you need official library/framework documentation, **use Context7 tools first**

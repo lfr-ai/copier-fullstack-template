@@ -4,7 +4,7 @@
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email the maintainers at **lfr@appension.dk**.
+Instead, please email the maintainers at **[lfr@appension.dk](mailto:lfr@appension.dk)**.
 
 Include:
 
@@ -15,11 +15,11 @@ Include:
 
 ## Response Timeline
 
-| Action | Timeframe |
-|--------|-----------|
-| Acknowledgement | Within 48 hours |
-| Initial assessment | Within 5 business days |
-| Patch release | Within 30 days of confirmation |
+| Action               | Timeframe                       |
+| -------------------- | ------------------------------- |
+| Acknowledgement      | Within 48 hours                 |
+| Initial assessment   | Within 5 business days          |
+| Patch release        | Within 30 days of confirmation  |
 
 ## Scope
 
@@ -38,9 +38,9 @@ Out of scope:
 
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
-| Latest (`main`) | Yes |
+| Version          | Supported |
+| ---------------- | --------- |
+| Latest (`main`)  | Yes       |
 
 ## Security Measures
 

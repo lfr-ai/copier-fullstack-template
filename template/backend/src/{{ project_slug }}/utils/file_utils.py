@@ -37,13 +37,13 @@ def file_sha256(path: Path, *, chunk_size: int = _READ_CHUNK_SIZE) -> str:
 
 
 def safe_filename(name: str) -> str:
-    """Sanitise *name* so it is safe as a filesystem path component.
+    """Sanitize *name* so it is safe as a filesystem path component.
 
     Args:
         name (str): Raw filename string.
 
     Returns:
-        str: Sanitised filename with unsafe characters replaced by underscores.
+        str: Sanitized filename with unsafe characters replaced by underscores.
     """
     keep = {" ", ".", "-", "_"}
     result = (

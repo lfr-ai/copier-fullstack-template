@@ -1,6 +1,7 @@
 # Copier Fullstack Template
 
-Production-ready project scaffolding for fullstack Python + TypeScript applications following clean / hexagonal architecture, modern best practices, and global standards.
+Production-ready project scaffolding for fullstack Python + TypeScript applications
+following clean / hexagonal architecture, modern best practices, and global standards.
 
 ---
 
@@ -49,7 +50,9 @@ zsh scripts/bootstrap.zsh
 task dev
 ```
 
-> **Key**: `uvx copier copy --trust . <destination>` uses the **current local directory** as the template source. The `.` refers to `copier.yml` + `template/` in the current directory. No `gh:your-org/...` URL is needed.
+> **Key**: `uvx copier copy --trust . <destination>` uses the **current local directory**
+> as the template source. The `.` refers to `copier.yml` + `template/` in the current
+> directory. No `gh:your-org/...` URL is needed.
 
 ### Windows Users
 

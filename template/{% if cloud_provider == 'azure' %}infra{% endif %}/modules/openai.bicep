@@ -22,7 +22,7 @@ param customSubDomainName string = ''
 @allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Enabled'
 
-@description('Disable local (API key) authentication in favour of Entra ID')
+@description('Disable local (API key) authentication in favor of Entra ID')
 param disableLocalAuth bool = false
 
 @description('Chat completion model deployment name')

@@ -126,7 +126,7 @@ Configure Playwright for E2E testing and create 2 visual regression tests with b
 
 **Baseline storage strategy:**
 - Store baselines in `tests/e2e/screenshots/baseline/`
-- Commit baselines to Git (small PNGs ~10-50KB each)
+- Commit baselines to Git (small ONGs ~10-50KB each)
 - Ignore `tests/e2e/screenshots/actual/` and `tests/e2e/screenshots/diff/` (generated on failure for debugging)
 
 **Gitignore additions:**

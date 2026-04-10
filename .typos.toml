@@ -1,0 +1,29 @@
+# Typos spell-checker configuration for the template repository.
+# Docs: https://github.com/crate-ci/typos
+# Run:  typos
+
+[default]
+locale = "en-us"
+
+[default.extend-words]
+# Technical abbreviations common in this codebase
+cfg = "cfg"
+ctx = "ctx"
+env = "env"
+impl = "impl"
+init = "init"
+msg = "msg"
+fmt = "fmt"
+src = "src"
+nd = "nd"
+hel = "hel"
+
+[files]
+extend-exclude = [
+    "CHANGELOG.md",
+    "*.lock",
+    "*.svg",
+    "htmlcov/",
+    "logs/**",
+    ".lycheecache",
+]

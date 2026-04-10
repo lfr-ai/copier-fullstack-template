@@ -1,4 +1,4 @@
-"""JSON serialisation / deserialisation helpers.
+"""JSON serialization / deserialisation helpers.
 
 Thin wrappers around :mod:`json` with :class:`AppJSONEncoder` as the
 default encoder for common Python types (datetime, UUID, set).
@@ -16,10 +16,10 @@ class AppJSONEncoder(json.JSONEncoder):
 
     @override
     def default(self, o: object) -> str | list[object]:
-        """Serialise non-standard types to JSON-safe primitives.
+        """Serialize non-standard types to JSON-safe primitives.
 
         Args:
-            o (object): Object to serialise.
+            o (object): Object to serialize.
 
         Returns:
             str | list[object]: JSON-serialisable representation.
@@ -39,7 +39,7 @@ def dumps(obj: object, **kwargs: object) -> str:
     """Serialize *obj* to a JSON string using :class:`AppJSONEncoder`.
 
     Args:
-        obj (object): Python object to serialise.
+        obj (object): Python object to serialize.
         **kwargs (object): Extra arguments forwarded to 'json.dumps'.
 
     Returns:

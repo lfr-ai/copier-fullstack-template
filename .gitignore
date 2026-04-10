@@ -1,60 +1,139 @@
-# ── OS ──
+# ──────────────────────────────────────────────
+# OS junk
+# ──────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# ── Editors / IDEs ──
+# ──────────────────────────────────────────────
+# Editors / IDEs
+# ──────────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
 .idea/
-*.code-workspace
 *.swp
 *.swo
 *~
 
-# ── Secrets / env ──
-.env
-.env.*
-!.env.example
-
-# ── Python ──
+# ──────────────────────────────────────────────
+# Python — byte-compiled / packaging
+# ──────────────────────────────────────────────
 __pycache__/
 *.py[cod]
-*.pyo
+*$py.class
 *.egg-info/
 *.egg
-.venv/
-venv/
-.mypy_cache/
-.ruff_cache/
-.pytype/
-
-# ── Test / coverage ──
-.coverage
-.coverage.*
-htmlcov/
-coverage/
-.pytest_cache/
-.tox/
-
-# ── JS / Node ──
-node_modules/
-.next/
 dist/
 build/
-.cache/
+.eggs/
 
-# ── Build artifacts ──
-target/
-vendor/
-tmp/
+# ──────────────────────────────────────────────
+# Python — virtual environments
+# ──────────────────────────────────────────────
+.venv/
+venv/
+.Python
+
+# ──────────────────────────────────────────────
+# Python — uv
+# ──────────────────────────────────────────────
+.python-version
+
+# ──────────────────────────────────────────────
+# Python — linters / type checkers / testing
+# ──────────────────────────────────────────────
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ty/
+.tox/
+.nox/
+.pytest_cache/
+.hypothesis/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# ──────────────────────────────────────────────
+# Node.js / Frontend
+# ──────────────────────────────────────────────
+node_modules/
+.bun/
+.vite/
+.next/
+coverage/
+playwright-report/
+test-results/
+
+# ──────────────────────────────────────────────
+# Logs (includes logs/copilot/ from Copilot hooks)
+# ──────────────────────────────────────────────
 *.log
+logs/
+!logs/.gitkeep
 
-# ── GSD / tooling ──
+# ──────────────────────────────────────────────
+# Environment / secrets / credentials
+# ──────────────────────────────────────────────
+.env
+.env.local
+.env.dev
+.env.test
+.env.staging
+.env.prod
+.env.*.local
+!.env.example
+!.env.*.example
+
+*.pem
+*.key
+*.crt
+id_ed25519
+id_ed25519.pub
+id_rsa
+id_rsa.pub
+*.ppk
+known_hosts
+
+# ──────────────────────────────────────────────
+# Build artifacts / archives
+# ──────────────────────────────────────────────
+*.whl
+*.tar.gz
+*.map
+*.db
+
+# ──────────────────────────────────────────────
+# Task runners / profilers / misc tools
+# ──────────────────────────────────────────────
+.task/
+.traycer/
+tmp/
+.lycheecache
+jscpd-report/
+
+# ──────────────────────────────────────────────
+# GSD / tooling
+# ──────────────────────────────────────────────
 .gsd
+.gsd-id
+.gsd-id*
 .gsd.lock
 .bg-shell
+.bg-shell/
 
-# ── Copilot hooks ──
-logs/copilot/
-
-# ── Copier / rendering ──
+# ──────────────────────────────────────────────
+# Copier / template rendering
+# ──────────────────────────────────────────────
 /test-render/
+
+# ──────────────────────────────────────────────
+# Workspace files
+# ──────────────────────────────────────────────
+*.code-workspace

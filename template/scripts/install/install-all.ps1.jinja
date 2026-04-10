@@ -287,6 +287,32 @@ Write-Warning "ShellCheck: recommend installing inside WSL instead"
 Log-Result "ShellCheck" "SKIPPED (WSL recommended)"
 }
 }
+
+function Install-Lychee {
+Write-Host ""
+Write-Host "--- Lychee (link checker) ---"
+if (Get-Command lychee -ErrorAction SilentlyContinue) {
+Write-Host "lychee already installed: $(lychee --version)"
+Log-Result "lychee" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id lycheeverse.lychee -e --accept-source-agreements --accept-package-agreements
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "lychee" "OK"
+}
+else {
+Write-Host "Install lychee via: winget install lycheeverse.lychee"
+Log-Result "lychee" "SKIPPED (no winget)"
+}
+}
+catch {
+Write-Warning "lychee installation failed: $_"
+Log-Result "lychee" "FAILED"
+}
+}
 {% if use_caddy %}
 
 function Install-Caddy {
@@ -426,6 +452,7 @@ Install-ContainerRuntime
 Install-GoTask
 Install-Hadolint
 Install-ShellCheck
+Install-Lychee
 {% if use_caddy %}
 
 Install-Caddy

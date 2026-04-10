@@ -9,7 +9,7 @@ generated from it.
 ## Prerequisites
 
 | Tool | Purpose |
-|------|---------|
+| ---- | ------- |
 | [uv](https://docs.astral.sh/uv/) | Python package manager |
 | [Copier](https://copier.readthedocs.io/) | Template engine (`uvx copier`) |
 | [pre-commit](https://pre-commit.com/) | Git hook framework (`uvx pre-commit`) |
@@ -32,7 +32,7 @@ uvx copier copy --trust . /tmp/test-project
 
 ## Repository Structure
 
-```
+```text
 copier.yml          # Copier engine configuration (questions, defaults, hooks)
 template/           # Everything inside here gets rendered by Copier
   backend/          # Python backend (FastAPI, Clean Architecture)
