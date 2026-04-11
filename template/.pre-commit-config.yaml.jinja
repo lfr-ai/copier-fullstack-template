@@ -62,7 +62,7 @@ repos:
         args: [--baseline, .secrets.baseline]
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
         args: [--severity=warning]
@@ -128,7 +128,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [pre-push, manual]
+        stages: [pre-commit, pre-push, manual]
 
       - id: frontend-test-suite
         name: frontend tests (unit)
@@ -136,7 +136,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [pre-push, manual]
+        stages: [pre-commit, pre-push, manual]
 
       - id: backend-integration-tests
         name: backend integration tests
@@ -144,4 +144,4 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [manual]
+        stages: [pre-push, manual]
