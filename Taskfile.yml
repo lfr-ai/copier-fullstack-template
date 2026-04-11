@@ -113,27 +113,86 @@ tasks:
     vars:
       OUT_DIR:
         sh: mktemp -d 2>/dev/null || echo "${TEMP:-/tmp}/copier-test-render"
+      SRC_DIR: "{{.OUT_DIR}}/template-src"
+      RENDER_DIR: "{{.OUT_DIR}}/rendered"
     cmds:
-      - echo "Rendering template to {{.OUT_DIR}}..."
       - |
-        uvx copier copy --trust --defaults \
+        if [ "{{OS}}" = "windows" ]; then
+          echo "[SKIP] task render is executed in Linux CI/WSL to avoid native Windows long-path limitations"
+          exit 0
+        fi
+
+        echo "Preparing short-path template source at {{.SRC_DIR}}..."
+        git clone --depth 1 . "{{.SRC_DIR}}"
+
+        echo "Rendering template to {{.RENDER_DIR}}..."
+        uvx copier copy --trust --defaults --vcs-ref HEAD \
           -d project_name="Test Project" \
           -d project_slug="test_project" \
           -d project_description="Smoke test render" \
           -d author_name="CI Bot" \
           -d author_email="ci@test.local" \
           -d github_username="ci-bot" \
-          . "{{.OUT_DIR}}"
-      - echo "[OK] Template rendered successfully"
-      - |
+          "{{.SRC_DIR}}" "{{.RENDER_DIR}}"
+
+        echo "[OK] Template rendered successfully"
         echo "Checking rendered output structure..."
         for f in backend/pyproject.toml frontend/package.json Taskfile.yml .github/workflows/ci.yml; do
-          if [ ! -f "{{.OUT_DIR}}/$f" ]; then
+          if [ ! -f "{{.RENDER_DIR}}/$f" ]; then
             echo "[FAIL] Missing expected file: $f"
             exit 1
           fi
         done
-      - echo "[OK] All expected files present in rendered output"
+        echo "[OK] All expected files present in rendered output"
+    status:
+      - "false"
+
+  test:rendered:
+    desc: Render template and run generated backend/frontend test suites
+    preconditions:
+      - sh: command -v uvx
+        msg: "uvx is required -- install uv from https://docs.astral.sh/uv/getting-started/"
+      - sh: command -v bun
+        msg: "bun is required -- install from https://bun.sh/docs/installation"
+    vars:
+      OUT_DIR:
+        sh: mktemp -d 2>/dev/null || echo "${TEMP:-/tmp}/copier-test-render-tests"
+      SRC_DIR: "{{.OUT_DIR}}/template-src"
+      RENDER_DIR: "{{.OUT_DIR}}/rendered"
+    cmds:
+      - |
+        if [ "{{OS}}" = "windows" ]; then
+          echo "[SKIP] task test:rendered is executed in Linux CI/WSL to avoid native Windows long-path limitations"
+          exit 0
+        fi
+
+        echo "Preparing short-path template source at {{.SRC_DIR}}..."
+        git clone --depth 1 . "{{.SRC_DIR}}"
+
+        echo "Rendering template to {{.RENDER_DIR}} for test execution..."
+        uvx copier copy --trust --defaults --vcs-ref HEAD \
+          -d project_name="Test Project" \
+          -d project_slug="test_project" \
+          -d project_description="Rendered test suite" \
+          -d author_name="CI Bot" \
+          -d author_email="ci@test.local" \
+          -d github_username="ci-bot" \
+          "{{.SRC_DIR}}" "{{.RENDER_DIR}}"
+
+        echo "Running generated backend quality + tests..."
+        cd "{{.RENDER_DIR}}/backend"
+        uv sync --all-extras
+        uv run tox -e lint,typecheck,security
+        uv run pytest tests/unit tests/property -v --tb=short
+
+        echo "Running generated frontend quality + tests..."
+        cd "{{.RENDER_DIR}}/frontend"
+        bun install
+        bun run lint
+        bun run typecheck
+        bun run test
+
+        echo "[OK] Rendered backend/frontend tests passed"
     status:
       - "false"
 
@@ -151,3 +210,4 @@ tasks:
     cmds:
       - task: verify-all
       - task: render
+      - task: test:rendered

@@ -77,6 +77,84 @@ jobs:
           done
           echo "Render smoke test OK"
 
+  rendered-tests:
+    name: Rendered project checks (backend + frontend + integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [render]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci_test_project_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.0.0
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Render template
+        run: |
+          uvx copier copy --trust --defaults --vcs-ref HEAD \
+            -d project_name="CI Test Project" \
+            -d project_slug="ci_test_project" \
+            -d project_description="CI rendered test suite" \
+            -d author_name="CI Bot" \
+            -d author_email="ci@test.local" \
+            -d github_username="ci-bot" \
+            . /tmp/ci-test-render
+
+      - name: Backend lint/type/security
+        working-directory: /tmp/ci-test-render/backend
+        run: |
+          uv sync --all-extras
+          uv run tox -e lint,typecheck,security
+
+      - name: Backend unit + property tests
+        working-directory: /tmp/ci-test-render/backend
+        run: uv run tox -e py313
+
+      - name: Backend integration tests
+        working-directory: /tmp/ci-test-render/backend
+        env:
+          CI_TEST_PROJECT_ENVIRONMENT: test
+          CI_TEST_PROJECT_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/ci_test_project_test
+          CI_TEST_PROJECT_REDIS_URL: redis://localhost:6379/0
+        run: uv run tox -e integration
+
+      - name: Frontend lint/type/tests
+        working-directory: /tmp/ci-test-render/frontend
+        run: |
+          bun install
+          bun run lint
+          bun run typecheck
+          bun run test
+
   pre-commit:
     name: Pre-commit hooks
     runs-on: ubuntu-latest
