@@ -66,16 +66,15 @@ repos:
         args: [--severity=warning]
         exclude: ^template/
 
-  # ── Local exhaustive checks (slow; run on pre-push/manual) ──
+  # ── Local exhaustive checks (run on every commit) ──
   - repo: local
     hooks:
       - id: template-verify-all
-        name: Template verification aggregate (architecture + conventions + github alignment)
+        name: Template verification (architecture + conventions + github alignment)
         entry: task verify-all
         language: system
         pass_filenames: false
         always_run: true
-        stages: [manual]
 
       - id: template-render-smoke
         name: Template render smoke test
@@ -83,7 +82,6 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [manual]
 
       - id: template-rendered-tests
         name: Rendered project backend/frontend tests
@@ -91,7 +89,6 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [manual]
 
   # ── Python complexity ──
   - repo: https://github.com/rubik/xenon
