@@ -3,6 +3,7 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
       - id: check-yaml
         args: [--unsafe]
@@ -11,13 +12,20 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=1000]
-      - id: detect-private-key
       - id: check-case-conflict
+      - id: check-illegal-windows-names
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: detect-private-key
+      - id: fix-byte-order-marker
       - id: mixed-line-ending
         args: [--fix=lf]
+      - id: no-commit-to-branch
+        args: [--branch=main]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.4
+    rev: v0.15.10
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -71,7 +79,7 @@ repos:
       - id: hadolint-docker
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1.30.3
+    rev: v1.45.0
     hooks:
       - id: typos
 
@@ -82,7 +90,7 @@ repos:
         args: [--max-absolute=B, --max-modules=B, --max-average=A]
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.17.2
+    rev: v0.22.0
     hooks:
       - id: markdownlint-cli2
 
@@ -92,6 +100,17 @@ repos:
       - id: lychee
         args: ["--no-progress", "--config", ".lychee.toml"]
         types_or: [markdown, html, rst]
+        stages: [manual]
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
 
   - repo: local
     hooks:
@@ -101,3 +120,28 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [manual]
+
+      - id: backend-test-suite
+        name: backend tests (unit + property + registry)
+        entry: uv run tox -c backend/tox.ini -e py{{ python_version | replace('.', '') }},registry-check,registry-test
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+
+      - id: frontend-test-suite
+        name: frontend tests (unit)
+        entry: bun --cwd frontend run test
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+
+      - id: backend-integration-tests
+        name: backend integration tests
+        entry: uv run tox -c backend/tox.ini -e integration
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
