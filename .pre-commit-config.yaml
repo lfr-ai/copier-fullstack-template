@@ -4,7 +4,6 @@
 # Run all: uvx pre-commit run --all-files
 #
 # Note: lychee requires system installation (brew install lychee / cargo install lychee).
-# It is skipped in CI — see .github/workflows/ci.yml.
 
 repos:
   # ── General file hygiene ──
@@ -112,7 +111,6 @@ repos:
         args: ["--no-progress", "--config", ".lychee.toml"]
         types_or: [markdown]
         files: ^[^/]+\.md$
-        stages: [manual]
 
   # ── Secret scanning ──
   - repo: https://github.com/gitleaks/gitleaks
