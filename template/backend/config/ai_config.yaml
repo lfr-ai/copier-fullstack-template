@@ -99,9 +99,6 @@ vector_stores:
   #   type: pgvector
   #   database_url: ${DATABASE_URL}
   #   table_name: vector_embeddings
-  #   schema_name: ${PGVECTOR_SCHEMA}          # optional; defaults to <environment>_schema
-  #   environment: ${APP_ENV}                  # optional; defaults from env vars
-  #   include_env_suffix: true                 # optional; appends _<env> to table name
   #   dimension: 1536
 
 # ============================================================================

@@ -15,10 +15,10 @@ tests/
 
 | Source | Test |
 |--------|------|
-| `backend/src/claim_handler/application/orchestrator.py` | `tests/unit/test_orchestrator.py` |
-| `backend/src/claim_handler/ai/handlers/gpt.py` | `tests/unit/test_gpt_handler.py` |
-| `backend/src/claim_handler/utils/validators.py` | `tests/unit/test_validators.py` |
-| `backend/src/claim_handler/core/pydantic_models.py` | `tests/unit/test_pydantic_models.py` |
+| `backend/src/<project_slug>/application/orchestrator.py` | `tests/unit/test_orchestrator.py` |
+| `backend/src/<project_slug>/ai/handlers/gpt.py` | `tests/unit/test_gpt_handler.py` |
+| `backend/src/<project_slug>/utils/validators.py` | `tests/unit/test_validators.py` |
+| `backend/src/<project_slug>/core/pydantic_models.py` | `tests/unit/test_pydantic_models.py` |
 
 ## Naming Conventions
 
@@ -37,7 +37,7 @@ tests/
 import pytest
 from hypothesis import given, strategies as st
 
-from claim_handler.{path} import {Symbol}
+from <project_slug>.{path} import {Symbol}
 
 
 class TestSymbol:

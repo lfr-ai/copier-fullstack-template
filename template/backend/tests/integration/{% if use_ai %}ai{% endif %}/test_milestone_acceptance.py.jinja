@@ -5,7 +5,7 @@ Validates all 6 milestone acceptance criteria:
 2. Hallucination detection with safe response (adjusted criteria)
 3. DeepRAG 5-hop traversal
 4. Framework swap equivalence
-5. Schema routing verification
+5. Database isolation verification
 6. Zero regressions confirmed
 
 Each test uses @pytest.mark.acceptance decorator for selective execution.
@@ -29,8 +29,6 @@ from {{ project_slug }}.core.interfaces.retriever import RetrievedContext
 from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult
 {%- if database_backend == "postgresql" %}
 from {{ project_slug }}.core.enums.environment import Environment
-from {{ project_slug }}.infrastructure.persistence.session import schema_for_environment
-from sqlalchemy import text
 {%- endif %}
 
 
@@ -383,53 +381,40 @@ async def test_acceptance_4_framework_swap_equivalence(
 
 
 @pytest.mark.acceptance
-def test_acceptance_5_schema_routing_verification(
+def test_acceptance_5_database_isolation_verification(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Acceptance 5: Schema routing verification.
+    """Acceptance 5: Database isolation verification.
 
     Scenario:
-    - Query in local environment writes to public schema
-    - Same code in dev environment writes to dev_schema
-    - Prod writes to prod_schema
-    - Schema routing verified across: ORM queries, raw SQL, transactions, migrations, connection pooling
+    - Each environment connects to its own database via DATABASE_URL
+    - All tables live in the default 'public' schema
+    - Environment isolation is achieved through separate databases, not schemas
+    - Settings correctly resolve per-environment database URLs
 
     Success Criteria:
-    - schema_for_environment returns correct schema for each environment
-    - Schema isolation enforced at connection level
-    - Environment-based routing works consistently
+    - Environment enum contains all expected members
+    - Settings factory resolves without error for test environment
+    - No schema routing or search_path manipulation is needed
     """
 {%- if database_backend == "postgresql" %}
     from {{ project_slug }}.config.settings import get_settings
 
-    # Test 1: Verify schema_for_environment mapping
+    # Test 1: Verify all environments are defined
+    expected_envs = {"LOCAL", "DEV", "TEST", "STAGING", "PROD"}
+    actual_envs = {e.name for e in Environment}
+    assert expected_envs == actual_envs, f"Expected environments: {expected_envs}, got: {actual_envs}"
+
+    # Test 2: Verify test settings load correctly
     original_env = os.environ.get("{{ project_slug | upper }}_ENVIRONMENT")
-
     try:
-        # Test LOCAL environment
-        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "local"
+        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "test"
         get_settings.cache_clear()
-        local_schema = schema_for_environment(Environment.LOCAL)
-        assert local_schema == "public", "LOCAL should map to public schema"
-
-        # Test DEV environment
-        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "dev"
-        get_settings.cache_clear()
-        dev_schema = schema_for_environment(Environment.DEV)
-        assert dev_schema == "dev_schema", "DEV should map to dev_schema"
-
-        # Test STAGING environment
-        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "staging"
-        get_settings.cache_clear()
-        staging_schema = schema_for_environment(Environment.STAGING)
-        assert staging_schema == "staging_schema", "STAGING should map to staging_schema"
-
-        # Test PROD environment
-        os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "prod"
-        get_settings.cache_clear()
-        prod_schema = schema_for_environment(Environment.PROD)
-        assert prod_schema == "prod_schema", "PROD should map to prod_schema"
-
+        settings = get_settings()
+        assert settings.environment == Environment.TEST
+        assert settings.database_url, "Test database URL should be configured"
+        # Database URL should point to a test-specific database
+        assert "{{ project_slug }}" in settings.database_url, "Database URL should contain project slug"
     finally:
         if original_env:
             os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = original_env
@@ -437,9 +422,9 @@ def test_acceptance_5_schema_routing_verification(
             os.environ.pop("{{ project_slug | upper }}_ENVIRONMENT", None)
         get_settings.cache_clear()
 {%- else %}
-    # Schema routing only applies to PostgreSQL backend
+    # Database isolation only applies to PostgreSQL backend
     # For {{ database_backend }}, this test passes by default
-    assert True, "Schema routing is PostgreSQL-specific"
+    assert True, "Database isolation is PostgreSQL-specific"
 {%- endif %}
 
 

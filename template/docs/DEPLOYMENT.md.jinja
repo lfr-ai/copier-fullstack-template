@@ -69,6 +69,20 @@ Production deployments use Azure Key Vault for secret management:
 Production environments should configure all variables from `.env.example`
 through the deployment platform's secret management system.
 
+When using Compose staging/production overrides, set required orchestration
+variables explicitly:
+
+{%- if database_backend == "postgresql" %}
+- `POSTGRES_PASSWORD`
+{%- endif %}
+{%- if use_redis %}
+- `REDIS_PASSWORD`
+{%- endif %}
+{%- if use_caddy %}
+- `CADDY_DOMAIN`
+{%- endif %}
+- `TAG` (recommended, for deterministic image selection)
+
 **Never** commit secrets to version control.
 
 See `docs/CONFIG.md` for the full variable reference.

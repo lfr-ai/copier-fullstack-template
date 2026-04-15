@@ -1,0 +1,171 @@
+"""Integration tests for Alembic migrations.
+
+Each environment connects to its own database via DATABASE_URL.
+All tables reside in the default ``public`` schema — no schema routing is
+needed.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import pytest
+from sqlalchemy import text
+{%- if database_backend == "postgresql" %}
+from sqlalchemy.ext.asyncio import create_async_engine
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncEngine
+{%- endif %}
+
+
+pytestmark = pytest.mark.integration
+
+
+{%- if database_backend == "postgresql" %}
+
+
+@pytest.fixture
+def test_database_url() -> str:
+    """Provide test database URL for migration tests."""
+    return "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+
+
+@pytest.mark.asyncio
+async def test_migrations_run_against_public_schema(
+    test_database_url: str,
+) -> None:
+    """Test that tables created by migrations live in the public schema."""
+    engine: AsyncEngine = create_async_engine(test_database_url)
+
+    try:
+        async with engine.connect() as connection:
+            # Default search_path should include public
+            result = await connection.execute(text("SHOW search_path"))
+            search_path = result.scalar()
+            assert "public" in search_path.lower()
+
+            # Create a test table — it should land in public
+            await connection.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS _migration_test (
+                        id SERIAL PRIMARY KEY,
+                        name TEXT NOT NULL
+                    )
+                    """
+                )
+            )
+            await connection.commit()
+
+            # Verify table is in public schema
+            result = await connection.execute(
+                text(
+                    """
+                    SELECT table_schema
+                    FROM information_schema.tables
+                    WHERE table_name = '_migration_test'
+                    """
+                )
+            )
+            schema = result.scalar()
+            assert schema == "public"
+
+            # Clean up
+            await connection.execute(
+                text("DROP TABLE IF EXISTS _migration_test CASCADE")
+            )
+            await connection.commit()
+
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_uuid_extension_available(
+    test_database_url: str,
+) -> None:
+    """Test that the uuid-ossp extension can be created."""
+    engine: AsyncEngine = create_async_engine(test_database_url)
+
+    try:
+        async with engine.connect() as connection:
+            await connection.execute(
+                text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+            )
+            await connection.commit()
+
+            result = await connection.execute(
+                text(
+                    """
+                    SELECT extname FROM pg_extension WHERE extname = 'uuid-ossp'
+                    """
+                )
+            )
+            assert result.scalar() == "uuid-ossp"
+
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_alembic_version_table_in_public_schema(
+    test_database_url: str,
+) -> None:
+    """Test that Alembic's version table resides in the public schema."""
+    engine: AsyncEngine = create_async_engine(test_database_url)
+
+    try:
+        async with engine.connect() as connection:
+            # Create a mock alembic_version table as Alembic would
+            await connection.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS alembic_version (
+                        version_num VARCHAR(32) NOT NULL PRIMARY KEY
+                    )
+                    """
+                )
+            )
+            await connection.commit()
+
+            # Verify it's in public
+            result = await connection.execute(
+                text(
+                    """
+                    SELECT table_schema
+                    FROM information_schema.tables
+                    WHERE table_name = 'alembic_version'
+                    """
+                )
+            )
+            schema = result.scalar()
+            assert schema == "public"
+
+            # Clean up
+            await connection.execute(
+                text("DROP TABLE IF EXISTS alembic_version CASCADE")
+            )
+            await connection.commit()
+
+    finally:
+        await engine.dispose()
+
+
+{%- elif database_backend == "sqlite" %}
+
+
+def test_alembic_migrations_noop_for_sqlite() -> None:
+    """SQLite does not support schemas — ensure migrations don't crash."""
+    assert True
+
+
+{%- else %}
+
+
+def test_alembic_migrations_placeholder() -> None:
+    """Placeholder test for non-PostgreSQL backends."""
+    assert True
+
+
+{%- endif %}

@@ -13,10 +13,6 @@ _exclude:
 
 _skip_if_exists:
   - ".env"
-  - ".env.dev"
-  - ".env.prod"
-  - ".env.staging"
-  - ".env.test"
   - "CHANGELOG.md"
   - "backend/seeds/initial_data.json"
 

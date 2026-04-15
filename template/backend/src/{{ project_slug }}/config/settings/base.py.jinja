@@ -21,12 +21,12 @@ _MAX_AGENT_STEPS = 50
 class BaseAppSettings(BaseSettings):
     """Base settings with environment variable loading.
 
-    Reads from .env file and environment variables with
+    Reads from .env/.env.local files and environment variables with
     configurable prefix.
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", ".env.local"),
         env_file_encoding="utf-8",
         env_prefix="{{ project_slug | upper }}_",
         case_sensitive=False,
@@ -78,13 +78,6 @@ class BaseAppSettings(BaseSettings):
         description="Echo SQL queries to log.",
         examples=[False, True],
     )
-{%- if database_backend in ('postgresql', 'azure_postgresql') %}
-    database_schema: str = Field(
-        default="public",
-        description="PostgreSQL schema for this environment. Overridden per environment class.",
-        examples=["public", "dev_schema", "test_schema", "staging_schema", "prod_schema"],
-    )
-{%- endif %}
 
     host: str = Field(
         default=DEFAULT_HOST,

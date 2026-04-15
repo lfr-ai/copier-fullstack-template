@@ -15,13 +15,13 @@ The fundamental invariant: **source-code dependencies always point inward**.
 
 | Layer | Location | Responsibility | Dependencies |
 |-------|----------|---------------|-------------|
-| `utils/` | `backend/src/claim_handler/utils/` | Enums, validators, types, retry policies | stdlib only |
-| `config/` | `backend/src/claim_handler/config/` | Frozen dataclass configurations | `utils/` |
-| `core/` | `backend/src/claim_handler/core/` | ORM models, Pydantic models, registry | `utils/`, `config/` |
-| `infrastructure/` | `backend/src/claim_handler/infrastructure/` | Azure OpenAI, external API clients | `config/`, `utils/`, `core/` |
-| `ai/` | `backend/src/claim_handler/ai/` | RAG pipeline, embeddings, LangGraph | `config/`, `utils/`, `core/` |
-| `application/` | `backend/src/claim_handler/application/` | Use cases, orchestration, services | `ai/`, `infrastructure/`, `core/`, `config/`, `utils/` |
-| `presentation/` | `backend/src/claim_handler/presentation/` | FastAPI routes, middleware, DI | ALL layers |
+| `utils/` | `backend/src/<project_slug>/utils/` | Enums, validators, types, retry policies | stdlib only |
+| `config/` | `backend/src/<project_slug>/config/` | Frozen dataclass configurations | `utils/` |
+| `core/` | `backend/src/<project_slug>/core/` | ORM models, Pydantic models, registry | `utils/`, `config/` |
+| `infrastructure/` | `backend/src/<project_slug>/infrastructure/` | Azure OpenAI, external API clients | `config/`, `utils/`, `core/` |
+| `ai/` | `backend/src/<project_slug>/ai/` | RAG pipeline, embeddings, LangGraph | `config/`, `utils/`, `core/` |
+| `application/` | `backend/src/<project_slug>/application/` | Use cases, orchestration, services | `ai/`, `infrastructure/`, `core/`, `config/`, `utils/` |
+| `presentation/` | `backend/src/<project_slug>/presentation/` | FastAPI routes, middleware, DI | ALL layers |
 
 ## Boundary Rules
 

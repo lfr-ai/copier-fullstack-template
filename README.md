@@ -174,6 +174,13 @@ After installation, `scripts/bootstrap.zsh` handles project-specific setup:
 - `bunx playwright install --with-deps` — _(if Playwright enabled)_ install browser binaries
 - `pre-commit install` — activate Git hooks (both `pre-commit` and `commit-msg`)
 
+Environment setup model for generated projects:
+
+- One canonical template: `.env.example`
+- Runtime files per environment: `.env`, `.env.dev`, `.env.test`, `.env.staging`, `.env.prod`
+- Local-only overrides: `.env.local` and `frontend/.env.local`
+- Never commit real `.env*` runtime files
+
 ---
 
 ## Features

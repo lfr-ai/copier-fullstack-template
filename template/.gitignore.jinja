@@ -47,10 +47,19 @@ frontend/dist/
 .lycheecache
 jscpd-report/
 
-.env
+# ─── Environment files ───
+# Root .env files: only .env.example and .env.local.example are committed.
+# Frontend .env / .env.[mode] ARE committed (Vite base + mode defaults, no secrets).
+# .env.local and .env.[mode].local are always ignored at any depth (personal overrides).
+/.env
 .env.local
 .env.*.local
+/.env.dev
+/.env.staging
+/.env.prod
+/.env.test
 !.env.example
+!.env.local.example
 
 *.pem
 *.key

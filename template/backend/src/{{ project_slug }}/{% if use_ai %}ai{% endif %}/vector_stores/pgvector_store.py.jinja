@@ -3,6 +3,9 @@
 Uses PostgreSQL with the pgvector extension for dense vector storage
 and similarity search via SQLAlchemy async.
 
+Each environment connects to its own database via DATABASE_URL.
+All tables live in the default ``public`` schema.
+
 Add 'pgvector' and 'asyncpg' to project dependencies before using.
 """
 
@@ -19,22 +22,6 @@ from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult, 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _VALID_IDENTIFIER: re.Pattern[str] = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,62}$")
-_ENV_ALIAS_MAP: dict[str, str] = {
-    "local": "local",
-    "dev": "dev",
-    "development": "dev",
-    "test": "test",
-    "staging": "staging",
-    "stage": "staging",
-    "prod": "prod",
-    "production": "prod",
-}
-
-
-def _canonical_environment(raw_environment: str) -> str:
-    """Normalize an environment label to a small canonical set."""
-    normalized = raw_environment.strip().lower()
-    return _ENV_ALIAS_MAP.get(normalized, normalized or "local")
 
 
 @final
@@ -42,10 +29,12 @@ class PgvectorStore(VectorStoreGateway):
     """PostgreSQL + pgvector backed vector store.
 
     Stores vectors in a dedicated table with HNSW indexing for
-    approximate nearest-neighbor search.
+    approximate nearest-neighbor search.  Each environment uses its
+    own database (via DATABASE_URL), so all tables live in the default
+    ``public`` schema.
     """
 
-    __slots__ = ("_database_url", "_dimension", "_environment", "_pool", "_schema_name", "_table_name")
+    __slots__ = ("_database_url", "_dimension", "_pool", "_table_name")
 
     def __init__(
         self,
@@ -53,9 +42,6 @@ class PgvectorStore(VectorStoreGateway):
         database_url: str,
         dimension: int,
         table_name: str = "vector_embeddings",
-        schema_name: str | None = None,
-        environment: str | None = None,
-        include_env_suffix: bool = True,
     ) -> None:
         try:
             import asyncpg  # type: ignore[import-untyped]  # noqa: F401
@@ -63,27 +49,12 @@ class PgvectorStore(VectorStoreGateway):
             msg = "asyncpg is required -- pip install asyncpg"
             raise ImportError(msg) from exc
 
-        resolved_environment = _canonical_environment(
-            environment
-            or os.environ.get("{{ project_slug | upper }}_ENVIRONMENT", "")
-            or os.environ.get("APP_ENV", "local")
-        )
-        resolved_schema = schema_name or f"{resolved_environment}_schema"
-        resolved_table = (
-            f"{table_name}_{resolved_environment}" if include_env_suffix else table_name
-        )
-
-        if not _VALID_IDENTIFIER.match(resolved_schema):
-            msg = f"Invalid schema name: {resolved_schema!r}"
-            raise ValueError(msg)
-        if not _VALID_IDENTIFIER.match(resolved_table):
-            msg = f"Invalid table name: {resolved_table!r}"
+        if not _VALID_IDENTIFIER.match(table_name):
+            msg = f"Invalid table name: {table_name!r}"
             raise ValueError(msg)
 
         self._dimension = dimension
-        self._environment = resolved_environment
-        self._schema_name = resolved_schema
-        self._table_name = resolved_table
+        self._table_name = table_name
         self._pool: object | None = None
         self._database_url = database_url
 
@@ -97,9 +68,6 @@ class PgvectorStore(VectorStoreGateway):
                 "database_url": "postgresql://user:pass@localhost/db",
                 "dimension": 1536,
                 "table_name": "vector_embeddings",  # optional (default: "vector_embeddings")
-                "schema_name": "dev_schema",  # optional (default: <environment>_schema)
-                "environment": "dev",  # optional (default from env vars)
-                "include_env_suffix": true,  # optional (default: true)
             }
 
         Args:
@@ -115,17 +83,11 @@ class PgvectorStore(VectorStoreGateway):
 
         dimension = int(config["dimension"])
         table_name = str(config.get("table_name", "vector_embeddings"))
-        schema_name = config.get("schema_name")
-        environment = config.get("environment")
-        include_env_suffix = bool(config.get("include_env_suffix", True))
 
         return cls(
             database_url=str(database_url),
             dimension=dimension,
             table_name=table_name,
-            schema_name=str(schema_name) if schema_name else None,
-            environment=str(environment) if environment else None,
-            include_env_suffix=include_env_suffix,
         )
 
     async def _ensure_pool(self) -> None:
@@ -138,9 +100,8 @@ class PgvectorStore(VectorStoreGateway):
         self._pool = await asyncpg.create_pool(self._database_url)
         async with self._pool.acquire() as conn:
             await conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-            await conn.execute(f'CREATE SCHEMA IF NOT EXISTS "{self._schema_name}";')
             await conn.execute(f"""
-                CREATE TABLE IF NOT EXISTS "{self._schema_name}"."{self._table_name}" (
+                CREATE TABLE IF NOT EXISTS "{self._table_name}" (
                     id TEXT PRIMARY KEY,
                     embedding vector({self._dimension}),
                     metadata JSONB DEFAULT '{{}}'::jsonb
@@ -148,14 +109,12 @@ class PgvectorStore(VectorStoreGateway):
             """)
             await conn.execute(f"""
                 CREATE INDEX IF NOT EXISTS idx_{self._table_name}_embedding
-                ON "{self._schema_name}"."{self._table_name}"
+                ON "{self._table_name}"
                 USING hnsw (embedding vector_l2_ops);
             """)
         logger.info(
             "pgvector table ensured",
-            schema=self._schema_name,
             table=self._table_name,
-            environment=self._environment,
         )
 
     async def add_vectors(
@@ -174,7 +133,7 @@ class PgvectorStore(VectorStoreGateway):
                 vec_str = "[" + ",".join(str(v) for v in vec) + "]"
                 await conn.execute(
                     f"""
-                    INSERT INTO "{self._schema_name}"."{self._table_name}" (id, embedding, metadata)
+                    INSERT INTO "{self._table_name}" (id, embedding, metadata)
                     VALUES ($1, $2::vector, $3::jsonb)
                     ON CONFLICT (id) DO UPDATE
                     SET embedding = EXCLUDED.embedding, metadata = EXCLUDED.metadata;
@@ -212,7 +171,7 @@ class PgvectorStore(VectorStoreGateway):
             rows = await conn.fetch(
                 f"""
                 SELECT id, embedding <-> $1::vector AS distance, metadata
-                FROM "{self._schema_name}"."{self._table_name}"
+                FROM "{self._table_name}"
                 {where_clause}
                 ORDER BY embedding <-> $1::vector
                 LIMIT $2;
@@ -233,7 +192,7 @@ class PgvectorStore(VectorStoreGateway):
         await self._ensure_pool()
         async with self._pool.acquire() as conn:
             await conn.execute(
-                f'DELETE FROM "{self._schema_name}"."{self._table_name}" WHERE id = ANY($1::text[]);',
+                f'DELETE FROM "{self._table_name}" WHERE id = ANY($1::text[]);',
                 ids,
             )
         logger.info("Deleted %d vectors from pgvector", len(ids))
@@ -242,6 +201,6 @@ class PgvectorStore(VectorStoreGateway):
         await self._ensure_pool()
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
-                f'SELECT COUNT(*) AS cnt FROM "{self._schema_name}"."{self._table_name}";'
+                f'SELECT COUNT(*) AS cnt FROM "{self._table_name}";'
             )
             return int(row["cnt"])

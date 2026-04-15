@@ -33,8 +33,9 @@ copier-fullstack-template/
 │   ├── agents/                # Copilot agent definitions
 │   ├── hooks/                 # Copilot coding agent hooks
 │   ├── instructions/          # Scoped instructions
-│   ├── prompts/               # Reusable prompts
+│   ├── skills/                # Domain knowledge playbooks
 │   └── workflows/             # CI/CD for template development
+├── scripts/                   # Template verification scripts
 ├── .pre-commit-config.yaml    # Pre-commit hooks
 ├── .cz.toml                   # Commitizen configuration
 └── ...                        # Root documentation files

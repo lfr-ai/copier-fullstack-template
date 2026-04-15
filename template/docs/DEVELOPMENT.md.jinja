@@ -14,6 +14,30 @@ Copy `.env.example` to `.env` and configure:
 cp .env.example .env
 ```
 
+Replace all `__CHANGE_ME__` placeholders (especially secrets) before using shared environments.
+
+For non-local workflows, copy `.env.example` to the appropriate env file and adjust
+the values listed in the "Per-Environment Quick Reference" section at the bottom:
+
+```bash
+cp .env.example .env.dev       # shared development server
+cp .env.example .env.test      # CI/integration testing
+cp .env.example .env.staging   # pre-production validation
+cp .env.example .env.prod      # production deployment baseline
+```
+
+Keep these files aligned and prefer one canonical active env file per run target.
+
+Local best practices:
+
+- Keep shared local defaults in `.env`
+- Put machine-specific backend overrides in `.env.local` (start from `.env.local.example`)
+- Put machine-specific frontend overrides in `frontend/.env.local` (start from `frontend/.env.local.example`)
+- Never commit `.env*` runtime files
+
+Runtime safety note: staging and production settings disable dotenv loading,
+so those environments depend on explicit process/container environment variables.
+
 Key variables:
 
 | Variable | Description | Default |

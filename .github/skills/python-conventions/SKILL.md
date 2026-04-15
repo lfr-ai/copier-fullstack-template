@@ -186,7 +186,7 @@ class ClaimModel(BaseModel):
 
 | Entity | Convention | Example |
 |--------|-----------|---------|
-| Files | snake_case | `claim_handler.py` |
+| Files | snake_case | `my_module.py` |
 | Classes | PascalCase | `ClaimProcessor` |
 | Functions | snake_case | `process_claim` |
 | Variables | snake_case | `claim_count` |
