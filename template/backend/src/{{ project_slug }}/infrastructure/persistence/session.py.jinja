@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import structlog
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -14,55 +13,21 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import StaticPool
 {%- endif %}
 
-from {{ project_slug }}.config.settings import get_settings
-{%- if database_backend in ('postgresql', 'azure_postgresql') %}
-from {{ project_slug }}.core.enums.environment import Environment
-{%- endif %}
-
 _logger = structlog.get_logger(__name__)
-
-{%- if database_backend in ('postgresql', 'azure_postgresql') %}
-
-
-def schema_for_environment(env: Environment) -> str:
-    """Map environment to PostgreSQL schema name.
-
-    Reads the ``database_schema`` setting if available, falling back
-    to a convention-based mapping.
-
-    Args:
-        env: Deployment environment.
-
-    Returns:
-        PostgreSQL schema name for the environment.
-    """
-    settings = get_settings()
-    if hasattr(settings, "database_schema") and settings.database_schema:
-        return settings.database_schema
-
-    match env:
-        case Environment.LOCAL:
-            return "public"
-        case Environment.DEV:
-            return "dev_schema"
-        case Environment.TEST:
-            return "test_schema"
-        case Environment.STAGING:
-            return "staging_schema"
-        case Environment.PROD:
-            return "prod_schema"
-{%- endif %}
 
 
 def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
-    """Create an async SQLAlchemy engine with schema routing.
+    """Create an async SQLAlchemy engine.
+
+    Each environment connects to its own database via DATABASE_URL.
+    All tables live in the default ``public`` schema -- no schema routing needed.
 
     Args:
         database_url (str): Database connection URL.
         echo (bool): Enable SQL statement logging.
 
     Returns:
-        AsyncEngine: Configured async engine instance with schema routing.
+        AsyncEngine: Configured async engine instance.
     """
 {%- if database_backend == "sqlite" %}
     # SQLite does not support connection pooling in the traditional sense.
@@ -74,7 +39,6 @@ def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    # SQLite does not support schemas - no routing needed
     return engine
 {%- else %}
     engine = _create_async_engine(
@@ -83,33 +47,9 @@ def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
         pool_pre_ping=True,
     )
 
-    # Register schema routing for PostgreSQL
-    settings = get_settings()
-    target_schema = schema_for_environment(settings.environment)
-
-    @event.listens_for(engine.sync_engine, "connect")
-    def _set_search_path(dbapi_conn, connection_record) -> None:  # noqa: ARG001
-        """Set search_path on every new connection from the pool.
-
-        Args:
-            dbapi_conn: Raw DBAPI connection object.
-            connection_record: Connection metadata (unused).
-        """
-        cursor = dbapi_conn.cursor()
-        try:
-            cursor.execute(f"SET search_path TO {target_schema}")
-            if echo:
-                _logger.debug(
-                    "search_path_set",
-                    schema=target_schema,
-                )
-        finally:
-            cursor.close()
-
     _logger.info(
-        "schema_routing_enabled",
-        environment=settings.environment.name,
-        target_schema=target_schema,
+        "database_engine_created",
+        echo=echo,
     )
 
     return engine

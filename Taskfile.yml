@@ -2,7 +2,7 @@ version: '3'
 
 # Taskfile for copier-fullstack-template (template source verification)
 # Runs verification on the template itself, NOT on rendered projects.
-# Requires: ripgrep (rg), copier (via uvx)
+# Requires: python, copier (via uvx), bun
 
 vars:
   BACKEND_SRC: template/backend/src
@@ -13,130 +13,25 @@ tasks:
   architecture:boundaries:
     desc: Verify core layer has zero outward imports (Clean Architecture)
     cmds:
-      - echo "Checking Clean Architecture boundaries (.py + .py.jinja) with Python scanner..."
-      - |
-        python - <<'PY'
-        from pathlib import Path
-        import re
-        import sys
-
-        root = Path("{{.BACKEND_SRC}}")
-        pattern = re.compile(r"\bfrom\s+[^\n]*\.(application|infrastructure|presentation|config|ai)\b")
-        offenders: list[str] = []
-
-        for path in root.rglob("*"):
-            if not path.is_file():
-                continue
-            if "/core/" not in path.as_posix():
-                continue
-            if not (path.name.endswith(".py") or path.name.endswith(".py.jinja")):
-                continue
-
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            if pattern.search(text):
-                offenders.append(path.as_posix())
-
-        if offenders:
-            print("[FAIL] Core layer contains outward imports:")
-            for file in offenders:
-                print(f"  - {file}")
-            sys.exit(1)
-        PY
-      - echo "[OK] Core layer has zero outward imports"
+      - python scripts/check-architecture-boundaries.py {{.BACKEND_SRC}}
 
   # ── Convention checks ──
 
   conventions:no-final:
     desc: Verify no Final[] type annotations on module-level constants
     cmds:
-      - echo "Checking for forbidden Final[] on constants (.py + .py.jinja) with Python scanner..."
-      - |
-        python - <<'PY'
-        from pathlib import Path
-        import re
-        import sys
-
-        root = Path("{{.BACKEND_SRC}}")
-        pattern = re.compile(r"^[A-Z_][A-Z0-9_]*\s*:\s*Final", re.MULTILINE)
-        offenders: list[str] = []
-
-        for path in root.rglob("*"):
-            if not path.is_file():
-                continue
-            if not (path.name.endswith(".py") or path.name.endswith(".py.jinja")):
-                continue
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            if pattern.search(text):
-                offenders.append(path.as_posix())
-
-        if offenders:
-            print("[FAIL] Found Final[] annotations on module-level constants:")
-            for file in offenders:
-                print(f"  - {file}")
-            sys.exit(1)
-        PY
-      - echo "[OK] No Final[] type annotations on constants"
+      - python scripts/check-no-final.py {{.BACKEND_SRC}}
 
   github:alignment:
-    desc: Enforce core template/.github alignment with claim_handler_v3 conventions
+    desc: Enforce core template/.github alignment conventions
     cmds:
-      - echo "Checking .github core alignment (agents/hooks/instructions/prompts/skills)..."
-      - |
-        set -eu
-        required_files="
-        template/.github/CODEOWNERS.jinja
-        template/.github/agents/coordinator.agent.md
-        template/.github/agents/debug.agents.md
-        template/.github/agents/deep-thinking.agent.md
-        template/.github/agents/security-auditor.agent.md
-        template/.github/agents/tdd.agent.md
-        template/.github/hooks/dependency-license-checker.json
-        template/.github/hooks/tool-guardian.json
-        template/.github/instructions/coding-conventions.instructions.md
-        template/.github/instructions/frontend.instructions.md
-        template/.github/instructions/security.instructions.md
-        template/.github/instructions/shell.instructions.md
-        template/.github/instructions/architecture.instructions.md.jinja
-        template/.github/instructions/testing.instructions.md.jinja
-        template/.github/prompts/conventional-commit.prompt.md
-        template/.github/skills/README.md
-        template/.github/skills/clean-architecture/SKILL.md
-        template/.github/skills/frontend-react-stack/SKILL.md
-        template/.github/skills/naming-registry/SKILL.md
-        template/.github/skills/python-conventions/SKILL.md
-        template/.github/skills/testing-conventions/SKILL.md
-        "
-
-        missing=0
-        for f in $required_files; do
-          if [ ! -f "$f" ]; then
-            echo "[FAIL] Missing required alignment file: $f"
-            missing=1
-          fi
-        done
-
-        if [ -f "template/.github/agents/debug.agent.md" ]; then
-          echo "[FAIL] Legacy agent file found: template/.github/agents/debug.agent.md (use debug.agents.md)"
-          missing=1
-        fi
-
-        if [ -f "template/.github/skills/shadcn-frontend/SKILL.md" ]; then
-          echo "[FAIL] Legacy skill file found: template/.github/skills/shadcn-frontend/SKILL.md (use frontend-react-stack/SKILL.md)"
-          missing=1
-        fi
-
-        if [ -f "template/.github/hooks/scripts/check-licenses.ps1" ] || [ -f "template/.github/hooks/scripts/check-licenses.sh" ]; then
-          echo "[FAIL] Legacy check-licenses hook scripts found (removed in favor of dependency-license-checker.json)"
-          missing=1
-        fi
-
-        [ "$missing" -eq 0 ] || exit 1
-      - echo "[OK] .github core alignment checks passed"
+      - bash scripts/check-github-alignment.sh
 
   # ── Render smoke test ──
 
   render:
     desc: Render template with test defaults and verify output
+    platforms: [linux, darwin]
     preconditions:
       - sh: command -v copier || command -v uvx
         msg: "copier is required -- install via 'uv tool install copier' or use 'uvx copier'"
@@ -146,31 +41,8 @@ tasks:
       SRC_DIR: "{{.OUT_DIR}}/template-src"
       RENDER_DIR: "{{.OUT_DIR}}/rendered"
     cmds:
+      - python scripts/copy-template-snapshot.py . {{.SRC_DIR}} {{.OUT_DIR}}
       - |
-        if [ "{{OS}}" = "windows" ]; then
-          echo "[SKIP] render smoke is enforced in Linux CI/WSL due Windows path-length constraints"
-          exit 0
-        fi
-
-        echo "Preparing VCS-free template snapshot at {{.SRC_DIR}}..."
-        python - <<'PY'
-        from pathlib import Path
-        import shutil
-
-        src = Path(".").resolve()
-        dst = Path("{{.SRC_DIR}}")
-        out = Path("{{.OUT_DIR}}")
-
-        def ignore(path: str, names: list[str]) -> set[str]:
-            ignored = {".git", ".venv", "node_modules", ".mypy_cache", ".ruff_cache", ".pytest_cache", "__pycache__"}
-            p = Path(path).resolve()
-            if p == out:
-                return set(names)
-            return {name for name in names if name in ignored}
-
-        shutil.copytree(src, dst, ignore=ignore, dirs_exist_ok=True)
-        PY
-
         echo "Rendering template to {{.RENDER_DIR}}..."
         uvx copier copy --trust --defaults \
           -d project_name="Test Project" \
@@ -190,11 +62,10 @@ tasks:
           fi
         done
         echo "[OK] All expected files present in rendered output"
-    status:
-      - "false"
 
   test:rendered:
     desc: Render template and run generated backend/frontend test suites
+    platforms: [linux, darwin]
     preconditions:
       - sh: command -v uvx
         msg: "uvx is required -- install uv from https://docs.astral.sh/uv/getting-started/"
@@ -206,31 +77,8 @@ tasks:
       SRC_DIR: "{{.OUT_DIR}}/template-src"
       RENDER_DIR: "{{.OUT_DIR}}/rendered"
     cmds:
+      - python scripts/copy-template-snapshot.py . {{.SRC_DIR}} {{.OUT_DIR}}
       - |
-        if [ "{{OS}}" = "windows" ]; then
-          echo "[SKIP] rendered test suite is enforced in Linux CI/WSL due Windows path-length constraints"
-          exit 0
-        fi
-
-        echo "Preparing VCS-free template snapshot at {{.SRC_DIR}}..."
-        python - <<'PY'
-        from pathlib import Path
-        import shutil
-
-        src = Path(".").resolve()
-        dst = Path("{{.SRC_DIR}}")
-        out = Path("{{.OUT_DIR}}")
-
-        def ignore(path: str, names: list[str]) -> set[str]:
-            ignored = {".git", ".venv", "node_modules", ".mypy_cache", ".ruff_cache", ".pytest_cache", "__pycache__"}
-            p = Path(path).resolve()
-            if p == out:
-                return set(names)
-            return {name for name in names if name in ignored}
-
-        shutil.copytree(src, dst, ignore=ignore, dirs_exist_ok=True)
-        PY
-
         echo "Rendering template to {{.RENDER_DIR}} for test execution..."
         uvx copier copy --trust --defaults \
           -d project_name="Test Project" \
@@ -255,8 +103,6 @@ tasks:
         bun run test
 
         echo "[OK] Rendered backend/frontend tests passed"
-    status:
-      - "false"
 
   # ── Aggregate ──
 

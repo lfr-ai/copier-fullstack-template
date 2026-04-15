@@ -126,6 +126,23 @@ This command will:
 - Set up pre-commit hooks
 - Copy `.env.example` to `.env`
 
+For non-local runs, create environment files from `.env.example` as needed:
+
+```zsh
+cp .env.example .env.dev
+cp .env.example .env.test
+cp .env.example .env.staging
+cp .env.example .env.prod
+```
+
+Then apply the environment-specific deltas listed in the
+**Per-Environment Quick Reference** section at the bottom of `.env.example`.
+
+Local-only overrides:
+
+- backend/global: `.env.local` (start from `.env.local.example`)
+- frontend: `frontend/.env.local` (start from `frontend/.env.local.example`)
+
 ---
 
 ## 8. Start Development

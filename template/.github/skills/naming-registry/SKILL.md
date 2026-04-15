@@ -11,7 +11,7 @@ TypeScript frontend).
 | File | Role | Editable? |
 |------|------|-----------|
 | `registry/naming_registry.json` | Source of truth | YES — edit this |
-| `backend/src/claim_handler/core/registry_constants.py` | Generated Python constants | NO — auto-generated |
+| `backend/src/<project_slug>/core/registry_constants.py` | Generated Python constants | NO — auto-generated |
 | `frontend/src/config/registry.ts` | Generated TypeScript constants | NO — auto-generated |
 | `registry/generate_registry.py` | Code generator script | YES — maintain this |
 
@@ -28,7 +28,7 @@ TypeScript frontend).
 ### Python — ORM Column Names
 
 ```python
-from claim_handler.core.registry_constants import ORM
+from <project_slug>.core.registry_constants import ORM
 
 class Claim(ORMBase):
     __tablename__ = "claims"
@@ -43,7 +43,7 @@ class Claim(ORMBase):
 ### Python — Pydantic Aliases
 
 ```python
-from claim_handler.core.registry_constants import Pydantic, APIFields
+from <project_slug>.core.registry_constants import Pydantic, APIFields
 
 class ClaimModel(BaseModel):
     id: Annotated[
@@ -61,7 +61,7 @@ class ClaimModel(BaseModel):
 ### Python — API Field Names
 
 ```python
-from claim_handler.core.registry_constants import APIFields
+from <project_slug>.core.registry_constants import APIFields
 
 form_data.get(APIFields.claims.diagnosis)
 ```

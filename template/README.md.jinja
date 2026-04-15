@@ -47,6 +47,28 @@ task dev:frontend    # Frontend with HMR
 task docker:up
 ```
 
+## Environment Configuration (Local, Backend, Frontend, Production)
+
+- Canonical template: `.env.example`
+- Local runtime file: `.env`
+- Optional local backend overrides: `.env.local` (gitignored; start from `.env.local.example`)
+- Shared environment runtime files: `.env.dev`, `.env.test`, `.env.staging`, `.env.prod`
+- Frontend mode defaults: `frontend/.env*` (committed)
+- Optional local frontend overrides: `frontend/.env.local` (gitignored; start from `frontend/.env.local.example`)
+
+Copy strategy:
+
+```bash
+cp .env.example .env
+cp .env.example .env.dev
+cp .env.example .env.test
+cp .env.example .env.staging
+cp .env.example .env.prod
+```
+
+Then apply environment-specific deltas from the **Per-Environment Quick Reference**
+section at the bottom of `.env.example`.
+
 ## Common Commands
 
 | Command | Description |

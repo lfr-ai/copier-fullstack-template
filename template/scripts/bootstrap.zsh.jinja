@@ -97,7 +97,29 @@ cd "${PROJECT_ROOT}"
 if [[ ! -f .env ]]; then
 print "=== Creating .env from .env.example ==="
 cp .env.example .env
-print ".env created review and update values"
+print ".env created. Review and replace all __CHANGE_ME__ placeholders before running shared/prod environments."
+print ""
+fi
+
+print "Environment file strategy:"
+print " - Local: .env (from .env.example)"
+print " - Shared/dev server: .env.dev (from .env.example)"
+print " - Test: .env.test (from .env.example)"
+print " - Staging: .env.staging (from .env.example)"
+print " - Production: .env.prod (from .env.example)"
+print " - Optional local backend overrides: .env.local (from .env.local.example)"
+print " - Optional local frontend overrides: frontend/.env.local (from frontend/.env.local.example)"
+print " See the Per-Environment Quick Reference at the bottom of .env.example."
+print ""
+
+if [[ "${BOOTSTRAP_CREATE_ALL_ENV_FILES:-false}" == "true" ]]; then
+for env_name in dev test staging prod; do
+local target_file=".env.${env_name}"
+if [[ ! -f "${target_file}" ]]; then
+cp .env.example "${target_file}"
+print "Created ${target_file} from .env.example — adjust values for ${env_name} environment"
+fi
+done
 print ""
 fi
 }

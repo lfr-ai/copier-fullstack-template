@@ -222,3 +222,60 @@ Copy `.env.example` to `.env` and fill in secret values:
 ```zsh
 cp .env.example .env
 ```
+
+Then replace every `__CHANGE_ME__` placeholder with strong, environment-specific values.
+Recommended generator:
+
+```zsh
+python -c "import secrets; print(secrets.token_urlsafe(64))"
+```
+
+## Environment File Strategy (Recommended)
+
+This template uses a **single example template** plus multiple real runtime files:
+
+- `.env.example` → canonical env key catalog + per-environment quick reference
+- `.env`, `.env.dev`, `.env.test`, `.env.staging`, `.env.prod` → real files with real values (gitignored)
+- `.env.local` → optional developer-specific local overrides (gitignored; start from `.env.local.example`)
+
+### One example file vs multiple example files
+
+Both are valid patterns:
+
+- **Single example file** is best when you want one canonical source and less duplication risk.
+- **Multiple example files** can be best for very large teams with strict environment-specific ownership.
+
+In this repository, the single-example approach is intentional and production-ready,
+as long as the quick-reference section remains complete and synchronized.
+
+## Local Environment Notes
+
+- Backend local defaults are driven by `.env` (and optional `.env.local` overrides; see `.env.local.example`).
+- Frontend mode defaults are committed in `frontend/.env*` files.
+- Personal frontend overrides belong in `frontend/.env.local` (see `frontend/.env.local.example`).
+
+## Compose-Only Variables
+
+These variables are used by Compose/runtime orchestration rather than directly by
+`BaseSettings`:
+
+| Variable | Scope | Description |
+|----------|-------|-------------|
+| `COMPOSE_PROJECT_NAME` | all | Compose project namespace |
+| `TAG` | staging/prod | Image tag used by override files |
+| `POSTGRES_PASSWORD` | staging/prod (PostgreSQL) | Required for database container startup |
+| `REDIS_PASSWORD` | staging/prod (Redis) | Required when Redis password protection is enabled |
+| `CADDY_DOMAIN` | staging/prod with Caddy | Required domain for reverse proxy config |
+
+## Precedence Rules
+
+- **Pydantic settings**: runtime environment variables override `.env` file values.
+- **Docker Compose**: CLI `--env` and `--env-file` overrides, then `environment`, then `env_file`, then image `ENV`.
+
+Additionally, in this template:
+
+- `staging`, `prod`, and `test` settings disable dotenv loading (`env_file=None`) to reduce accidental file-based config leakage.
+- `local` and `dev` remain dotenv-friendly for developer ergonomics.
+
+When the same key is present in multiple places, ensure one source of truth per
+environment to avoid configuration drift.

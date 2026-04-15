@@ -32,21 +32,46 @@ This is NOT a generated project — this is the template source repository.
 | `template/frontend/` | Frontend template (React, TypeScript, Vite, shadcn/ui) |
 | `template/.github/` | GitHub config template (agents, hooks, instructions, workflows) |
 | `.github/` | Root repo GitHub config (SUBSET of template's `.github`) |
+| `scripts/` | Template verification scripts (called by `Taskfile.yml`) |
 | `.pre-commit-config.yaml` | Pre-commit hooks for the root repo |
 
 ## Scoped Instructions (`.github/instructions/`)
 
 File-scoped instructions auto-load for matching globs:
 
-- `scaffolding.instructions.md` — Copier/Jinja2 template authoring for `**/*.jinja`
-- `security.instructions.md` — Security rules for all source code
+- `commit.instructions.md` — Conventional commit format for `**`
+- `no-heredoc.instructions.md` — Prevents heredoc file corruption for `**`
+- `prompt.instructions.md` — Guidelines for creating prompt files for `**/*.prompt.md`
+- `python.instructions.md` — Python conventions for `scripts/**/*.py`
+- `shell.instructions.md` — Shell/PowerShell conventions for `**/*.{sh,ps1}`
+- `update-docs-on-code-change.instructions.md` — Auto-update docs when code changes
+
+## Agent Modes (`.github/agents/`)
+
+Specialized agents for template development:
+
+| Agent | Purpose |
+|-------|---------|
+| `debug` | Diagnostic debugging with root cause analysis |
+| `deep-thinking` | Extended reasoning for complex decisions |
+| `modernization` | Codebase modernization and migration |
+
+## Agent Skills (`.github/skills/`)
+
+| Skill | Domain |
+|-------|--------|
+| `clean-architecture/` | Architecture boundaries and Dependency Rule |
+| `python-conventions/` | Python code quality and typing standards |
+| `testing-conventions/` | Test strategy, markers, and coverage gates |
+| `naming-registry/` | Registry-first constant/code generation |
+| `frontend-react-stack/` | React + TypeScript + Router + shadcn/ui |
 
 ## Copilot Hooks (`.github/hooks/`)
 
 Active hooks for the Copilot coding agent:
 
 - **tool-guardian** (PreToolUse) — Blocks dangerous operations (force push, `rm -rf`, etc.)
-- **auto-format** (PostToolUse) — Auto-formats edited files after tool use
+- **check-licenses** (Stop) — Scans dependencies for license compatibility
 
 ## File Naming Conventions
 

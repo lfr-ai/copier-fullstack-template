@@ -3,41 +3,77 @@ description: Coding conventions and guidelines
 applyTo: "**"
 ---
 
+# {{ project_name }} — Coding Conventions
 
+This document defines coding standards, conventions, and best practices for this
+codebase. It serves as the repo-wide baseline; scoped instructions and skills take
+priority when they apply.
 
-This document defines coding standards, conventions, and best practices for this codebase
+## Scope and Precedence
 
-## Agent Skills ('.github/skills/')
+1. **Skills** (`.github/skills/`) — task-specific playbooks (highest specificity)
+2. **Instructions** (`.github/instructions/`) — file-scoped rules for matching globs
+3. **This file** — repo-wide baseline (lowest specificity)
 
-Use the agent skills in '.github/skills/' as task-specific playbooks. Each skill is
-a directory containing a 'SKILL.md' file:
+If rules conflict, prefer the **most specific applicable scope**.
 
-- 'clean-architecture/' for Clean Architecture boundary and Dependency Rule checks
-- 'python-conventions/' for Python code quality and typing standards
-- 'testing-conventions/' for test strategy, markers, and coverage gates
-- 'naming-registry/' for registry-first constant/code generation workflow
-- 'frontend-react-stack/' for React + TypeScript + Router + shadcn/ui frontend work
+## Agent Modes (`.github/agents/`)
 
-When a task clearly matches one of those domains, apply that skill guidance first,
-then apply the general conventions in this file.
+Specialized agents for different workflows:
 
-The 'clean-architecture/' skill is MANDATORY for all backend Python work — always
-apply it regardless of task scope.
+| Agent | Purpose |
+|-------|---------|
+| `debug` | Diagnostic debugging with systematic root cause analysis |
+| `deep-thinking` | Extended reasoning for complex architectural decisions |
+| `expert-react-frontend-engineer` | Senior React/TypeScript frontend development |
+| `modernization` | Codebase modernization and migration |
+| `prompt-engineering` | Prompt file creation and optimization |
+| `sdd` | Specification-Driven Development workflow |
+| `tdd` | Test-Driven Development (red-green-refactor) workflow |
 
-For frontend work (`frontend/**`), prefer 'frontend-react-stack/' first, then apply
-the scoped frontend instructions.
+## Agent Skills (`.github/skills/`)
 
-## Scoped Instructions ('.github/instructions/')
+Use agent skills as task-specific playbooks. Each skill is a directory containing
+a `SKILL.md` file:
+
+| Skill | Domain | When to Apply |
+|-------|--------|---------------|
+| `clean-architecture/` | Architecture | **MANDATORY** for all backend Python work |
+| `python-conventions/` | Python | Code quality, typing, idioms |
+| `testing-conventions/` | Testing | Test strategy, markers, coverage gates |
+| `naming-registry/` | Registry | Registry-first constant/code generation |
+| `frontend-react-stack/` | Frontend | React + TypeScript + Router + shadcn/ui |
+
+When a task matches a skill domain, apply that skill guidance first, then apply
+the general conventions in this file.
+
+## Scoped Instructions (`.github/instructions/`)
 
 File-scoped instructions auto-load for matching globs:
 
-- 'architecture.instructions.md' — Clean Architecture for 'backend/**/*.py'
-- 'coding-conventions.instructions.md' — Python conventions for '**/*.py'
-- 'frontend.instructions.md' — TypeScript, component, and Vite patterns for 'frontend/**'
-- 'security.instructions.md' — security rules for all source code
-- 'shell.instructions.md' — zsh scripting and Azure CLI patterns for '**/*.zsh', 'scripts/**'
-- 'testing.instructions.md' — test structure and markers for 'backend/tests/**/*.py'
-- 'scaffolding.instructions.md' — Copier template conventions for '**/*.jinja'
+| Instruction | Applies To | Domain |
+|-------------|------------|--------|
+| `architecture` | `backend/**/*.py` | Clean Architecture boundaries |
+| `coding-conventions` | `**/*.py` | Python conventions and style |
+| `commit` | `**` | Conventional Commits format |
+| `frontend` | `frontend/**` | TypeScript, components, Vite patterns |
+| `testing` | `backend/tests/**/*.py` | Test structure and markers |
+| `shell` | `**/*.zsh`, `scripts/**` | zsh scripting and Azure CLI |
+| `prompt` | `**/*.prompt.md` | Prompt file guidelines |
+| `no-heredoc` | `**` | Prevents heredoc file corruption |
+| `update-docs-on-code-change` | `**/*.{md,ts,py,css}` | Auto-update docs on code changes |
+
+## Copilot Hooks (`.github/hooks/`)
+
+Active hooks for the Copilot coding agent:
+
+- **tool-guardian** (PreToolUse) — Blocks dangerous operations (force push, `rm -rf`, etc.)
+- **check-licenses** (Stop) — Scans dependencies for license compatibility
+
+## Documentation Policy
+
+- For library/framework/API documentation, prefer Context7 first
+- If Context7 is insufficient, use official vendor docs and cite sources
 
 Apply principles from PEP 20 (The Zen of Python) throughout:
 

@@ -53,6 +53,17 @@ Copy `.env.example` to `.env` and configure:
 cp .env.example .env
 ```
 
+Replace all `__CHANGE_ME__` placeholders with generated secrets before sharing environments.
+
+For shared deployments, copy `.env.example` to the appropriate env file
+(`.env.dev`, `.env.test`, `.env.staging`, `.env.prod`) and adjust the values
+listed in the "Per-Environment Quick Reference" section at the bottom of the file.
+
+For local-only personal overrides:
+
+- backend/global overrides: `.env.local` (start from `.env.local.example`)
+- frontend overrides: `frontend/.env.local` (start from `frontend/.env.local.example`)
+
 Key variables are documented in `docs/CONFIG.md`.
 {%- if use_ai %}
 

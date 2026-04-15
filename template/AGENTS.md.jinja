@@ -752,10 +752,10 @@ File-scoped instructions auto-load for matching globs:
 | `architecture.instructions.md` | `backend/**/*.py` | Clean Architecture enforcement, dependency table, concern boundaries, DI patterns |
 | `coding-conventions.instructions.md` | `**/*.py` | SRP, enums, typing, `@final`, `@override`, logging, exceptions, keyword-only args, docstrings |
 | `frontend.instructions.md` | `frontend/**/*.ts, frontend/**/*.tsx, frontend/**/*.css` | TypeScript, React, Tailwind v4, Vite, Biome, testing patterns |
-| `security.instructions.md` | `**/*.py, **/*.ts, **/*.js, **/*.zsh` | OWASP security rules, injection prevention, secrets management |
+| `prompt.instructions.md` | `**/*.prompt.md` | Guidelines for creating high-quality prompt files |
 | `shell.instructions.md` | `**/*.zsh, **/*.azcli, scripts/**` | Zsh scripting, Azure CLI patterns, safe scripting |
 | `testing.instructions.md` | `backend/tests/**/*.py` | Test structure, markers, fixtures, property testing, anti-patterns |
-| `scaffolding.instructions.md` | `**/*.jinja` | Copier template conventions, Jinja2 patterns, validation |
+| `update-docs-on-code-change.instructions.md` | `**/*.{md,ts,tsx,jsx,py,css}` | Auto-update documentation when code changes |
 
 ### GitHub Copilot Agents
 
@@ -763,40 +763,31 @@ Located in `.github/agents/`. Invoked via `@AgentName` in Copilot Chat (agent mo
 
 | Agent | File | Invocable | Tools | Purpose |
 | --- | --- | --- | --- | --- |
-| **Coordinator** | `coordinator.agent.md` | Yes | agent, read, search, edit, execute, web, context7 | Central orchestrator with inlined phase guidance (planning, implementation, review, testing, documentation); delegates to Security Auditor via handoff |
 | **TDD** | `tdd.agent.md` | Yes | read, search, edit, execute, context7 | Red-Green-Refactor TDD orchestrator — fully self-contained, no subagent delegation |
-| **Thorough Reviewer** | `thorough-reviewer.agent.md` | Yes | agent, read, search | Multi-perspective parallel code review (correctness, quality, security, architecture, performance) |
+| **SDD** | `sdd.agent.md` | Yes | read, search, edit, execute, context7 | Spec-Driven Development: Specify → Design → Implement → Validate → Reflect |
 | **Deep Thinking** | `deep-thinking.agent.md` | Yes | read, search, edit, execute, web, context7 | Autonomous complex problem-solving with extended reasoning; persists until fully resolved |
-| **Debug** | `debug.agent.md` | Yes | read, search, edit, execute, web, context7 | Systematic 4-phase debugging (gather context → reproduce → root cause → fix + verify) |
-| **Security Auditor** | `security-auditor.agent.md` | No | read, search, web | OWASP/CWE vulnerability scanning — read-only, never modifies files; produces structured audit report |
-
-### Copilot Handoff Workflow
-
-The coordinator includes inlined phase guidance and supports **handoffs** — structured
-transition points where the human can approve, redirect, or abort:
-
-1. **Discovery** → handoff → **Planning** (architecture validation, task decomposition)
-2. **Planning** → handoff → **Implementation** (coding standards, layer compliance)
-3. **Implementation** → handoff → **Review** (quality assurance + security auditor)
-4. **Review** → handoff → **Testing** (unit + integration + property tests)
-5. **Testing** → handoff → **Documentation** (docstrings, CHANGELOG, docs/)
+| **Debug** | `debug.agents.md` | Yes | read, search, edit, execute, web, context7 | Systematic 4-phase debugging (gather context → reproduce → root cause → fix + verify) |
+| **Expert React Frontend** | `expert-react-frontend-engineer.agent.md` | Yes | read, search, edit, execute, context7 | Senior React/TypeScript frontend engineer with Vite, shadcn/ui, Tailwind v4 expertise |
+| **Modernization** | `modernization.agent.md` | Yes | read, search, edit, execute, web, context7 | Human-in-the-loop project modernization with exhaustive analysis and architectural planning |
+| **Prompt Engineering** | `prompt-engineering.agent.md` | Yes | read, search, edit, execute, context7 | Crafts and refines prompts, instructions, and agent definitions |
 
 ### Usage Examples
 
 ```
-@Coordinator Implement a new user preferences feature with API endpoint and frontend form
 @TDD Add a discount calculation service using test-driven development
-@Thorough-Reviewer Review the changes in the current branch
+@SDD Design and implement a new user preferences feature with API endpoint
 @Debug Investigate the intermittent database connection timeout
 @Deep-Thinking Design the caching strategy for the recommendation engine
+@Expert-React-Frontend Build a dashboard page with charts and filters
+@Modernization Analyze the codebase and plan a migration to the latest patterns
+@Prompt-Engineering Create an agent definition for database migration workflows
 ```
+
 ### Agent Design Principles
 
-1. **Least privilege**: Workers get only the tools they need (read-only agents cannot
-   edit)
-2. **Single responsibility**: Each agent has one clear concern
-3. **Structured output**: Agents produce consistent, parseable formats
-4. **Handoff gates**: Human stays in the loop at critical transitions
+1. **Single responsibility**: Each agent has one clear concern
+2. **Structured output**: Agents produce consistent, parseable formats
+3. **Human-in-the-loop**: Agents that make significant changes ask for approval at key transitions
 5. **Model selection**: Use the best available model from your provider;
    reasoning-heavy tasks benefit from stronger models
 6. **Temperature tuning**: Read-only analysis at 0.1; code generation at 0.2-0.3
@@ -923,12 +914,12 @@ Skills are stored in two locations for cross-agent compatibility:
 | **Python Conventions** | `python-conventions/` | Naming, typing, async patterns | Type hints, structured logging, keyword-only args |
 | **Testing Conventions** | `testing-conventions/` | Pytest structure, coverage | Markers, factories, fixtures, >= 80% coverage |
 | **Naming Registry** | `naming-registry/` | Registry-first constants | Edit JSON → validate → generate → check → test |
-| **Shadcn Frontend** | `shadcn-frontend/` | Frontend UI and design-system work | Prefer shadcn/ui primitives, semantic tokens, strict React + TS patterns |
+| **Frontend React Stack** | `frontend-react-stack/` | Frontend UI and design-system work | React 19, shadcn/ui primitives, Tailwind v4, Vite, Biome |
 
 The `clean-architecture` skill is **MANDATORY** for all backend Python work — agents
 MUST apply it regardless of task scope.
 
-For frontend work, the `shadcn-frontend` skill should be applied first.
+For frontend work, the `frontend-react-stack` skill should be applied first.
 
 ---
 
@@ -937,9 +928,7 @@ For frontend work, the `shadcn-frontend` skill should be applied first.
 Reusable prompt templates for common workflows. Located in `.github/prompts/`.
 Invoke via `/` slash command in chat, or Command Palette → **Chat: Run Prompt File**.
 
-| Prompt | File | Purpose |
-| --- | --- | --- |
-| **Conventional Commit** | `conventional-commit.prompt.md` | Generate commit messages following Conventional Commits spec |
+No prompt files are currently defined. Add `.prompt.md` files to `.github/prompts/` as needed.
 
 ---
 
@@ -1042,9 +1031,9 @@ GSD and Copilot agents share the same conventions:
 
 - **Skills** — `.github/skills/` (Copilot) and `~/.agents/skills/` (GSD) both contain
   clean-architecture, python-conventions, testing-conventions, naming-registry,
-  shadcn-frontend
+  frontend-react-stack
 - **Instructions** — `.github/instructions/` (architecture, coding, frontend,
-  security, shell, testing, scaffolding)
+  prompt, shell, testing, update-docs-on-code-change)
 - **Custom instructions** — GSD's `custom_instructions` in PREFERENCES.md mirror
   the rules from Copilot's `.github/copilot-instructions.md` and scoped instructions
 - **Skill routing** — GSD's `always_use_skills`, `prefer_skills`, and `skill_rules`

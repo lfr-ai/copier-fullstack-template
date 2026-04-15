@@ -10,9 +10,6 @@ from collections.abc import AsyncIterator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-{%- if database_backend in ('postgresql', 'azure_postgresql') %}
-from sqlalchemy import text
-{%- endif %}
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from {{ project_slug }}.infrastructure.persistence.orm.base import ORMBase
@@ -27,8 +24,8 @@ pytest_plugins = [
 ]
 
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
-# Test database URL. Schema isolation is handled via search_path routing:
-# all tests run in test_schema, preventing pollution of public or other environment schemas.
+# Test database URL — each environment connects to its own database.
+# Tests use a dedicated database ({{ project_slug }}_test) with the default public schema.
 TEST_DATABASE_URL = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
 {%- elif database_backend == 'sqlite' %}
 TEST_DATABASE_URL = "sqlite+aiosqlite:///data/{{ project_slug }}_test.db"
@@ -37,11 +34,9 @@ TEST_DATABASE_URL = ""
 {%- endif %}
 
 
-{%- if database_backend in ('postgresql', 'azure_postgresql') %}
-# Set TEST environment for all test runs to ensure schema routing targets test_schema.
+# Set TEST environment for all test runs.
 # This must happen before any settings are loaded or engines are created.
-os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "TEST"
-{%- endif %}
+os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "test"
 
 
 @pytest.fixture(scope="session")
@@ -58,54 +53,30 @@ def event_loop_policy() -> asyncio.AbstractEventLoopPolicy:
 
 @pytest_asyncio.fixture(scope="session")
 async def engine() -> AsyncIterator[AsyncEngine]:
-    """Create async test database engine with schema isolation.
+    """Create async test database engine.
 
-    Schema Routing and Isolation:
-        All tests run in test_schema, isolated from public and other environment schemas.
-        The ENVIRONMENT=TEST setting (set at module import time) triggers schema routing
-        via the SQLAlchemy pool event listener in session.py, which sets search_path to
-        test_schema on every connection. This ensures:
-        - Test data never pollutes public schema
-        - Tests can run in parallel with dev/staging deployments
-        - Schema cleanup is simple: DROP/TRUNCATE test_schema only
+    Each environment uses its own database. Tests always run against
+    ``{{ project_slug }}_test`` using the default ``public`` schema.
+    Tables are created at session start and dropped at session end.
 
     Yields:
-        AsyncIterator[AsyncEngine]: Configured async engine with tables created in test_schema.
+        AsyncIterator[AsyncEngine]: Configured async engine with tables created.
 
     Raises:
-        pytest.skip: When no database URL is configured or test_schema does not exist.
+        pytest.skip: When no database URL is configured for this template variant.
     """
     if not TEST_DATABASE_URL:
         pytest.skip("No database URL configured for this template variant")
 
     eng = create_async_engine(TEST_DATABASE_URL, echo=False)
 
-{%- if database_backend in ('postgresql', 'azure_postgresql') %}
-    # Verify test_schema exists before running tests
-    async with eng.begin() as conn:
-        result = await conn.execute(
-            text(
-                """
-                SELECT schema_name
-                FROM information_schema.schemata
-                WHERE schema_name = 'test_schema'
-                """
-            )
-        )
-        if result.scalar() is None:
-            await eng.dispose()
-            pytest.skip(
-                "test_schema does not exist. Run 'alembic upgrade head' to create it."
-            )
-{%- endif %}
-
-    # Create all tables in the active schema (test_schema for TEST environment)
+    # Create all tables in the test database
     async with eng.begin() as conn:
         await conn.run_sync(ORMBase.metadata.create_all)
 
     yield eng
 
-    # Drop all tables from test_schema after test session
+    # Drop all tables after test session
     async with eng.begin() as conn:
         await conn.run_sync(ORMBase.metadata.drop_all)
     await eng.dispose()
@@ -125,53 +96,6 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
     async with factory() as sess:
         yield sess
         await sess.rollback()
-
-
-{%- if database_backend in ('postgresql', 'azure_postgresql') %}
-@pytest_asyncio.fixture(scope="session")
-async def clean_test_schema(engine: AsyncEngine) -> AsyncIterator[None]:
-    """Optional fixture to clean test_schema between test sessions.
-
-    This fixture truncates all tables in test_schema after the test session completes,
-    ensuring a clean slate for the next test run. Useful when you need to inspect
-    test data manually or when running tests repeatedly without recreating the schema.
-
-    Usage:
-        Add to your test function or class to enable cleanup:
-        ```python
-        @pytest.mark.usefixtures("clean_test_schema")
-        class TestSomething:
-            ...
-        ```
-
-    Args:
-        engine (AsyncEngine): Test database engine.
-
-    Yields:
-        None
-    """
-    yield
-
-    # Truncate all tables in test_schema after test session
-    async with engine.begin() as conn:
-        # Get all table names in test_schema
-        result = await conn.execute(
-            text(
-                """
-                SELECT tablename
-                FROM pg_tables
-                WHERE schemaname = 'test_schema'
-                """
-            )
-        )
-        tables = [row[0] for row in result.fetchall()]
-
-        # Truncate each table (CASCADE to handle foreign keys)
-        for table in tables:
-            await conn.execute(
-                text(f'TRUNCATE TABLE test_schema."{table}" RESTART IDENTITY CASCADE')
-            )
-{%- endif %}
 
 
 @pytest_asyncio.fixture

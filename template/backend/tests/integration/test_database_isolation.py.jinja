@@ -1,0 +1,228 @@
+"""Integration tests for database isolation (single database per environment).
+
+This test suite verifies that:
+- Each environment uses a separate database (via DATABASE_URL)
+- All tables live in the default ``public`` schema
+- Engine creation works correctly
+- ORM queries use the public schema
+- Transactions work correctly in the test database
+"""
+
+from __future__ import annotations
+
+import uuid
+from typing import TYPE_CHECKING
+
+import pytest
+from sqlalchemy import text
+{%- if database_backend == "postgresql" %}
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
+from {{ project_slug }}.infrastructure.persistence.orm.base import ORMBase
+from {{ project_slug }}.infrastructure.persistence.orm.user_model import UserModel
+from {{ project_slug }}.infrastructure.persistence.session import create_engine
+{%- endif %}
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+
+pytestmark = pytest.mark.integration
+
+
+{%- if database_backend == "postgresql" %}
+
+
+@pytest.fixture
+def test_database_url() -> str:
+    """Provide test database URL.
+
+    Returns:
+        str: PostgreSQL test database connection URL.
+    """
+    return "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+
+
+@pytest.fixture
+async def test_engine(test_database_url: str) -> AsyncIterator[AsyncEngine]:
+    """Create engine for test database.
+
+    Args:
+        test_database_url (str): Test database URL.
+
+    Yields:
+        AsyncEngine: Engine connected to the test database.
+    """
+    engine = create_engine(test_database_url, echo=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(ORMBase.metadata.create_all)
+
+    yield engine
+
+    async with engine.begin() as conn:
+        await conn.run_sync(ORMBase.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_engine_creation(test_database_url: str) -> None:
+    """Verify engine creates successfully with pool_pre_ping.
+
+    Args:
+        test_database_url (str): Test database URL.
+    """
+    engine = create_engine(test_database_url, echo=False)
+    assert engine is not None
+
+    # Verify connection works
+    async with engine.begin() as conn:
+        result = await conn.execute(text("SELECT 1"))
+        assert result.scalar() == 1
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_orm_queries_use_public_schema(test_engine: AsyncEngine) -> None:
+    """Verify ORM inserts go to the default public schema.
+
+    Args:
+        test_engine (AsyncEngine): Engine connected to the test database.
+    """
+    session_factory = async_sessionmaker(
+        test_engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    test_email = f"orm_test_{uuid.uuid4().hex[:8]}@example.com"
+    async with session_factory() as session:
+        user = UserModel(
+            email=test_email,
+            display_name="ORM Test User",
+            is_active=True,
+        )
+        session.add(user)
+        await session.commit()
+
+    # Verify row exists in public.users
+    async with test_engine.begin() as conn:
+        result = await conn.execute(
+            text("SELECT COUNT(*) FROM public.users WHERE email = :email"),
+            {"email": test_email},
+        )
+        count = result.scalar()
+        assert count == 1, "ORM insert should create row in public.users"
+
+
+@pytest.mark.asyncio
+async def test_transaction_commit_and_rollback(test_engine: AsyncEngine) -> None:
+    """Verify commit persists data and rollback discards data.
+
+    Args:
+        test_engine (AsyncEngine): Engine connected to the test database.
+    """
+    # Test commit: data should persist
+    commit_email = f"commit_test_{uuid.uuid4().hex[:8]}@example.com"
+    async with test_engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                INSERT INTO users (id, email, display_name, is_active, created_at, updated_at)
+                VALUES (gen_random_uuid(), :email, 'Commit Test', true, now(), now())
+                """
+            ),
+            {"email": commit_email},
+        )
+
+    async with test_engine.begin() as conn:
+        result = await conn.execute(
+            text("SELECT COUNT(*) FROM users WHERE email = :email"),
+            {"email": commit_email},
+        )
+        assert result.scalar() == 1, "Committed data should persist"
+
+    # Test rollback: data should NOT persist
+    rollback_email = f"rollback_test_{uuid.uuid4().hex[:8]}@example.com"
+    try:
+        async with test_engine.begin() as conn:
+            await conn.execute(
+                text(
+                    """
+                    INSERT INTO users (id, email, display_name, is_active, created_at, updated_at)
+                    VALUES (gen_random_uuid(), :email, 'Rollback Test', true, now(), now())
+                    """
+                ),
+                {"email": rollback_email},
+            )
+            raise RuntimeError("Intentional rollback")
+    except RuntimeError:
+        pass
+
+    async with test_engine.begin() as conn:
+        result = await conn.execute(
+            text("SELECT COUNT(*) FROM users WHERE email = :email"),
+            {"email": rollback_email},
+        )
+        assert result.scalar() == 0, "Rolled-back data should not persist"
+
+
+@pytest.mark.asyncio
+async def test_connection_pooling(test_engine: AsyncEngine) -> None:
+    """Verify multiple sequential queries via pooled connections work correctly.
+
+    Args:
+        test_engine (AsyncEngine): Engine connected to the test database.
+    """
+    email1 = f"pool_test1_{uuid.uuid4().hex[:8]}@example.com"
+    email2 = f"pool_test2_{uuid.uuid4().hex[:8]}@example.com"
+
+    async with test_engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                INSERT INTO users (id, email, display_name, is_active, created_at, updated_at)
+                VALUES (gen_random_uuid(), :email, 'Pool Test 1', true, now(), now())
+                """
+            ),
+            {"email": email1},
+        )
+
+    async with test_engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                INSERT INTO users (id, email, display_name, is_active, created_at, updated_at)
+                VALUES (gen_random_uuid(), :email, 'Pool Test 2', true, now(), now())
+                """
+            ),
+            {"email": email2},
+        )
+
+    async with test_engine.begin() as conn:
+        result = await conn.execute(
+            text("SELECT COUNT(*) FROM users WHERE email IN (:e1, :e2)"),
+            {"e1": email1, "e2": email2},
+        )
+        assert result.scalar() == 2, "Both pooled insertions should succeed"
+
+
+{%- elif database_backend == "sqlite" %}
+
+
+def test_sqlite_engine_creation() -> None:
+    """SQLite engine should create without errors."""
+    from {{ project_slug }}.infrastructure.persistence.session import create_engine
+
+    engine = create_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    assert engine is not None
+
+
+{%- else %}
+
+
+def test_database_placeholder() -> None:
+    """Placeholder test for non-database backends."""
+    assert True
+
+
+{%- endif %}

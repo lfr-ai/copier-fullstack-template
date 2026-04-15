@@ -1,0 +1,103 @@
+"""Integration tests for test fixture database isolation."""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
+{%- endif %}
+
+
+pytestmark = pytest.mark.integration
+
+
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+
+
+@pytest.mark.asyncio
+async def test_environment_variable_set_to_test() -> None:
+    """Verify ENVIRONMENT=test is set at module import time."""
+    env_var = os.environ.get("{{ project_slug | upper }}_ENVIRONMENT")
+    assert env_var == "test", "ENVIRONMENT must be 'test' for all test runs"
+
+
+@pytest.mark.asyncio
+async def test_engine_uses_public_schema(engine: AsyncEngine) -> None:
+    """Verify that test engine uses the default public schema."""
+    async with engine.begin() as conn:
+        result = await conn.execute(text("SHOW search_path"))
+        search_path = result.scalar()
+        # Default PostgreSQL search_path includes "$user", public
+        assert (
+            "public" in search_path.lower() or '"$user"' in search_path
+        ), f"Expected public in search_path, got: {search_path}"
+
+
+@pytest.mark.asyncio
+async def test_tables_exist_in_public_schema(engine: AsyncEngine) -> None:
+    """Verify test tables are created in the public schema."""
+    async with engine.begin() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT table_schema
+                FROM information_schema.tables
+                WHERE table_name = 'users'
+                AND table_schema = 'public'
+                """
+            )
+        )
+        schema = result.scalar()
+        assert schema == "public", "users table should exist in public schema"
+
+
+@pytest.mark.asyncio
+async def test_basic_crud_in_test_database(engine: AsyncEngine) -> None:
+    """Verify basic CRUD operations work in the test database."""
+    async with engine.begin() as conn:
+        # Create a temporary test table
+        await conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS crud_test (
+                    id SERIAL PRIMARY KEY,
+                    data TEXT NOT NULL
+                )
+                """
+            )
+        )
+
+        # Insert
+        await conn.execute(
+            text("INSERT INTO crud_test (data) VALUES ('test-data-1'), ('test-data-2')")
+        )
+
+        # Read
+        result = await conn.execute(text("SELECT COUNT(*) FROM crud_test"))
+        count = result.scalar()
+        assert count == 2, "Should have inserted 2 rows"
+
+        # Clean up
+        await conn.execute(text("DROP TABLE crud_test CASCADE"))
+
+
+{%- elif database_backend == "sqlite" %}
+
+
+def test_database_isolation_not_applicable_for_sqlite() -> None:
+    """SQLite isolation is via separate database file."""
+    assert True
+
+
+{%- else %}
+
+
+def test_database_isolation_placeholder() -> None:
+    """Placeholder test for non-database backends."""
+    assert True
+
+
+{%- endif %}
