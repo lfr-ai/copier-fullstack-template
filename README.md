@@ -206,7 +206,8 @@ Environment setup model for generated projects:
 - **DevContainer** — _(conditional)_ reproducible development environments
 - **GitHub Actions CI/CD** — lint, test, build, deploy, CodeQL security scanning
 - **Renovate** for automated dependency updates
-- **Pre-commit hooks** — ruff, ty, biome, detect-secrets, typos, shellcheck, hadolint, markdownlint
+- **Pre-commit hooks** — ruff, ty, bandit, xenon, biome, detect-secrets,
+  typos, yamllint, shellcheck, hadolint, markdownlint-cli2, jscpd, commitizen
 - **Testing** — pytest (unit, integration, property-based, performance), Vitest, Playwright E2E
 - **Full documentation** — architecture, setup, development, testing, deployment, config, ADRs, conventions
 
