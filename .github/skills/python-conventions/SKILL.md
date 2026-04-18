@@ -11,9 +11,8 @@ mapping: dict[str, int]
 pair: tuple[str, int]
 nullable: str | None
 
-# Final for constants
-from typing import Final
-MAX_RETRIES: Final[int] = 3
+# Plain constants (no Final annotation)
+MAX_RETRIES = 3
 
 # @final for sealed classes/methods
 from typing import final
@@ -192,6 +191,8 @@ class ClaimModel(BaseModel):
 | Variables | snake_case | `claim_count` |
 | Constants | UPPER_SNAKE_CASE | `MAX_RETRIES` |
 | Private | `_` prefix | `_internal_state` |
+
+Rule: Never use `Final[...]` for internal constants or variables.
 
 ## Caching
 

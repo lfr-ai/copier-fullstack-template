@@ -359,9 +359,9 @@ these conventions:
 - Conditionally included directories use Jinja2 in folder name:
   `{% if use_devcontainer %}.devcontainer{% endif %}/`
 - Static files (no Jinja2 inside) do NOT need `.jinja` suffix
-- Spaces inside delimiters: `{{ variable }}`, `{% if condition %}`
+- Spaces inside delimiters: `{{ '{{' }} variable {{ '}}' }}`, `{% raw %}{% if condition %}{% endraw %}`
 - Access Copier config: `{{ _copier_conf.answers_file }}`
-- Always provide sensible defaults in `copier.yml`
+- Keep defaults minimal and intentional in `copier.yml`; avoid redundant defaults
 - Validate required fields with `validator:`
 
 For every generated layer directory:

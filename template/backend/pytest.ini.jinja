@@ -1,0 +1,18 @@
+[pytest]
+minversion = 8.0
+testpaths = tests
+asyncio_mode = auto
+addopts = -ra --strict-markers --strict-config -x --tb=short
+markers =
+    unit: Unit tests
+    integration: Integration tests
+    slow: Slow-running tests
+    property: Property-based tests
+    performance: Benchmarks and performance regression tests
+    profiling: Profiling tests (CPU, memory, SQL)
+    benchmark: pytest-benchmark performance benchmarks
+filterwarnings =
+    error
+    ignore::DeprecationWarning
+    ignore::ResourceWarning
+    ignore::pytest.PytestUnraisableExceptionWarning

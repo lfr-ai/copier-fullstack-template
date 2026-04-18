@@ -32,7 +32,7 @@ REGISTRY_PATH = _REGISTRY_DIR / "naming_registry.json"
 OUTPUT_PY = (
     _BASE_DIR / "backend" / "src" / "{{ project_slug }}" / "core" / "registry_constants.py"
 )
-OUTPUT_TS = (
+{% raw %}OUTPUT_TS = (
     _BASE_DIR / "frontend" / "src" / "config" / "registry_constants.ts"
 )
 OUTPUT_ENV = _BASE_DIR / ".env.ports"
@@ -319,13 +319,13 @@ def _generate_ts_enums(enums: dict[str, object]) -> list[str]:
     lines: list[str] = []
     for name, members in enums.items():
         if isinstance(members, list):
-            lines.append(f"export const {name} = {{")
+            lines.append(f"export const {name} = " + "{")
             for member in members:
                 lines.append(f'  {member.upper()}: "{member}",')
             lines.append("} as const;")
             lines.append(f"export type {name} = (typeof {name})[keyof typeof {name}];\n")
         elif isinstance(members, dict):
-            lines.append(f"export const {name} = {{")
+            lines.append(f"export const {name} = " + "{")
             for member_name, value in members.items():
                 lines.append(f"  {member_name}: {value},")
             lines.append("} as const;")
@@ -349,7 +349,7 @@ def _generate_ts_routes(routes: dict[str, object]) -> list[str]:
         prefix = config.get("prefix", "")
         endpoints = config.get("endpoints", {})
         obj_name = _to_camel_case(route_name)
-        lines.append(f"    {obj_name}: {{")
+        lines.append(f"    {obj_name}: " + "{")
         lines.append(f'      PREFIX: "{prefix}",')
         for ep_name, ep_path in endpoints.items():
             full_path = f"{prefix}{ep_path}"
@@ -511,3 +511,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+{% endraw %}

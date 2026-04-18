@@ -1,0 +1,80 @@
+target-version = "py{{ python_version | replace('.', '') }}"
+line-length = 88
+src = ["src", "tests"]
+
+[lint]
+select = [
+    "F",      # pyflakes
+    "E", "W", # pycodestyle
+    "C90",    # mccabe
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "S",      # flake8-bandit
+    "B",      # flake8-bugbear
+    "A",      # flake8-builtins
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "T10",    # flake8-debugger
+    "T20",    # flake8-print
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "PIE",    # flake8-pie
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SLF",    # flake8-self
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "TCH",    # flake8-type-checking
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate
+    "PL",     # pylint
+    "TRY",    # tryceratops
+    "FLY",    # flynt
+    "PERF",   # perflint
+    "FURB",   # refurb
+    "LOG",    # flake8-logging
+    "RUF",    # ruff-specific
+    "ANN",    # flake8-annotations
+    "D",      # pydocstyle
+]
+ignore = [
+    "D100",   # missing docstring in public module
+    "D104",   # missing docstring in public package
+    "S101",   # use of assert (needed in tests)
+    "I001",   # import sorting handled separately
+    "E501",   # line too long (handled by formatter)
+    "TRY003", # long exception messages
+    "ISC001", # conflicts with formatter
+    "TCH001", # type-checking import placement (application)
+    "TCH002", # type-checking import placement (third-party)
+    "TCH003", # type-checking import placement (stdlib)
+    "UP046",  # PEP 695 generic type syntax (classes)
+    "UP047",  # PEP 695 generic type syntax (functions)
+]
+
+[lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "ANN", "D", "ARG", "PLR2004"]
+"alembic/**/*.py" = ["D", "ANN", "ERA"]
+"scripts/**/*.py" = ["T20"]
+"**/__init__.py" = ["I001"]
+
+[lint.isort]
+known-first-party = ["{{ project_slug }}"]
+force-single-line = false
+lines-after-imports = 2
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.pylint]
+max-args = 8
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true

@@ -96,9 +96,10 @@ Active hooks for the Copilot coding agent:
 
 When adding new template variables:
 
-1. Add the question to `copier.yml` with type, help text, and default
+1. Add the question to `copier.yml` with type and help text; add a default only when it
+   materially improves onboarding
 2. Use the variable in templates with `{{ variable_name }}`
-3. Test rendering with both default and non-default values
+3. Test rendering with default and non-default values when a default exists
 4. Update CI render smoke test if the variable affects expected output files
 
 ## Build, Test, and Validation Workflow
@@ -137,6 +138,23 @@ Scopes: template, backend, frontend, infra, ci, copier, hooks, agents
    --vcs-ref HEAD . /tmp/test-render`
 4. **Pre-commit must pass** — `uvx pre-commit run --all-files`
 5. **Conventional commits** — all commits must follow the format above
+6. **No `Final[...]` for internals** — NEVER use `Final` or `Final[...]` for internal
+   constants or variables. Internal constants MUST use `_UPPER_SNAKE_CASE` prefix.
+   The leading underscore signals 'private, do not reassign'. Plain
+   `UPPER_SNAKE_CASE` assignment is sufficient for public constants.
+7. **FastAPI status constants only** — HTTP status codes in ALL code (API handlers AND
+   tests) MUST use `from fastapi import status` (no numeric literals, no Starlette
+   imports)
+8. **Single quotes in docstrings** — use `'word'` to reference identifiers in
+   docstrings and prose, NEVER markdown backticks
+9. **Docstring type hints** — `Args:` and `Returns:` sections MUST include explicit
+   type information: `name (Type): Description.`
+10. **Underscore prefixes** — ALL non-public functions, methods, attributes, and
+    constants MUST be prefixed with `_`. Prefer `_*.py` module names for non-public
+    implementation modules.
+11. **`Annotated` only where relevant** — use `Annotated[...]` ONLY when runtime
+    metadata is required (FastAPI `Depends`, Pydantic `Field` constraints). NEVER use
+    for plain type hints without metadata.
 
 ## Documentation Policy
 

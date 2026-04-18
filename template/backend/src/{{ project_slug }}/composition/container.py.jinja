@@ -189,7 +189,6 @@ class Container:
             )
             return None
 
-{% endif %}
     def _get_openai_key(self) -> str:
         """Return OpenAI API key from settings or raise."""
         key = getattr(self._settings, "openai_api_key", "")
@@ -251,7 +250,6 @@ class Container:
 
     def _create_vector_store(self) -> VectorStoreGateway:
         """Create vector store adapter based on configuration."""
-        dim = getattr(self._settings, "embedding_dimension", 1536)
 {%- if use_ai_search %}
         endpoint = getattr(self._settings, "azure_ai_search_endpoint", "")
         api_key = getattr(self._settings, "azure_ai_search_api_key", "")

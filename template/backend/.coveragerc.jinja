@@ -1,0 +1,29 @@
+[run]
+source = src/{{ project_slug }}
+branch = true
+parallel = true
+omit =
+    */tests/*
+    */__main__.py
+    */alembic/*
+
+[report]
+show_missing = true
+skip_empty = true
+fail_under = 80
+precision = 2
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    if __name__ == .__main__.
+    raise NotImplementedError
+    @overload
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+    \.\.\.
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml

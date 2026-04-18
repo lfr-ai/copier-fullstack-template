@@ -22,6 +22,11 @@ tasks:
     cmds:
       - python scripts/check-no-final.py {{.BACKEND_SRC}}
 
+  conventions:fastapi-status-codes:
+    desc: Verify FastAPI status constants are used (no numeric status_code literals)
+    cmds:
+      - python scripts/check-fastapi-status-codes.py {{.BACKEND_SRC}}
+
   github:alignment:
     desc: Enforce core template/.github alignment conventions
     cmds:
@@ -111,6 +116,7 @@ tasks:
     cmds:
       - task: architecture:boundaries
       - task: conventions:no-final
+      - task: conventions:fastapi-status-codes
       - task: github:alignment
 
   ci:

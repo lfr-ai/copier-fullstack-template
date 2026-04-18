@@ -1,7 +1,12 @@
-"""Verify no Final[] type annotations on module-level constants."""
-from pathlib import Path
+from __future__ import annotations
+
+"""Verify no Final[] type annotations on module-level constants.
+
+Applies to public and internal constants/variables.
+"""
 import re
 import sys
+from pathlib import Path
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("template/backend/src")
 pattern = re.compile(r"^[A-Z_][A-Z0-9_]*\s*:\s*Final", re.MULTILINE)
@@ -17,9 +22,9 @@ for path in root.rglob("*"):
         offenders.append(path.as_posix())
 
 if offenders:
-    print("[FAIL] Found Final[] annotations on module-level constants:")
+    print("[FAIL] Found Final[] annotations on module-level constants/variables:")
     for file in offenders:
         print(f"  - {file}")
     sys.exit(1)
 
-print("[OK] No Final[] type annotations on constants")
+print("[OK] No Final[] type annotations on module-level constants/variables")

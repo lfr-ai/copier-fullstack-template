@@ -1,0 +1,6 @@
+[environment]
+python-version = "{{ python_version }}"
+
+[src]
+include = ["src/{{ project_slug }}"]
+exclude = ["**/__pycache__/**", ".venv/**", ".tox/**", "dist/**", "build/**"]

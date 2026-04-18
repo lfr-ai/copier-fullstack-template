@@ -19,12 +19,43 @@ applyTo: "scripts/**/*.py"
 - Use `TYPE_CHECKING` guard for import-only types
 - Prefer `collections.abc` types over `typing` equivalents (`Sequence`, `Mapping`)
 - Use `X | None` union syntax (not `Optional[X]`)
+- Use `Annotated[...]` only when runtime metadata is required (FastAPI `Depends`,
+  Pydantic `Field` constraints, validation metadata)
+- NEVER use `Annotated` for plain type hints without metadata
+
+## Constants and Visibility — CRITICAL
+
+- NEVER use `Final` or `Final[...]` for internal constants or internal variables
+- Reserve `Final` for public module constants ONLY when truly needed
+- Prefer plain `UPPER_SNAKE_CASE` assignment — the naming convention already signals
+  immutability intent
+- Prefix internal constants with `_UPPER_SNAKE_CASE`
+- Prefix internal variables and helper functions with `_`
+- A plain type annotation (e.g. `_FOO: Path = ...`) is sufficient for internal
+  variables — the leading underscore already signals 'private, do not reassign'
+- Prefer `_*.py` module names for non-public implementation modules
+
+## Docstrings
+
+- Use Google-style docstrings
+- `Args:` — each parameter MUST include type: `name (Type): Description.`
+- `Returns:` — MUST include type: `TypeName: Description.` (no parentheses)
+- `Raises:` — format: `ExceptionName: Description.` (no parentheses)
+- Use single quotes for identifier references in docstrings (not markdown backticks)
+
+## FastAPI Status Codes
+
+- In API code, always use `from fastapi import status`
+- Never use numeric literals like `status_code=200`
+- Never import status from Starlette directly
+- In test assertions, also use `from fastapi import status` constants
 
 ## Error Handling
 
 - Catch specific exceptions, never bare `except:`
 - Use custom exception classes for domain errors
 - Let unexpected errors propagate
+- Always use `raise ... from e` to chain exceptions
 
 ## Testing
 
