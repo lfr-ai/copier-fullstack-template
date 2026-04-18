@@ -71,18 +71,17 @@ Target: ≥ 80% line coverage on 'core' + 'application' layers (enforced by 'tox
 @pytest.mark.smoke         # Critical path — must pass before deploy
 ```
 
-Configure in 'pyproject.toml':
+Configure in `pytest.ini`:
 
-```toml
-[tool.pytest.ini_options]
-markers = [
-    "unit: Fast, isolated, no I/O",
-    "integration: Real adapters and services",
-    "property: Hypothesis property-based",
-    "performance: Benchmarks",
-    "slow: Tests > 5 seconds",
-    "smoke: Critical path",
-]
+```ini
+[pytest]
+markers =
+    unit: Fast, isolated, no I/O
+    integration: Real adapters and services
+    property: Hypothesis property-based
+    performance: Benchmarks
+    slow: Tests > 5 seconds
+    smoke: Critical path
 ```
 
 
@@ -91,6 +90,8 @@ markers = [
 - ALL async tests: 'pytest-asyncio' correctly configured
 - ZERO 'print()' — use 'capsys' or assertions
 - ZERO 'time.sleep' — mock or async wait
+- For HTTP status assertions, always use constants from 'fastapi.status'
+  instead of numeric literals (e.g. 'status.HTTP_200_OK', not '200')
 - Edge cases: empty inputs, 'None', boundary values, invalid types
 - Exception paths: 'pytest.raises(ExcType, match=...)' with match verification
 - '*' enforcement: tests confirming positional usage raises 'TypeError'

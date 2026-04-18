@@ -214,8 +214,10 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 
 
 
-- Use 'Annotated' from 'typing' to add metadata to type hints
-- Particularly useful with Pydantic 'Field' for validation constraints
+- Use 'Annotated' from 'typing' ONLY when runtime metadata is required
+- Valid uses: FastAPI 'Depends()', Pydantic 'Field()' constraints, validation metadata
+- NEVER use 'Annotated' for plain type hints without metadata
+- Prefer plain types when no runtime metadata is attached
 
 
 - Define type aliases using 'TypeAlias' from 'typing' for complex, reusable types
@@ -327,9 +329,8 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 - Enable 'validate_assignment=True' to validate on attribute assignment
 
 
-- Always use 'Annotated' with 'Field' for field metadata
-- Every field MUST have a 'description' parameter
-- Every field MUST have 'examples' parameter demonstrating valid values
+- Use 'Annotated' with 'Field' for Pydantic model fields that need constraints or metadata
+- For plain settings fields, plain type + default is sufficient
 - Use 'validation_alias' for accepting multiple input field names
 - Use 'serialization_alias' for consistent output field names
 

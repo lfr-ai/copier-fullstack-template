@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 
-from fastapi import APIRouter
-from starlette import status
+from fastapi import APIRouter, status
 
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO
 from {{ project_slug }}.presentation.api.dependencies import UserServiceDep

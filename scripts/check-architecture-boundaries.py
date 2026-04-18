@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 """Verify core layer has zero outward imports (Clean Architecture)."""
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("template/backend/src")
 pattern = re.compile(

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from {{ project_slug }}.config.settings.base import BaseAppSettings
 from pydantic_settings import SettingsConfigDict
+
+from {{ project_slug }}.config.settings.base import BaseAppSettings
 from {{ project_slug }}.core.enums.environment import Environment
+
+
 class TestSettings(BaseAppSettings):
     """Settings for test environment.
 

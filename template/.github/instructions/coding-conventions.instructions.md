@@ -58,20 +58,100 @@ z: list[int]
 - 'typing' imports ONLY for: 'TypeVar', 'Protocol', 'TypeAlias', 'Annotated', 'Literal',
   'NoReturn', 'Generic', 'runtime_checkable', 'TypedDict', 'final', 'overload',
   'TYPE_CHECKING', 'Self', 'override'
-- ZERO 'Final[type]' type annotations on constants — plain 'UPPER_SNAKE_CASE' assignment
-  is sufficient
-- Use 'match/case' for multi-branch dispatch over types, enums, literals
-- Use '@override' on overriding methods
-- Use 'Self' for fluent/builder return types
+
+## Final and Constants — CRITICAL RULES
+
+- NEVER use 'Final' or 'Final[...]' for internal constants or internal variables
+- Reserve 'Final' for public module constants ONLY when truly needed
+- Prefer plain 'UPPER_SNAKE_CASE' assignment — the naming convention already signals
+  immutability intent
+- Internal constants MUST use '_UPPER_SNAKE_CASE' prefix — the leading underscore
+  signals 'private, do not reassign'
+- A plain type annotation (e.g. '_FOO: Path = ...') is sufficient for internal variables
 
 ```python
 MAX_RETRIES = 3
 
 _INTERNAL_BUFFER_SIZE = 4096
+_DEFAULT_TIMEOUT = 30.0
 ```
 
-- ZERO 'Final[type]' type annotations on constants — plain 'UPPER_SNAKE_CASE' is
-  sufficient
+## Underscore Prefixes — Visibility Convention
+
+- '_' prefix on ALL non-public module-level functions, methods, attributes
+- '_UPPER_SNAKE_CASE' on ALL internal-only constants
+- Internal-only variables and helper modules MUST be prefixed with '_'
+- Prefer '_*.py' module names for non-public implementation modules
+- NO '__' name mangling unless explicitly justified
+- '__all__' in '__init__.py' files exporting public API
+
+## 'Annotated' Usage — Only Where Relevant
+
+- Use 'Annotated[...]' ONLY when runtime metadata is required:
+  - FastAPI 'Depends()' injection
+  - Pydantic 'Field()' constraints on model fields
+  - Validation metadata consumed at runtime
+- NEVER use 'Annotated' for plain type hints without metadata
+- Prefer plain types when no runtime metadata is attached
+
+```python
+from typing import Annotated
+from fastapi import Depends
+settings: Annotated[AppSettings, Depends(get_settings)]
+
+name: str
+```
+
+## Docstrings — Google Style with Type Information
+
+- EVERY public module, class, method, function: docstring
+- First line: imperative, ends with period, does NOT start with 'A'/'An'/'The'
+- Use single quotes ('word') in docstrings to reference identifiers — NEVER
+  markdown backticks
+- 'Args:' — each parameter MUST include type: 'name (Type): Description.'
+- 'Returns:' — MUST include type: 'TypeName: Description.' (no parentheses)
+- 'Raises:' — format: 'ExceptionName: Description.' (no parentheses)
+- 'Yields:' — format: 'TypeName: Description.' (no parentheses)
+- Remove ':param:'/'@param' style — Google style only
+- ZERO emojis in docstrings, comments, logs, or documentation
+
+```python
+def fetch_user(*, user_id: int) -> User:
+    """Fetch user by identifier.
+
+    Args:
+        user_id (int): Unique user identifier.
+
+    Returns:
+        User: Resolved user entity.
+
+    Raises:
+        NotFoundError: If no user matches 'user_id'.
+    """
+```
+
+## FastAPI HTTP Status Codes — MANDATORY
+
+- Always import status constants via 'from fastapi import status' in API handlers
+- NEVER use numeric literals such as 'status_code=200' or 'status_code=404'
+- NEVER import status constants from Starlette directly
+- In test assertions, also use 'from fastapi import status' constants
+
+```python
+from fastapi import status
+
+@router.get("/items", status_code=status.HTTP_200_OK)
+async def list_items() -> list[Item]:
+    ...
+
+response = client.get("/items")
+assert response.status_code == status.HTTP_200_OK
+```
+
+- Use 'match/case' for multi-branch dispatch over types, enums, literals
+- Use '@override' on overriding methods
+- Use 'Self' for fluent/builder return types
+
 - ZERO literal numbers in logic — extract to named 'UPPER_SNAKE_CASE' constant
 - ZERO hardcoded config strings — 'AppSettings' or named constants
 - ZERO hardcoded field/column names — naming registry
@@ -189,6 +269,9 @@ When '*' is NOT required:
 - EVERY '@property' has return type
 - ALL class attributes typed
 - Default values match their type annotation
+- Use 'Annotated[...]' only where runtime metadata is needed (FastAPI 'Depends',
+  Pydantic constraints, validation metadata)
+- Prefer plain types when metadata is not required
 
 - EVERY public module, class, method, function: docstring
 - First line: imperative, ends with period, does NOT start with "A"/"An"/"The"
@@ -200,11 +283,20 @@ When '*' is NOT required:
 - ZERO emojis in docstrings, comments, logs, or documentation
 - Use single quotes ('word') in docstrings to reference identifiers — NEVER double
   backticks
+- Always include explicit type information in 'Args:' and 'Returns:' sections
 
 - '_' prefix on ALL non-public module-level functions, methods, attributes
 - '_UPPER_SNAKE_CASE' on ALL internal-only constants
+- Internal-only variables and helper modules MUST be prefixed with '_'
+- Prefer '_*.py' module names for non-public implementation modules
 - NO '__' name mangling unless explicitly justified
 - '__all__' in '__init__.py' files exporting public API
+
+## FastAPI HTTP Status Codes
+
+- Always import status constants via 'from fastapi import status' in API handlers
+- Never use numeric literals such as 'status_code=200'
+- Never import status constants from Starlette
 
 1. **Critical:** F-string logging, exception chaining (correctness + performance)
 2. **High:** Dataclass slots, enum @unique, type coverage (correctness + memory)

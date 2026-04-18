@@ -2,28 +2,21 @@
 
 from __future__ import annotations
 
-from pydantic import Field, model_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from {{ project_slug }}.config.constants import (
     DEFAULT_HOST,
     DEFAULT_PORT,
-    MAX_PORT,
 {%- if use_auth %}
     TOKEN_EXPIRY_MINUTES,
 {%- endif %}
 )
 from {{ project_slug }}.core.enums.environment import Environment
-_MAX_GRAPHQL_DEPTH = 50
-_MAX_AGENT_STEPS = 50
 
 
 class BaseAppSettings(BaseSettings):
-    """Base settings with environment variable loading.
-
-    Reads from .env/.env.local files and environment variables with
-    configurable prefix.
-    """
+    """Base settings with environment variable loading."""
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),
@@ -33,392 +26,127 @@ class BaseAppSettings(BaseSettings):
         extra="ignore",
     )
 
-    environment: Environment = Field(
-        default=Environment.LOCAL,
-        description="Deployment environment.",
-        examples=["local", "dev", "test", "staging", "prod"],
-    )
-    debug: bool = Field(
-        default=False,
-        description="Enable debug mode.",
-        examples=[False, True],
-    )
-    log_level: str = Field(
-        default="INFO",
-        description="Logging level.",
-        examples=["INFO", "DEBUG", "WARNING"],
-    )
-    secret_key: str = Field(
-        default="change-me-in-production",
-        description="Application secret key for signing.",
-        examples=["my-super-secret-key-at-least-32-chars"],
-    )
+    environment: Environment = Environment.LOCAL
+    debug: bool = False
+    log_level: str = "INFO"
+    secret_key: str = "change-me-in-production"
 
-    database_url: str = Field(
-{%- if database_backend == "postgresql" %}
-        default="postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}",
-        description="Async database connection URL.",
-        examples=["postgresql+psycopg://user:pass@localhost/db"],
-{%- elif database_backend == "azure_postgresql" %}
-        default="",
-        description="Azure PostgreSQL Flexible Server connection URL. Set via environment or Key Vault.",
-        examples=["postgresql+psycopg://user:pass@myserver.postgres.database.azure.com:5432/{{ project_slug }}?sslmode=require"],
-{%- elif database_backend == "sqlite" %}
-        default="sqlite+aiosqlite:///data/{{ project_slug }}.db",
-        description="SQLite database file URL (async via aiosqlite).",
-        examples=["sqlite+aiosqlite:///data/app.db", "sqlite+aiosqlite:///./data/{{ project_slug }}.db"],
-{%- else %}
-        default="",
-        description="Database connection URL. Leave empty if no database is configured.",
-        examples=["postgresql+psycopg://user:pass@localhost/db"],
-{%- endif %}
-    )
-    database_echo: bool = Field(
-        default=False,
-        description="Echo SQL queries to log.",
-        examples=[False, True],
-    )
+    database_url: str = {% if database_backend == "postgresql" %}"postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}"{% elif database_backend == "azure_postgresql" %}""{% elif database_backend == "sqlite" %}"sqlite+aiosqlite:///data/{{ project_slug }}.db"{% else %}""{% endif %}
 
-    host: str = Field(
-        default=DEFAULT_HOST,
-        description="Server bind host.",
-        examples=["127.0.0.1", "0.0.0.0"],
-    )
-    port: int = Field(
-        default=DEFAULT_PORT,
-        gt=0,
-        le=MAX_PORT,
-        description="Server bind port.",
-        examples=[8000, 8080],
-    )
+    database_echo: bool = False
 
-    cors_allowed_origins: list[str] = Field(
-        default_factory=list,
-        description="Allowed CORS origins for non-local environments.",
-        examples=[["https://example.com"]],
-    )
+    host: str = DEFAULT_HOST
+    port: int = DEFAULT_PORT
 
-    rate_limit: str = Field(
-        default="60/minute",
-        description="Default rate limit (slowapi format: 'count/period').",
-        examples=["60/minute", "100/minute", "10/second"],
-    )
+    cors_allowed_origins: list[str] = []
+    rate_limit: str = "60/minute"
 
-    # Profiling
-    profiling_enabled: bool = Field(
-        default=False,
-        description="Enable on-demand profiling middleware (?profile=cpu|memory).",
-        examples=[False, True],
-    )
-    profiling_secret: str = Field(
-        default="",
-        description="Shared secret for X-Profile-Secret header (required when profiling_enabled).",
-        examples=["change-me-profiling-secret"],
-    )
-    profiling_dir: str = Field(
-        default="profiles",
-        description="Directory for saved profiling reports.",
-        examples=["profiles", "/tmp/profiles"],
-    )
+    profiling_enabled: bool = False
+    profiling_secret: str = ""
+    profiling_dir: str = "profiles"
 {%- if api_style in ('graphql', 'both') %}
 
-    # GraphQL
-    graphql_max_depth: int = Field(
-        default=10,
-        gt=0,
-        le=_MAX_GRAPHQL_DEPTH,
-        description="Maximum allowed query nesting depth for the GraphQL endpoint.",
-        examples=[10, 15],
-    )
-    graphql_ide: str = Field(
-        default="graphiql",
-        description="GraphQL IDE to show in debug mode (graphiql, apollo-sandbox, pathfinder, or empty to disable).",
-        examples=["graphiql", "apollo-sandbox", ""],
-    )
+    graphql_max_depth: int = 10
+    graphql_ide: str = "graphiql"
 {%- endif %}
 {%- if use_redis %}
 
-    redis_url: str = Field(
-        default="redis://localhost:6379/0",
-        description="Redis connection URL.",
-        examples=["redis://localhost:6379/0"],
-    )
-    redis_ttl: int = Field(
-        default=3600,
-        gt=0,
-        description="Default Redis TTL in seconds.",
-        examples=[3600, 7200],
-    )
+    redis_url: str = "redis://localhost:6379/0"
+    redis_ttl: int = 3600
 {%- endif %}
 {%- if use_celery %}
 
-    celery_broker_url: str = Field(
-        default="redis://localhost:6379/1",
-        description="Celery broker connection URL.",
-        examples=["redis://localhost:6379/1"],
-    )
-    celery_result_backend: str = Field(
-        default="redis://localhost:6379/2",
-        description="Celery result backend URL.",
-        examples=["redis://localhost:6379/2"],
-    )
+    celery_broker_url: str = "redis://localhost:6379/1"
+    celery_result_backend: str = "redis://localhost:6379/2"
 {%- endif %}
 {%- if use_auth %}
 
-    jwt_secret_key: str = Field(
-        default="change-me-jwt-secret",
-        description="JWT signing secret key.",
-        examples=["my-jwt-secret-key-at-least-32-chars"],
-    )
-    jwt_expire_minutes: int = Field(
-        default=TOKEN_EXPIRY_MINUTES,
-        gt=0,
-        description="JWT token expiration in minutes.",
-        examples=[30, 60],
-    )
+    jwt_secret_key: str = "change-me-jwt-secret"
+    jwt_expire_minutes: int = TOKEN_EXPIRY_MINUTES
 {%- endif %}
 {%- if secret_backend == "azure_kv" %}
 
-    azure_key_vault_url: str = Field(
-        default="",
-        description="Azure Key Vault URL.",
-        examples=["https://my-vault.vault.azure.net/"],
-    )
+    azure_key_vault_url: str = ""
 {%- endif %}
 {%- if use_ai %}
 
-    # AI / LLM
-    openai_api_key: str = Field(
-        default="",
-        description="OpenAI API key for LLM and embedding.",
-        examples=["sk-..."],
-    )
-    openai_model: str = Field(
-        default="gpt-4o",
-        description="Default OpenAI model for completions.",
-        examples=["gpt-4o", "gpt-4o-mini"],
-    )
-    embedding_model: str = Field(
-        default="text-embedding-3-small",
-        description="Embedding model identifier.",
-        examples=["text-embedding-3-small", "text-embedding-3-large"],
-    )
-    embedding_dimension: int = Field(
-        default=1536,
-        gt=0,
-        description="Embedding vector dimension.",
-        examples=[1536, 3072],
-    )
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o"
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimension: int = 1536
 {%- endif %}
 {%- if use_azure_openai %}
 
-    # Azure OpenAI
-    azure_openai_endpoint: str = Field(
-        default="",
-        description="Azure OpenAI endpoint URL.",
-        examples=["https://my-openai.openai.azure.com/"],
-    )
-    azure_openai_api_key: str = Field(
-        default="",
-        description="Azure OpenAI API key.",
-        examples=["..."],
-    )
-    azure_openai_api_version: str = Field(
-        default="2025-04-01-preview",
-        description="Azure OpenAI API version.",
-    )
-    azure_openai_deployment: str = Field(
-        default="",
-        description="Azure OpenAI deployment name.",
-    )
+    azure_openai_endpoint: str = ""
+    azure_openai_api_key: str = ""
+    azure_openai_api_version: str = "2025-04-01-preview"
+    azure_openai_deployment: str = ""
 {%- endif %}
 {%- if use_faiss %}
 
-    # FAISS
-    faiss_persist_dir: str | None = Field(
-        default=None,
-        description="Directory to persist FAISS index (None for in-memory only).",
-        examples=["/data/faiss", "data/faiss_index"],
-    )
+    faiss_persist_dir: str | None = None
 {%- endif %}
 {%- if use_pgvector %}
 
-    # pgvector
-    pgvector_table_name: str = Field(
-        default="vector_embeddings",
-        description="PostgreSQL table name for pgvector storage.",
-    )
+    pgvector_table_name: str = "vector_embeddings"
 {%- endif %}
 {%- if use_knowledge_graph %}
 
-    # Knowledge Graph
-    knowledge_graph_backend: str = Field(
-        default="{{ knowledge_graph_backend | default('networkx') }}",
-        description="Knowledge graph backend: networkx, neo4j, or rdflib.",
-    )
-    knowledge_graph_path: str | None = Field(
-        default=None,
-        description="Path to persist knowledge graph (None for in-memory only).",
-        examples=["data/knowledge_graph.json", "data/knowledge_graph.ttl"],
-    )
+    knowledge_graph_backend: str = "{{ knowledge_graph_backend | default('networkx') }}"
+    knowledge_graph_path: str | None = None
 {%- endif %}
 {%- if use_rag %}
 
-    # RAG Pipeline
-    chunk_size: int = Field(
-        default=512,
-        gt=0,
-        description="Default text chunk size for RAG ingestion.",
-    )
-    chunk_overlap: int = Field(
-        default=64,
-        ge=0,
-        description="Overlap between consecutive text chunks.",
-    )
+    chunk_size: int = 512
+    chunk_overlap: int = 64
 {%- endif %}
 {%- if use_mcp %}
 
-    # MCP Server
-    mcp_server_name: str = Field(
-        default="{{ project_name }} MCP",
-        description="MCP server display name.",
-    )
-    mcp_enabled: bool = Field(
-        default=False,
-        description="Enable MCP (Model Context Protocol) server.",
-    )
+    mcp_server_name: str = "{{ project_name }} MCP"
+    mcp_enabled: bool = False
 {%- endif %}
 {%- if use_anthropic %}
 
-    # Anthropic
-    anthropic_api_key: str = Field(
-        default="",
-        description="Anthropic API key for Claude models.",
-        examples=["sk-ant-..."],
-    )
-    anthropic_model: str = Field(
-        default="claude-sonnet-4-6",
-        description="Default Anthropic model for completions.",
-        examples=["claude-sonnet-4-6", "claude-opus-4-6"],
-    )
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-4-6"
 {%- endif %}
 {%- if use_ai_search %}
 
-    # Azure AI Search
-    azure_ai_search_endpoint: str = Field(
-        default="",
-        description="Azure AI Search service endpoint URL.",
-        examples=["https://my-search.search.windows.net"],
-    )
-    azure_ai_search_api_key: str = Field(
-        default="",
-        description="Azure AI Search admin or query API key.",
-    )
-    azure_ai_search_index: str = Field(
-        default="{{ project_slug }}-index",
-        description="Azure AI Search index name.",
-    )
+    azure_ai_search_endpoint: str = ""
+    azure_ai_search_api_key: str = ""
+    azure_ai_search_index: str = "{{ project_slug }}-index"
 {%- endif %}
 {%- if use_document_intelligence %}
 
-    # Azure Document Intelligence
-    azure_doc_intelligence_endpoint: str = Field(
-        default="",
-        description="Azure Document Intelligence endpoint URL.",
-        examples=["https://my-di.cognitiveservices.azure.com/"],
-    )
-    azure_doc_intelligence_api_key: str = Field(
-        default="",
-        description="Azure Document Intelligence API key.",
-    )
+    azure_doc_intelligence_endpoint: str = ""
+    azure_doc_intelligence_api_key: str = ""
 {%- endif %}
 {%- if use_agents %}
 
-    # Agent Framework
-    agent_max_steps: int = Field(
-        default=10,
-        gt=0,
-        le=_MAX_AGENT_STEPS,
-        description="Maximum steps per agent execution.",
-    )
-    agent_default_model: str = Field(
-        default="gpt-4o",
-        description="Default model for agent LLM calls.",
-    )
-    checkpointer_backend: str = Field(
-        default="memory",
-        description="LangGraph checkpointer backend: memory, sqlite, or postgres.",
-        examples=["memory", "sqlite", "postgres"],
-    )
+    agent_max_steps: int = 10
+    agent_default_model: str = "gpt-4o"
+    checkpointer_backend: str = "memory"
 {%- endif %}
 {%- if use_rag %}
 
-    # RAG Advanced
-    rag_score_threshold: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="Minimum similarity score for retrieval results.",
-    )
-    rag_retrieval_strategy: str = Field(
-        default="similarity",
-        description="Retrieval strategy (similarity, mmr, hybrid).",
-        examples=["similarity", "mmr", "hybrid"],
-    )
-    embedding_batch_size: int = Field(
-        default=100,
-        gt=0,
-        description="Batch size for embedding operations.",
-    )
+    rag_score_threshold: float = 0.0
+    rag_retrieval_strategy: str = "similarity"
+    embedding_batch_size: int = 100
 {%- endif %}
 {%- if use_knowledge_graph %}
 
-    # Knowledge Graph
-    neo4j_uri: str = Field(
-        default="bolt://localhost:7687",
-        description="Neo4j database URI.",
-        examples=["bolt://localhost:7687", "neo4j+s://my-instance.neo4j.io:7687"],
-    )
-    neo4j_user: str = Field(
-        default="neo4j",
-        description="Neo4j authentication username.",
-    )
-    neo4j_password: str = Field(
-        default="changeme",
-        description="Neo4j authentication password.",
-    )
-    neo4j_database: str = Field(
-        default="neo4j",
-        description="Neo4j database name.",
-    )
+    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: str = "changeme"
+    neo4j_database: str = "neo4j"
 {%- endif %}
 {%- if use_crewai %}
 
-    # CrewAI Multi-Agent
-    crewai_default_model: str = Field(
-        default="gpt-4o",
-        description="Default LLM model for CrewAI agents.",
-        examples=["gpt-4o", "gpt-4o-mini", "claude-sonnet-4-6"],
-    )
-    crewai_verbose: bool = Field(
-        default=False,
-        description="Enable verbose logging for CrewAI crew execution.",
-    )
-    crewai_embedder_provider: str = Field(
-        default="openai",
-        description="Embedding provider for CrewAI knowledge and memory.",
-        examples=["openai", "azure", "ollama"],
-    )
-    crewai_embedder_model: str | None = Field(
-        default=None,
-        description="Override the default embedder model for CrewAI.",
-        examples=["text-embedding-3-small", "text-embedding-ada-002"],
-    )
-    crewai_memory_scoring: str = Field(
-        default="default",
-        description="Memory scoring preset: 'default', 'sprint', or 'knowledge_base'.",
-        examples=["default", "sprint", "knowledge_base"],
-    )
+    crewai_default_model: str = "gpt-4o"
+    crewai_verbose: bool = False
+    crewai_embedder_provider: str = "openai"
+    crewai_embedder_model: str | None = None
+    crewai_memory_scoring: str = "default"
 {%- endif %}
 
     @model_validator(mode="after")

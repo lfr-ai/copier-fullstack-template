@@ -5,25 +5,31 @@
 #
 # Note: lychee requires system installation (brew install lychee / cargo install lychee).
 
+minimum_pre_commit_version: "4.0"
+default_language_version:
+  python: python3.12
+
 repos:
   # ── General file hygiene ──
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
       - id: check-yaml
         args: [--allow-multiple-documents, --unsafe]
         exclude: ^template/
       - id: check-json
       - id: check-toml
+      - id: check-ast
       - id: check-merge-conflict
+      - id: check-docstring-first
       - id: check-added-large-files
         args: [--maxkb=500]
       - id: check-case-conflict
       - id: check-illegal-windows-names
       - id: check-symlinks
+      - id: destroyed-symlinks
       - id: check-executables-have-shebangs
         exclude: ^template/
       - id: check-shebang-scripts-are-executable
@@ -34,6 +40,10 @@ repos:
         args: [--fix=lf]
       - id: no-commit-to-branch
         args: [--branch=main]
+      - id: debug-statements
+      - id: name-tests-test
+        args: [--pytest-test-first]
+        files: ^scripts/
 
   # ── YAML linting ──
   - repo: https://github.com/adrienverge/yamllint
@@ -45,7 +55,7 @@ repos:
 
   # ── Python linting / formatting / typing / security / complexity ──
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.10
+    rev: v0.15.11
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -62,10 +72,11 @@ repos:
         pass_filenames: false
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.6
+    rev: 1.9.4
     hooks:
       - id: bandit
         args: [-q, -r, scripts]
+        additional_dependencies: ["bandit[toml]"]
         pass_filenames: false
 
   # ── Markdown linting ──
@@ -85,13 +96,13 @@ repos:
 
   # ── Spell checking ──
   - repo: https://github.com/crate-ci/typos
-    rev: v1.45.0
+    rev: v1.45.1
     hooks:
       - id: typos
 
   # ── Shell linting ──
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
         args: [--severity=warning]
@@ -106,6 +117,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-commit, pre-push, manual]
 
       - id: template-render-smoke
         name: Template render smoke test
@@ -113,6 +125,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-push, manual]
 
       - id: template-rendered-tests
         name: Rendered project backend/frontend tests
@@ -120,6 +133,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-push, manual]
 
   # ── Python complexity ──
   - repo: https://github.com/rubik/xenon
@@ -143,6 +157,7 @@ repos:
         args: ["--no-progress", "--config", ".lychee.toml"]
         types_or: [markdown]
         files: ^[^/]+\.md$
+        stages: [manual]
 
   # ── Duplication detection ──
   - repo: local
@@ -158,7 +173,7 @@ repos:
 
   # ── Conventional commit enforcement ──
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.13.9
+    rev: v4.13.10
     hooks:
       - id: commitizen
         stages: [commit-msg]

@@ -1,0 +1,94 @@
+"""Runtime environment resolution for settings.
+
+Precedence order:
+1) Process environment variable
+2) '.env.local'
+3) '.env'
+4) Hostname map
+5) local
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+import os
+import socket
+
+from {{ project_slug }}.core.enums.environment import Environment
+
+_ROOT_PARENT_LEVEL = 5
+_ENVIRONMENT_KEY = '{{ project_slug | upper }}_ENVIRONMENT'
+_ENV_FILES = ('.env.local', '.env')
+
+_HOSTNAME_ENV_MAP: dict[str, Environment] = {}
+
+
+def _parse_environment(*, raw_value: str | None) -> Environment | None:
+    """Parse string value into an Environment enum.
+
+    Args:
+        raw_value (str | None): Raw string from process or dotenv.
+
+    Returns:
+        Environment | None: Parsed value when valid, otherwise None.
+    """
+    if raw_value is None:
+        return None
+
+    normalized = raw_value.strip().lower()
+    if not normalized:
+        return None
+
+    try:
+        return Environment(normalized)
+    except ValueError:
+        return None
+
+
+def _peek_env_file(*, file_path: Path) -> str | None:
+    """Read one key from a dotenv-like file without mutating process env.
+
+    Args:
+        file_path (Path): Dotenv file path.
+
+    Returns:
+        str | None: Raw value when present.
+    """
+    if not file_path.is_file():
+        return None
+
+    for raw_line in file_path.read_text(encoding='utf-8').splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+
+        key, value = line.split('=', maxsplit=1)
+        if key.strip() != _ENVIRONMENT_KEY:
+            continue
+
+        return value.strip().strip('"').strip("'")
+
+    return None
+
+
+def resolve_runtime_environment() -> Environment:
+    """Resolve active runtime environment from known precedence.
+
+    Returns:
+        Environment: Resolved environment enum value.
+    """
+    if parsed_process_env := _parse_environment(raw_value=os.getenv(_ENVIRONMENT_KEY)):
+        return parsed_process_env
+
+    root_dir = Path(__file__).resolve().parents[_ROOT_PARENT_LEVEL]
+    for env_filename in _ENV_FILES:
+        if parsed_file_env := _parse_environment(
+            raw_value=_peek_env_file(file_path=root_dir / env_filename)
+        ):
+            return parsed_file_env
+
+    hostname = socket.gethostname().lower()
+    if hostname_env := _HOSTNAME_ENV_MAP.get(hostname):
+        return hostname_env
+
+    return Environment.LOCAL

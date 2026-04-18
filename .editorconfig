@@ -1,5 +1,4 @@
 # EditorConfig — https://editorconfig.org
-# Enforces consistent formatting across all editors for template contributors.
 
 root = true
 
@@ -13,18 +12,13 @@ trim_trailing_whitespace = true
 
 [*.{py,py.jinja}]
 indent_size = 4
+max_line_length = 88
 
 [*.md]
 trim_trailing_whitespace = false
 
 [Makefile]
 indent_style = tab
-
-[*.{yml,yaml}]
-indent_size = 2
-
-[*.{toml,toml.jinja}]
-indent_size = 4
 
 [copier.yml]
 indent_size = 2

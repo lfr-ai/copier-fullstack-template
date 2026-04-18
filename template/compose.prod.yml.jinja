@@ -16,7 +16,7 @@ services:
     environment:
       {{ project_slug | upper }}_ENVIRONMENT: prod
       {{ project_slug | upper }}_LOG_LEVEL: WARNING
-      {{ project_slug | upper }}_SECRET_KEY: ${{{ project_slug | upper }}_SECRET_KEY:?SECRET_KEY must be set for production}
+      {{ project_slug | upper }}_SECRET_KEY: ${{ '{' }}{{ project_slug | upper }}_SECRET_KEY:?SECRET_KEY must be set for production{{ '}' }}
     deploy:
       resources:
         limits:

@@ -11,7 +11,7 @@ services:
     environment:
       {{ project_slug | upper }}_ENVIRONMENT: staging
       {{ project_slug | upper }}_LOG_LEVEL: INFO
-      {{ project_slug | upper }}_SECRET_KEY: ${{{ project_slug | upper }}_SECRET_KEY:?SECRET_KEY must be set for staging}
+      {{ project_slug | upper }}_SECRET_KEY: ${{ '{' }}{{ project_slug | upper }}_SECRET_KEY:?SECRET_KEY must be set for staging{{ '}' }}
     deploy:
       resources:
         limits:

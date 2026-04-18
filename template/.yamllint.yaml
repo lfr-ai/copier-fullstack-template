@@ -3,7 +3,7 @@ extends: default
 
 rules:
   line-length:
-    max: 120
+    max: 88
     level: warning
   indentation:
     spaces: 2
@@ -14,5 +14,8 @@ rules:
     allowed-values: ["true", "false", "yes", "no", "on", "off"]
     check-keys: false
   document-start: disable
+  new-lines:
+    type: unix
   empty-lines:
     max: 1
+    max-end: 1

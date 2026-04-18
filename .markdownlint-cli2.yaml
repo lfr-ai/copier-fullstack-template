@@ -8,13 +8,21 @@ ignores:
   - '.pre-commit-cache/**'
 
 config:
-  line-length:
-    line_length: 120
-    heading_line_length: 120
-    code_block_line_length: 120
+  default: true
 
-  no-duplicate-heading:
+  MD013:
+    line_length: 88
+    code_blocks: false
+    tables: false
+    headings: false
+
+  MD024:
     siblings_only: true
 
-  no-inline-html: false
-  no-trailing-punctuation: false
+  MD041: true
+
+  MD046:
+    style: fenced
+
+  MD048:
+    style: backtick

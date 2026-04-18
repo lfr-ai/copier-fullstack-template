@@ -98,161 +98,27 @@ dev = [
     "freezegun>=1.4",
     "respx>=0.22",{% if use_celery %}
     "pytest-celery>=1.1",{% endif %}
+    "bandit[toml]>=1.9.4",
     "ruff>=0.9",
-    "ty>=0.0.1a23",  # ty is pre-release -- update pin when a stable version ships
+    "ty>=0.0.1a23",
     "pre-commit>=4.0",
     "tox>=4.23",
     "tox-uv>=1.16",
     "pip-audit>=2.7",
     "detect-secrets>=1.5",
+    "commitizen>=4.13",
+    "yamllint>=1.37",
+    "xenon>=0.9.3",
 ]
 
 [project.scripts]
 {{ project_slug }} = "{{ project_slug }}.presentation.cli.app:main"
 
 [build-system]
-requires = ["hatchling>=1.27"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/{{ project_slug }}"]
+[tool.uv]
+package = true
+default-groups = ["dev"]
 
-[tool.ruff]
-target-version = "py{{ python_version | replace('.', '') }}"
-line-length = 88
-src = ["src", "tests"]
-
-[tool.ruff.lint]
-select = [
-    "F",      # pyflakes
-    "E", "W", # pycodestyle
-    "C90",    # mccabe
-    "I",      # isort
-    "N",      # pep8-naming
-    "UP",     # pyupgrade
-    "S",      # flake8-bandit
-    "B",      # flake8-bugbear
-    "A",      # flake8-builtins
-    "C4",     # flake8-comprehensions
-    "DTZ",    # flake8-datetimez
-    "T10",    # flake8-debugger
-    "T20",    # flake8-print
-    "ISC",    # flake8-implicit-str-concat
-    "ICN",    # flake8-import-conventions
-    "PIE",    # flake8-pie
-    "PT",     # flake8-pytest-style
-    "Q",      # flake8-quotes
-    "RSE",    # flake8-raise
-    "RET",    # flake8-return
-    "SLF",    # flake8-self
-    "SIM",    # flake8-simplify
-    "TID",    # flake8-tidy-imports
-    "TCH",    # flake8-type-checking
-    "ARG",    # flake8-unused-arguments
-    "PTH",    # flake8-use-pathlib
-    "ERA",    # eradicate
-    "PL",     # pylint
-    "TRY",    # tryceratops
-    "FLY",    # flynt
-    "PERF",   # perflint
-    "FURB",   # refurb
-    "LOG",    # flake8-logging
-    "RUF",    # ruff-specific
-    "ANN",    # flake8-annotations
-    "D",      # pydocstyle
-]
-ignore = [
-    "D100",   # missing docstring in public module (relaxed for now)
-    "D104",   # missing docstring in public package
-    "S101",   # use of assert (needed in tests)
-    "I001",   # import sorting noise handled separately when desired
-    "E501",   # line too long (handled by formatter)
-    "TRY003", # long exception messages
-    "ISC001", # conflicts with formatter
-    "TCH001", # type-checking import placement (application imports)
-    "TCH002", # type-checking import placement (third-party imports)
-    "TCH003", # type-checking import placement (stdlib imports)
-    "UP046",  # PEP 695 generic type parameter syntax migration (classes)
-    "UP047",  # PEP 695 generic type parameter syntax migration (functions)
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "ANN", "D", "ARG", "PLR2004"]
-"alembic/**/*.py" = ["D", "ANN", "ERA"]
-"scripts/**/*.py" = ["T20"]
-"**/__init__.py" = ["I001"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["{{ project_slug }}"]
-force-single-line = false
-lines-after-imports = 2
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
-[tool.ruff.lint.pylint]
-max-args = 8
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-line-ending = "lf"
-docstring-code-format = true
-
-[tool.ty]
-python-version = "{{ python_version }}"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"
-addopts = [
-    "-ra",
-    "--strict-markers",
-    "--strict-config",
-    "-x",
-    "--tb=short",
-]
-markers = [
-    "unit: Unit tests",
-    "integration: Integration tests",
-    "slow: Slow-running tests",
-    "property: Property-based tests",
-    "performance: Benchmarks and performance regression tests",
-    "profiling: Profiling tests (CPU, memory, SQL)",
-    "benchmark: pytest-benchmark performance benchmarks",
-]
-filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning",
-    "ignore::ResourceWarning",
-    "ignore::pytest.PytestUnraisableExceptionWarning",
-]
-
-[tool.coverage.run]
-source = ["src/{{ project_slug }}"]
-branch = true
-parallel = true
-omit = [
-    "*/tests/*",
-    "*/__main__.py",
-    "*/alembic/*",
-]
-
-[tool.coverage.report]
-show_missing = true
-fail_under = 80
-precision = 2
-exclude_lines = [
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
-    "raise NotImplementedError",
-    "@overload",
-    "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod",
-]
-
-[tool.coverage.html]
-directory = "htmlcov"
-
-[tool.coverage.xml]
-output = "coverage.xml"

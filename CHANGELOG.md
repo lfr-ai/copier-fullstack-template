@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- FastAPI status-code convention checker (`scripts/check-fastapi-status-codes.py`)
+- Task wiring for FastAPI status-code enforcement (`conventions:fastapi-status-codes`)
+- Root-level architecture and feature analysis docs under `docs/`
+
+### Changed
+
+- Standardized width settings to 88 for markdownlint/yamllint in root and template
+- Updated and simplified root/template pre-commit baselines for iterative onboarding
+- Strengthened coding instructions around internal naming, `Final[...]` avoidance,
+  selective `Annotated[...]` usage, and typed docstring sections
+- Updated backend template Ruff formatting to single-quote style
+
 ## [0.1.0] - 2026-04-10
 
 ### Added

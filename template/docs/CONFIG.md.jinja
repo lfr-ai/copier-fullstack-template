@@ -105,7 +105,7 @@ All configuration is loaded from environment variables with the
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_FAISS_PERSIST_DIR` | `str\|None` | `None` | Directory for FAISS index persistence (`None` = in-memory only) |
+| `{{ project_slug | upper }}_FAISS_PERSIST_DIR` | `str` or `None` | `None` | Directory for FAISS index persistence (`None` = in-memory only) |
 {% endif %}
 {% if use_pgvector %}
 
@@ -121,8 +121,8 @@ All configuration is loaded from environment variables with the
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND` | `str` | `{{ knowledge_graph_backend \| default('networkx') }}` | Knowledge graph backend: `networkx`, `neo4j`, or `rdflib` |
-| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_PATH` | `str\|None` | `None` | File path for knowledge graph persistence (None = in-memory) |
+| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_BACKEND` | `str` | `{{ knowledge_graph_backend | default('networkx') }}` | Knowledge graph backend: `networkx`, `neo4j`, or `rdflib` |
+| `{{ project_slug | upper }}_KNOWLEDGE_GRAPH_PATH` | `str` or `None` | `None` | File path for knowledge graph persistence (None = in-memory) |
 | `{{ project_slug | upper }}_NEO4J_URI` | `str` | `bolt://localhost:7687` | Neo4j Bolt connection URI |
 | `{{ project_slug | upper }}_NEO4J_USER` | `str` | `neo4j` | Neo4j username |
 | `{{ project_slug | upper }}_NEO4J_PASSWORD` | `str` | `changeme` | Neo4j password |
@@ -196,7 +196,7 @@ All configuration is loaded from environment variables with the
 | `{{ project_slug | upper }}_CREWAI_DEFAULT_MODEL` | `str` | `gpt-4o` | Default LLM model for CrewAI agents |
 | `{{ project_slug | upper }}_CREWAI_VERBOSE` | `bool` | `false` | Enable verbose CrewAI logging |
 | `{{ project_slug | upper }}_CREWAI_EMBEDDER_PROVIDER` | `str` | `openai` | Embedding provider for CrewAI memory |
-| `{{ project_slug | upper }}_CREWAI_EMBEDDER_MODEL` | `str\|None` | `None` | Override the default embedder model for CrewAI (resolved by provider when `None`) |
+| `{{ project_slug | upper }}_CREWAI_EMBEDDER_MODEL` | `str` or `None` | `None` | Override the default embedder model for CrewAI (resolved by provider when `None`) |
 | `{{ project_slug | upper }}_CREWAI_MEMORY_SCORING` | `str` | `default` | Memory scoring preset: `default`, `sprint`, or `knowledge_base` |
 {% endif %}
 
