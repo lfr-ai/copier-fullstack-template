@@ -13,6 +13,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   lint:
     name: Lint template source
@@ -55,6 +58,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.0.0
+        with:
+          enable-cache: false
 
       - name: Configure git author for post-copy tasks
         run: |
@@ -117,6 +122,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.0.0
+        with:
+          enable-cache: false
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
@@ -172,11 +179,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v8.0.0
+        with:
+          enable-cache: false
 
       - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
+        run: uvx pre-commit run --all-files
         env:
           SKIP: no-commit-to-branch,template-verify-all,template-render-smoke,template-rendered-tests
 

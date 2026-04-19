@@ -2,7 +2,6 @@
 name = "{{ project_slug }}"
 version = "0.1.0"
 description = "{{ project_description }}"
-readme = "../README.md"
 license = { text = "{{ license }}" }
 requires-python = ">={{ python_version }}"
 authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
@@ -14,12 +13,6 @@ classifiers = [
     "Programming Language :: Python :: {{ python_version }}",
     "Typing :: Typed",
 ]
-
-[project.urls]
-Homepage = "https://github.com/{{ github_username }}/{{ project_slug }}"
-Repository = "https://github.com/{{ github_username }}/{{ project_slug }}"
-Issues = "https://github.com/{{ github_username }}/{{ project_slug }}/issues"
-Documentation = "https://github.com/{{ github_username }}/{{ project_slug }}/tree/main/docs"
 
 dependencies = [
     "fastapi>=0.115",
@@ -84,6 +77,12 @@ dependencies = [
     "azure-search-documents>=11.6",{% endif %}{% if use_document_intelligence %}
     "azure-ai-documentintelligence>=1.0",{% endif %}
 ]
+
+[project.urls]
+Homepage = "https://github.com/{{ github_username }}/{{ project_slug }}"
+Repository = "https://github.com/{{ github_username }}/{{ project_slug }}"
+Issues = "https://github.com/{{ github_username }}/{{ project_slug }}/issues"
+Documentation = "https://github.com/{{ github_username }}/{{ project_slug }}/tree/main/docs"
 
 [dependency-groups]
 dev = [
