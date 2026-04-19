@@ -18,6 +18,15 @@ config:
   MD024:
     siblings_only: true
 
+  MD012: false
+  MD028: false
+  MD031: false
+  MD032: false
+  MD034: false
+  MD040: false
+  MD058: false
+  MD060: false
+
   MD033:
     allowed_elements:
       - br

@@ -93,7 +93,7 @@ jobs:
         if: matrix.python-version == '{% endraw %}{{ python_version }}{% raw %}'
         uses: codecov/codecov-action@v5
         with:
-          file: coverage.xml
+          files: coverage.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 {% endraw %}
