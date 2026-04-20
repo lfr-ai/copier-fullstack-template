@@ -54,6 +54,9 @@ exclude_path = [
   "__pycache__",
   ".tox",
   "*.egg-info",
+  "uv.lock",
+  "pyproject.toml",
+  ".env.*",
   "CHANGELOG.md",
 ]
 

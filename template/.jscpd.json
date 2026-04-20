@@ -25,11 +25,9 @@
     "htmlcov",
     "coverage",
     ".lycheecache",
-    "logs/**"
-  ],
-  "format": ["python", "typescript", "javascript", "markup", "css"],
-  "absolute": true,
-  "gitignore": true,
-  "blame": false,
-  "exitCode": 1
+    "jscpd-report/**",
+    "logs/**",
+    "**/.github/agents/**",
+    "**/prompts/**"
+  ]
 }

@@ -6,6 +6,7 @@ services:
     volumes:
       - ..:/workspace:cached
     command: sleep infinity
+    init: true
     environment:
       - {{ project_slug | upper }}_ENVIRONMENT=local
 {%- if use_redis %}

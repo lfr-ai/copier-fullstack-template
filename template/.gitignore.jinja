@@ -16,6 +16,7 @@ Desktop.ini
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 *.egg-info/
 *.egg
 dist/
@@ -26,11 +27,17 @@ venv/
 htmlcov/
 .coverage
 .coverage.*
+coverage.xml
 .pytest_cache/
+.hypothesis/
 .ruff_cache/
 .mypy_cache/
+.dmypy.json
 .ty/
 .tox/
+.nox/
+.pre-commit-cache/
+.cache/pre-commit/
 
 node_modules/
 .bun/
@@ -64,6 +71,7 @@ jscpd-report/
 *.pem
 *.key
 *.crt
+*.p12
 id_ed25519
 id_ed25519.pub
 id_rsa
@@ -76,8 +84,13 @@ known_hosts
 *.tar.gz
 
 *.db
+*.sqlite
+*.sqlite3
+*.map
 
-
+secrets/
+uploads/
+storage/
 profiles/
 
 .task/
@@ -85,5 +98,11 @@ profiles/
 .traycer/
 logs/
 !logs/.gitkeep
+temp/
 tmp/
+*.tmp
+*.temp
 .bootstrap/
+
+# ─── Workspace files ───
+*.code-workspace

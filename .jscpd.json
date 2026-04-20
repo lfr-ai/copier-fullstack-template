@@ -1,8 +1,11 @@
 {
-  "threshold": 5,
-  "minLines": 5,
-  "minTokens": 50,
-  "reporters": ["console"],
+  "threshold": 3,
+  "skipBlocks": [
+    {
+      "open": "\"\"\"",
+      "close": "\"\"\""
+    }
+  ],
   "ignore": [
     "node_modules",
     "dist",
@@ -23,10 +26,5 @@
     "coverage",
     ".pre-commit-cache",
     "logs/**"
-  ],
-  "format": ["python", "typescript", "javascript", "markup", "css", "yaml", "json", "markdown"],
-  "absolute": true,
-  "gitignore": true,
-  "blame": false,
-  "exitCode": 1
+  ]
 }
