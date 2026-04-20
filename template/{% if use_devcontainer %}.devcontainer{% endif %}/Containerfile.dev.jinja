@@ -1,23 +1,45 @@
 FROM mcr.microsoft.com/devcontainers/python:{{ python_version }}
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    git \
-    unzip \
-    zsh \
+ARG HADOLINT_VERSION=v2.14.0
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV UV_LINK_MODE=copy
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# ── System packages ─────────────────────────────────────────────────────
+# hadolint ignore=DL3008
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git \
+        jq \
+        unzip \
+        zsh \
+        shellcheck \
+{%- if database_backend in ("postgresql", "azure_postgresql") %}
+        postgresql-client \
+{%- endif %}
     && rm -rf /var/lib/apt/lists/*
 
+# ── uv (Python package manager) ─────────────────────────────────────────
 COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /uvx /usr/local/bin/
 
+# ── Taskfile ─────────────────────────────────────────────────────────────
 RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
+# ── Bun (frontend runtime) ──────────────────────────────────────────────
 RUN curl -fsSL https://bun.sh/install | bash \
     && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
     && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
 
-RUN curl -sL -o /usr/local/bin/hadolint \
-    "https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64" \
+# ── hadolint ─────────────────────────────────────────────────────────────
+RUN curl -sSL -o /usr/local/bin/hadolint \
+    "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
     && chmod +x /usr/local/bin/hadolint
+
+# ── Zsh as default shell for vscode user ─────────────────────────────────
+RUN chsh -s /usr/bin/zsh vscode
 
 WORKDIR /workspace

@@ -48,7 +48,13 @@
     "lychee",
     "jscpd",
     "hmas",
-    "jsonrpc"
+    "jsonrpc",
+    "minversion",
+    "testpaths",
+    "monkeypatch",
+    "autouse",
+    "dotenv",
+    "Taskfile"
 {%- if api_style in ('graphql', 'both') -%}
     ,
     "graphql",
@@ -73,7 +79,13 @@
     "**/__pycache__/**",
     ".tox/**",
     ".ruff_cache/**",
-    ".ty/**"
+    ".mypy_cache/**",
+    ".ty/**",
+    "logs/**",
+    "CHANGELOG.md",
+    "jscpd-report/**",
+    "*.egg-info/**",
+    "tox.ini"
   ],
   "overrides": [
     {

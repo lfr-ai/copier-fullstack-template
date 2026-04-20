@@ -3,7 +3,34 @@
   "dockerComposeFile": "compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
-  "forwardPorts": [8000, 3000{% if use_redis %}, 6379{% endif %}{% if database_backend == "postgresql" %}, 5432{% endif %}{% if use_storybook %}, 6006{% endif %}],
+  "overrideCommand": false,
+  "waitFor": "postCreateCommand",
+  "mounts": [
+    "source={{ project_slug }}-uv-cache,target=/home/vscode/.cache/uv,type=volume",
+    "source={{ project_slug }}-precommit-cache,target=/home/vscode/.cache/pre-commit,type=volume",
+    "source={{ project_slug }}-zsh-history,target=/commandhistory,type=volume"
+  ],
+  "remoteEnv": {
+    "PYTHONPATH": "/workspace/backend/src",
+    "UV_LINK_MODE": "copy",
+    "UV_CACHE_DIR": "/home/vscode/.cache/uv"
+  },
+  "forwardPorts": [8000, 3000{% if use_redis %}, 6379{% endif %}{% if database_backend in ("postgresql", "azure_postgresql") %}, 5432{% endif %}{% if use_storybook %}, 6006{% endif %}],
+  "portsAttributes": {
+    "8000": {
+      "label": "FastAPI Backend",
+      "onAutoForward": "openBrowserOnce"
+    },
+    "3000": {
+      "label": "Frontend (Vite)"
+    }{% if database_backend in ("postgresql", "azure_postgresql") %},
+    "5432": {
+      "label": "PostgreSQL"
+    }{% endif %}{% if use_redis %},
+    "6379": {
+      "label": "Redis"
+    }{% endif %}
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -102,6 +129,19 @@
         "[markdown]": {
           "editor.defaultFormatter": "davidanson.vscode-markdownlint"
         },
+        "[toml]": {
+          "editor.defaultFormatter": "tamasfe.even-better-toml"
+        },
+        "[shellscript]": {
+          "editor.defaultFormatter": "timonwong.shellcheck"
+        },
+        "editor.autoIndentOnPaste": true,
+        "editor.folding": false,
+        "editor.tabCompletion": "on",
+        "diffEditor.ignoreTrimWhitespace": true,
+        "files.autoSave": "afterDelay",
+        "workbench.iconTheme": "vscode-icons",
+        "cSpell.language": "en",
         "files.associations": {
           "*.css": "tailwindcss",
           "Containerfile": "dockerfile",
@@ -111,5 +151,7 @@
     }
   },
   "postCreateCommand": "zsh scripts/bootstrap.zsh",
-  "remoteUser": "vscode"
+  "updateRemoteUserUID": true,
+  "remoteUser": "vscode",
+  "shutdownAction": "stopCompose"
 }

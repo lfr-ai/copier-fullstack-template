@@ -1,6 +1,7 @@
 target-version = "py{{ python_version | replace('.', '') }}"
 line-length = 88
 src = ["src", "tests"]
+exclude = [".venv", ".tox", "dist", "build"]
 
 [lint]
 select = [

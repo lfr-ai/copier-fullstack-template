@@ -4,11 +4,18 @@ globs:
 
 ignores:
   - 'node_modules/**'
+  - '**/node_modules/**'
   - '.venv/**'
+  - '**/.venv/**'
+  - '.tox/**'
+  - '**/.tox/**'
   - 'htmlcov/**'
   - 'frontend/dist/**'
+  - 'logs/**'
 
 config:
+  default: true
+
   MD013:
     line_length: 88
     code_blocks: false
