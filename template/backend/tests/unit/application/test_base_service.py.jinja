@@ -37,7 +37,7 @@ class _FakeUnitOfWork:
     async def check_connection(self) -> bool:
         return True
 
-class _ConcreteService(BaseService[str]):
+class _ConcreteService(BaseService):
     """Concrete service for testing base class features."""
 
     async def do_work(self) -> str:  # noqa: PLR6301
@@ -50,13 +50,13 @@ class TestBaseService:
     def test_receives_unit_of_work(self) -> None:
         """Verify UoW is stored as protected attribute."""
         uow = _FakeUnitOfWork()
-        service = _ConcreteService(uow)
+        service = _ConcreteService(uow=uow)
         assert service._uow is uow  # noqa: SLF001
 
     def test_logger_is_named_after_class(self) -> None:
         """Verify logger name includes concrete class name."""
         uow = _FakeUnitOfWork()
-        service = _ConcreteService(uow)
+        service = _ConcreteService(uow=uow)
         assert "_ConcreteService" in service._logger.name  # noqa: SLF001
 
     def test_logger_is_logging_instance(self) -> None:

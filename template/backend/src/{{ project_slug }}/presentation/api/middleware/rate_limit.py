@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from fastapi import status
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
 
 
 _DEFAULT_RATE_LIMIT = "60/minute"
-_HTTP_TOO_MANY_REQUESTS = 429
 
 
 def _get_real_client_ip(request: "Request") -> str:
@@ -36,7 +36,7 @@ async def _rate_limit_exceeded(
     retry_after = getattr(exc, "retry_after", None)
     headers = {"Retry-After": str(retry_after)} if retry_after else {}
     return JSONResponse(
-        status_code=_HTTP_TOO_MANY_REQUESTS,
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         content={"detail": "Rate limit exceeded"},
         headers=headers,
     )
