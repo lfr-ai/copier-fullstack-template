@@ -16,10 +16,16 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 router = APIRouter()
 
-try:
-    _APP_VERSION: str = version("{{ project_slug }}")
-except PackageNotFoundError:
-    _APP_VERSION: str = "0.0.0-dev"  # type: ignore[no-redef]
+
+def _resolve_app_version() -> str:
+    """Resolve the installed package version, falling back to dev marker."""
+    try:
+        return version("{{ project_slug }}")
+    except PackageNotFoundError:
+        return "0.0.0-dev"
+
+
+_APP_VERSION: str = _resolve_app_version()
 
 
 @router.get("/health", response_model=HealthResponse)

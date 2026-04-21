@@ -3,6 +3,7 @@
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import override
 
 
 def utcnow() -> datetime:
@@ -53,12 +54,14 @@ class Entity:
         self._events.clear()
         return events
 
+    @override
     def __eq__(self, other: object) -> bool:
         """Compare entities by identity."""
         if not isinstance(other, Entity):
             return NotImplemented
         return self.id == other.id
 
+    @override
     def __hash__(self) -> int:
         """Hash by entity identity."""
         return hash(self.id)

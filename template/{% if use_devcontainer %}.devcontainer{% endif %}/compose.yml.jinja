@@ -9,6 +9,41 @@ services:
     init: true
     environment:
       - {{ project_slug | upper }}_ENVIRONMENT=local
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+      - {{ project_slug | upper }}_DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/{{ project_slug }}
+{%- endif %}
+{%- if use_redis %}
+      - {{ project_slug | upper }}_REDIS_URL=redis://redis:6379/0
+{%- endif %}
+{%- if database_backend in ('postgresql', 'azure_postgresql') or use_redis %}
+    depends_on:
+{%- endif %}
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+      db:
+        condition: service_healthy
+{%- endif %}
+{%- if use_redis %}
+      redis:
+        condition: service_healthy
+{%- endif %}
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+
+  db:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: {{ project_slug }}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+{%- endif %}
 {%- if use_redis %}
 
   redis:
@@ -17,9 +52,19 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 {%- endif %}
-{%- if use_redis %}
+{%- if database_backend in ('postgresql', 'azure_postgresql') or use_redis %}
 
 volumes:
+{%- endif %}
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+  postgres-data:
+{%- endif %}
+{%- if use_redis %}
   redis-data:
 {%- endif %}
