@@ -33,6 +33,12 @@ x-common-env: &common-env
 {%- if use_mcp %}
   {{ project_slug | upper }}_MCP_ENABLED: ${{ '{' }}{{ project_slug | upper }}_MCP_ENABLED:-false{{ '}' }}
 {%- endif %}
+{%- if use_lightrag %}
+  {{ project_slug | upper }}_LIGHTRAG_WORKING_DIR: /app/data/lightrag
+  {{ project_slug | upper }}_LIGHTRAG_GRAPH_STORAGE: ${{ '{' }}{{ project_slug | upper }}_LIGHTRAG_GRAPH_STORAGE:-NetworkXStorage{{ '}' }}
+  {{ project_slug | upper }}_LIGHTRAG_VECTOR_STORAGE: ${{ '{' }}{{ project_slug | upper }}_LIGHTRAG_VECTOR_STORAGE:-NanoVectorDBStorage{{ '}' }}
+  {{ project_slug | upper }}_LIGHTRAG_LLM_MODEL: ${{ '{' }}{{ project_slug | upper }}_LIGHTRAG_LLM_MODEL:-gpt-4o-mini{{ '}' }}
+{%- endif %}
 
 services:
   app:
@@ -51,6 +57,9 @@ services:
 {%- endif %}
 {%- if use_faiss %}
       - faiss-data:/app/data/faiss
+{%- endif %}
+{%- if use_lightrag %}
+      - lightrag-data:/app/data/lightrag
 {%- endif %}
 {%- if use_redis or database_backend == "postgresql" %}
     depends_on:
@@ -301,6 +310,9 @@ volumes:
 {%- endif %}
 {%- if use_knowledge_graph and knowledge_graph_backend == "neo4j" %}
   neo4j-data:
+{%- endif %}
+{%- if use_lightrag %}
+  lightrag-data:
 {%- endif %}
 
 networks:

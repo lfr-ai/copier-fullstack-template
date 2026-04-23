@@ -1,0 +1,296 @@
+"""RAG-Anything adapter -- multimodal document processing and RAG built on LightRAG.
+
+Provides async document ingestion for PDFs, Office documents, images,
+tables, and equations. Wraps the 'raganything.RAGAnything' library
+with typed interfaces and structured logging.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING, final
+
+import structlog
+
+from {{ project_slug }}.ai.raganything.config import (
+    RAGAnythingSettings,
+)
+
+if TYPE_CHECKING:
+    from {{ project_slug }}.ai.lightrag.adapter import LightRAGAdapter
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_LOG_TRUNCATE = 200
+
+
+@final
+class RAGAnythingAdapter:
+    """Async adapter for RAG-Anything multimodal RAG.
+
+    Builds on top of a 'LightRAGAdapter' to add multimodal document
+    processing capabilities: PDF parsing, image analysis, table
+    interpretation, and equation extraction.
+
+    Usage::
+
+        lightrag_adapter = await LightRAGAdapter.create(lightrag_settings)
+        rag_anything = await RAGAnythingAdapter.create(
+            settings=raganything_settings,
+            lightrag_adapter=lightrag_adapter,
+        )
+        await rag_anything.process_document("path/to/document.pdf")
+        result = await rag_anything.query("What are the key findings?")
+    """
+
+    __slots__ = ("_rag", "_settings", "_lightrag_adapter")
+
+    def __init__(
+        self,
+        *,
+        rag: object,
+        settings: RAGAnythingSettings,
+        lightrag_adapter: LightRAGAdapter,
+    ) -> None:
+        self._rag = rag
+        self._settings = settings
+        self._lightrag_adapter = lightrag_adapter
+
+    @classmethod
+    async def create(
+        cls,
+        settings: RAGAnythingSettings,
+        *,
+        lightrag_adapter: LightRAGAdapter,
+        llm_model_func: object | None = None,
+        vision_model_func: object | None = None,
+        embedding_func: object | None = None,
+    ) -> RAGAnythingAdapter:
+        """Factory: create and initialize a RAGAnythingAdapter.
+
+        Args:
+            settings (RAGAnythingSettings): RAG-Anything configuration.
+            lightrag_adapter (LightRAGAdapter): Pre-initialized LightRAG adapter.
+            llm_model_func (object | None): Custom LLM function for text processing.
+            vision_model_func (object | None): Vision model function for image analysis.
+            embedding_func (object | None): Custom embedding function.
+
+        Returns:
+            RAGAnythingAdapter: Initialized multimodal RAG adapter.
+        """
+        from raganything import RAGAnything, RAGAnythingConfig
+
+        config = RAGAnythingConfig(
+            working_dir=settings.working_dir,
+            parser=settings.parser.value,
+            parse_method=settings.parse_method.value,
+            enable_image_processing=settings.enable_image_processing,
+            enable_table_processing=settings.enable_table_processing,
+            enable_equation_processing=settings.enable_equation_processing,
+        )
+
+        kwargs: dict[str, object] = {
+            "config": config,
+            "lightrag": lightrag_adapter.raw,
+        }
+        if vision_model_func is not None:
+            kwargs["vision_model_func"] = vision_model_func
+        if llm_model_func is not None:
+            kwargs["llm_model_func"] = llm_model_func
+        if embedding_func is not None:
+            kwargs["embedding_func"] = embedding_func
+
+        rag = RAGAnything(**kwargs)
+
+        logger.info(
+            "raganything_initialized",
+            working_dir=settings.working_dir,
+            parser=settings.parser.value,
+            image=settings.enable_image_processing,
+            table=settings.enable_table_processing,
+            equation=settings.enable_equation_processing,
+        )
+        return cls(rag=rag, settings=settings, lightrag_adapter=lightrag_adapter)
+
+    # ── Document Processing ──────────────────────────────────────────
+
+    async def process_document(
+        self,
+        file_path: str,
+        *,
+        output_dir: str | None = None,
+        parse_method: str | None = None,
+        display_stats: bool = True,
+    ) -> None:
+        """Process a single multimodal document end-to-end.
+
+        Parses the document, extracts text/images/tables/equations,
+        builds the multimodal knowledge graph, and indexes for retrieval.
+
+        Args:
+            file_path (str): Path to the document file.
+            output_dir (str | None): Override output directory.
+            parse_method (str | None): Override parse method ('auto', 'ocr', 'txt').
+            display_stats (bool): Whether to display content statistics.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+        """
+        path = Path(file_path)
+        if not path.is_file():
+            msg = f"File not found: {file_path}"
+            raise FileNotFoundError(msg)
+
+        out = output_dir or self._settings.output_dir
+        method = parse_method or self._settings.parse_method.value
+
+        await self._rag.process_document_complete(
+            file_path=str(path),
+            output_dir=out,
+            parse_method=method,
+            display_stats=display_stats,
+        )
+        logger.info(
+            "raganything_document_processed",
+            file=str(path),
+            method=method,
+        )
+
+    async def process_folder(
+        self,
+        folder_path: str,
+        *,
+        output_dir: str | None = None,
+        recursive: bool = True,
+        max_workers: int | None = None,
+    ) -> None:
+        """Process all supported documents in a folder.
+
+        Args:
+            folder_path (str): Path to the folder containing documents.
+            output_dir (str | None): Override output directory.
+            recursive (bool): Whether to process subdirectories.
+            max_workers (int | None): Maximum parallel workers.
+        """
+        out = output_dir or self._settings.output_dir
+        workers = max_workers or self._settings.max_workers
+
+        await self._rag.process_folder_complete(
+            folder_path=folder_path,
+            output_dir=out,
+            file_extensions=list(self._settings.supported_extensions),
+            recursive=recursive,
+            max_workers=workers,
+        )
+        logger.info(
+            "raganything_folder_processed",
+            folder=folder_path,
+            recursive=recursive,
+        )
+
+    async def insert_content_list(
+        self,
+        content_list: list[dict[str, object]],
+        *,
+        file_path: str = "direct_input",
+        doc_id: str | None = None,
+        display_stats: bool = True,
+    ) -> None:
+        """Insert pre-parsed multimodal content directly.
+
+        Bypasses document parsing for content from external parsers
+        or programmatic sources.
+
+        Args:
+            content_list (list[dict[str, object]]): List of content items.
+                Each item has 'type' ('text', 'image', 'table', 'equation')
+                and type-specific fields.
+            file_path (str): Reference file name for citation.
+            doc_id (str | None): Custom document ID.
+            display_stats (bool): Whether to display content statistics.
+        """
+        await self._rag.insert_content_list(
+            content_list=content_list,
+            file_path=file_path,
+            doc_id=doc_id,
+            display_stats=display_stats,
+        )
+        logger.info(
+            "raganything_content_inserted",
+            items=len(content_list),
+            doc_id=doc_id,
+        )
+
+    # ── Querying ─────────────────────────────────────────────────────
+
+    async def query(
+        self,
+        question: str,
+        *,
+        mode: str = "hybrid",
+    ) -> str:
+        """Query the multimodal knowledge base (text-only query).
+
+        Uses LightRAG's query engine under the hood.
+
+        Args:
+            question (str): Natural language question.
+            mode (str): Query mode ('naive', 'local', 'global', 'hybrid').
+
+        Returns:
+            str: Generated answer.
+        """
+        result = await self._rag.aquery(question, mode=mode)
+        logger.info(
+            "raganything_query",
+            mode=mode,
+            question=question[:_LOG_TRUNCATE],
+        )
+        return str(result)
+
+    async def query_multimodal(
+        self,
+        question: str,
+        multimodal_content: list[dict[str, object]],
+        *,
+        mode: str = "hybrid",
+    ) -> str:
+        """Query with additional multimodal content for enhanced analysis.
+
+        Combines text query with specific multimodal elements (tables,
+        equations, images) for cross-modal reasoning.
+
+        Args:
+            question (str): Natural language question.
+            multimodal_content (list[dict[str, object]]): Multimodal items to analyze.
+            mode (str): Query mode.
+
+        Returns:
+            str: Generated multimodal-aware answer.
+        """
+        result = await self._rag.aquery_with_multimodal(
+            question,
+            multimodal_content=multimodal_content,
+            mode=mode,
+        )
+        logger.info(
+            "raganything_multimodal_query",
+            mode=mode,
+            content_items=len(multimodal_content),
+        )
+        return str(result)
+
+    @property
+    def settings(self) -> RAGAnythingSettings:
+        """Return the current RAG-Anything settings."""
+        return self._settings
+
+    @property
+    def lightrag(self) -> LightRAGAdapter:
+        """Return the underlying LightRAG adapter."""
+        return self._lightrag_adapter
+
+    @property
+    def raw(self) -> object:
+        """Return the underlying 'raganything.RAGAnything' instance."""
+        return self._rag

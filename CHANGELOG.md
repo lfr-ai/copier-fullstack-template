@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Strengthened coding instructions around internal naming, `Final[...]` avoidance,
   selective `Annotated[...]` usage, and typed docstring sections
 - Updated backend template Ruff formatting to single-quote style
+- Wired LightRAG and RAG-Anything into backend runtime settings, container factories,
+  and environment documentation
 
 ## [0.1.0] - 2026-04-10
 

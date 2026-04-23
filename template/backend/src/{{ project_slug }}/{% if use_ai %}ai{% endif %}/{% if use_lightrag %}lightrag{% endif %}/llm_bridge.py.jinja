@@ -1,0 +1,94 @@
+"""LightRAG LLM bridge -- adapts application LLM providers to LightRAG callables.
+
+LightRAG expects plain async callables for LLM and embedding functions.
+This module bridges the application's 'LLMGateway' and 'EmbeddingGateway'
+interfaces to the LightRAG function protocol.
+
+For Azure OpenAI or custom providers, use these bridges instead of
+LightRAG's built-in OpenAI adapters.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import structlog
+
+if TYPE_CHECKING:
+    from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
+    from {{ project_slug }}.core.interfaces.llm import LLMGateway
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+def create_llm_func_from_gateway(gateway: LLMGateway) -> object:
+    """Create a LightRAG-compatible LLM function from an 'LLMGateway'.
+
+    LightRAG expects: 'async def(prompt, system_prompt=None, history_messages=[], **kwargs) -> str'
+
+    Args:
+        gateway (LLMGateway): Application LLM gateway instance.
+
+    Returns:
+        An async callable compatible with LightRAG's 'llm_model_func' parameter.
+    """
+
+    async def _llm_func(
+        prompt: str,
+        system_prompt: str | None = None,
+        history_messages: list[dict[str, str]] | None = None,
+        **kwargs: object,
+    ) -> str:
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        if history_messages:
+            messages.extend(history_messages)
+        messages.append({"role": "user", "content": prompt})
+
+        response = await gateway.generate(
+            messages=messages,
+            **kwargs,  # type: ignore[arg-type]
+        )
+        return str(response)
+
+    logger.info("lightrag_llm_bridge_created")
+    return _llm_func
+
+
+def create_embedding_func_from_gateway(
+    gateway: EmbeddingGateway,
+    *,
+    dimension: int = 3072,
+    max_token_size: int = 8192,
+) -> object:
+    """Create a LightRAG-compatible 'EmbeddingFunc' from an 'EmbeddingGateway'.
+
+    Args:
+        gateway (EmbeddingGateway): Application embedding gateway instance.
+        dimension (int): Embedding vector dimension.
+        max_token_size (int): Maximum token size per request.
+
+    Returns:
+        An 'EmbeddingFunc' instance compatible with LightRAG.
+    """
+    from lightrag.utils import EmbeddingFunc
+
+    async def _embed(texts: list[str]) -> list[list[float]]:
+        results = []
+        for text in texts:
+            embedding = await gateway.embed(text)
+            results.append(embedding)
+        return results
+
+    func = EmbeddingFunc(
+        embedding_dim=dimension,
+        max_token_size=max_token_size,
+        func=_embed,
+    )
+    logger.info(
+        "lightrag_embedding_bridge_created",
+        dimension=dimension,
+        max_token_size=max_token_size,
+    )
+    return func

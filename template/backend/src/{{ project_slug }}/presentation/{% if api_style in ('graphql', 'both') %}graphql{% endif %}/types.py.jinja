@@ -115,6 +115,209 @@ class RAGResult:
 {%- endif %}
 
 
+{%- if use_lightrag %}
+
+_DEFAULT_LIGHTRAG_TOP_K = 60
+
+
+@strawberry.input(description="Input for a LightRAG graph-native retrieval query.")
+@final
+class LightRAGQueryInput:
+    """GraphQL input for LightRAG graph-native retrieval.
+
+    Modes: 'local' (entity neighborhood), 'global' (community summaries),
+    'hybrid' (combined), 'naive' (vector only), 'mix' (hybrid + reranker).
+    """
+
+    query: str
+    mode: str | None = "hybrid"
+    top_k: int = _DEFAULT_LIGHTRAG_TOP_K
+    response_type: str = "Multiple Paragraphs"
+    only_need_context: bool = False
+    user_prompt: str | None = None
+
+
+@strawberry.type(description="LightRAG query response with graph-augmented answer.")
+@final
+class LightRAGResult:
+    """GraphQL result for a LightRAG query."""
+
+    answer: str
+    context: str | None = None
+    mode: str
+
+
+@strawberry.input(description="Input for LightRAG text ingestion.")
+@final
+class LightRAGInsertInput:
+    """GraphQL input for inserting text into LightRAG."""
+
+    text: str
+    doc_id: str | None = None
+    file_path: str | None = None
+
+
+@strawberry.type(description="LightRAG document insertion result.")
+@final
+class LightRAGInsertResultType:
+    """GraphQL result for a LightRAG insertion."""
+
+    source: str
+    success: bool
+    document_count: int
+    message: str | None = None
+
+
+@strawberry.type(description="A knowledge graph node from LightRAG.")
+@final
+class KnowledgeGraphNode:
+    """GraphQL type for a knowledge graph entity."""
+
+    name: str
+    label: str | None = None
+    properties: str | None = None
+
+
+@strawberry.type(description="A knowledge graph edge from LightRAG.")
+@final
+class KnowledgeGraphEdge:
+    """GraphQL type for a knowledge graph relationship."""
+
+    source: str
+    target: str
+    relationship: str
+    weight: float | None = None
+
+
+@strawberry.type(description="Knowledge graph export result.")
+@final
+class KnowledgeGraphData:
+    """GraphQL type for exported knowledge graph data."""
+
+    nodes: list[KnowledgeGraphNode]
+    edges: list[KnowledgeGraphEdge]
+
+
+@strawberry.input(description="Input for creating a knowledge graph entity.")
+@final
+class LightRAGEntityInput:
+    """GraphQL input for creating a KG entity."""
+
+    name: str
+    entity_type: str = ""
+    description: str = ""
+
+
+@strawberry.type(description="Knowledge graph entity information.")
+@final
+class LightRAGEntityType:
+    """GraphQL type for a KG entity."""
+
+    name: str
+    entity_type: str
+    description: str
+
+
+@strawberry.input(description="Input for creating a knowledge graph relation.")
+@final
+class LightRAGRelationInput:
+    """GraphQL input for creating a KG relation."""
+
+    source: str
+    target: str
+    description: str = ""
+    keywords: str = ""
+    weight: float = 1.0
+
+
+@strawberry.type(description="Knowledge graph relation information.")
+@final
+class LightRAGRelationType:
+    """GraphQL type for a KG relation."""
+
+    source: str
+    target: str
+    description: str
+    keywords: str
+    weight: float
+
+
+@strawberry.input(description="Input for merging knowledge graph entities.")
+@final
+class LightRAGMergeInput:
+    """GraphQL input for merging KG entities."""
+
+    source_entities: list[str]
+    target_entity: str
+{%- endif %}
+{%- if use_raganything %}
+
+
+@strawberry.input(description="Input for RAG-Anything document processing.")
+@final
+class RAGAnythingDocumentInput:
+    """GraphQL input for multimodal document ingestion."""
+
+    file_path: str
+    output_dir: str = "./raganything_output"
+    parse_method: str | None = "auto"
+    parser: str | None = None
+
+
+@strawberry.input(description="Input for RAG-Anything multimodal query.")
+@final
+class RAGAnythingQueryInput:
+    """GraphQL input for multimodal RAG query."""
+
+    query: str
+    mode: str | None = "hybrid"
+    vlm_enhanced: bool | None = None
+
+
+@strawberry.input(description="A single multimodal content item for direct insertion.")
+@final
+class MultimodalContentItem:
+    """GraphQL input for a multimodal content element."""
+
+    content_type: str
+    text: str | None = None
+    image_path: str | None = None
+    table_body: str | None = None
+    latex: str | None = None
+    caption: str | None = None
+    page_index: int | None = None
+
+
+@strawberry.input(description="Input for batch multimodal content insertion.")
+@final
+class RAGAnythingContentListInput:
+    """GraphQL input for inserting pre-parsed multimodal content."""
+
+    content_items: list[MultimodalContentItem]
+    file_path: str = "inline_content"
+    doc_id: str | None = None
+
+
+@strawberry.type(description="RAG-Anything multimodal query response.")
+@final
+class RAGAnythingResult:
+    """GraphQL result for a multimodal RAG query."""
+
+    answer: str
+    mode: str
+
+
+@strawberry.type(description="RAG-Anything document processing result.")
+@final
+class RAGAnythingProcessResultType:
+    """GraphQL result for document processing."""
+
+    file_path: str
+    success: bool
+    message: str | None = None
+{%- endif %}
+
+
 @strawberry.type(description="Mutation outcome with success flag and optional error message.")
 @final
 class MutationResult:

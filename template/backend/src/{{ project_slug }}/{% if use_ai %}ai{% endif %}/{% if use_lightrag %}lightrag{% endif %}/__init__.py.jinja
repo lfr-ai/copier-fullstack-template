@@ -1,0 +1,6 @@
+"""LightRAG integration -- graph-native RAG with knowledge graph + vector hybrid retrieval."""
+
+from {{ project_slug }}.ai.lightrag.adapter import LightRAGAdapter
+from {{ project_slug }}.ai.lightrag.config import LightRAGQueryMode, LightRAGSettings
+
+__all__ = ["LightRAGAdapter", "LightRAGQueryMode", "LightRAGSettings"]

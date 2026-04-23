@@ -6,7 +6,7 @@ import pytest
 
 from {{ project_slug }}.ai.prompts.manager import PromptManager
 
-
+{% raw %}
 class TestPromptManager:
     """Tests for PromptManager."""
 
@@ -54,3 +54,4 @@ class TestPromptManager:
         pm = PromptManager()
         names = pm.list_templates()
         assert names == sorted(names)
+{% endraw %}

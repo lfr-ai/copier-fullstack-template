@@ -15,8 +15,18 @@ from {{ project_slug }}.presentation.graphql.types import (
     CompletionInput,
     CompletionResult,
 {%- endif %}
-{%- if use_rag %}
+{%- if use_rag or use_lightrag or use_raganything %}
     MutationResult,
+{%- endif %}
+{%- if use_lightrag %}
+    LightRAGEntityInput,
+    LightRAGInsertInput,
+    LightRAGMergeInput,
+    LightRAGRelationInput,
+{%- endif %}
+{%- if use_raganything %}
+    RAGAnythingDocumentInput,
+    MultimodalContentItem,
 {%- endif %}
 )
 
@@ -24,7 +34,7 @@ from {{ project_slug }}.presentation.graphql.types import (
 _DEFAULT_MAX_TOKENS = 256
 _DEFAULT_TEMPERATURE = 0.7
 {%- endif %}
-{%- if use_rag %}
+{%- if use_rag or use_lightrag or use_raganything %}
 _ERROR_MSG_MAX_LEN = 200
 {%- endif %}
 
@@ -92,6 +102,194 @@ class Mutation:
             return MutationResult(
                 success=True,
                 message=f"Ingested {result.chunk_count} chunks from {result.source}.",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])
+{%- endif %}
+{%- if use_lightrag %}
+
+    @strawberry.mutation(description="Insert text into the LightRAG knowledge base.")
+    async def lightrag_insert(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: LightRAGInsertInput,
+    ) -> MutationResult:
+        """Insert text into LightRAG for entity extraction and graph indexing."""
+        try:
+            from {{ project_slug }}.ai.lightrag.lightrag_service import LightRAGIngestRequest
+
+            service = info.context.lightrag_service
+            request = LightRAGIngestRequest(
+                text=input.text,
+                doc_id=input.doc_id,
+                file_path=input.file_path,
+            )
+            result = await service.ingest(request)
+            if result.success:
+                return MutationResult(
+                    success=True,
+                    message=f"Inserted {len(input.text)} characters into LightRAG.",
+                )
+            return MutationResult(success=False, message=result.message[:_ERROR_MSG_MAX_LEN])
+        except Exception as exc:  # noqa: BLE001
+            return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])
+
+    @strawberry.mutation(description="Create a knowledge graph entity in LightRAG.")
+    async def lightrag_create_entity(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: LightRAGEntityInput,
+    ) -> MutationResult:
+        """Create a new entity in the LightRAG knowledge graph."""
+        try:
+            service = info.context.lightrag_service
+            entity = await service.create_entity(
+                input.name,
+                entity_type=input.entity_type,
+                description=input.description,
+            )
+            return MutationResult(
+                success=True,
+                message=f"Entity '{entity.name}' created.",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])
+
+    @strawberry.mutation(description="Create a relation between entities in LightRAG.")
+    async def lightrag_create_relation(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: LightRAGRelationInput,
+    ) -> MutationResult:
+        """Create a new relation in the LightRAG knowledge graph."""
+        try:
+            service = info.context.lightrag_service
+            await service.create_relation(
+                input.source,
+                input.target,
+                description=input.description,
+                keywords=input.keywords,
+                weight=input.weight,
+            )
+            return MutationResult(
+                success=True,
+                message=f"Relation '{input.source}' -> '{input.target}' created.",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])
+
+    @strawberry.mutation(description="Delete an entity from the LightRAG knowledge graph.")
+    async def lightrag_delete_entity(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        entity_name: str,
+    ) -> MutationResult:
+        """Remove an entity and its relationships from the knowledge graph."""
+        try:
+            service = info.context.lightrag_service
+            await service.delete_entity(entity_name)
+            return MutationResult(
+                success=True,
+                message=f"Entity '{entity_name}' deleted from LightRAG.",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])
+
+    @strawberry.mutation(description="Merge multiple entities in the LightRAG knowledge graph.")
+    async def lightrag_merge_entities(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: LightRAGMergeInput,
+    ) -> MutationResult:
+        """Merge multiple entities into a single target entity."""
+        try:
+            service = info.context.lightrag_service
+            result = await service.merge_entities(
+                input.source_entities,
+                input.target_entity,
+            )
+            return MutationResult(
+                success=True,
+                message=f"Merged {len(input.source_entities)} entities into '{result.name}'.",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])
+
+    @strawberry.mutation(description="Delete a document from LightRAG by document ID.")
+    async def lightrag_delete_document(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        doc_id: str,
+    ) -> MutationResult:
+        """Delete all data associated with a document."""
+        try:
+            service = info.context.lightrag_service
+            await service.delete_document(doc_id)
+            return MutationResult(
+                success=True,
+                message=f"Document '{doc_id}' deleted from LightRAG.",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])
+{%- endif %}
+{%- if use_raganything %}
+
+    @strawberry.mutation(description="Process a multimodal document through RAG-Anything.")
+    async def raganything_process_document(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: RAGAnythingDocumentInput,
+    ) -> MutationResult:
+        """Process a PDF, Office document, or image through RAG-Anything."""
+        try:
+            service = info.context.raganything_service
+            await service.process_document(
+                input.file_path,
+                output_dir=input.output_dir,
+                parse_method=input.parse_method,
+            )
+            return MutationResult(
+                success=True,
+                message=f"Document '{input.file_path}' processed successfully.",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])
+
+    @strawberry.mutation(description="Insert pre-parsed multimodal content into RAG-Anything.")
+    async def raganything_insert_content(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        items: list[MultimodalContentItem],
+        file_path: str = "direct_input",
+    ) -> MutationResult:
+        """Insert pre-parsed multimodal content directly."""
+        try:
+            service = info.context.raganything_service
+            content_list = []
+            for item in items:
+                entry: dict[str, object] = {"type": item.content_type}
+                if item.text is not None:
+                    entry["text"] = item.text
+                if item.image_path is not None:
+                    entry["img_path"] = item.image_path
+                if item.table_body is not None:
+                    entry["table_body"] = item.table_body
+                if item.latex is not None:
+                    entry["latex"] = item.latex
+                if item.caption is not None:
+                    entry["table_caption"] = [item.caption]
+                    entry["image_caption"] = [item.caption]
+                if item.page_index is not None:
+                    entry["page_idx"] = item.page_index
+                content_list.append(entry)
+
+            await service.insert_content_list(
+                content_list,
+                file_path=file_path,
+            )
+            return MutationResult(
+                success=True,
+                message=f"Inserted {len(items)} content items.",
             )
         except Exception as exc:  # noqa: BLE001
             return MutationResult(success=False, message=str(exc)[:_ERROR_MSG_MAX_LEN])

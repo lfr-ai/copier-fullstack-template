@@ -104,7 +104,7 @@ class PgvectorStore(VectorStoreGateway):
                 CREATE TABLE IF NOT EXISTS "{self._table_name}" (
                     id TEXT PRIMARY KEY,
                     embedding vector({self._dimension}),
-                    metadata JSONB DEFAULT '{{}}'::jsonb
+                    metadata JSONB DEFAULT '{{ "{{" }}{{ "}}" }}'::jsonb
                 );
             """)
             await conn.execute(f"""

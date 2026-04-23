@@ -75,6 +75,35 @@ class BaseAppSettings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     embedding_dimension: int = 1536
 {%- endif %}
+{%- if use_lightrag %}
+
+    lightrag_working_dir: str = "./data/lightrag"
+    lightrag_default_query_mode: str = "hybrid"
+    lightrag_top_k: int = 60
+    lightrag_graph_storage: str = "NetworkXStorage"
+    lightrag_vector_storage: str = "NanoVectorDBStorage"
+    lightrag_kv_storage: str = "JsonKVStorage"
+    lightrag_doc_status_storage: str = "JsonDocStatusStorage"
+    lightrag_chunk_token_size: int = 1200
+    lightrag_chunk_overlap: int = 100
+    lightrag_embedding_batch_num: int = 32
+    lightrag_embedding_max_async: int = 16
+    lightrag_llm_max_async: int = 4
+    lightrag_llm_model: str = "gpt-4o-mini"
+    lightrag_enable_llm_cache: bool = True
+    lightrag_language: str = "English"
+{%- endif %}
+{%- if use_raganything %}
+
+    raganything_working_dir: str = "./data/raganything"
+    raganything_output_dir: str = "./data/raganything/output"
+    raganything_parser: str = "mineru"
+    raganything_parse_method: str = "auto"
+    raganything_enable_image_processing: bool = True
+    raganything_enable_table_processing: bool = True
+    raganything_enable_equation_processing: bool = True
+    raganything_max_workers: int = 4
+{%- endif %}
 {%- if use_azure_openai %}
 
     azure_openai_endpoint: str = ""
@@ -152,6 +181,29 @@ class BaseAppSettings(BaseSettings):
     @model_validator(mode="after")
     def _check_default_secrets(self) -> "BaseAppSettings":
         """Reject insecure default secrets outside local environment."""
+{%- if use_lightrag %}
+        lightrag_modes = {"naive", "local", "global", "hybrid", "mix"}
+        if self.lightrag_default_query_mode not in lightrag_modes:
+            msg = (
+                "lightrag_default_query_mode must be one of "
+                f"{sorted(lightrag_modes)}"
+            )
+            raise ValueError(msg)
+{%- endif %}
+{%- if use_raganything %}
+        raganything_parsers = {"mineru", "docling", "paddleocr"}
+        if self.raganything_parser not in raganything_parsers:
+            msg = f"raganything_parser must be one of {sorted(raganything_parsers)}"
+            raise ValueError(msg)
+
+        raganything_parse_methods = {"auto", "ocr", "txt"}
+        if self.raganything_parse_method not in raganything_parse_methods:
+            msg = (
+                "raganything_parse_method must be one of "
+                f"{sorted(raganything_parse_methods)}"
+            )
+            raise ValueError(msg)
+{%- endif %}
         if self.environment == Environment.LOCAL:
             return self
         insecure = {

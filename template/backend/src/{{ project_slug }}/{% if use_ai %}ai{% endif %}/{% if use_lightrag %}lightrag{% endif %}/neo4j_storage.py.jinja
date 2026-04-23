@@ -1,0 +1,76 @@
+"""LightRAG Neo4j storage configuration -- production-grade graph backend.
+
+Configures LightRAG to use Neo4j as the graph storage backend,
+suitable for production deployments with millions of entities
+and relationships.
+
+Usage::
+
+    settings = LightRAGSettings(
+        graph_storage="Neo4JStorage",
+        addon_params=build_neo4j_addon_params(
+            uri="bolt://localhost:7687",
+            username="neo4j",
+            password="secret",
+        ),
+    )
+"""
+
+from __future__ import annotations
+
+import structlog
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+def build_neo4j_addon_params(
+    *,
+    uri: str = "bolt://localhost:7687",
+    username: str = "neo4j",
+    password: str = "",
+    database: str = "neo4j",
+) -> dict[str, object]:
+    """Build addon_params dict for LightRAG Neo4j graph storage.
+
+    These parameters are passed to 'LightRAG(addon_params=...)'
+    when 'graph_storage="Neo4JStorage"'.
+
+    Args:
+        uri (str): Neo4j Bolt URI.
+        username (str): Neo4j authentication username.
+        password (str): Neo4j authentication password.
+        database (str): Neo4j database name.
+
+    Returns:
+        dict[str, object]: Addon parameters for Neo4j storage.
+    """
+    params = {
+        "neo4j_uri": uri,
+        "neo4j_username": username,
+        "neo4j_password": password,
+        "neo4j_database": database,
+    }
+    logger.info("lightrag_neo4j_params_built", uri=uri, database=database)
+    return params
+
+
+def build_postgres_addon_params(
+    *,
+    dsn: str = "postgresql://postgres:postgres@localhost:5432/lightrag",
+) -> dict[str, object]:
+    """Build addon_params dict for LightRAG PostgreSQL storage backends.
+
+    Configures LightRAG to use PostgreSQL for all storage types:
+    graph, vector (pgvector), key-value, document, and chunk storage.
+
+    Args:
+        dsn (str): PostgreSQL connection string.
+
+    Returns:
+        dict[str, object]: Addon parameters for PostgreSQL storage.
+    """
+    params = {
+        "postgres_dsn": dsn,
+    }
+    logger.info("lightrag_postgres_params_built")
+    return params

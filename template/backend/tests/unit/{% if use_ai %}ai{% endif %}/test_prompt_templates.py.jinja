@@ -7,7 +7,7 @@ import pytest
 
 from {{ project_slug }}.ai.prompts.jinja2_templates import Jinja2PromptTemplate
 
-
+{% raw %}
 @pytest.fixture
 def template_manager() -> Jinja2PromptTemplate:
     """Create a Jinja2PromptTemplate and register test templates."""
@@ -89,6 +89,7 @@ class TestJinja2PromptTemplateRegister:
         template_manager.register_template(name="greeting", template="Hey {{ name }}!")
         result = template_manager.render(template_name="greeting", variables={"name": "Eve"})
         assert result == "Hey Eve!"
+{%- endraw %}
 {%- else %}
 # Prompt template tests are only generated when use_ai is enabled.
 {%- endif %}

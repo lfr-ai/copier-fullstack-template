@@ -9,6 +9,7 @@ from typing import override, final
 from {{ project_slug }}.core.interfaces.prompt_template import PromptTemplateGateway
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+{% raw %}
 _BUILTIN_TEMPLATES: dict[str, str] = {
     "rag_query": (
         "Answer the following question based on the provided context.\n\n"
@@ -46,7 +47,7 @@ _BUILTIN_TEMPLATES: dict[str, str] = {
         "Answer based on the context and conversation history:"
     ),
 }
-
+{% endraw %}
 
 @final
 class Jinja2PromptTemplate(PromptTemplateGateway):

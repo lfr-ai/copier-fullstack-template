@@ -25,6 +25,23 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application startup and shutdown resources."""
+{%- if use_lightrag %}
+    from {{ project_slug }}.composition.container import get_container as _get_container
+
+    _container = _get_container()
+    try:
+        await _container.lightrag_adapter_async()
+        logger.info("lightrag_adapter_initialized")
+    except Exception:  # noqa: BLE001
+        logger.exception("lightrag_adapter_init_failed")
+{%- endif %}
+{%- if use_raganything %}
+    try:
+        await _container.raganything_adapter_async()
+        logger.info("raganything_adapter_initialized")
+    except Exception:  # noqa: BLE001
+        logger.exception("raganything_adapter_init_failed")
+{%- endif %}
     yield
     # Dispose the DI container's DB engine on shutdown to release connections.
     from {{ project_slug }}.composition.container import get_container

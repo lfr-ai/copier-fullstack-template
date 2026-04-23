@@ -9,7 +9,7 @@ from {{ project_slug }}.ai.prompts import SUMMARIZE_TEMPLATE, SYSTEM_DEFAULT, re
 from {{ project_slug }}.ai.prompts.manager import PromptManager
 from {{ project_slug }}.ai.prompts.rag_prompts import RAG_CONDENSE_PROMPT, RAG_QUERY_PROMPT, RAG_SYSTEM_PROMPT
 
-
+{% raw %}
 class TestRenderPrompt:
     """Tests for render_prompt utility."""
 
@@ -67,4 +67,5 @@ class TestRAGPrompts:
     def test_rag_condense_prompt_has_placeholders(self) -> None:
         assert "{chat_history}" in RAG_CONDENSE_PROMPT
         assert "{question}" in RAG_CONDENSE_PROMPT
+{%- endraw %}
 {%- endif %}

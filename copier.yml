@@ -258,6 +258,18 @@ use_rag:
   default: false
   when: "{{ use_ai }}"
 
+use_lightrag:
+  type: bool
+  help: "Include LightRAG graph-native RAG (knowledge graph + vector hybrid retrieval)"
+  default: false
+  when: "{{ use_ai }}"
+
+use_raganything:
+  type: bool
+  help: "Include RAG-Anything multimodal RAG (PDF, images, tables, equations via LightRAG)"
+  default: false
+  when: "{{ use_ai and use_lightrag }}"
+
 use_agents:
   type: bool
   help: "Include AI agent framework (autonomous tool-calling agents)"

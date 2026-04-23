@@ -1,0 +1,56 @@
+"""RAG-Anything configuration -- settings for multimodal document processing."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import StrEnum, unique
+
+
+@unique
+class DocumentParser(StrEnum):
+    """Supported document parsers for RAG-Anything."""
+
+    MINERU = "mineru"
+    DOCLING = "docling"
+    PADDLEOCR = "paddleocr"
+
+
+@unique
+class ParseMethod(StrEnum):
+    """Parsing methods for document content extraction."""
+
+    AUTO = "auto"
+    OCR = "ocr"
+    TXT = "txt"
+
+
+DEFAULT_RAGANYTHING_PARSER = DocumentParser.MINERU
+
+DEFAULT_RAGANYTHING_PARSE_METHOD = ParseMethod.AUTO
+
+DEFAULT_RAGANYTHING_WORKING_DIR = "./data/raganything"
+
+DEFAULT_RAGANYTHING_OUTPUT_DIR = "./data/raganything/output"
+
+DEFAULT_RAGANYTHING_VISION_MODEL = "gpt-4o"
+
+DEFAULT_RAGANYTHING_MAX_WORKERS = 4
+
+
+@dataclass(frozen=True, slots=True)
+class RAGAnythingSettings:
+    """Immutable configuration for a RAG-Anything instance.
+
+    All fields map to 'RAGAnythingConfig(...)' constructor parameters.
+    """
+
+    working_dir: str = DEFAULT_RAGANYTHING_WORKING_DIR
+    output_dir: str = DEFAULT_RAGANYTHING_OUTPUT_DIR
+    parser: DocumentParser = DEFAULT_RAGANYTHING_PARSER
+    parse_method: ParseMethod = DEFAULT_RAGANYTHING_PARSE_METHOD
+    enable_image_processing: bool = True
+    enable_table_processing: bool = True
+    enable_equation_processing: bool = True
+    vision_model: str = DEFAULT_RAGANYTHING_VISION_MODEL
+    max_workers: int = DEFAULT_RAGANYTHING_MAX_WORKERS
+    supported_extensions: tuple[str, ...] = (".pdf", ".docx", ".pptx", ".xlsx", ".png", ".jpg")

@@ -131,7 +131,7 @@ class Neo4jKnowledgeGraph(KnowledgeGraphGateway):
     ) -> list[dict[str, object]]:
         depth = int(depth)  # ensure safe integer for Cypher interpolation
         query = f"""
-        MATCH (s:Entity {{name: $entity}})-[r*1..{depth}]-(neighbor:Entity)
+        MATCH (s:Entity {{ "{{" }}name: $entity{{ "}}" }})-[r*1..{depth}]-(neighbor:Entity)
         RETURN DISTINCT neighbor.name AS entity,
                [rel IN r | type(rel) + ': ' + rel.type] AS relationships
         LIMIT $limit

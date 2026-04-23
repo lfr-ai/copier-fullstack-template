@@ -33,6 +33,13 @@ if TYPE_CHECKING:
     from {{ project_slug }}.ai.services import RAGService
     from {{ project_slug }}.application.services.ingestion_service import IngestionService
 {%- endif %}
+{%- if use_lightrag %}
+    from {{ project_slug }}.ai.lightrag.adapter import LightRAGAdapter
+    from {{ project_slug }}.ai.lightrag.lightrag_service import LightRAGService
+{%- endif %}
+{%- if use_raganything %}
+    from {{ project_slug }}.ai.raganything.adapter import RAGAnythingAdapter
+{%- endif %}
 {%- if use_knowledge_graph %}
     from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
     from {{ project_slug }}.application.services.knowledge_graph_service import KnowledgeGraphService
@@ -67,6 +74,13 @@ class Container:
         self._event_bus: MemoryEventBus | None = None
 {% if use_ai %}
         self._ai_config_loader = None
+{%- if use_lightrag %}
+        self._lightrag_adapter = None
+        self._lightrag_service = None
+{%- endif %}
+{%- if use_raganything %}
+        self._raganything_adapter = None
+{%- endif %}
 {%- endif %}
         if self._settings.database_url:
             from {{ project_slug }}.infrastructure.persistence.session import (
@@ -146,7 +160,6 @@ class Container:
             if loader:
                 pipeline = loader.create_pipeline("self_crag")
             else:
-                # Fallback to settings-based instantiation
                 llm = container._create_llm()
         """
         from pathlib import Path
@@ -250,6 +263,7 @@ class Container:
 
     def _create_vector_store(self) -> VectorStoreGateway:
         """Create vector store adapter based on configuration."""
+        dim = getattr(self._settings, "embedding_dimension", 1536)
 {%- if use_ai_search %}
         endpoint = getattr(self._settings, "azure_ai_search_endpoint", "")
         api_key = getattr(self._settings, "azure_ai_search_api_key", "")
@@ -755,6 +769,161 @@ class Container:
             default_llm=default_llm,
             verbose=verbose,
         )
+{%- endif %}
+{%- if use_lightrag %}
+
+    def lightrag_adapter(self) -> object:
+        """Create and return a LightRAG adapter singleton.
+
+        The adapter is lazily initialized on first access.
+        Must be awaited via 'await container.lightrag_adapter_async()'
+        for full initialization.
+
+        For synchronous access (e.g. GraphQL context), returns
+        a pre-created adapter from the startup hook.
+        """
+        if self._lightrag_adapter is None:
+            msg = (
+                "LightRAG adapter not initialized. "
+                "Call 'await container.lightrag_adapter_async()' during app startup."
+            )
+            raise RuntimeError(msg)
+        return self._lightrag_adapter
+
+    def lightrag_service(self) -> object:
+        """Return the pre-initialized LightRAG application service."""
+        if self._lightrag_service is None:
+            msg = (
+                "LightRAG service not initialized. "
+                "Call 'await container.lightrag_adapter_async()' during app startup."
+            )
+            raise RuntimeError(msg)
+        return self._lightrag_service
+
+    async def lightrag_adapter_async(self) -> object:
+        """Create and initialize the LightRAG adapter (async factory).
+
+        Should be called once during application startup (lifespan hook).
+        Subsequent calls return the cached instance.
+
+        Returns:
+            LightRAGAdapter: Initialized LightRAG adapter.
+        """
+        if self._lightrag_adapter is not None:
+            return self._lightrag_adapter
+
+        from {{ project_slug }}.ai.lightrag.adapter import LightRAGAdapter
+        from {{ project_slug }}.ai.lightrag.config import LightRAGQueryMode, LightRAGSettings
+        from {{ project_slug }}.ai.lightrag.lightrag_service import LightRAGService
+        from {{ project_slug }}.ai.lightrag.neo4j_storage import build_neo4j_addon_params
+
+        settings = LightRAGSettings(
+            working_dir=self._settings.lightrag_working_dir,
+            default_query_mode=LightRAGQueryMode(
+                self._settings.lightrag_default_query_mode.lower(),
+            ),
+            top_k=self._settings.lightrag_top_k,
+            graph_storage=self._settings.lightrag_graph_storage,
+            vector_storage=self._settings.lightrag_vector_storage,
+            kv_storage=self._settings.lightrag_kv_storage,
+            doc_status_storage=self._settings.lightrag_doc_status_storage,
+            chunk_token_size=self._settings.lightrag_chunk_token_size,
+            chunk_overlap_token_size=self._settings.lightrag_chunk_overlap,
+            embedding_batch_num=self._settings.lightrag_embedding_batch_num,
+            embedding_max_async=self._settings.lightrag_embedding_max_async,
+            llm_max_async=self._settings.lightrag_llm_max_async,
+            llm_model_name=self._settings.lightrag_llm_model,
+            enable_llm_cache=self._settings.lightrag_enable_llm_cache,
+            embedding_dim=self._settings.embedding_dimension,
+            addon_params=(
+                build_neo4j_addon_params(
+                    uri=getattr(self._settings, "neo4j_uri", "bolt://localhost:7687"),
+                    username=getattr(self._settings, "neo4j_user", "neo4j"),
+                    password=getattr(self._settings, "neo4j_password", "changeme"),
+                    database=getattr(self._settings, "neo4j_database", "neo4j"),
+                )
+                if self._settings.lightrag_graph_storage == "Neo4JStorage"
+                else None
+            ),
+        )
+
+        # Bridge application LLM/embedding to LightRAG callables
+        llm_func = None
+        embedding_func = None
+        try:
+            from {{ project_slug }}.ai.lightrag.llm_bridge import (
+                create_embedding_func_from_gateway,
+                create_llm_func_from_gateway,
+            )
+
+            llm_func = create_llm_func_from_gateway(self._create_llm())
+            embedding_func = create_embedding_func_from_gateway(
+                self._create_embedding(),
+                dimension=getattr(self._settings, "embedding_dimension", 1536),
+            )
+        except (AttributeError, ImportError):
+            logger.debug("Using LightRAG built-in OpenAI adapters")
+
+        self._lightrag_adapter = await LightRAGAdapter.create(
+            settings,
+            llm_model_func=llm_func,
+            embedding_func=embedding_func,
+        )
+        self._lightrag_service = LightRAGService(adapter=self._lightrag_adapter)
+        return self._lightrag_adapter
+{%- endif %}
+{%- if use_raganything %}
+
+    def raganything_adapter(self) -> object:
+        """Return the pre-initialized RAG-Anything adapter.
+
+        Must be initialized during startup via
+        'await container.raganything_adapter_async()'.
+        """
+        if self._raganything_adapter is None:
+            msg = (
+                "RAG-Anything adapter not initialized. "
+                "Call 'await container.raganything_adapter_async()' during app startup."
+            )
+            raise RuntimeError(msg)
+        return self._raganything_adapter
+
+    async def raganything_adapter_async(self) -> object:
+        """Create and initialize the RAG-Anything adapter (async factory).
+
+        Requires LightRAG to be initialized first.
+
+        Returns:
+            RAGAnythingAdapter: Initialized multimodal RAG adapter.
+        """
+        if self._raganything_adapter is not None:
+            return self._raganything_adapter
+
+        from {{ project_slug }}.ai.raganything.adapter import RAGAnythingAdapter
+        from {{ project_slug }}.ai.raganything.config import (
+            DocumentParser,
+            ParseMethod,
+            RAGAnythingSettings,
+        )
+
+        lightrag = await self.lightrag_adapter_async()
+
+        settings = RAGAnythingSettings(
+            working_dir=self._settings.raganything_working_dir,
+            output_dir=self._settings.raganything_output_dir,
+            parser=DocumentParser(self._settings.raganything_parser.lower()),
+            parse_method=ParseMethod(self._settings.raganything_parse_method.lower()),
+            enable_image_processing=self._settings.raganything_enable_image_processing,
+            enable_table_processing=self._settings.raganything_enable_table_processing,
+            enable_equation_processing=self._settings.raganything_enable_equation_processing,
+            max_workers=self._settings.raganything_max_workers,
+        )
+
+        self._raganything_adapter = await RAGAnythingAdapter.create(
+            settings=settings,
+            lightrag_adapter=lightrag,
+        )
+        return self._raganything_adapter
 {%- endif %}
 
 

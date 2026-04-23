@@ -1,0 +1,241 @@
+"""LightRAG application service -- orchestrates graph-native RAG operations.
+
+Sits in the application layer and delegates to the LightRAG adapter
+for document ingestion, knowledge graph management, and hybrid
+retrieval queries.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import final
+
+import structlog
+
+from {{ project_slug }}.ai.lightrag.adapter import (
+    LightRAGAdapter,
+    LightRAGEntityInfo,
+    LightRAGInsertResult,
+    LightRAGQueryMode,
+    LightRAGQueryResult,
+    LightRAGRelationInfo,
+)
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_ERROR_MSG_MAX_LEN = 200
+
+
+@dataclass(frozen=True, slots=True)
+@final
+class LightRAGIngestRequest:
+    """Request to ingest text into LightRAG."""
+
+    text: str
+    doc_id: str | None = None
+    file_path: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+@final
+class LightRAGQueryRequest:
+    """Request to query LightRAG."""
+
+    question: str
+    mode: str = "hybrid"
+    top_k: int = 60
+    response_type: str = "Multiple Paragraphs"
+    only_need_context: bool = False
+    conversation_history: list[dict[str, str]] = field(default_factory=list)
+    user_prompt: str | None = None
+
+
+@final
+class LightRAGService:
+    """Application service for LightRAG graph-native RAG.
+
+    Provides a high-level interface for:
+    * Document ingestion with knowledge graph extraction
+    * Hybrid retrieval queries (local/global/hybrid/naive/mix)
+    * Knowledge graph entity and relation management
+    * Document deletion and entity merging
+    """
+
+    __slots__ = ("_adapter",)
+
+    def __init__(self, *, adapter: LightRAGAdapter) -> None:
+        self._adapter = adapter
+
+    async def ensure_initialized(self) -> None:
+        """Ensure the underlying adapter is initialized."""
+        await self._adapter.initialize()
+
+    async def ingest(self, request: LightRAGIngestRequest) -> LightRAGInsertResult:
+        """Ingest text into the LightRAG knowledge base.
+
+        Args:
+            request (LightRAGIngestRequest): Ingestion request.
+
+        Returns:
+            LightRAGInsertResult: Ingestion outcome.
+        """
+        await self.ensure_initialized()
+        return await self._adapter.insert(
+            request.text,
+            doc_id=request.doc_id,
+            file_path=request.file_path,
+        )
+
+    async def ingest_batch(
+        self,
+        texts: list[str],
+        *,
+        ids: list[str] | None = None,
+        file_paths: list[str] | None = None,
+    ) -> LightRAGInsertResult:
+        """Batch-ingest multiple texts.
+
+        Args:
+            texts (list[str]): Document texts.
+            ids (list[str] | None): Document IDs.
+            file_paths (list[str] | None): File paths for citations.
+
+        Returns:
+            LightRAGInsertResult: Ingestion outcome.
+        """
+        await self.ensure_initialized()
+        return await self._adapter.insert_batch(texts, ids=ids, file_paths=file_paths)
+
+    async def query(self, request: LightRAGQueryRequest) -> LightRAGQueryResult:
+        """Execute a graph-native RAG query.
+
+        Args:
+            request (LightRAGQueryRequest): Query parameters.
+
+        Returns:
+            LightRAGQueryResult: Answer with metadata.
+        """
+        await self.ensure_initialized()
+        mode = LightRAGQueryMode(request.mode)
+        return await self._adapter.query(
+            request.question,
+            mode=mode,
+            top_k=request.top_k,
+            response_type=request.response_type,
+            only_need_context=request.only_need_context,
+            conversation_history=request.conversation_history or None,
+            user_prompt=request.user_prompt,
+        )
+
+    async def create_entity(
+        self,
+        name: str,
+        *,
+        entity_type: str = "",
+        description: str = "",
+    ) -> LightRAGEntityInfo:
+        """Create a knowledge graph entity.
+
+        Args:
+            name (str): Entity name.
+            entity_type (str): Entity type.
+            description (str): Description.
+
+        Returns:
+            LightRAGEntityInfo: Created entity.
+        """
+        await self.ensure_initialized()
+        return await self._adapter.create_entity(
+            name, entity_type=entity_type, description=description,
+        )
+
+    async def delete_entity(self, name: str) -> None:
+        """Delete an entity and its relationships."""
+        await self.ensure_initialized()
+        await self._adapter.delete_entity(name)
+
+    async def merge_entities(
+        self,
+        source_entities: list[str],
+        target_entity: str,
+        *,
+        merge_strategy: dict[str, str] | None = None,
+    ) -> LightRAGEntityInfo:
+        """Merge multiple entities into one.
+
+        Args:
+            source_entities (list[str]): Entities to merge.
+            target_entity (str): Target entity name.
+            merge_strategy (dict[str, str] | None): Merge strategy.
+
+        Returns:
+            LightRAGEntityInfo: Merged entity.
+        """
+        await self.ensure_initialized()
+        return await self._adapter.merge_entities(
+            source_entities, target_entity, merge_strategy=merge_strategy,
+        )
+
+    async def create_relation(
+        self,
+        source: str,
+        target: str,
+        *,
+        description: str = "",
+        keywords: str = "",
+        weight: float = 1.0,
+    ) -> LightRAGRelationInfo:
+        """Create a relation between entities.
+
+        Args:
+            source (str): Source entity.
+            target (str): Target entity.
+            description (str): Relation description.
+            keywords (str): Keywords.
+            weight (float): Weight.
+
+        Returns:
+            LightRAGRelationInfo: Created relation.
+        """
+        await self.ensure_initialized()
+        return await self._adapter.create_relation(
+            source, target, description=description, keywords=keywords, weight=weight,
+        )
+
+    async def delete_relation(self, source: str, target: str) -> None:
+        """Delete a relation."""
+        await self.ensure_initialized()
+        await self._adapter.delete_relation(source, target)
+
+    async def delete_document(self, doc_id: str) -> None:
+        """Delete all data for a document."""
+        await self.ensure_initialized()
+        await self._adapter.delete_by_doc_id(doc_id)
+
+    async def insert_custom_kg(
+        self,
+        custom_kg: dict[str, list[dict[str, object]]],
+    ) -> LightRAGInsertResult:
+        """Insert a pre-built knowledge graph.
+
+        Args:
+            custom_kg (dict[str, list[dict[str, object]]]): KG data.
+
+        Returns:
+            LightRAGInsertResult: Insertion outcome.
+        """
+        await self.ensure_initialized()
+        return await self._adapter.insert_custom_kg(custom_kg)
+
+    async def get_knowledge_graph(self) -> dict[str, list[dict[str, object]]]:
+        """Export the knowledge graph as nodes and edges.
+
+        Returns:
+            dict[str, list[dict[str, object]]]: A dict with 'nodes' and 'edges' keys.
+        """
+        await self.ensure_initialized()
+        return await self._adapter.get_knowledge_graph()
+
+    async def close(self) -> None:
+        """Release adapter resources."""
+        await self._adapter.close()

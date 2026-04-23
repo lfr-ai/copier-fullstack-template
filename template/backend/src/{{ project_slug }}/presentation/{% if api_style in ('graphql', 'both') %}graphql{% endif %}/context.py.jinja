@@ -18,6 +18,12 @@ if TYPE_CHECKING:
 {%- if use_rag %}
     from {{ project_slug }}.ai.services import RAGService
 {%- endif %}
+{%- if use_lightrag %}
+    from {{ project_slug }}.ai.lightrag.lightrag_service import LightRAGService
+{%- endif %}
+{%- if use_raganything %}
+    from {{ project_slug }}.ai.raganything.adapter import RAGAnythingAdapter
+{%- endif %}
 
 
 @final
@@ -66,6 +72,20 @@ class GraphQLContext(BaseContext):
     def rag_service(self) -> RAGService:
         """'RAGService' resolved from the DI container."""
         return self._container.rag_service()
+{%- endif %}
+{%- if use_lightrag %}
+
+    @cached_property
+    def lightrag_service(self) -> LightRAGService:
+        """'LightRAGService' resolved from the DI container."""
+        return self._container.lightrag_service()
+{%- endif %}
+{%- if use_raganything %}
+
+    @cached_property
+    def raganything_service(self) -> RAGAnythingAdapter:
+        """'RAGAnythingAdapter' resolved from the DI container."""
+        return self._container.raganything_adapter()
 {%- endif %}
 
 
