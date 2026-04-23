@@ -118,3 +118,100 @@ def create_directory_read_tool(directory: str | None = None) -> object:
     if directory is not None:
         kwargs["directory"] = directory
     return DirectoryReadTool(**kwargs)  # type: ignore[arg-type]
+{%- if use_lightrag %}
+
+
+def create_lightrag_query_tool(
+    adapter: object,
+    *,
+    name: str = "lightrag_query",
+    description: str = "Query the LightRAG knowledge base for information using graph-native retrieval. Supports modes: naive, local, global, hybrid.",
+    default_mode: str = "hybrid",
+) -> object:
+    """Create a CrewAI tool that queries a LightRAG knowledge base.
+
+    This bridges the application's 'LightRAGAdapter' into the CrewAI
+    tool ecosystem, allowing agents to query the knowledge graph
+    during task execution.
+
+    Args:
+        adapter (object): A 'LightRAGAdapter' instance.
+        name (str): Tool name shown to agents.
+        description (str): Tool description for LLM tool selection.
+        default_mode (str): Default query mode.
+
+    Returns:
+        A CrewAI-compatible tool instance.
+    """
+    import asyncio
+
+    from crewai.tools import tool as crewai_tool
+
+    from {{ project_slug }}.ai.lightrag.config import LightRAGQueryMode
+
+    @crewai_tool(name)
+    def _lightrag_query(question: str, mode: str = default_mode) -> str:
+        """Query the LightRAG knowledge base."""
+        query_mode = LightRAGQueryMode(mode)
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(
+                    asyncio.run,
+                    adapter.query(question, mode=query_mode),
+                ).result()
+        else:
+            result = asyncio.run(adapter.query(question, mode=query_mode))
+        return str(result)
+
+    _lightrag_query.__doc__ = description
+    _lightrag_query.description = description
+
+    logger.info("crewai_lightrag_query_tool_created", name=name)
+    return _lightrag_query
+
+
+def create_lightrag_ingest_tool(
+    adapter: object,
+    *,
+    name: str = "lightrag_ingest",
+    description: str = "Insert text content into the LightRAG knowledge base for entity extraction and graph indexing.",
+) -> object:
+    """Create a CrewAI tool that ingests text into LightRAG.
+
+    Args:
+        adapter (object): A 'LightRAGAdapter' instance.
+        name (str): Tool name.
+        description (str): Tool description.
+
+    Returns:
+        A CrewAI-compatible tool instance.
+    """
+    import asyncio
+
+    from crewai.tools import tool as crewai_tool
+
+    @crewai_tool(name)
+    def _lightrag_ingest(text: str) -> str:
+        """Insert text into the LightRAG knowledge base."""
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                pool.submit(
+                    asyncio.run,
+                    adapter.insert(text),
+                ).result()
+        else:
+            asyncio.run(adapter.insert(text))
+        return f"Successfully ingested {len(text)} characters into LightRAG."
+
+    _lightrag_ingest.__doc__ = description
+    _lightrag_ingest.description = description
+
+    logger.info("crewai_lightrag_ingest_tool_created", name=name)
+    return _lightrag_ingest
+{%- endif %}

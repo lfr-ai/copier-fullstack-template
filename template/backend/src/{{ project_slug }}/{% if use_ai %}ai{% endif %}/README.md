@@ -2,7 +2,8 @@
 
 Full AI/ML integration layer following Clean Architecture principles. All components
 depend on domain interfaces (protocols) — concrete implementations are injected at the
-composition root. LiteLLM is the universal LLM and embedding backend; the model string prefix routes
+composition root. LiteLLM is the universal LLM and embedding backend; the model
+string prefix routes
 to the correct provider (OpenAI, Azure OpenAI, Anthropic, etc.) automatically.
 
 ## Architecture
@@ -44,6 +45,11 @@ ai/
 │   ├── litellm_adapter.py      # LiteLLM → LLMGateway (universal backend)
 │   ├── gateway.py              # Multi-provider gateway with failover
 │   └── anthropic_adapter.py    # Anthropic Claude → LLMGateway (via LiteLLM)
+├── lightrag/             # LightRAG graph-native RAG adapters
+│   ├── adapter.py              # LightRAG lifecycle, ingestion, and query wrapper
+│   ├── config.py               # Typed LightRAG settings and query modes
+│   ├── llm_bridge.py           # Bridge from app gateways to LightRAG callables
+│   └── neo4j_storage.py        # Neo4j/PostgreSQL LightRAG storage params
 ├── mcp/                  # Model Context Protocol server & client
 │   ├── server.py               # FastMCP tools, resources, prompts
 │   └── client.py               # MCP client for remote servers
@@ -69,6 +75,10 @@ ai/
 │       ├── ensemble_retriever.py  # Multi-strategy ensemble
 │       ├── _rrf.py                # Reciprocal Rank Fusion scorer
 │       └── llamaindex_retriever.py  # LlamaIndex retriever (conditional)
+├── raganything/          # Multimodal RAG-Anything adapters
+│   ├── adapter.py              # Multimodal ingestion and query wrapper
+│   ├── config.py               # Typed parser/processing settings
+│   └── processors.py           # Image/table/equation processor helpers
 ├── services/             # AI application services
 │   └── __init__.py             # AIService, RAGService
 ├── text_splitter.py      # Recursive character text splitter
@@ -134,6 +144,8 @@ ai/
 | `rdflib`           | ≥7.0    | RDF/SPARQL knowledge graph support                             |
 | `SPARQLWrapper`    | ≥2.0    | SPARQL endpoint client (Wikidata, DBpedia)                     |
 | `mcp[cli]`         | ≥1.30   | Model Context Protocol SDK                                     |
+| `lightrag-hku`     | ≥1.4    | Graph-native hybrid RAG engine                                 |
+| `raganything`      | ≥1.2    | Multimodal RAG processing built on LightRAG                    |
 | `anthropic`        | ≥0.52   | Anthropic Claude SDK                                           |
 
 ## Usage

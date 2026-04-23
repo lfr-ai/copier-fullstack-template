@@ -1,0 +1,156 @@
+"""RAG-Anything modal processors -- typed wrappers for multimodal content processing.
+
+Provides factory functions for creating specialized processors
+for images, tables, equations, and custom content types.
+These processors can be used independently of the full
+'RAGAnythingAdapter' pipeline for granular content ingestion.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import structlog
+
+if TYPE_CHECKING:
+    pass
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+async def process_image(
+    lightrag_instance: object,
+    *,
+    image_path: str,
+    caption: str = "",
+    footnote: str = "",
+    entity_name: str = "",
+    file_path: str = "unknown",
+    vision_model_func: object | None = None,
+) -> tuple[str, dict[str, object]]:
+    """Process an image through the RAG-Anything image processor.
+
+    Args:
+        lightrag_instance (object): Raw LightRAG instance.
+        image_path (str): Absolute path to the image file.
+        caption (str): Image caption for context.
+        footnote (str): Image footnote/source.
+        entity_name (str): Knowledge graph entity name for this image.
+        file_path (str): Source document file path for citation.
+        vision_model_func (object | None): Vision model callable.
+
+    Returns:
+        tuple[str, dict[str, object]]: Description and entity info.
+    """
+    from raganything.modalprocessors import ImageModalProcessor
+
+    processor = ImageModalProcessor(
+        lightrag=lightrag_instance,
+        modal_caption_func=vision_model_func,
+    )
+
+    image_content = {
+        "img_path": image_path,
+        "image_caption": [caption] if caption else [],
+        "image_footnote": [footnote] if footnote else [],
+    }
+
+    description, entity_info = await processor.process_multimodal_content(
+        modal_content=image_content,
+        content_type="image",
+        file_path=file_path,
+        entity_name=entity_name or f"Image: {caption}",
+    )
+    logger.info("raganything_image_processed", entity=entity_name)
+    return description, entity_info
+
+
+async def process_table(
+    lightrag_instance: object,
+    *,
+    table_body: str,
+    caption: str = "",
+    footnote: str = "",
+    entity_name: str = "",
+    file_path: str = "unknown",
+    llm_func: object | None = None,
+) -> tuple[str, dict[str, object]]:
+    """Process a table through the RAG-Anything table processor.
+
+    Args:
+        lightrag_instance (object): Raw LightRAG instance.
+        table_body (str): Markdown-formatted table content.
+        caption (str): Table caption.
+        footnote (str): Table footnote/source.
+        entity_name (str): Knowledge graph entity name.
+        file_path (str): Source document file path.
+        llm_func (object | None): LLM callable for table interpretation.
+
+    Returns:
+        tuple[str, dict[str, object]]: Description and entity info.
+    """
+    from raganything.modalprocessors import TableModalProcessor
+
+    processor = TableModalProcessor(
+        lightrag=lightrag_instance,
+        modal_caption_func=llm_func,
+    )
+
+    table_content = {
+        "table_body": table_body,
+        "table_caption": [caption] if caption else [],
+        "table_footnote": [footnote] if footnote else [],
+    }
+
+    description, entity_info = await processor.process_multimodal_content(
+        modal_content=table_content,
+        content_type="table",
+        file_path=file_path,
+        entity_name=entity_name or f"Table: {caption}",
+    )
+    logger.info("raganything_table_processed", entity=entity_name)
+    return description, entity_info
+
+
+async def process_equation(
+    lightrag_instance: object,
+    *,
+    latex: str,
+    description_text: str = "",
+    entity_name: str = "",
+    file_path: str = "unknown",
+    llm_func: object | None = None,
+) -> tuple[str, dict[str, object]]:
+    """Process a mathematical equation through the RAG-Anything equation processor.
+
+    Args:
+        lightrag_instance (object): Raw LightRAG instance.
+        latex (str): LaTeX representation of the equation.
+        description_text (str): Human-readable description.
+        entity_name (str): Knowledge graph entity name.
+        file_path (str): Source document file path.
+        llm_func (object | None): LLM callable for equation interpretation.
+
+    Returns:
+        tuple[str, dict[str, object]]: Description and entity info.
+    """
+    from raganything.modalprocessors import GenericModalProcessor
+
+    processor = GenericModalProcessor(
+        lightrag=lightrag_instance,
+        modal_caption_func=llm_func,
+    )
+
+    equation_content = {
+        "latex": latex,
+        "text": description_text,
+    }
+
+    description, entity_info = await processor.process_multimodal_content(
+        modal_content=equation_content,
+        content_type="equation",
+        file_path=file_path,
+        entity_name=entity_name or f"Equation: {latex[:50]}",
+    )
+    logger.info("raganything_equation_processed", entity=entity_name)
+    return description, entity_info

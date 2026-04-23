@@ -12,6 +12,7 @@ from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_SPARQL_TIMEOUT_SECONDS,
     ExternalKnowledgeGraphGateway,
 )
+{% raw %}
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _WIKIDATA_SPARQL = "https://query.wikidata.org/sparql"
@@ -377,3 +378,4 @@ def _sanitize(value: str) -> str:
         .replace("{", "")
         .replace("}", "")
     )
+{% endraw %}

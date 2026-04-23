@@ -24,6 +24,17 @@ from {{ project_slug }}.presentation.graphql.types import (
     RAGResult,
     RetrievedChunk,
 {%- endif %}
+{%- if use_lightrag %}
+    LightRAGQueryInput,
+    LightRAGResult,
+    KnowledgeGraphData,
+    KnowledgeGraphNode,
+    KnowledgeGraphEdge,
+{%- endif %}
+{%- if use_raganything %}
+    RAGAnythingQueryInput,
+    RAGAnythingResult,
+{%- endif %}
 )
 
 _DEFAULT_PAGE_LIMIT = 20
@@ -156,6 +167,86 @@ class Query:
             for src in result.sources
         ]
         return RAGResult(answer=result.answer, chunks=chunks)
+{%- endif %}
+{%- if use_lightrag %}
+
+    @strawberry.field(description="Query the LightRAG knowledge base with graph-native retrieval.")
+    async def lightrag_query(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: LightRAGQueryInput,
+    ) -> LightRAGResult:
+        """Execute a LightRAG graph-native RAG query.
+
+        Supports multiple retrieval modes:
+        - 'naive': vector similarity only
+        - 'local': entity neighborhood traversal
+        - 'global': community-level summarization
+        - 'hybrid': combined local + global (recommended)
+        - 'mix': hybrid + reranker fusion
+        """
+        from {{ project_slug }}.ai.lightrag.lightrag_service import LightRAGQueryRequest
+
+        service = info.context.lightrag_service
+        mode = input.mode or "hybrid"
+        request = LightRAGQueryRequest(
+            question=input.query,
+            mode=mode,
+            top_k=input.top_k,
+            response_type=input.response_type,
+            only_need_context=input.only_need_context,
+            user_prompt=input.user_prompt,
+        )
+        result = await service.query(request)
+        return LightRAGResult(
+            answer=result.answer,
+            context="\n\n".join(result.contexts) if result.contexts else None,
+            mode=result.mode,
+        )
+
+    @strawberry.field(description="Export the LightRAG knowledge graph.")
+    async def lightrag_knowledge_graph(
+        self,
+        info: strawberry.Info[GraphQLContext],
+    ) -> KnowledgeGraphData:
+        """Export the full knowledge graph built by LightRAG."""
+        service = info.context.lightrag_service
+        graph = await service.get_knowledge_graph()
+        nodes = [
+            KnowledgeGraphNode(
+                name=str(n.get("name", "")),
+                label=str(n.get("label", "")),
+                properties=str(n.get("properties", "")),
+            )
+            for n in graph.get("nodes", [])
+        ]
+        edges = [
+            KnowledgeGraphEdge(
+                source=str(e.get("source", "")),
+                target=str(e.get("target", "")),
+                relationship=str(e.get("relationship", "")),
+                weight=float(e["weight"]) if "weight" in e else None,
+            )
+            for e in graph.get("edges", [])
+        ]
+        return KnowledgeGraphData(nodes=nodes, edges=edges)
+{%- endif %}
+{%- if use_raganything %}
+
+    @strawberry.field(description="Query the RAG-Anything multimodal knowledge base.")
+    async def raganything_query(
+        self,
+        info: strawberry.Info[GraphQLContext],
+        input: RAGAnythingQueryInput,
+    ) -> RAGAnythingResult:
+        """Execute a multimodal RAG query across text, images, tables, and equations."""
+        service = info.context.raganything_service
+        mode = input.mode or "hybrid"
+        answer = await service.query(
+            input.query,
+            mode=mode,
+        )
+        return RAGAnythingResult(answer=answer, mode=mode)
 {%- endif %}
 
 

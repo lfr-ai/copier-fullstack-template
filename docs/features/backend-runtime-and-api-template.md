@@ -9,10 +9,12 @@ application factory wiring, middleware, and API route conventions.
 
 - `template/backend/src/{{ project_slug }}/main.py.jinja`
 - `template/backend/src/{{ project_slug }}/config/settings/base.py.jinja`
+- `template/backend/src/{{ project_slug }}/composition/container.py.jinja`
 - `template/backend/src/{{ project_slug }}/config/settings/__init__.py.jinja`
 - `template/backend/src/{{ project_slug }}/presentation/api/app.py.jinja`
 - `template/backend/src/{{ project_slug }}/presentation/api/routes/*.py.jinja`
 - `template/backend/pyproject.toml.jinja`
+- `template/.env.example.jinja`
 
 ## Business rules and constraints
 
@@ -37,6 +39,8 @@ application factory wiring, middleware, and API route conventions.
 
 - `BaseAppSettings` is the central runtime config model.
 - Typed fields define operational knobs: network, CORS, auth, AI, and integrations.
+- AI runtime settings include optional LightRAG and RAG-Anything knobs for
+  working directories, retrieval modes, parsers, and processing flags.
 - Generated dependencies include FastAPI, Pydantic, SQLAlchemy, and optional AI stacks
   (`template/backend/pyproject.toml.jinja:120`).
 
@@ -44,6 +48,8 @@ application factory wiring, middleware, and API route conventions.
 
 - FastAPI app and middleware stack.
 - Optional Redis/Celery/Azure/LLM providers via feature flags.
+- Optional LightRAG and RAG-Anything adapters are now wired in the composition
+  container with typed settings and env-backed defaults.
 - DI container disposal on lifespan shutdown.
 
 ## API endpoints or UI components

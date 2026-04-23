@@ -1,0 +1,138 @@
+"""LightRAG configuration -- enums, settings, and storage backend helpers."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import StrEnum, unique
+
+# ── Query mode enum ───────────────────────────────────────────────
+
+
+@unique
+class LightRAGQueryMode(StrEnum):
+    """LightRAG query modes for retrieval strategies."""
+
+    LOCAL = "local"
+    GLOBAL = "global"
+    HYBRID = "hybrid"
+    NAIVE = "naive"
+    MIX = "mix"
+
+
+# ── Storage backend mappings ──────────────────────────────────────
+
+GRAPH_STORAGE_MAP: dict[str, str] = {
+    "networkx": "NetworkXStorage",
+    "neo4j": "Neo4JStorage",
+    "postgresql": "PGGraphStorage",
+    "memgraph": "MemgraphStorage",
+    "opensearch": "OpenSearchGraphStorage",
+}
+
+VECTOR_STORAGE_MAP: dict[str, str] = {
+    "nano": "NanoVectorDBStorage",
+    "postgresql": "PGVectorStorage",
+    "faiss": "FaissVectorDBStorage",
+    "milvus": "MilvusVectorDBStorage",
+    "qdrant": "QdrantVectorDBStorage",
+    "opensearch": "OpenSearchVectorDBStorage",
+}
+
+KV_STORAGE_MAP: dict[str, str] = {
+    "json": "JsonKVStorage",
+    "postgresql": "PGKVStorage",
+    "redis": "RedisKVStorage",
+    "mongodb": "MongoKVStorage",
+    "opensearch": "OpenSearchKVStorage",
+}
+
+DOC_STATUS_STORAGE_MAP: dict[str, str] = {
+    "json": "JsonDocStatusStorage",
+    "postgresql": "PGDocStatusStorage",
+    "mongodb": "MongoDocStatusStorage",
+    "opensearch": "OpenSearchDocStatusStorage",
+}
+
+# ── Defaults ──────────────────────────────────────────────────────
+
+DEFAULT_WORKING_DIR = "./data/lightrag"
+DEFAULT_CHUNK_TOKEN_SIZE = 1200
+DEFAULT_CHUNK_OVERLAP = 100
+DEFAULT_EMBEDDING_BATCH_NUM = 32
+DEFAULT_EMBEDDING_MAX_ASYNC = 16
+DEFAULT_LLM_MAX_ASYNC = 4
+DEFAULT_TOP_K = 60
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
+DEFAULT_EMBEDDING_DIM = 1536
+DEFAULT_EMBEDDING_MAX_TOKENS = 8192
+
+
+# ── Settings dataclass ────────────────────────────────────────────
+
+
+@dataclass(frozen=True, slots=True)
+class LightRAGSettings:
+    """Immutable configuration for a LightRAG instance.
+
+    Fields map to the 'lightrag.LightRAG(...)' constructor parameters.
+    """
+
+    working_dir: str = DEFAULT_WORKING_DIR
+    default_query_mode: LightRAGQueryMode = LightRAGQueryMode.HYBRID
+    top_k: int = DEFAULT_TOP_K
+    graph_storage: str = "NetworkXStorage"
+    vector_storage: str = "NanoVectorDBStorage"
+    kv_storage: str = "JsonKVStorage"
+    doc_status_storage: str = "JsonDocStatusStorage"
+    chunk_token_size: int = DEFAULT_CHUNK_TOKEN_SIZE
+    chunk_overlap_token_size: int = DEFAULT_CHUNK_OVERLAP
+    embedding_batch_num: int = DEFAULT_EMBEDDING_BATCH_NUM
+    embedding_max_async: int = DEFAULT_EMBEDDING_MAX_ASYNC
+    llm_max_async: int = DEFAULT_LLM_MAX_ASYNC
+    llm_model_name: str = DEFAULT_LLM_MODEL
+    enable_llm_cache: bool = True
+    embedding_dim: int = DEFAULT_EMBEDDING_DIM
+    embedding_max_tokens: int = DEFAULT_EMBEDDING_MAX_TOKENS
+    addon_params: dict[str, object] | None = None
+
+
+# ── Resolver helpers ──────────────────────────────────────────────
+
+
+def resolve_graph_storage(backend: str) -> str:
+    """Resolve a shorthand graph backend name to the LightRAG storage class name.
+
+    Args:
+        backend (str): Shorthand name ('networkx', 'neo4j', 'postgresql', etc.)
+            or full class name ('Neo4JStorage').
+
+    Returns:
+        str: LightRAG storage class name.
+    """
+    return GRAPH_STORAGE_MAP.get(backend.lower(), backend)
+
+
+def resolve_vector_storage(backend: str) -> str:
+    """Resolve a shorthand vector backend name to the LightRAG storage class name.
+
+    Args:
+        backend (str): Shorthand name ('faiss', 'postgresql', etc.)
+            or full class name.
+
+    Returns:
+        str: LightRAG storage class name.
+    """
+    return VECTOR_STORAGE_MAP.get(backend.lower(), backend)
+
+
+def resolve_kv_storage(backend: str) -> str:
+    """Resolve a shorthand KV backend name to the LightRAG storage class name.
+
+    Args:
+        backend (str): Shorthand name ('json', 'postgresql', 'redis', etc.)
+            or full class name.
+
+    Returns:
+        str: LightRAG storage class name.
+    """
+    return KV_STORAGE_MAP.get(backend.lower(), backend)
