@@ -41,6 +41,7 @@ class RAGService:
         splitter: TextSplitterGateway,
         knowledge_graph: KnowledgeGraphGateway | None = None,
         reranker: RerankerGateway | None = None,
+        lightrag_service: object | None = None,
     ) -> None:
         self._ingestion = IngestionPipeline(
             loader=loader,
@@ -54,6 +55,7 @@ class RAGService:
             vector_store=vector_store,
             knowledge_graph=knowledge_graph,
             reranker=reranker,
+            lightrag_service=lightrag_service,
         )
         self._embedding = embedding
         self._vector_store = vector_store
@@ -88,6 +90,10 @@ class RAGService:
             top_k=request.top_k,
             system_prompt=request.system_prompt,
             use_graph=request.use_graph,
+            strategy=request.strategy,
+            use_lightrag=request.use_lightrag,
+            lightrag_mode=request.lightrag_mode,
+            combine_strategies=request.combine_strategies,
         )
         sources = [
             SourceReference(

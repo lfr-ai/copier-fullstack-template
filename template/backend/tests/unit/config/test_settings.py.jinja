@@ -4,14 +4,27 @@ from __future__ import annotations
 
 import os
 from unittest.mock import patch
+import pytest
 
 
 from {{ project_slug }}.config.settings import get_settings
 from {{ project_slug }}.config.settings.base import BaseAppSettings
+from {{ project_slug }}.config.settings.dev import DevSettings
 from {{ project_slug }}.config.settings.local import LocalSettings
 from {{ project_slug }}.config.settings.prod import ProdSettings
+from {{ project_slug }}.config.settings.staging import StagingSettings
 from {{ project_slug }}.config.settings.test import TestSettings
 from {{ project_slug }}.core.enums.environment import Environment
+
+_VALID_SECRET_KEY = "super-secure-secret-key-value-with-32-chars"
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache() -> None:
+    """Clear cached settings between tests for isolation."""
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 class TestGetSettings:
     """Test suite for settings factory function."""
@@ -30,10 +43,11 @@ class TestGetSettings:
         assert settings.environment == Environment.LOCAL
 
     def test_dev_env_returns_local_settings(self) -> None:
-        """Verify DEV env returns LocalSettings."""
+        """Verify DEV env returns DevSettings."""
         with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "DEV"}):
             settings = get_settings()
-        assert isinstance(settings, LocalSettings)
+        assert isinstance(settings, DevSettings)
+        assert settings.environment == Environment.DEV
 
     def test_test_env_returns_test_settings(self) -> None:
         """Verify TEST env returns TestSettings."""
@@ -43,14 +57,33 @@ class TestGetSettings:
         assert settings.environment == Environment.TEST
 
     def test_staging_env_returns_prod_settings(self) -> None:
-        """Verify STAGING env returns ProdSettings."""
-        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "STAGING"}):
+        """Verify STAGING env returns StagingSettings."""
+        with patch.dict(
+            os.environ,
+            {
+                "{{ project_slug | upper }}_ENVIRONMENT": "STAGING",
+                "{{ project_slug | upper }}_SECRET_KEY": _VALID_SECRET_KEY,
+{%- if use_auth %}
+                "{{ project_slug | upper }}_JWT_SECRET_KEY": _VALID_SECRET_KEY,
+{%- endif %}
+            },
+        ):
             settings = get_settings()
-        assert isinstance(settings, ProdSettings)
+        assert isinstance(settings, StagingSettings)
+        assert settings.environment == Environment.STAGING
 
     def test_prod_env_returns_prod_settings(self) -> None:
         """Verify PROD env returns ProdSettings."""
-        with patch.dict(os.environ, {"{{ project_slug | upper }}_ENVIRONMENT": "PROD"}):
+        with patch.dict(
+            os.environ,
+            {
+                "{{ project_slug | upper }}_ENVIRONMENT": "PROD",
+                "{{ project_slug | upper }}_SECRET_KEY": _VALID_SECRET_KEY,
+{%- if use_auth %}
+                "{{ project_slug | upper }}_JWT_SECRET_KEY": _VALID_SECRET_KEY,
+{%- endif %}
+            },
+        ):
             settings = get_settings()
         assert isinstance(settings, ProdSettings)
         assert settings.environment == Environment.PROD
@@ -94,9 +127,9 @@ class TestTestSettings:
 {%- endif %}
 
     def test_debug_enabled(self) -> None:
-        """Verify debug is True in test environment."""
+        """Verify debug is False in test environment."""
         settings = TestSettings()
-        assert settings.debug is True
+        assert settings.debug is False
 
     def test_database_echo_disabled(self) -> None:
         """Verify SQL echo is disabled in test."""
@@ -108,18 +141,37 @@ class TestProdSettings:
 
     def test_debug_disabled(self) -> None:
         """Verify debug is False in prod."""
-        settings = ProdSettings()
+        settings = ProdSettings(secret_key=_VALID_SECRET_KEY{%- if use_auth %}, jwt_secret_key=_VALID_SECRET_KEY{% endif %})
         assert settings.debug is False
 
     def test_log_level_warning(self) -> None:
         """Verify log level is WARNING in prod."""
-        settings = ProdSettings()
+        settings = ProdSettings(secret_key=_VALID_SECRET_KEY{%- if use_auth %}, jwt_secret_key=_VALID_SECRET_KEY{% endif %})
         assert settings.log_level == "WARNING"
 
     def test_database_echo_disabled(self) -> None:
         """Verify SQL echo is disabled in prod."""
-        settings = ProdSettings()
+        settings = ProdSettings(secret_key=_VALID_SECRET_KEY{%- if use_auth %}, jwt_secret_key=_VALID_SECRET_KEY{% endif %})
         assert settings.database_echo is False
+
+    def test_rejects_insecure_default_secret(self) -> None:
+        """Verify prod rejects insecure default secret values."""
+        with pytest.raises(ValueError, match="secret_key"):
+            ProdSettings(secret_key="change-me-in-production"{%- if use_auth %}, jwt_secret_key=_VALID_SECRET_KEY{% endif %})
+
+
+class TestStagingSettings:
+    """Test suite for StagingSettings defaults."""
+
+    def test_log_level_info(self) -> None:
+        """Verify log level is INFO in staging."""
+        settings = StagingSettings(secret_key=_VALID_SECRET_KEY{%- if use_auth %}, jwt_secret_key=_VALID_SECRET_KEY{% endif %})
+        assert settings.log_level == "INFO"
+
+    def test_rejects_short_secret_key(self) -> None:
+        """Verify staging rejects short secret keys."""
+        with pytest.raises(ValueError, match="secret_key"):
+            StagingSettings(secret_key="too-short"{%- if use_auth %}, jwt_secret_key=_VALID_SECRET_KEY{% endif %})
 
 class TestBaseAppSettings:
     """Test suite for BaseAppSettings field defaults."""

@@ -1,9 +1,10 @@
-from __future__ import annotations
-
 """Verify no Final[] type annotations on module-level constants.
 
 Applies to public and internal constants/variables.
 """
+
+from __future__ import annotations
+
 import re
 import sys
 from pathlib import Path

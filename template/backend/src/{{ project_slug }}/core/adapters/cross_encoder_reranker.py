@@ -1,8 +1,9 @@
+"""Provide cross-encoder reranking adapter implementation."""
+
 from __future__ import annotations
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-from typing import List
 
 from ..interfaces.reranker import RerankerGateway, RankedResult
 
@@ -18,9 +19,9 @@ class CrossEncoderReranker(RerankerGateway):
         self,
         *,
         query: str,
-        results: List[dict[str, object]],
+        results: list[dict[str, object]],
         top_k: int = 5,
-    ) -> List[RankedResult]:
+    ) -> list[RankedResult]:
         """Rerank search results using the Cross-Encoder model."""
         rerank_scores = []
         for result in results:

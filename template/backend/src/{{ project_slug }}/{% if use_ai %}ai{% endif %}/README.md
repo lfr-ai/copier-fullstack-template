@@ -131,7 +131,7 @@ ai/
 
 | Package            | Version | Purpose                                                        |
 | ------------------ | ------- | -------------------------------------------------------------- |
-| `litellm`          | ≥1.90   | Universal LLM/embedding proxy (OpenAI, Azure, Anthropic, etc.) |
+| `litellm`          | ≥1.83.12,<2 | Universal LLM/embedding proxy (OpenAI, Azure, Anthropic, etc.) |
 | `openai`           | ≥1.80   | OpenAI / Azure OpenAI API client                               |
 | `langchain`        | ≥0.4    | LangChain agent framework                                      |
 | `langchain-core`   | ≥0.4    | LangChain core abstractions                                    |

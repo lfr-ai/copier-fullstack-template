@@ -156,7 +156,15 @@ class Query:
         from {{ project_slug }}.ai.models import RAGQueryRequest
 
         service = info.context.rag_service
-        request = RAGQueryRequest(question=input.query, top_k=input.top_k or _DEFAULT_RAG_TOP_K)
+        request = RAGQueryRequest(
+            question=input.query,
+            top_k=input.top_k or _DEFAULT_RAG_TOP_K,
+            use_graph=input.use_graph,
+            strategy=input.strategy,
+            use_lightrag=input.use_lightrag,
+            lightrag_mode=input.lightrag_mode,
+            combine_strategies=input.combine_strategies,
+        )
         result = await service.query(request)
         chunks = [
             RetrievedChunk(

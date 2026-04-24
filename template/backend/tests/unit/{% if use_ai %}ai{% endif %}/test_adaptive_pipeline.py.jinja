@@ -1,7 +1,7 @@
 """Unit tests for AdaptiveRAGPipeline routing logic."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from {{ project_slug }}.ai.rag.adaptive_pipeline import AdaptiveRAGPipeline
 from {{ project_slug }}.ai.rag.retrieval import RetrievalResult
@@ -146,7 +146,7 @@ class TestAdaptiveRAGPipelineRouting:
         )
 
         with patch.object(
-            pipeline_minimal,
+            AdaptiveRAGPipeline,
             "_get_self_crag_pipeline",
             return_value=mock_self_crag,
         ):
@@ -183,7 +183,7 @@ class TestAdaptiveRAGPipelineRouting:
         )
 
         with patch.object(
-            pipeline_with_kg,
+            AdaptiveRAGPipeline,
             "_get_deep_rag_pipeline",
             return_value=mock_deeprag,
         ):
@@ -195,6 +195,106 @@ class TestAdaptiveRAGPipelineRouting:
         assert result.answer == "DeepRAG answer"
         assert len(result.graph_context) == 2
         mock_deeprag.query.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_combined_strategy_merges_candidates(
+        self,
+        *,
+        pipeline_with_kg: AdaptiveRAGPipeline,
+    ) -> None:
+        """combined strategy should merge answers and sources from multiple pipelines."""
+        mock_self_crag = AsyncMock()
+        mock_self_crag.query = AsyncMock(
+            return_value=RetrievalResult(
+                query="Test question",
+                answer="Self answer",
+                sources=[
+                    VectorSearchResult(
+                        id="doc-self",
+                        score=0.80,
+                        metadata={"content": "Self source"},
+                    )
+                ],
+                graph_context=[],
+            )
+        )
+        mock_deeprag = AsyncMock()
+        mock_deeprag.query = AsyncMock(
+            return_value=RetrievalResult(
+                query="Test question",
+                answer="Deep answer",
+                sources=[
+                    VectorSearchResult(
+                        id="doc-deep",
+                        score=0.90,
+                        metadata={"content": "Deep source"},
+                    )
+                ],
+                graph_context=[{"provider": "deep_rag"}],
+            )
+        )
+
+        with (
+            patch.object(
+                AdaptiveRAGPipeline,
+                "_get_self_crag_pipeline",
+                return_value=mock_self_crag,
+            ),
+            patch.object(
+                AdaptiveRAGPipeline,
+                "_get_deep_rag_pipeline",
+                return_value=mock_deeprag,
+            ),
+            patch.object(
+                AdaptiveRAGPipeline,
+                "_synthesize_combined_answer",
+                new=AsyncMock(return_value="Combined answer"),
+            ),
+        ):
+            result = await pipeline_with_kg.query(
+                "Test question",
+                strategy="combined",
+                combine_strategies=True,
+            )
+
+        assert result.answer == "Combined answer"
+        assert {source.id for source in result.sources} == {"doc-self", "doc-deep"}
+
+    @pytest.mark.asyncio
+    async def test_lightrag_strategy_falls_back_when_unavailable(
+        self,
+        *,
+        pipeline_minimal: AdaptiveRAGPipeline,
+    ) -> None:
+        """lightrag strategy should gracefully fall back to Self-CRAG when unavailable."""
+        mock_self_crag = AsyncMock()
+        mock_self_crag.query = AsyncMock(
+            return_value=RetrievalResult(
+                query="Test question",
+                answer="Self fallback answer",
+                sources=[
+                    VectorSearchResult(
+                        id="doc-fallback",
+                        score=0.88,
+                        metadata={"content": "Fallback source"},
+                    )
+                ],
+                graph_context=[],
+            )
+        )
+
+        with patch.object(
+            AdaptiveRAGPipeline,
+            "_get_self_crag_pipeline",
+            return_value=mock_self_crag,
+        ):
+            result = await pipeline_minimal.query(
+                "Test question",
+                strategy="lightrag",
+            )
+
+        assert result.answer == "Self fallback answer"
+        mock_self_crag.query.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_raises_on_empty_question(
@@ -238,7 +338,7 @@ class TestAdaptiveRAGPipelineRouting:
         )
 
         with patch.object(
-            pipeline_minimal,
+            AdaptiveRAGPipeline,
             "_get_self_crag_pipeline",
             return_value=mock_self_crag,
         ):
@@ -267,7 +367,7 @@ class TestAdaptiveRAGPipelineRouting:
         )
 
         with patch.object(
-            pipeline_minimal,
+            AdaptiveRAGPipeline,
             "_get_self_crag_pipeline",
             return_value=mock_self_crag,
         ):
@@ -408,18 +508,11 @@ class TestAdaptiveRAGPipelineRouting:
         pipeline_minimal: AdaptiveRAGPipeline,
     ) -> None:
         """_get_self_crag_pipeline() should lazily initialize pipeline once."""
-        with patch("{{ project_slug }}.ai.rag.adaptive_pipeline.SelfCRAGPipeline") as mock_cls:
-            mock_instance = MagicMock()
-            mock_cls.return_value = mock_instance
+        result1 = pipeline_minimal._get_self_crag_pipeline()
+        result2 = pipeline_minimal._get_self_crag_pipeline()
 
-            # First call should initialize
-            result1 = pipeline_minimal._get_self_crag_pipeline()
-            # Second call should reuse
-            result2 = pipeline_minimal._get_self_crag_pipeline()
-
-            assert result1 is result2
-            # Pipeline should only be constructed once
-            assert mock_cls.call_count <= 2  # May be called twice due to import patching
+        assert result1 is not None
+        assert result1 is result2
 
     @pytest.mark.asyncio
     async def test_lazy_initialization_deeprag(
@@ -428,16 +521,11 @@ class TestAdaptiveRAGPipelineRouting:
         pipeline_with_kg: AdaptiveRAGPipeline,
     ) -> None:
         """_get_deep_rag_pipeline() should lazily initialize pipeline once."""
-        with patch("{{ project_slug }}.ai.rag.adaptive_pipeline.DeepRAGPipeline") as mock_cls:
-            mock_instance = MagicMock()
-            mock_cls.return_value = mock_instance
+        result1 = pipeline_with_kg._get_deep_rag_pipeline()
+        result2 = pipeline_with_kg._get_deep_rag_pipeline()
 
-            # First call should initialize
-            result1 = pipeline_with_kg._get_deep_rag_pipeline()
-            # Second call should reuse
-            result2 = pipeline_with_kg._get_deep_rag_pipeline()
-
-            assert result1 is result2
+        assert result1 is not None
+        assert result1 is result2
 
     def test_from_config_minimal(
         self,
@@ -551,7 +639,7 @@ class TestAdaptiveRAGPipelineRouting:
         )
 
         with patch.object(
-            pipeline_minimal,
+            AdaptiveRAGPipeline,
             "_get_self_crag_pipeline",
             return_value=mock_self_crag,
         ):

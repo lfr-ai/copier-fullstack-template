@@ -27,6 +27,11 @@ tasks:
     cmds:
       - python scripts/check-fastapi-status-codes.py {{.BACKEND_SRC}}
 
+  conventions:module-docstrings:
+    desc: Verify module-level docstrings exist in Python/Python-template files
+    cmds:
+      - python scripts/check-module-docstrings.py scripts template/backend/src template/tools
+
   github:alignment:
     desc: Enforce core template/.github alignment conventions
     cmds:
@@ -117,6 +122,7 @@ tasks:
       - task: architecture:boundaries
       - task: conventions:no-final
       - task: conventions:fastapi-status-codes
+      - task: conventions:module-docstrings
       - task: github:alignment
 
   ci:

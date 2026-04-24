@@ -23,6 +23,8 @@ repository and generated-project scaffolding.
 - `features/backend-runtime-and-api-template.md`
 - `features/frontend-template-toolchain.md`
 - `features/agent-governance-and-instructions.md`
+- `features/tooling-config-governance-benchmark.md`
+- `features/settings-config-architecture-benchmark.md`
 
 ## Frontend and cross-cutting syntheses
 
@@ -35,3 +37,12 @@ repository and generated-project scaffolding.
 - Updated pre-commit baselines and moved expensive tests to `pre-push/manual`.
 - Added FastAPI status-code convention checker script and task wiring.
 - Strengthened instruction governance for internal naming and default minimization.
+- Added lock-aware dependency audit scaffolding for generated projects.
+- Added runtime environment invalid-value warning diagnostics in settings runtime
+  resolver.
+- Added module/file-level docstring enforcement across root and generated-project
+  quality gates.
+
+## Implementation plan
+
+- `modernization/implementation-plan.md`

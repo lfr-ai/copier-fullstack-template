@@ -1,12 +1,11 @@
 """Prompt template manager -- backward-compatibility alias.
 
-from typing import final
-
-Use :class:`~{{ project_slug }}.ai.prompts.jinja2_templates.Jinja2PromptTemplate`
-directly for new code.
+Use 'Jinja2PromptTemplate' directly for new code.
 """
 
-from {{ project_slug }}.ai.prompts.jinja2_templates import Jinja2PromptTemplate
+from typing import final
+
+from .jinja2_templates import Jinja2PromptTemplate
 
 
 @final

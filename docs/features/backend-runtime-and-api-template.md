@@ -41,6 +41,9 @@ application factory wiring, middleware, and API route conventions.
 - Typed fields define operational knobs: network, CORS, auth, AI, and integrations.
 - AI runtime settings include optional LightRAG and RAG-Anything knobs for
   working directories, retrieval modes, parsers, and processing flags.
+- RAG query payloads now support strategy-aware orchestration controls
+  (`strategy`, `use_lightrag`, `lightrag_mode`, `combine_strategies`) so
+  generated APIs can explicitly route across Self-CRAG, DeepRAG, and LightRAG.
 - Generated dependencies include FastAPI, Pydantic, SQLAlchemy, and optional AI stacks
   (`template/backend/pyproject.toml.jinja:120`).
 
@@ -50,6 +53,9 @@ application factory wiring, middleware, and API route conventions.
 - Optional Redis/Celery/Azure/LLM providers via feature flags.
 - Optional LightRAG and RAG-Anything adapters are now wired in the composition
   container with typed settings and env-backed defaults.
+- Adaptive RAG orchestration supports combined execution mode where Self-CRAG,
+  DeepRAG, and LightRAG (when configured) run together with source/result
+  aggregation and synthesis fallback behavior.
 - DI container disposal on lifespan shutdown.
 
 ## API endpoints or UI components

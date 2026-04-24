@@ -51,6 +51,19 @@ repos:
 
   - repo: local
     hooks:
+      - id: module-docstrings
+        name: module-level docstring enforcement
+        entry: uv run python tools/conventions/check_module_docstrings.py
+        language: system
+        pass_filenames: false
+
+      - id: dependency-audit
+        name: dependency vulnerability audit
+        entry: uv run python tools/security/dependency_audit.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: ty-check
         name: ty type check
         entry: uvx ty check

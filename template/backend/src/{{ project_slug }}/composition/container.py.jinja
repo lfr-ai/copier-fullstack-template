@@ -356,6 +356,11 @@ class Container:
             knowledge_graph=None,
 {%- endif %}
             reranker=self.reranker(),
+{%- if use_lightrag %}
+            lightrag_service=self._lightrag_service,
+{%- else %}
+            lightrag_service=None,
+{%- endif %}
         )
 {%- endif %}
 {% if use_mcp %}

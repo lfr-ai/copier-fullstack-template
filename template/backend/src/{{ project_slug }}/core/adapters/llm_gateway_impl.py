@@ -1,10 +1,28 @@
-from {{ project_slug }}.core.adapters.llm_hallucination_detector import HallucinationDetector
-from {{ project_slug }}.core.interfaces.reranker import RerankerGateway
-from {{ project_slug }}.core.interfaces.llm import LLMGateway
+"""Provide concrete LLM gateway adapter implementation."""
+
+from .llm_hallucination_detector import HallucinationDetector
+from ..interfaces.llm import LLMGateway
+from ..interfaces.reranker import RerankerGateway
 
 class LLMGatewayImpl(LLMGateway):
-    async def complete(self, *args, **kwargs):
-        pass  # Replace with real implementation
+    async def complete(self, *args: object, **kwargs: object) -> str:
+        """Generate completion using configured provider implementation."""
+        raise NotImplementedError
 
-    async def detect_hallucination(self, detector: HallucinationDetector, *args, **kwargs):
-        result = await detector.detect_hallucination(llm_response=..., ...)
+    async def detect_hallucination(
+        self,
+        detector: HallucinationDetector,
+        *,
+        user_query: str,
+        context: list[str],
+        llm_response: str,
+        reranker: RerankerGateway | None = None,
+    ) -> bool:
+        """Delegate hallucination detection to configured detector."""
+        if reranker is not None:
+            _ = reranker
+        return await detector.detect_hallucination(
+            user_query=user_query,
+            context=context,
+            llm_response=llm_response,
+        )

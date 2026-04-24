@@ -1,0 +1,83 @@
+"""Unit tests for runtime environment resolution."""
+
+from __future__ import annotations
+
+from unittest.mock import patch
+
+from {{ project_slug }}.config.settings import get_settings
+from {{ project_slug }}.config.settings.runtime import resolve_runtime_environment
+from {{ project_slug }}.core.enums.environment import Environment
+
+
+class TestResolveRuntimeEnvironment:
+    """Test suite for runtime environment resolution precedence."""
+
+    def test_process_environment_takes_precedence(self) -> None:
+        """Verify process environment value wins over file/hostname paths."""
+        with patch.dict(
+            '{{ project_slug }}.config.settings.runtime.os.environ',
+            {'{{ project_slug | upper }}_ENVIRONMENT': 'prod'},
+            clear=True,
+        ):
+            resolved = resolve_runtime_environment()
+
+        assert resolved == Environment.PROD
+
+    def test_invalid_process_environment_falls_back_to_local(self) -> None:
+        """Verify invalid process environment values safely fall back."""
+        with patch.dict(
+            '{{ project_slug }}.config.settings.runtime.os.environ',
+            {'{{ project_slug | upper }}_ENVIRONMENT': 'invalid-value'},
+            clear=True,
+        ), patch(
+            '{{ project_slug }}.config.settings.runtime._peek_env_file',
+            return_value=None,
+        ), patch(
+            '{{ project_slug }}.config.settings.runtime._HOSTNAME_ENV_MAP',
+            {},
+        ), patch(
+            '{{ project_slug }}.config.settings.runtime.socket.gethostname',
+            return_value='unknown-host',
+        ):
+            resolved = resolve_runtime_environment()
+
+        assert resolved == Environment.LOCAL
+
+    def test_hostname_map_used_when_process_and_files_missing(self) -> None:
+        """Verify hostname map is used when higher precedence sources are absent."""
+        with patch.dict(
+            '{{ project_slug }}.config.settings.runtime.os.environ',
+            {},
+            clear=True,
+        ), patch(
+            '{{ project_slug }}.config.settings.runtime._peek_env_file',
+            return_value=None,
+        ), patch(
+            '{{ project_slug }}.config.settings.runtime._HOSTNAME_ENV_MAP',
+            {'my-dev-box': Environment.DEV},
+        ), patch(
+            '{{ project_slug }}.config.settings.runtime.socket.gethostname',
+            return_value='my-dev-box',
+        ):
+            resolved = resolve_runtime_environment()
+
+        assert resolved == Environment.DEV
+
+
+class TestGetSettingsCache:
+    """Test suite for settings-factory cache behavior."""
+
+    def test_get_settings_returns_cached_instance(self) -> None:
+        """Verify settings factory returns singleton-like cached object."""
+        get_settings.cache_clear()
+
+        with patch.dict(
+            '{{ project_slug }}.config.settings.runtime.os.environ',
+            {'{{ project_slug | upper }}_ENVIRONMENT': 'local'},
+            clear=True,
+        ):
+            first = get_settings()
+            second = get_settings()
+
+        assert first is second
+        get_settings.cache_clear()

@@ -12,6 +12,12 @@ from {{ project_slug }}.config.constants import (
     TOKEN_EXPIRY_MINUTES,
 {%- endif %}
 )
+from {{ project_slug }}.config.settings._validators import (
+{%- if use_auth %}
+    validate_auth_configuration,
+{%- endif %}
+    validate_secret_key_strength,
+)
 from {{ project_slug }}.core.enums.environment import Environment
 
 
@@ -181,8 +187,17 @@ class BaseAppSettings(BaseSettings):
     @model_validator(mode="after")
     def _check_default_secrets(self) -> "BaseAppSettings":
         """Reject insecure default secrets outside local environment."""
+{%- if use_auth %}
+        validate_auth_configuration(
+            auth_enabled=self.auth_enabled,
+            environment=self.environment,
+            jwt_secret_key=self.jwt_secret_key,
+            jwt_expire_minutes=self.jwt_expire_minutes,
+            env_prefix=self.model_config.get('env_prefix', ''),
+        )
+{%- endif %}
 {%- if use_lightrag %}
-        lightrag_modes = {"naive", "local", "global", "hybrid", "mix"}
+        lightrag_modes = {"naive", "local", "global", "hybrid", "mix", "bypass"}
         if self.lightrag_default_query_mode not in lightrag_modes:
             msg = (
                 "lightrag_default_query_mode must be one of "
@@ -206,8 +221,11 @@ class BaseAppSettings(BaseSettings):
 {%- endif %}
         if self.environment == Environment.LOCAL:
             return self
+        validate_secret_key_strength(
+            secret_key=self.secret_key,
+            env_prefix=self.model_config.get('env_prefix', ''),
+        )
         insecure = {
-            "secret_key": "change-me-in-production",
 {%- if use_auth %}
             "jwt_secret_key": "change-me-jwt-secret",
 {%- endif %}

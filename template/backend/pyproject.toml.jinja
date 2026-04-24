@@ -42,7 +42,7 @@ dependencies = [
     "azure-keyvault-secrets>=4.9",{% endif %}{% if cloud_provider == 'azure' %}
     "azure-storage-blob>=12.24",{% endif %}{% if use_ai %}
     "openai>=1.80",
-    "litellm>=1.90",
+    "litellm>=1.83.12,<2",
     "tiktoken>=0.9",
     "numpy>=2.0",{% endif %}{% if use_faiss %}
     "faiss-cpu>=1.14",{% endif %}{% if use_pgvector %}
@@ -122,4 +122,3 @@ build-backend = "setuptools.build_meta"
 [tool.uv]
 package = true
 default-groups = ["dev"]
-

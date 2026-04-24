@@ -93,6 +93,11 @@ class RAGQueryInput:
 
     query: str
     top_k: int | None = _DEFAULT_RAG_TOP_K
+    use_graph: bool = False
+    strategy: str = "auto"
+    use_lightrag: bool = False
+    lightrag_mode: str = "mix"
+    combine_strategies: bool = False
 
 
 @strawberry.type(description="A single retrieved document chunk.")

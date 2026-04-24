@@ -1,0 +1,77 @@
+"""Validation helpers for configuration settings.
+
+Provides reusable validators shared across environment-specific settings
+classes to keep configuration logic consistent and maintainable.
+"""
+
+from __future__ import annotations
+
+from {{ project_slug }}.core.enums.environment import Environment
+
+_MIN_SECRET_KEY_LENGTH = 32
+_INSECURE_SECRET_DEFAULT = 'change-me-in-production'
+
+
+def validate_secret_key_strength(*, secret_key: str, env_prefix: str) -> None:
+    """Validate secret-key strength and placeholder usage.
+
+    Args:
+        secret_key (str): Secret key value to validate.
+        env_prefix (str): Environment variable prefix for guidance.
+
+    Raises:
+        ValueError: If key is default/placeholder or too short.
+    """
+    if (
+        secret_key == _INSECURE_SECRET_DEFAULT
+        or '__CHANGE_ME__' in secret_key
+        or len(secret_key) < _MIN_SECRET_KEY_LENGTH
+    ):
+        msg = (
+            'secret_key must be at least 32 characters and not the default '
+            'placeholder. Set the environment variable '
+            f'{env_prefix}SECRET_KEY.'
+        )
+        raise ValueError(msg)
+
+
+def validate_auth_configuration(
+    *,
+    auth_enabled: bool,
+    environment: Environment,
+    jwt_secret_key: str,
+    jwt_expire_minutes: int,
+    env_prefix: str,
+) -> None:
+    """Validate authentication settings consistency.
+
+    Args:
+        auth_enabled (bool): Whether JWT auth is enabled.
+        environment (Environment): Active application environment.
+        jwt_secret_key (str): JWT signing secret.
+        jwt_expire_minutes (int): Access-token expiration in minutes.
+        env_prefix (str): Environment variable prefix for guidance.
+
+    Raises:
+        ValueError: If auth settings are invalid.
+    """
+    if not auth_enabled:
+        return
+
+    if not jwt_secret_key or jwt_secret_key == 'change-me-jwt-secret':
+        msg = (
+            'jwt_secret_key must be configured when auth_enabled is True. '
+            f'Set {env_prefix}JWT_SECRET_KEY.'
+        )
+        raise ValueError(msg)
+
+    if jwt_expire_minutes <= 0:
+        msg = 'jwt_expire_minutes must be greater than zero when authentication is enabled.'
+        raise ValueError(msg)
+
+    if environment != Environment.LOCAL and len(jwt_secret_key) < _MIN_SECRET_KEY_LENGTH:
+        msg = (
+            'jwt_secret_key must be at least 32 characters outside LOCAL '
+            f'environment. Set {env_prefix}JWT_SECRET_KEY.'
+        )
+        raise ValueError(msg)

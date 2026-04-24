@@ -2,7 +2,7 @@
 
 Re-exports base entity types::
 
-    from {{ project_slug }}.core.entities import (
+    from package.core.entities import (
         AggregateRoot,
         DomainEvent,
         Entity,
@@ -10,7 +10,7 @@ Re-exports base entity types::
     )
 """
 
-from {{ project_slug }}.core.entities.base import (
+from .base import (
     AggregateRoot,
     DomainEvent,
     Entity,

@@ -20,6 +20,10 @@ implementation constraints for template development and generated projects.
   (`.github/copilot-instructions.md:143`).
 - Python docstrings use single-quoted identifier references and typed Args/Returns
   (`.github/instructions/python.instructions.md:35`).
+- Python modules/files require top-level module docstrings as first significant
+  statement and are enforced with checker tooling
+  (`.github/instructions/python.instructions.md`,
+  `template/.github/instructions/coding-conventions.instructions.md`).
 - Template instructions enforce underscore-prefixed internals and selective
   `Annotated[...]` usage (`template/.github/instructions/coding-conventions.instructions.md`).
 
