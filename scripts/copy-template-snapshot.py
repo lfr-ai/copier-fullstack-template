@@ -1,4 +1,5 @@
 """Create a VCS-free copy of the template source for rendering."""
+
 from pathlib import Path
 import shutil
 import sys
@@ -8,8 +9,13 @@ dst = Path(sys.argv[2])
 exclude = Path(sys.argv[3]).resolve() if len(sys.argv) > 3 else None
 
 IGNORED = {
-    ".git", ".venv", "node_modules", ".mypy_cache",
-    ".ruff_cache", ".pytest_cache", "__pycache__",
+    ".git",
+    ".venv",
+    "node_modules",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".pytest_cache",
+    "__pycache__",
 }
 
 

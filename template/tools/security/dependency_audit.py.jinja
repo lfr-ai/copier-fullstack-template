@@ -1,0 +1,66 @@
+"""Run dependency vulnerability audit for generated projects.
+
+Exports the locked dependency graph using 'uv export' and scans the
+resulting requirements with 'pip-audit'.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import tempfile
+from pathlib import Path
+
+_BACKEND_PROJECT_PATH = Path('backend')
+
+
+def _run_dependency_audit() -> int:
+    """Export dependencies and run 'pip-audit'.
+
+    Returns:
+        int: Process exit code. Zero means success.
+    """
+    file_descriptor, temporary_path = tempfile.mkstemp(
+        prefix='{{ project_slug }}-requirements-',
+        suffix='.txt',
+    )
+    os.close(file_descriptor)
+    requirements_path = Path(temporary_path)
+
+    pip_audit_command = [
+        'uv',
+        'run',
+        '--project',
+        str(_BACKEND_PROJECT_PATH),
+        'pip-audit',
+        '-r',
+        str(requirements_path),
+        '--desc',
+        'on',
+        '--no-deps',
+        '--disable-pip',
+    ]
+
+    try:
+        subprocess.run(
+            [
+                'uv',
+                'export',
+                '--project',
+                str(_BACKEND_PROJECT_PATH),
+                '--no-hashes',
+                '--frozen',
+                '-o',
+                str(requirements_path),
+            ],
+            check=True,
+        )
+        subprocess.run(pip_audit_command, check=True)
+    finally:
+        requirements_path.unlink(missing_ok=True)
+
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(_run_dependency_audit())

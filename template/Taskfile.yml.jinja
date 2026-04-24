@@ -134,6 +134,7 @@ tasks:
   lint:
     desc: "Run all linters"
     cmds:
+      - task: conventions:module-docstrings
       - task: backend:lint
       - task: frontend:lint
       - task: lint:containers
@@ -154,6 +155,11 @@ tasks:
     desc: "Type check Python code"
     cmds:
       - task: backend:typecheck
+
+  conventions:module-docstrings:
+    desc: "Verify module-level docstrings in Python modules"
+    cmds:
+      - uv run python tools/conventions/check_module_docstrings.py
 
   lint:frontend:
     desc: "Lint and type check frontend"
@@ -320,7 +326,7 @@ tasks:
   security:audit:
     desc: "Run security audits on all dependencies"
     cmds:
-      - cd backend && uv run pip-audit 2>/dev/null || echo "pip-audit not installed, skipping"
+      - uv run python tools/security/dependency_audit.py
       - cd frontend && bun pm audit 2>/dev/null || echo "bun audit not available, skipping"
       - cd backend && uv run detect-secrets scan --baseline ../.secrets.baseline
 

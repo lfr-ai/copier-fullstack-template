@@ -144,6 +144,10 @@ class RAGQueryRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=50)
     system_prompt: str | None = Field(default=None, max_length=MAX_SYSTEM_PROMPT_LENGTH)
     use_graph: bool = Field(default=False)
+    strategy: str = Field(default="auto")
+    use_lightrag: bool = Field(default=False)
+    lightrag_mode: str = Field(default="mix")
+    combine_strategies: bool = Field(default=False)
 
 
 @final

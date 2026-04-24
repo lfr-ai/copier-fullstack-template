@@ -9,6 +9,8 @@ Orchestrates adaptive retrieval by:
 
 from __future__ import annotations
 
+import asyncio
+from types import SimpleNamespace
 from typing import final
 
 import structlog
@@ -41,6 +43,7 @@ class AdaptiveRAGPipeline:
         "_vector_store",
         "_knowledge_graph",
         "_reranker",
+        "_lightrag_service",
         "_self_crag_pipeline",
         "_deep_rag_pipeline",
     )
@@ -53,6 +56,7 @@ class AdaptiveRAGPipeline:
         vector_store: VectorStoreGateway,
         knowledge_graph: KnowledgeGraphGateway | None = None,
         reranker: RerankerGateway | None = None,
+        lightrag_service: object | None = None,
     ) -> None:
         """Initialize the adaptive RAG pipeline.
 
@@ -62,12 +66,14 @@ class AdaptiveRAGPipeline:
             vector_store: Vector store gateway for similarity search.
             knowledge_graph: Optional knowledge graph gateway for DeepRAG traversal.
             reranker: Optional reranker for result reordering before grading.
+            lightrag_service: Optional LightRAG service for graph-native retrieval.
         """
         self._llm = llm
         self._embedding = embedding
         self._vector_store = vector_store
         self._knowledge_graph = knowledge_graph
         self._reranker = reranker
+        self._lightrag_service = lightrag_service
 
         # Lazy initialization of pipelines
         self._self_crag_pipeline = None
@@ -77,11 +83,13 @@ class AdaptiveRAGPipeline:
             workflow="adaptive-rag",
             has_knowledge_graph=knowledge_graph is not None,
             has_reranker=reranker is not None,
+            has_lightrag=lightrag_service is not None,
         )
         log.info(
             "AdaptiveRAGPipeline initialized",
             kg_available=knowledge_graph is not None,
             reranker_available=reranker is not None,
+            lightrag_available=lightrag_service is not None,
         )
 
     @classmethod
@@ -96,6 +104,7 @@ class AdaptiveRAGPipeline:
                 "vector_store": <VectorStoreGateway>,
                 "knowledge_graph": <KnowledgeGraphGateway | None>,  # optional
                 "reranker": <RerankerGateway | None>,  # optional
+                "lightrag_service": <object | None>,  # optional
             }
 
         Args:
@@ -128,7 +137,92 @@ class AdaptiveRAGPipeline:
             vector_store=vector_store,  # type: ignore[arg-type]
             knowledge_graph=config.get("knowledge_graph"),  # type: ignore[arg-type]
             reranker=config.get("reranker"),  # type: ignore[arg-type]
+            lightrag_service=config.get("lightrag_service"),
         )
+
+    async def _route_to_lightrag(
+        self,
+        *,
+        question: str,
+        top_k: int,
+        lightrag_mode: str,
+        user_prompt: str | None,
+    ) -> RetrievalResult:
+        """Route query to LightRAG when service is configured."""
+        if self._lightrag_service is None:
+            msg = "LightRAG service is not configured"
+            raise RuntimeError(msg)
+
+        request = SimpleNamespace(
+            question=question,
+            mode=lightrag_mode,
+            top_k=top_k,
+            response_type="Multiple Paragraphs",
+            only_need_context=False,
+            conversation_history=[],
+            user_prompt=user_prompt,
+        )
+
+        result = await self._lightrag_service.query(request)
+        contexts = list(getattr(result, "contexts", []) or [])
+
+        sources = [
+            VectorSearchResult(
+                id=f"lightrag_ctx_{idx}",
+                score=0.5,
+                metadata={"content": context, "source": "lightrag"},
+            )
+            for idx, context in enumerate(contexts)
+        ]
+
+        return RetrievalResult(
+            query=question,
+            answer=str(getattr(result, "answer", "")),
+            sources=sources[:top_k],
+            graph_context=[
+                {
+                    "provider": "lightrag",
+                    "mode": str(getattr(result, "mode", lightrag_mode)),
+                    "context_count": len(contexts),
+                }
+            ],
+        )
+
+    async def _synthesize_combined_answer(
+        self,
+        *,
+        question: str,
+        candidates: list[RetrievalResult],
+    ) -> str:
+        """Synthesize a single final answer from multiple strategy candidates."""
+        if not candidates:
+            return "I could not generate an answer from the configured retrieval strategies."
+
+        if len(candidates) == 1:
+            return candidates[0].answer
+
+        answer_block = "\n\n".join(
+            f"Candidate {idx + 1}:\n{candidate.answer}"
+            for idx, candidate in enumerate(candidates)
+        )
+        prompt = (
+            "You are combining outputs from multiple retrieval strategies "
+            "(Self-CRAG, DeepRAG, and LightRAG). "
+            "Produce one factual, concise, non-duplicative final answer grounded in the candidates.\n\n"
+            f"Question: {question}\n\n"
+            f"Candidates:\n{answer_block}"
+        )
+
+        try:
+            return await self._llm.complete(prompt=prompt)
+        except Exception as exc:
+            logger.warning(
+                "Combined answer synthesis failed -- falling back to longest candidate",
+                workflow="adaptive-rag",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+            return max(candidates, key=lambda c: len(c.answer)).answer
 
     def _get_self_crag_pipeline(self) -> object:
         """Lazily initialize the Self-CRAG pipeline."""
@@ -281,6 +375,10 @@ class AdaptiveRAGPipeline:
         top_k: int = 5,
         system_prompt: str | None = None,
         use_graph: bool = False,
+        strategy: str = "auto",
+        use_lightrag: bool = False,
+        lightrag_mode: str = "mix",
+        combine_strategies: bool = False,
     ) -> RetrievalResult:
         """Execute an adaptive RAG query with routing.
 
@@ -293,6 +391,10 @@ class AdaptiveRAGPipeline:
             system_prompt: Optional custom system prompt for LLM instructions.
             use_graph: If True, route to DeepRAG (multi-hop graph traversal).
                       If False, route to Self-CRAG (self-corrective retrieval).
+            strategy: Routing strategy ('auto', 'self_crag', 'deep_rag', 'lightrag', 'combined').
+            use_lightrag: If True, route to LightRAG when strategy='auto'.
+            lightrag_mode: LightRAG query mode (typically 'hybrid' or 'mix').
+            combine_strategies: If True, execute combined orchestration.
 
         Returns:
             RetrievalResult with answer and workflow metadata.
@@ -322,13 +424,35 @@ class AdaptiveRAGPipeline:
             msg = "system_prompt exceeds 10K characters"
             raise ValueError(msg)
 
+        allowed_strategies = {"auto", "self_crag", "deep_rag", "lightrag", "combined"}
+        normalized_strategy = strategy.strip().lower()
+        if normalized_strategy not in allowed_strategies:
+            msg = f"strategy must be one of {sorted(allowed_strategies)}"
+            raise ValueError(msg)
+
         # Determine routing decision
-        routing_decision = "deeprag" if use_graph else "self-crag"
+        if combine_strategies or normalized_strategy == "combined":
+            routing_decision = "combined"
+        elif normalized_strategy == "self_crag":
+            routing_decision = "self-crag"
+        elif normalized_strategy == "deep_rag":
+            routing_decision = "deeprag"
+        elif normalized_strategy == "lightrag":
+            routing_decision = "lightrag"
+        elif use_graph:
+            routing_decision = "deeprag"
+        elif use_lightrag:
+            routing_decision = "lightrag"
+        else:
+            routing_decision = "self-crag"
 
         log = logger.bind(
             workflow="adaptive-rag",
             routing_decision=routing_decision,
             use_graph=use_graph,
+            strategy=normalized_strategy,
+            use_lightrag=use_lightrag,
+            combine_strategies=combine_strategies,
             query_len=len(question),
             top_k=top_k,
         )
@@ -339,12 +463,106 @@ class AdaptiveRAGPipeline:
         )
 
         # Route to appropriate workflow
-        if routing_decision == "deeprag":
+        if routing_decision == "combined":
+            tasks: list[tuple[str, asyncio.Future[RetrievalResult] | asyncio.Task[RetrievalResult]]] = [
+                (
+                    "self_crag",
+                    asyncio.create_task(
+                        self._route_to_self_crag(
+                            question=question,
+                            top_k=top_k,
+                            system_prompt=system_prompt,
+                        )
+                    ),
+                ),
+                (
+                    "deep_rag",
+                    asyncio.create_task(
+                        self._route_to_deeprag(
+                            question=question,
+                            top_k=top_k,
+                            system_prompt=system_prompt,
+                        )
+                    ),
+                ),
+            ]
+            if self._lightrag_service is not None:
+                tasks.append(
+                    (
+                        "lightrag",
+                        asyncio.create_task(
+                            self._route_to_lightrag(
+                                question=question,
+                                top_k=top_k,
+                                lightrag_mode=lightrag_mode,
+                                user_prompt=system_prompt,
+                            )
+                        ),
+                    )
+                )
+
+            combined_results = await asyncio.gather(
+                *(task for _, task in tasks),
+                return_exceptions=True,
+            )
+
+            candidates: list[RetrievalResult] = []
+            for (name, _), maybe_result in zip(tasks, combined_results, strict=False):
+                if isinstance(maybe_result, Exception):
+                    logger.warning(
+                        "Sub-strategy failed in combined mode",
+                        workflow="adaptive-rag",
+                        strategy=name,
+                        error=str(maybe_result),
+                        error_type=type(maybe_result).__name__,
+                    )
+                    continue
+                candidates.append(maybe_result)
+
+            merged_sources: dict[str, VectorSearchResult] = {}
+            merged_graph_context: list[dict[str, object]] = []
+            for candidate in candidates:
+                for source in candidate.sources:
+                    existing = merged_sources.get(source.id)
+                    if existing is None or source.score > existing.score:
+                        merged_sources[source.id] = source
+                merged_graph_context.extend(candidate.graph_context)
+
+            final_answer = await self._synthesize_combined_answer(
+                question=question,
+                candidates=candidates,
+            )
+
+            result = RetrievalResult(
+                query=question,
+                answer=final_answer,
+                sources=sorted(merged_sources.values(), key=lambda s: s.score, reverse=True)[:top_k],
+                graph_context=merged_graph_context,
+            )
+        elif routing_decision == "deeprag":
             result = await self._route_to_deeprag(
                 question=question,
                 top_k=top_k,
                 system_prompt=system_prompt,
             )
+        elif routing_decision == "lightrag":
+            if self._lightrag_service is None:
+                logger.warning(
+                    "LightRAG requested but unavailable -- falling back to Self-CRAG",
+                    workflow="adaptive-rag",
+                )
+                result = await self._route_to_self_crag(
+                    question=question,
+                    top_k=top_k,
+                    system_prompt=system_prompt,
+                )
+            else:
+                result = await self._route_to_lightrag(
+                    question=question,
+                    top_k=top_k,
+                    lightrag_mode=lightrag_mode,
+                    user_prompt=system_prompt,
+                )
         else:
             result = await self._route_to_self_crag(
                 question=question,

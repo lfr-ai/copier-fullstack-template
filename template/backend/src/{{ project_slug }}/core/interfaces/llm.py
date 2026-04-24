@@ -3,7 +3,7 @@
 from collections.abc import AsyncIterator
 from typing import Protocol, runtime_checkable
 
-from {{ project_slug }}.core.value_objects.model_config import (
+from ..value_objects.model_config import (
     DEFAULT_MAX_TOKENS,
     DEFAULT_TEMPERATURE,
 )
