@@ -6,10 +6,8 @@ from pydantic import model_validator
 from pydantic_settings import SettingsConfigDict
 
 from {{ project_slug }}.config.settings.base import BaseAppSettings
+from {{ project_slug }}.config.settings._validators import validate_secret_key_strength
 from {{ project_slug }}.core.enums.environment import Environment
-
-_MIN_SECRET_KEY_LENGTH = 32
-_INSECURE_DEFAULT = "change-me-in-production"
 
 
 class ProdSettings(BaseAppSettings):
@@ -27,15 +25,8 @@ class ProdSettings(BaseAppSettings):
 
     @model_validator(mode="after")
     def _validate_secret_key(self) -> "ProdSettings":
-        if (
-            self.secret_key == _INSECURE_DEFAULT
-            or "__CHANGE_ME__" in self.secret_key
-            or len(self.secret_key) < _MIN_SECRET_KEY_LENGTH
-        ):
-            msg = (
-                "secret_key must be at least 32 characters and not the default "
-                "placeholder. Set the environment variable "
-                f"{self.model_config.get('env_prefix', '')}SECRET_KEY."
-            )
-            raise ValueError(msg)
+        validate_secret_key_strength(
+            secret_key=self.secret_key,
+            env_prefix=self.model_config.get('env_prefix', ''),
+        )
         return self

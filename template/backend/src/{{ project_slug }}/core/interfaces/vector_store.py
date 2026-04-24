@@ -3,6 +3,8 @@
 Concrete adapters: FAISS, Azure AI Search, Chroma, Pinecone, etc.
 """
 
+from __future__ import annotations
+
 from typing import Protocol, runtime_checkable, final
 
 DEFAULT_SEARCH_TOP_K = 10

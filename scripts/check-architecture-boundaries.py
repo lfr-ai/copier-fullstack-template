@@ -1,6 +1,7 @@
+"""Verify core layer has zero outward imports (Clean Architecture)."""
+
 from __future__ import annotations
 
-"""Verify core layer has zero outward imports (Clean Architecture)."""
 import re
 import sys
 from pathlib import Path

@@ -155,6 +155,10 @@ Scopes: template, backend, frontend, infra, ci, copier, hooks, agents
 11. **`Annotated` only where relevant** — use `Annotated[...]` ONLY when runtime
     metadata is required (FastAPI `Depends`, Pydantic `Field` constraints). NEVER use
     for plain type hints without metadata.
+12. **Module docstrings mandatory** — EVERY Python module/file MUST include a
+   module-level docstring as the first significant statement (before imports,
+   excluding shebang/encoding/comments). Enforced by
+   `scripts/check-module-docstrings.py`.
 
 ## Documentation Policy
 

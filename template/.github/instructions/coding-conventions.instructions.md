@@ -104,6 +104,8 @@ name: str
 
 ## Docstrings — Google Style with Type Information
 
+- EVERY Python module/file: module-level docstring as first significant statement
+  (before imports; shebang/encoding/comments allowed above)
 - EVERY public module, class, method, function: docstring
 - First line: imperative, ends with period, does NOT start with 'A'/'An'/'The'
 - Use single quotes ('word') in docstrings to reference identifiers — NEVER
@@ -114,6 +116,7 @@ name: str
 - 'Yields:' — format: 'TypeName: Description.' (no parentheses)
 - Remove ':param:'/'@param' style — Google style only
 - ZERO emojis in docstrings, comments, logs, or documentation
+- Enforcement command: `uv run python tools/conventions/check_module_docstrings.py`
 
 ```python
 def fetch_user(*, user_id: int) -> User:

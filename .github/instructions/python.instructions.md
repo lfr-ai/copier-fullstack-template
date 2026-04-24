@@ -37,11 +37,14 @@ applyTo: "scripts/**/*.py"
 
 ## Docstrings
 
+- Every Python module/file MUST have a module-level docstring as the first
+  significant statement (before imports), excluding shebang/encoding/comments.
 - Use Google-style docstrings
 - `Args:` — each parameter MUST include type: `name (Type): Description.`
 - `Returns:` — MUST include type: `TypeName: Description.` (no parentheses)
 - `Raises:` — format: `ExceptionName: Description.` (no parentheses)
 - Use single quotes for identifier references in docstrings (not markdown backticks)
+- Enforcement command: `python scripts/check-module-docstrings.py scripts template/backend/src template/tools`
 
 ## FastAPI Status Codes
 

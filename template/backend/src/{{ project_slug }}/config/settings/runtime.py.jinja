@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 import os
 import socket
+import logging
 
 from {{ project_slug }}.core.enums.environment import Environment
 
@@ -21,6 +22,8 @@ _ENVIRONMENT_KEY = '{{ project_slug | upper }}_ENVIRONMENT'
 _ENV_FILES = ('.env.local', '.env')
 
 _HOSTNAME_ENV_MAP: dict[str, Environment] = {}
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_environment(*, raw_value: str | None) -> Environment | None:
@@ -77,15 +80,25 @@ def resolve_runtime_environment() -> Environment:
     Returns:
         Environment: Resolved environment enum value.
     """
-    if parsed_process_env := _parse_environment(raw_value=os.getenv(_ENVIRONMENT_KEY)):
+    process_raw = os.getenv(_ENVIRONMENT_KEY)
+    if parsed_process_env := _parse_environment(raw_value=process_raw):
         return parsed_process_env
+    if process_raw is not None and process_raw.strip():
+        logger.warning(
+            'invalid_process_environment_value',
+            extra={'key': _ENVIRONMENT_KEY, 'value': process_raw},
+        )
 
     root_dir = Path(__file__).resolve().parents[_ROOT_PARENT_LEVEL]
     for env_filename in _ENV_FILES:
-        if parsed_file_env := _parse_environment(
-            raw_value=_peek_env_file(file_path=root_dir / env_filename)
-        ):
+        raw_file_env = _peek_env_file(file_path=root_dir / env_filename)
+        if parsed_file_env := _parse_environment(raw_value=raw_file_env):
             return parsed_file_env
+        if raw_file_env is not None and raw_file_env.strip():
+            logger.warning(
+                'invalid_file_environment_value',
+                extra={'file': env_filename, 'key': _ENVIRONMENT_KEY, 'value': raw_file_env},
+            )
 
     hostname = socket.gethostname().lower()
     if hostname_env := _HOSTNAME_ENV_MAP.get(hostname):

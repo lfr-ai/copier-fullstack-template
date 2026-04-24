@@ -7,7 +7,7 @@
 
 minimum_pre_commit_version: "4.0"
 default_language_version:
-  python: python3.12
+  python: python3.13
 
 repos:
   # ── General file hygiene ──
@@ -111,6 +111,12 @@ repos:
   # ── Local exhaustive checks (run on every commit) ──
   - repo: local
     hooks:
+      - id: module-docstrings
+        name: module-level docstring enforcement
+        entry: python scripts/check-module-docstrings.py scripts template/backend/src template/tools
+        language: system
+        pass_filenames: false
+
       - id: template-verify-all
         name: Template verification (architecture + conventions + github alignment)
         entry: task verify-all
