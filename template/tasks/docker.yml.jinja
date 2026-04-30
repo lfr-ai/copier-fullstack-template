@@ -1,3 +1,5 @@
+version: "3"
+
 tasks:
   up:
     desc: "Start all services"
@@ -52,27 +54,54 @@ tasks:
   prod:
     desc: "Start services with production overrides"
     cmds:
-      - {{ container_runtime }} compose -f compose.yml -f compose.prod.yml --env-file .env.prod up -d --build
+      - {{ container_runtime }} compose --env-file .env --env-file .env.prod -f compose.yml -f compose.prod.yml up -d --build
 
   staging:
     desc: "Start services with staging overrides"
     cmds:
-      - {{ container_runtime }} compose -f compose.yml -f compose.staging.yml --env-file .env.staging up -d --build
+      - {{ container_runtime }} compose --env-file .env --env-file .env.staging -f compose.yml -f compose.staging.yml up -d --build
 
   test:
     desc: "Start services with test overrides"
     cmds:
-      - {{ container_runtime }} compose -f compose.yml -f compose.test.yml --env-file .env.test up -d --build
+      - {{ container_runtime }} compose --env-file .env --env-file .env.test -f compose.yml -f compose.test.yml up -d --build
 
   dev:
     desc: "Start services with dev overrides (shared development server)"
     cmds:
-      - {{ container_runtime }} compose -f compose.yml -f compose.dev.yml --env-file .env.dev up -d --build
+      - {{ container_runtime }} compose --env-file .env --env-file .env.dev -f compose.yml -f compose.dev.yml up -d --build
 
   shell:
     desc: "Open a shell inside the running app container"
     cmds:
       - {{ container_runtime }} compose exec app /bin/sh
+{%- if use_caddy %}
+
+  gateway:
+    desc: "Start all services including Caddy reverse proxy"
+    cmds:
+      - {{ container_runtime }} compose --profile gateway up -d
+
+  gateway:logs:
+    desc: "Follow Caddy reverse proxy logs"
+    cmds:
+      - {{ container_runtime }} compose --profile gateway logs -f caddy
+
+  gateway:reload:
+    desc: "Reload Caddy configuration without downtime"
+    cmds:
+      - {{ container_runtime }} compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+  gateway:validate:
+    desc: "Validate Caddyfile syntax"
+    cmds:
+      - {{ container_runtime }} compose exec caddy caddy validate --config /etc/caddy/Caddyfile
+
+  gateway:fmt:
+    desc: "Format Caddyfile"
+    cmds:
+      - {{ container_runtime }} compose exec caddy caddy fmt --overwrite /etc/caddy/Caddyfile
+{%- endif %}
 {%- if container_runtime == "docker" %}
 
   bake:

@@ -1,5 +1,7 @@
 """Base tool -- abstract foundation for agent tools."""
 
+from __future__ import annotations
+
 from typing import final
 
 import abc

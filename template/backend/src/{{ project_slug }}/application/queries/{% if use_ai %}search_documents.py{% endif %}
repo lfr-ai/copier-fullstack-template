@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import override
+from typing import final, override
 
 import structlog
 
@@ -17,6 +17,7 @@ logger = structlog.get_logger(__name__)
 _DEFAULT_TOP_K = 10
 
 
+@final
 @dataclass(frozen=True, slots=True)
 class SearchDocumentsQuery:
     """Query for vector similarity search."""
@@ -26,6 +27,7 @@ class SearchDocumentsQuery:
     filters: dict[str, object] | None = None
 
 
+@final
 class SearchDocumentsHandler(QueryHandler[SearchDocumentsQuery, list[SourceDTO]]):
     """Handles document search using vector similarity."""
 

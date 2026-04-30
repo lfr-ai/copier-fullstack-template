@@ -1,0 +1,112 @@
+version: 2
+
+registries:
+  ghcr:
+    type: docker-registry
+    url: https://ghcr.io
+    username: "{% raw %}${{ github.actor }}{% endraw %}"
+    password: "{% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}"
+
+updates:
+  # ── Python (backend) ────────────────────────────────────────────
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Copenhagen
+    open-pull-requests-limit: 10
+    reviewers:
+      - "{{ github_username }}"
+    labels:
+      - dependencies
+      - python
+    groups:
+      python-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+        patterns: ["*"]
+        exclude-patterns: ["fastapi", "pydantic", "sqlalchemy"]
+      python-frameworks:
+        applies-to: version-updates
+        patterns: ["fastapi", "pydantic", "sqlalchemy", "alembic"]
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps(backend)"
+      include: scope
+
+  # ── npm (frontend) ──────────────────────────────────────────────
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Copenhagen
+    open-pull-requests-limit: 10
+    reviewers:
+      - "{{ github_username }}"
+    labels:
+      - dependencies
+      - javascript
+    groups:
+      react-ecosystem:
+        applies-to: version-updates
+        patterns: ["react", "react-dom", "@types/react*", "react-router*"]
+      ui-components:
+        applies-to: version-updates
+        patterns: ["@radix-ui/*", "tailwindcss", "class-variance-authority", "clsx"]
+      dev-tooling:
+        applies-to: version-updates
+        dependency-type: development
+        patterns: ["*"]
+        update-types: [minor, patch]
+      frontend-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps(frontend)"
+      include: scope
+
+  # ── GitHub Actions ──────────────────────────────────────────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Copenhagen
+    open-pull-requests-limit: 5
+    reviewers:
+      - "{{ github_username }}"
+    labels:
+      - dependencies
+      - ci
+    groups:
+      github-actions-all:
+        applies-to: version-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci(deps)"
+      include: scope
+{% if container_runtime == 'docker' %}
+  # ── Docker / Container images ───────────────────────────────────
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "06:00"
+      timezone: Europe/Copenhagen
+    reviewers:
+      - "{{ github_username }}"
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: "deps(docker)"
+      include: scope
+{% endif %}

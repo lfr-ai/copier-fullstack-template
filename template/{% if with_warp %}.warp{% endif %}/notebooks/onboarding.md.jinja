@@ -1,0 +1,79 @@
+# {{ project_name }} — Developer Onboarding
+
+Welcome to **{{ project_name }}**! This notebook walks you through setting up and
+running the project for the first time.
+
+## Prerequisites
+
+Verify all tools are installed:
+
+```bash
+git --version && python --version && bun --version && task --version && {{ container_runtime }} --version
+```
+
+## 1. Bootstrap the Project
+
+Run the full bootstrap script to install dependencies and configure the environment:
+
+```bash
+zsh scripts/bootstrap.zsh
+```
+
+## 2. Start Development Servers
+
+Start all services (backend + frontend + database + cache):
+
+```bash
+task dev
+```
+
+## 3. Verify Everything Works
+
+Run the test suite to confirm setup:
+
+```bash
+task test
+```
+
+Check service health:
+
+```bash
+task health
+```
+
+## 4. Key Commands
+
+| Command | Purpose |
+|---------|---------|
+| `task dev` | Start all development servers |
+| `task test` | Run full test suite |
+| `task lint` | Lint all code |
+| `task format` | Auto-format all code |
+| `task typecheck` | Type checking |
+| `task docker:up` | Start containers |
+| `task docker:down` | Stop containers |
+| `task db:migrate` | Run database migrations |
+| `task clean` | Remove build artifacts |
+
+## 5. Project Structure
+
+```text
+backend/src/{{ project_slug }}/
+  core/           # Domain entities, interfaces (no deps)
+  application/    # Use cases, services, DTOs
+  infrastructure/ # DB, cache, external services
+  presentation/   # API routes, CLI
+
+frontend/src/
+  components/     # React components (shadcn/ui)
+  pages/          # Route pages
+  hooks/          # Custom hooks
+  lib/            # Utilities
+```
+
+## 6. Making Your First Change
+
+1. Create a feature branch: `git checkout -b feat/my-feature`
+2. Make your changes
+3. Run quality checks: `task lint && task typecheck && task test`
+4. Commit with conventional message: `git commit -m "feat: add my feature"`

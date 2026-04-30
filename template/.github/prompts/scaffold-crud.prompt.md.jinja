@@ -1,0 +1,62 @@
+---
+description: 'Scaffold a complete CRUD resource (model, repository, service, routes, tests)'
+name: 'scaffold-crud'
+argument-hint: 'Resource name (e.g., Project, Comment, Invoice)'
+agent: 'agent'
+model: 'Claude Sonnet 4'
+tools:
+  [
+    search/codebase,
+    search/fileSearch,
+    search/textSearch,
+    search/listDirectory,
+    read/readFile,
+    edit/editFiles,
+    execute/runInTerminal,
+    context7/get-library-docs,
+    context7/resolve-library-id,
+  ]
+---
+
+# Scaffold CRUD Resource
+
+Generate a complete CRUD resource across all architectural layers.
+
+## Generated Files
+
+### Core Layer
+- `core/entities/{resource}.py` — Domain entity with value objects
+- `core/interfaces/{resource}_repository.py` — Repository interface
+
+### Application Layer
+- `application/services/{resource}_service.py` — Business logic
+- `application/dtos/{resource}_dto.py` — Data transfer objects
+- `application/commands/{resource}_commands.py` — Create/Update/Delete commands
+
+### Infrastructure Layer
+- `infrastructure/persistence/models/{resource}_model.py` — SQLAlchemy ORM model
+- `infrastructure/persistence/repositories/{resource}_repository.py` — Repository implementation
+
+### Presentation Layer
+- `presentation/api/routes/{resource}_routes.py` — FastAPI router (CRUD endpoints)
+- `presentation/api/schemas/{resource}_schemas.py` — Pydantic request/response schemas
+
+### Tests
+- `tests/unit/application/test_{resource}_service.py` — Service unit tests
+- `tests/integration/test_{resource}_api.py` — API integration tests
+- `tests/factories/{resource}_factory.py` — Factory Boy factory
+
+## Conventions
+
+- Entity ID uses UUID
+- All timestamps use UTC
+- Soft deletes (deleted_at column) unless specified otherwise
+- Pagination for list endpoints (offset/limit)
+- Use keyword-only arguments everywhere
+- Full type annotations on all functions
+
+## Verification
+
+```bash
+task lint && task typecheck && task test:unit
+```

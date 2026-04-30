@@ -1,5 +1,7 @@
 """RAG prompt templates -- system, query, and synthesis prompts for RAG pipeline."""
 
+from __future__ import annotations
+
 RAG_SYSTEM_PROMPT = (
     "You are a knowledgeable assistant. Answer questions accurately "
     "based on the provided context. If the context does not contain "

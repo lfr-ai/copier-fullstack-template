@@ -38,6 +38,12 @@
     "microsoft-docs": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/microsoft-docs"
-    }
+    }{% if with_gitnexus %},
+
+    // ── GitNexus (code intelligence graph) ───────────────────
+    "gitnexus": {
+      "command": "npx",
+      "args": ["-y", "gitnexus@latest", "mcp"]
+    }{% endif %}
   }
 }

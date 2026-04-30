@@ -9,6 +9,11 @@
     "helpers:pinGitHubActionDigests"
   ],
   "labels": ["dependencies"],
+  "schedule": ["before 8am every weekday"],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  "dependencyDashboard": true,
   "pre-commit": {
     "enabled": true
   },

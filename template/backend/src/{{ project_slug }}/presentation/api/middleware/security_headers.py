@@ -1,5 +1,7 @@
 """Security headers middleware."""
 
+from __future__ import annotations
+
 from typing import override, final
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint

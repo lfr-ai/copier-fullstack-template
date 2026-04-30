@@ -1,5 +1,7 @@
 """Base DTO definitions using Pydantic."""
 
+from __future__ import annotations
+
 from typing import Annotated, Generic, TypeVar, final
 
 from pydantic import BaseModel, ConfigDict, Field

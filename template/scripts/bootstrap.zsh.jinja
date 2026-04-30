@@ -86,6 +86,16 @@ if [[ -d "${PROJECT_ROOT}/.github/hooks/scripts" ]]; then
 chmod +x "${PROJECT_ROOT}"/.github/hooks/scripts/*.sh 2>/dev/null || true
 print "Copilot agent hook scripts marked executable"
 fi
+{% if with_gitnexus %}
+
+print "=== Setting up GitNexus code intelligence ==="
+cd "${PROJECT_ROOT}"
+if [[ -f "scripts/setup-gitnexus.zsh" ]]; then
+zsh "scripts/setup-gitnexus.zsh" || \
+print "WARNING: GitNexus setup incomplete -- run 'gitnexus analyze' manually"
+fi
+print ""
+{% endif %}
 }
 
 setup_environment() {
@@ -140,6 +150,12 @@ print "Caddy: $(caddy version 2>/dev/null || print 'NOT FOUND')"
 {% endif %}
 {% if cloud_provider == "azure" %}
 print "Azure CLI: $(az version --output tsv 2>/dev/null | head -1 || print 'NOT FOUND')"
+{% endif %}
+{% if with_warp %}
+print "Warp: $(command -v warp-terminal &>/dev/null && print 'installed' || (test -d '/Applications/Warp.app' && print 'installed') || print 'NOT FOUND')"
+{% endif %}
+{% if with_gitnexus %}
+print "GitNexus: $(gitnexus --version 2>/dev/null || print 'NOT FOUND (available via npx)')"
 {% endif %}
 print ""
 print "Bootstrap complete. Run 'task dev' to start developing."

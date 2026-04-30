@@ -1,0 +1,192 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// docker-bake.hcl — Declarative build configuration for {{ project_name }}
+//
+// Requires: Docker Buildx (bundled with Docker Desktop / Docker Engine 23+)
+//
+// Usage:
+//   docker buildx bake [group|target]       Build targets
+//   docker buildx bake --print [target]     Preview build plan (dry-run)
+//   docker buildx bake --list=targets       List available targets
+//   docker buildx bake --list=variables     List available variables
+//
+// Examples:
+//   docker buildx bake                      Build default (dev) targets
+//   docker buildx bake prod                 Build all production targets
+//   docker buildx bake app-prod             Build backend prod image only
+//   TAG=v1.2.3 REGISTRY=ghcr.io/{{ github_username }} docker buildx bake prod
+//
+// Override any variable via environment:
+//   TAG=abc123 docker buildx bake prod
+//   REGISTRY=myregistry.azurecr.io docker buildx bake prod
+//
+// The companion docker-bake.override.hcl is auto-loaded for local dev.
+// CI pipelines skip it via: docker buildx bake -f docker-bake.hcl [target]
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ─── Variables ───────────────────────────────────────────────────────────────
+
+variable "TAG" {
+  default     = "latest"
+  description = "Image tag (semver, git SHA, 'latest')"
+}
+
+variable "REGISTRY" {
+  default     = ""
+  description = "Registry prefix (e.g. 'ghcr.io/{{ github_username }}'). Empty = local only."
+}
+
+variable "UV_VERSION" {
+  default     = "0.10"
+  description = "Astral UV version for Python dependency management"
+}
+
+variable "PLATFORM" {
+  default     = ""
+  description = "Target platform(s) — e.g. 'linux/amd64,linux/arm64'. Empty = native."
+}
+
+// ─── Functions ───────────────────────────────────────────────────────────────
+
+function "image_tags" {
+  params = [name]
+  result = notequal("", REGISTRY) ? [
+    "${REGISTRY}/${name}:${TAG}",
+  ] : [
+    "${name}:${TAG}",
+  ]
+}
+
+// ─── Groups ──────────────────────────────────────────────────────────────────
+
+group "default" {
+  targets = ["app-dev", "frontend-dev"]
+}
+
+group "dev" {
+  targets = ["app-dev", "frontend-dev"]
+}
+
+group "prod" {
+  targets = [
+    "app-prod",
+{%- if use_caddy %}
+    "caddy",
+{%- else %}
+    "frontend-prod",
+{%- endif %}
+  ]
+}
+
+group "all" {
+  targets = [
+    "app-dev",
+    "app-prod",
+    "frontend-dev",
+    "frontend-prod",
+{%- if use_caddy %}
+    "caddy",
+{%- endif %}
+  ]
+}
+
+// ─── Shared base targets (underscore prefix = not built directly) ────────────
+
+target "_common" {
+  labels = {
+    "org.opencontainers.image.title"       = "{{ project_slug }}"
+    "org.opencontainers.image.description"  = "{{ project_description }}"
+    "org.opencontainers.image.authors"      = "{{ author_name }} <{{ author_email }}>"
+    "org.opencontainers.image.source"       = "https://github.com/{{ github_username }}/{{ project_slug }}"
+    "org.opencontainers.image.licenses"     = "{{ license }}"
+    "org.opencontainers.image.version"      = "${TAG}"
+  }
+}
+
+target "_prod" {
+  inherits  = ["_common"]
+  platforms = notequal("", PLATFORM) ? split(",", PLATFORM) : []
+  attest = [
+    { type = "provenance", mode = "max" },
+    { type = "sbom" },
+  ]
+}
+
+// ─── Backend (Python / FastAPI) ──────────────────────────────────────────────
+
+target "app-dev" {
+  description = "Backend dev image with hot-reload and dev dependencies"
+  inherits    = ["_common"]
+  context     = "."
+  dockerfile  = "Containerfile"
+  target      = "dev"
+  tags        = image_tags("{{ project_slug }}-app")
+  args = {
+    UV_VERSION = UV_VERSION
+  }
+}
+
+target "app-prod" {
+  description = "Backend production image — minimal, non-root, health-checked"
+  inherits    = ["_prod"]
+  context     = "."
+  dockerfile  = "Containerfile"
+  target      = "prod"
+  tags        = image_tags("{{ project_slug }}-app")
+  args = {
+    UV_VERSION = UV_VERSION
+  }
+}
+
+// ─── Frontend (Vite / React) ──────────────────────
+
+target "frontend-dev" {
+  description = "Frontend dev image with HMR"
+  inherits    = ["_common"]
+  context     = "frontend"
+  dockerfile  = "Containerfile"
+  target      = "dev"
+  tags        = image_tags("{{ project_slug }}-frontend")
+}
+
+target "frontend-prod" {
+  description = "Frontend production image — optimized static assets"
+  inherits    = ["_prod"]
+  context     = "frontend"
+  dockerfile  = "Containerfile"
+  target      = "prod"
+  tags        = image_tags("{{ project_slug }}-frontend")
+}
+{%- if use_caddy %}
+
+// ─── Caddy (reverse proxy + frontend static assets) ──────────────────────────
+
+target "caddy" {
+  description = "Caddy reverse proxy with built-in frontend assets"
+  inherits    = ["_prod"]
+  context     = "."
+  dockerfile  = "caddy/Containerfile"
+  tags        = image_tags("{{ project_slug }}-caddy")
+  args = {
+    CADDY_VERSION = "2.9"
+    BUN_VERSION   = "1"
+  }
+}
+{%- endif %}
+{%- if use_celery %}
+
+// ─── Celery (worker + beat — same image as app) ─────────────────────────────
+
+target "worker-prod" {
+  description = "Celery worker — uses the app-prod image"
+  inherits    = ["app-prod"]
+}
+{%- endif %}
+{%- if use_mcp %}
+
+// ─── MCP Server ──────────────────────────────────────────────────────────────
+
+target "mcp-server-prod" {
+  description = "MCP (Model Context Protocol) server"
+  inherits    = ["app-prod"]
+}
+{%- endif %}

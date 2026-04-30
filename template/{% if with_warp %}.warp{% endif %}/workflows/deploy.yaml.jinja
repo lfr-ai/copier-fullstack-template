@@ -1,0 +1,12 @@
+---
+name: Deploy
+command: task docker:{{environment}}
+tags:
+  - deploy
+  - cd
+description: "Deploy application to a target environment using {{ container_runtime }} compose"
+arguments:
+  - name: environment
+    description: "Target environment: dev, staging, prod"
+    default_value: staging
+---

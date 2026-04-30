@@ -1,0 +1,56 @@
+---
+description: Warp Agent Mode project rules for {{ project_name }}
+---
+
+# {{ project_name }} — Warp Agent Rules
+
+## Architecture
+
+This project follows **Clean Architecture** with strict dependency rules:
+
+- `core/` → Domain entities, value objects, interfaces (NO external dependencies)
+- `application/` → Use cases, commands, queries, DTOs (depends only on core)
+- `infrastructure/` → Persistence, external services, frameworks (implements core interfaces)
+- `presentation/` → API routes, schemas, CLI (depends on application layer)
+
+**Dependency Rule**: Inner layers NEVER import from outer layers.
+
+## Stack
+
+- **Backend**: Python {{ python_version }} + FastAPI + SQLAlchemy (async) + uv
+- **Frontend**: React 19 + TypeScript + Vite + Bun + Tailwind CSS v4 + shadcn/ui
+- **Container**: {{ container_runtime | capitalize }}
+- **Task runner**: Taskfile (use `task` commands)
+{% if database_backend != 'none' %}
+- **Database**: {{ database_backend | replace('_', ' ') | capitalize }}
+{% endif %}
+{% if use_redis %}
+- **Cache/Broker**: Redis
+{% endif %}
+
+## Commands
+
+- `task dev` — Start all development servers
+- `task test` — Run full test suite
+- `task lint` — Lint all code
+- `task format` — Auto-format all code
+- `task typecheck` — Type check backend (ty) + frontend (tsc)
+- `task build` — Production build
+- `task docker:up` — Start container services
+- `task db:migrate` — Run database migrations
+
+## Conventions
+
+- Use keyword-only arguments (`*,`) for functions with 2+ parameters
+- All public functions MUST have type annotations
+- Use structured logging (`structlog`), never `print()`
+- Tests use factory-boy for data, not raw fixtures
+- Frontend components go in `presentation/components/`
+- API schemas use Pydantic v2 model_validator pattern
+
+## File Patterns
+
+- Backend source: `backend/src/{{ project_slug }}/`
+- Frontend source: `frontend/src/`
+- Tests: `backend/tests/` (unit/, integration/, property/)
+- Migrations: `backend/migrations/versions/`

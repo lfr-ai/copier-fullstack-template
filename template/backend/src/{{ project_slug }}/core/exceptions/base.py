@@ -1,5 +1,7 @@
 """Base exception hierarchy for the domain layer."""
 
+from __future__ import annotations
+
 
 class DomainError(Exception):
     """Base exception for all domain errors.

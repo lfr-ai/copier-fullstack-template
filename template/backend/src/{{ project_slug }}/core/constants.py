@@ -5,6 +5,8 @@ infrastructure-specific (DB pool sizes, networking defaults, etc.)
 live in 'config.constants' instead.
 """
 
+from __future__ import annotations
+
 DEFAULT_LIST_LIMIT = 100
 
 EMAIL_MIN_LENGTH = 5

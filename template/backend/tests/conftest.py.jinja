@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 
 from {{ project_slug }}.infrastructure.persistence.orm.base import ORMBase
 from {{ project_slug }}.presentation.api.app import create_api_app
@@ -24,14 +24,14 @@ pytest_plugins = [
 ]
 
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
-# Test database URL — each environment connects to its own database.
-# Tests use a dedicated database ({{ project_slug }}_test) with the default public schema.
-TEST_DATABASE_URL = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
+_DEFAULT_TEST_DB_URL = "postgresql+psycopg://postgres:test-password@localhost:5432/{{ project_slug }}_test"
 {%- elif database_backend == 'sqlite' %}
-TEST_DATABASE_URL = "sqlite+aiosqlite:///data/{{ project_slug }}_test.db"
+_DEFAULT_TEST_DB_URL = "sqlite+aiosqlite:///data/{{ project_slug }}_test.db"
 {%- else %}
-TEST_DATABASE_URL = ""
+_DEFAULT_TEST_DB_URL = ""
 {%- endif %}
+
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", _DEFAULT_TEST_DB_URL)
 
 
 # Set TEST environment for all test runs.
@@ -84,18 +84,29 @@ async def engine() -> AsyncIterator[AsyncEngine]:
 
 @pytest_asyncio.fixture
 async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
-    """Create async test database session with rollback.
+    """Create async test database session with SAVEPOINT-based rollback.
+
+    Uses a connection-level transaction so the entire test (including any
+    work the application does through this session) is rolled back after
+    each test.  Inner commits become SAVEPOINTs and are transparently
+    restarted, keeping full isolation without DDL churn.
 
     Args:
         engine (AsyncEngine): Test database engine.
 
     Yields:
-        Async session rolled back after each test.
+        AsyncSession: Async session rolled back after each test.
     """
-    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with factory() as sess:
-        yield sess
-        await sess.rollback()
+    conn = await engine.connect()
+    trans = await conn.begin()
+
+    sess = AsyncSession(bind=conn, expire_on_commit=False, join_transaction_block=True)
+
+    yield sess
+
+    await sess.close()
+    await trans.rollback()
+    await conn.close()
 
 
 @pytest_asyncio.fixture

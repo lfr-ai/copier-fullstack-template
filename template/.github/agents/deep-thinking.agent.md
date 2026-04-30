@@ -23,6 +23,14 @@ tools:
     context7/get-library-docs,
     context7/resolve-library-id,
   ]
+model: ['Claude Opus 4', 'Claude Sonnet 4']
+handoffs:
+  - label: 'Implement solution with TDD'
+    agent: tdd
+    prompt: 'Implement the designed solution using test-driven development'
+  - label: 'Design architecture'
+    agent: claude-architect
+    prompt: 'Design the architecture for this solution'
 ---
 
 # Deep Thinking Agent

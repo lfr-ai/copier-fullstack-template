@@ -1,5 +1,7 @@
 """Centralized retry policies using tenacity."""
 
+from __future__ import annotations
+
 import logging  # noqa: LOG001 -- stdlib logger required by tenacity before_sleep_log
 
 from tenacity import (

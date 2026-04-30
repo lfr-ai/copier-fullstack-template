@@ -19,6 +19,14 @@ tools:
     context7/get-library-docs,
     context7/resolve-library-id,
   ]
+model: ['Claude Sonnet 4', 'Claude Opus 4']
+handoffs:
+  - label: 'Implement with TDD'
+    agent: tdd
+    prompt: 'Implement the specified feature using test-driven development'
+  - label: 'Architecture review'
+    agent: claude-architect
+    prompt: 'Review the architecture of the specified design'
 ---
 
 # SDD Agent

@@ -1,0 +1,54 @@
+---
+description: 'Create a new feature following Clean Architecture with full test coverage'
+name: 'new-feature'
+argument-hint: 'Describe the feature to implement'
+agent: 'agent'
+model: 'Claude Sonnet 4'
+tools:
+  [
+    search/codebase,
+    search/fileSearch,
+    search/textSearch,
+    search/listDirectory,
+    search/usages,
+    read/readFile,
+    edit/editFiles,
+    execute/runInTerminal,
+    context7/get-library-docs,
+    context7/resolve-library-id,
+  ]
+---
+
+# New Feature Implementation
+
+Implement the requested feature following **Clean Architecture** and project conventions.
+
+## Process
+
+1. **Analyze** the request and determine which layers need changes
+2. **Plan** the implementation (entities, interfaces, services, routes)
+3. **Implement** following the dependency rule (inside-out):
+   - `core/` — entities, value objects, interfaces
+   - `application/` — services, commands/queries, DTOs
+   - `infrastructure/` — repository implementations, external services
+   - `presentation/` — API routes, schemas
+4. **Test** — write unit tests using factories and markers
+5. **Verify** — run `task lint && task typecheck && task test:unit`
+
+## Architecture Rules
+
+- Inner layers NEVER import from outer layers
+- All dependencies point inward
+- Use keyword-only arguments for functions with 2+ parameters
+- Type-annotate all public functions
+- Use structured logging (structlog), never print()
+
+## File Locations
+
+- Backend source: `backend/src/{{ project_slug }}/`
+- Tests: `backend/tests/unit/`, `backend/tests/integration/`
+- Frontend: `frontend/src/`
+
+## Output
+
+Implement the feature completely across all required layers. Run the verification commands to confirm correctness.

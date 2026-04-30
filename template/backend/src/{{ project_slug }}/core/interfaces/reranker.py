@@ -4,6 +4,8 @@ Concrete adapters may use Cohere, Cross-Encoder models, LLM-based
 reranking, or reciprocal rank fusion strategies.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable, final
 

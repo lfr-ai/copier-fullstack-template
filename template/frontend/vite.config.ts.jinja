@@ -1,17 +1,13 @@
 import { defineConfig } from 'vite';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'url';
+import { resolve } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react-swc';
 import { visualizer } from 'rollup-plugin-visualizer';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
 	plugins: [
 		tailwindcss(),
 		react(),
-		// Bundle analysis - activate with ANALYZE=true
 		...(process.env.ANALYZE === 'true'
 			? [
 					visualizer({
@@ -27,26 +23,25 @@ export default defineConfig({
 	root: '.',
 	build: {
 		outDir: 'dist',
-		sourcemap: true,
+		sourcemap: mode === 'prod' ? 'hidden' : true,
 		target: 'es2022',
 		cssMinify: 'lightningcss',
 		rollupOptions: {
 			input: {
-				main: resolve(__dirname, 'index.html'),
+				main: resolve(import.meta.dirname, 'index.html'),
 			},
 			output: {
 				manualChunks: {
 					'react-vendor': ['react', 'react-dom', 'react-router'],
 					'query-vendor': ['@tanstack/react-query'],
-					'form-vendor': ['react-hook-form', '@hookform/resolvers'],
-					validation: ['zod'],
+					'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
 				},
 			},
 		},
 	},
 	resolve: {
 		alias: {
-			'@': resolve(__dirname, 'src'),
+			'@': resolve(import.meta.dirname, 'src'),
 		},
 	},
 	server: {
@@ -56,6 +51,7 @@ export default defineConfig({
 			'/api': {
 				target: 'http://localhost:8000',
 				changeOrigin: true,
+				ws: true,
 			},
 		},
 	},
@@ -63,4 +59,4 @@ export default defineConfig({
 		port: 3001,
 		strictPort: true,
 	},
-});
+}));

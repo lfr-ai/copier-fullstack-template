@@ -19,6 +19,14 @@ tools:
     context7/get-library-docs,
     context7/resolve-library-id,
   ]
+model: ['Claude Sonnet 4', 'Claude Opus 4']
+handoffs:
+  - label: 'Review architecture'
+    agent: claude-architect
+    prompt: 'Review architecture boundaries of the implemented feature'
+  - label: 'Debug failing test'
+    agent: debug
+    prompt: 'Debug why this test is failing unexpectedly'
 ---
 
 # TDD Agent

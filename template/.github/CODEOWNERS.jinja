@@ -1,9 +1,29 @@
-# Default owners
+# Default owners — last matching pattern wins
 * @{{ github_username }}
 
-# GitHub automation/config in generated repos
-/.github/ @{{ github_username }}
-
-# Backend and frontend ownership
+# Backend
 /backend/ @{{ github_username }}
+
+# Frontend
 /frontend/ @{{ github_username }}
+
+# Infrastructure & CI/CD
+/.github/ @{{ github_username }}
+/compose*.yml @{{ github_username }}
+/Containerfile @{{ github_username }}
+/docker-bake.hcl @{{ github_username }}
+/Taskfile.yml @{{ github_username }}
+/tasks/ @{{ github_username }}
+
+# Agent configuration
+/.github/agents/ @{{ github_username }}
+/.github/instructions/ @{{ github_username }}
+/.github/skills/ @{{ github_username }}
+/.github/hooks/ @{{ github_username }}
+/.claude/ @{{ github_username }}
+/CLAUDE.md @{{ github_username }}
+/AGENTS.md @{{ github_username }}
+
+# Security-critical files
+/.github/workflows/ @{{ github_username }}
+/.github/dependabot.yml @{{ github_username }}

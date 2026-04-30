@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import structlog
 from dataclasses import dataclass, field
-from enum import StrEnum, auto, unique
+from enum import StrEnum, unique
 from typing import TYPE_CHECKING, final
 
 from {{ project_slug }}.ai.crewai.config import HMAS_MAX_DEPTH
@@ -49,9 +49,9 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class DelegationTarget(StrEnum):
     """Type of target for sub-goal delegation."""
 
-    CREWAI_CREW = auto()
+    CREWAI_CREW = "crewai_crew"
 {%- if use_agents %}
-    LANGGRAPH_WORKFLOW = auto()
+    LANGGRAPH_WORKFLOW = "langgraph_workflow"
 {%- endif %}
 
 
@@ -59,11 +59,11 @@ class DelegationTarget(StrEnum):
 class SubGoalState(StrEnum):
     """Lifecycle state of a delegated sub-goal."""
 
-    PENDING = auto()
-    IN_PROGRESS = auto()
-    COMPLETED = auto()
-    FAILED = auto()
-    SKIPPED = auto()
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
 
 
 @dataclass

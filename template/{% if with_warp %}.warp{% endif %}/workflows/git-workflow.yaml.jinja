@@ -1,0 +1,12 @@
+---
+name: Git Workflow
+command: "{{command}}"
+tags:
+  - git
+  - vcs
+description: "Common git operations for development workflow"
+arguments:
+  - name: command
+    description: "Git command to run"
+    default_value: "git status && git log --oneline -10"
+---

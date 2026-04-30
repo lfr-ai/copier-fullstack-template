@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import override
+from typing import final, override
 
 import structlog
 
@@ -17,6 +17,7 @@ _DEFAULT_AGENT_MAX_STEPS = 10
 logger = structlog.get_logger(__name__)
 
 
+@final
 @dataclass(frozen=True, slots=True)
 class ExecuteAgentCommand:
     """Command to execute an agent task."""
@@ -27,6 +28,7 @@ class ExecuteAgentCommand:
     tools: list[str] = field(default_factory=list)
 
 
+@final
 class ExecuteAgentHandler(CommandHandler[ExecuteAgentCommand, AgentResultDTO]):
     """Handles agent task execution through the orchestrator."""
 

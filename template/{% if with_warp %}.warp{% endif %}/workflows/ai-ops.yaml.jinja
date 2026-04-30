@@ -1,0 +1,14 @@
+{%- if use_ai %}
+---
+name: AI Setup & Validate
+command: task ai:{{action}}
+tags:
+  - ai
+  - setup
+description: "AI infrastructure operations (setup, validate, serve MCP, index)"
+arguments:
+  - name: action
+    description: "AI action: setup, validate, serve, index, chat"
+    default_value: validate
+---
+{%- endif %}

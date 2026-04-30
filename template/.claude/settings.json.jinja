@@ -1,0 +1,72 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(task dev*)",
+      "Bash(task test*)",
+      "Bash(task lint*)",
+      "Bash(task format*)",
+      "Bash(task typecheck*)",
+      "Bash(task build*)",
+      "Bash(task registry*)",
+      "Bash(task clean*)",
+      "Bash(task health*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(uv run pytest*)",
+      "Bash(uv run ruff*)",
+      "Bash(bun run*)",
+      "Bash(bun test*)",
+      "Bash(bunx biome*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -- .)",
+      "Bash(git clean -f*)",
+      "Bash(docker system prune*)",
+      "Bash(*--no-verify*)",
+      "Bash(env)",
+      "Bash(printenv)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .github/hooks/guard-tool.zsh ]; then zsh .github/hooks/guard-tool.zsh \"$TOOL_NAME\" \"$TOOL_INPUT\"; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .github/hooks/post-edit.zsh ]; then zsh .github/hooks/post-edit.zsh \"$TOOL_NAME\" \"$TOOL_INPUT\"; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .github/hooks/check-licenses.zsh ]; then zsh .github/hooks/check-licenses.zsh; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

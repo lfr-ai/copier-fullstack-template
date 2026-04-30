@@ -1,5 +1,7 @@
 """Cryptographic hashing adapter -- implements :class:`PasswordHasher` port."""
 
+from __future__ import annotations
+
 from typing import final
 
 import hashlib

@@ -9,6 +9,8 @@ Implements the node functions for the self-corrective RAG pipeline:
 - route_after_grading: Routing function for grade -> rewrite vs. generate
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 import structlog

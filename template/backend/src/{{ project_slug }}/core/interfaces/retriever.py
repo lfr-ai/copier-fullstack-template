@@ -4,6 +4,8 @@ Concrete adapters may implement simple vector search, hybrid search
 (vector + keyword), or re-ranking strategies.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable, final
 

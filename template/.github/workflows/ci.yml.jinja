@@ -22,7 +22,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v8.0.0
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
@@ -41,7 +41,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v8.0.0
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
@@ -58,7 +58,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v8.0.0
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
@@ -81,7 +81,7 @@ jobs:
       matrix:
         python-version: ["{% endraw %}{{ python_version }}{% raw %}"{% endraw %}{% if python_version == "3.12" %}{% raw %}, "3.13"{% endraw %}{% endif %}{% raw %}]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v8.0.0
         with:
           python-version: ${{ matrix.python-version }}
@@ -90,7 +90,7 @@ jobs:
       - name: Unit & property tests
         run: uv run pytest tests/unit tests/property -v --tb=short --cov --cov-report=xml
       - name: Upload coverage
-        if: matrix.python-version == '{% endraw %}{{ python_version }}{% raw %}'
+        if: matrix.python-version == '{% endraw %}{{ python_version }}{% raw %}' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
@@ -159,7 +159,7 @@ jobs:
 {%- endif %}
 {% raw %}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v8.0.0
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
@@ -186,10 +186,16 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.2"
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck
@@ -200,14 +206,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v8.0.0
         with:
           python-version: "{% endraw %}{{ python_version }}{% raw %}"
           enable-cache: true
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.2"
       - name: Prepare backend/frontend dependencies for local hooks
         run: |
           cd backend
@@ -224,7 +230,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Lint Containerfiles
         uses: hadolint/hadolint-action@v3
         with:
@@ -245,22 +251,44 @@ jobs:
 {%- raw %}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build all production images
-        uses: docker/bake-action@v7
+      - name: Build backend production image
+        uses: docker/build-push-action@v6
         with:
-          source: .
-          targets: prod
-          files: docker-bake.hcl
-          load: true
-          set: |
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
+          context: .
+          file: Containerfile
+          target: prod
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build frontend production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: frontend/Containerfile
+          target: prod
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+{%- endraw %}
+{%- if use_caddy %}
+{%- raw %}
+      - name: Build caddy production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: caddy/Containerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+{%- endraw %}
+{%- endif %}
+{%- raw %}
 
   spellcheck:
     name: Spell Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: crate-ci/typos@v1
 {% endraw %}

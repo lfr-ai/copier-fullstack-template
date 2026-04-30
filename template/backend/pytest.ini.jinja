@@ -3,7 +3,7 @@ minversion = 8.0
 testpaths = tests
 pythonpath = src
 asyncio_mode = auto
-addopts = -ra --strict-markers --strict-config -x --tb=short
+addopts = -ra --strict-markers --strict-config --tb=short
 markers =
     unit: Unit tests
     integration: Integration tests
@@ -14,6 +14,7 @@ markers =
     benchmark: pytest-benchmark performance benchmarks
 filterwarnings =
     error
-    ignore::DeprecationWarning
+    ignore::DeprecationWarning:celery.*
+    ignore::DeprecationWarning:kombu.*
     ignore::ResourceWarning
     ignore::pytest.PytestUnraisableExceptionWarning

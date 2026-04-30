@@ -21,6 +21,14 @@ tools:
     context7/get-library-docs,
     context7/resolve-library-id,
   ]
+model: ['Claude Opus 4', 'Claude Sonnet 4']
+handoffs:
+  - label: 'Implement modernization'
+    agent: tdd
+    prompt: 'Implement the planned modernization changes with tests'
+  - label: 'Architecture review'
+    agent: claude-architect
+    prompt: 'Review the modernization architecture plan'
 ---
 
 # Modernization Agent

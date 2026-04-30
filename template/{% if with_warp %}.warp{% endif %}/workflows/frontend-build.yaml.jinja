@@ -1,0 +1,12 @@
+---
+name: Frontend Build
+command: task frontend:build:{{mode}}
+tags:
+  - frontend
+  - build
+description: "Build frontend for a specific mode (dev, staging, prod, test)"
+arguments:
+  - name: mode
+    description: "Build mode: dev, staging, prod, test"
+    default_value: prod
+---

@@ -1,63 +1,42 @@
+# OS
 .DS_Store
 Thumbs.db
-Desktop.ini
 
+# Editors
 .vscode/*
 !.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/mcp.json
-*.swp
-*.swo
-*~
 .idea/
 
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
 *.egg-info/
-*.egg
 dist/
 build/
 .venv/
-venv/
-.eggs/
-htmlcov/
+.tox/
 .coverage
-.coverage.*
 coverage.xml
+htmlcov/
 .pytest_cache/
-.hypothesis/
 .ruff_cache/
 .mypy_cache/
-.dmypy.json
 .ty/
-.tox/
-.nox/
-.pre-commit-cache/
-.cache/pre-commit/
+profiles/
 
+# Node / Frontend
 node_modules/
-.bun/
 .vite/
 coverage/
 playwright-report/
 test-results/
 frontend/dist/
+storybook-static/
+.lighthouseci/
 
-*.log
-
-.bake-cache/
-
-.lycheecache
-jscpd-report/
-
-# ─── Environment files ───
-# Root .env files: only .env.example and .env.local.example are committed.
-# Frontend .env / .env.[mode] ARE committed (Vite base + mode defaults, no secrets).
-# .env.local and .env.[mode].local are always ignored at any depth (personal overrides).
+# Environment
 /.env
 .env.local
 .env.*.local
@@ -68,41 +47,29 @@ jscpd-report/
 !.env.example
 !.env.local.example
 
+# Secrets
 *.pem
 *.key
 *.crt
-*.p12
-id_ed25519
-id_ed25519.pub
-id_rsa
-id_rsa.pub
-*.ppk
-known_hosts
-.vscode/sftp.json
-
-*.whl
-*.tar.gz
-
-*.db
-*.sqlite
-*.sqlite3
-*.map
-
 secrets/
-uploads/
-storage/
-profiles/
 
+# Data
+*.db
+*.sqlite3
+
+# Misc
+*.log
 .task/
-
-.traycer/
-logs/
-!logs/.gitkeep
+.cache/
 temp/
 tmp/
-*.tmp
-*.temp
 .bootstrap/
-
-# ─── Workspace files ───
-*.code-workspace
+{% if with_gitnexus %}
+# GitNexus
+.gitnexus/db/
+.gitnexus/cache/
+.gitnexus/embeddings/
+{% endif %}
+# Claude Code
+CLAUDE.local.md
+.claude/settings.local.json

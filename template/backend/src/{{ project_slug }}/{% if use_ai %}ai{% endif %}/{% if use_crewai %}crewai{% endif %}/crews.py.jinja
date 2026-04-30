@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import structlog
 from dataclasses import dataclass, field
-from enum import StrEnum, auto, unique
+from enum import StrEnum, unique
 from typing import TYPE_CHECKING, final
 
 from {{ project_slug }}.ai.crewai.config import (
@@ -26,8 +26,8 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 class CrewProcessType(StrEnum):
     """Crew execution process type."""
 
-    SEQUENTIAL = auto()
-    HIERARCHICAL = auto()
+    SEQUENTIAL = "sequential"
+    HIERARCHICAL = "hierarchical"
 
 
 @dataclass(slots=True)
@@ -125,6 +125,7 @@ def build_crew(spec: CrewSpec) -> Crew:
 
 def kickoff_crew(
     crew: Crew,
+    *,
     inputs: dict[str, object] | None = None,
 ) -> CrewOutput:
     """Synchronously kick off a crew and return the result.
@@ -142,6 +143,7 @@ def kickoff_crew(
 
 async def akickoff_crew(
     crew: Crew,
+    *,
     inputs: dict[str, object] | None = None,
 ) -> CrewOutput:
     """Asynchronously kick off a crew (native async).

@@ -1,0 +1,135 @@
+# {{ project_name }}
+
+This file provides persistent context for Claude Code sessions (CLI, VS Code agent,
+GitHub Copilot). It is always loaded and acts as the primary knowledge anchor.
+
+## Project Overview
+
+- **Type**: Fullstack Python + React/TypeScript application
+- **Backend**: Python {{ python_version }}, FastAPI, Clean Architecture
+- **Frontend**: React 19, TypeScript, Vite, SWC, Bun, shadcn/ui, Tailwind CSS v4
+- **Container**: {{ container_runtime | capitalize }}{% if use_caddy %}, Caddy (reverse proxy){% endif %}
+
+{% if database_backend != 'none' -%}
+- **Database**: {{ database_backend | replace('_', ' ') | title }}
+{%- endif %}
+{% if use_redis -%}
+- **Cache**: Redis
+{%- endif %}
+{% if use_celery -%}
+- **Task Queue**: Celery{% if use_redis %} + Redis broker{% endif %}
+
+{%- endif %}
+{% if use_ai -%}
+- **AI/RAG**: {% if use_langchain %}LangChain{% endif %}{% if use_llamaindex %}{% if use_langchain %}, {% endif %}LlamaIndex{% endif %}{% if use_lightrag %}{% if use_langchain or use_llamaindex %}, {% endif %}LightRAG{% endif %}{% if use_raganything %}{% if use_langchain or use_llamaindex or use_lightrag %}, {% endif %}RAG Anything{% endif %}
+
+{%- endif %}
+{% if cloud_provider != 'none' -%}
+- **Cloud**: {{ cloud_provider | title }}
+{%- endif %}
+
+## Architecture
+
+Clean Architecture with strict layering. The **Dependency Rule** is non-negotiable:
+source-code dependencies always point **inward**.
+
+```text
+presentation/infrastructure -> application -> core
+```
+
+| Layer | Directory | May Import From |
+| --- | --- | --- |
+| Core | `backend/src/{{ project_slug }}/core/` | stdlib, utils/ only |
+| Application | `backend/src/{{ project_slug }}/application/` | core/, utils/ |
+| Infrastructure | `backend/src/{{ project_slug }}/infrastructure/` | core/, application/ |
+| Presentation | `backend/src/{{ project_slug }}/presentation/` | application/, core/ (exceptions, enums) |
+| Config | `backend/src/{{ project_slug }}/config/` | core/enums/, utils/ |
+{%- if use_ai %}
+| AI | `backend/src/{{ project_slug }}/ai/` | core/, application/, utils/ |
+{%- endif %}
+| Utils | `backend/src/{{ project_slug }}/utils/` | stdlib ONLY |
+
+## Key Directories
+
+| Path | Purpose |
+| --- | --- |
+| `backend/src/{{ project_slug }}/` | Python application source |
+| `backend/tests/` | Backend tests (unit, integration, property, performance) |
+| `frontend/src/` | React frontend source |
+| `frontend/tests/` | Frontend tests (unit, e2e) |
+| `registry/` | Naming registry (shared constants, code generation) |
+| `scripts/` | Bootstrap, install, and utility scripts |
+| `docs/` | Project documentation |
+| `.github/` | Agents, instructions, skills, hooks, prompts, workflows |
+| `.claude/` | Claude-native rules, agents, settings |
+
+## Task Runner
+
+All commands use [Task](https://taskfile.dev/):
+
+```bash
+task dev              # Start full development stack
+task test             # Run all tests (backend + frontend)
+task lint             # Lint all code
+task format           # Format all code
+task typecheck        # Type-check all code
+task build            # Production build
+task registry:generate  # Regenerate constants from naming_registry.json
+```
+
+## Conventions Summary
+
+- **Python**: snake_case, type hints everywhere, structured logging (structlog),
+  keyword-only args, `raise ... from e`, no `Final[]`, no `Any`
+- **TypeScript**: PascalCase components, camelCase functions, strict mode
+- **Shell**: zsh only (`.zsh` extension), `emulate -L zsh`, `setopt PIPE_FAIL ERR_EXIT`
+- **Commits**: Conventional Commits (`type(scope): description`)
+- **Constants**: Never hardcode; use `registry/naming_registry.json`
+- **Docs**: Google-style docstrings, module-level docstrings mandatory
+
+## Agent System
+
+This project has a multi-agent system with shared conventions:
+
+| Location | Format | Used By |
+| --- | --- | --- |
+| `.github/agents/` | GitHub Copilot YAML frontmatter | VS Code Copilot |
+| `.github/instructions/` | Scoped instructions (`applyTo` glob) | VS Code Copilot |
+| `.github/skills/` | SKILL.md directories | VS Code Copilot, Claude |
+| `.claude/rules/` | Claude rules (`paths` array) | Claude Code, Copilot |
+| `.claude/agents/` | Claude agent format | Claude Code |
+| `.claude/settings.json` | Hooks, permissions | Claude Code |
+| `AGENTS.md` | Universal agent instructions | All agents |
+| `CLAUDE.md` | This file — always loaded | Claude Code |
+
+## MCP Servers
+
+Available MCP servers (configured in `.vscode/mcp.json`):
+
+| Server | Purpose |
+| --- | --- |
+| context7 | Library documentation lookup |
+| github | GitHub API access |
+| shadcn | shadcn/ui component registry |
+{%- if use_playwright %}
+| playwright | Browser automation and testing |
+{%- endif %}
+{%- if cloud_provider == 'azure' %}
+| azure | Azure resource management |
+{%- endif %}
+{%- if with_gitnexus %}
+| gitnexus | Graph-powered code intelligence |
+{%- endif %}
+
+## Non-Negotiable Rules
+
+1. Dependency Rule: core/ has ZERO outward imports
+2. No `Final[]` annotations — use `_UPPER_SNAKE_CASE` for internal constants
+3. Module-level docstrings on every Python file
+4. `raise ... from e` for exception chaining
+5. No raw SQL — use ORM exclusively
+6. No `Any` type hints — use `object` as fallback
+7. Registry-first: constants live in `naming_registry.json`
+8. Structured logging only (structlog, `%s` formatting)
+9. Shell scripts use `.zsh` extension exclusively
+10. Conventional Commits enforced on all commits

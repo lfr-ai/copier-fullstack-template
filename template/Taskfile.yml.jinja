@@ -1,3 +1,5 @@
+version: "3"
+
 dotenv: [".env", ".env.local"]
 
 includes:
@@ -411,4 +413,36 @@ tasks:
     desc: "Start Celery worker (alias for backend:worker)"
     cmds:
       - task: backend:worker
+{% endif %}
+{% if with_gitnexus %}
+
+  gitnexus:analyze:
+    desc: "Index the repository for code intelligence (GitNexus)"
+    cmds:
+      - gitnexus analyze . {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  gitnexus:analyze:full:
+    desc: "Full re-index with embeddings (slower, better semantic search)"
+    cmds:
+      - gitnexus analyze . --force {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  gitnexus:status:
+    desc: "Show GitNexus index status for this repository"
+    cmds:
+      - gitnexus status
+
+  gitnexus:serve:
+    desc: "Start GitNexus web UI (graph explorer on port 4747)"
+    cmds:
+      - gitnexus serve
+
+  gitnexus:clean:
+    desc: "Delete GitNexus index for this repository"
+    cmds:
+      - gitnexus clean
+
+  gitnexus:wiki:
+    desc: "Generate documentation from the code intelligence graph"
+    cmds:
+      - gitnexus wiki . {% raw %}{{.CLI_ARGS}}{% endraw %}
 {% endif %}

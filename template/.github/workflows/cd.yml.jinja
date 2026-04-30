@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -38,21 +38,55 @@ jobs:
         id: tag
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push all production images
-        uses: docker/bake-action@v7
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
         with:
-          source: .
-          targets: prod
-          files: docker-bake.hcl
+          context: .
+          file: Containerfile
+          target: prod
           push: true
           sbom: true
           provenance: mode=max
-          set: |
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
-        env:
-          TAG: ${{ steps.tag.outputs.version }}
-          REGISTRY: ${{ env.REGISTRY }}/${{ github.repository_owner }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/{% endraw %}{{ project_slug }}{% raw %}-app:${{ steps.tag.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/{% endraw %}{{ project_slug }}{% raw %}-app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: frontend/Containerfile
+          target: prod
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/{% endraw %}{{ project_slug }}{% raw %}-frontend:${{ steps.tag.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/{% endraw %}{{ project_slug }}{% raw %}-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+{%- endraw %}
+{%- if use_caddy %}
+{%- raw %}
+
+      - name: Build and push caddy image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: caddy/Containerfile
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/{% endraw %}{{ project_slug }}{% raw %}-caddy:${{ steps.tag.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/{% endraw %}{{ project_slug }}{% raw %}-caddy:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+{%- endraw %}
+{%- endif %}
+{%- raw %}
 
   deploy-staging:
     name: Deploy to Staging
@@ -62,7 +96,7 @@ jobs:
     environment: staging
     if: contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Deploy to staging
         run: echo "Staging deploy step — configure for your infrastructure"
         # Example: docker compose -f compose.yml -f compose.staging.yml --env-file .env.staging up -d
@@ -75,7 +109,7 @@ jobs:
     environment: prod
     if: "!contains(github.ref, '-rc') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha')"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Deploy to production
         run: echo "Deploy step - configure for your infrastructure"
         # Example: docker compose -f compose.yml -f compose.prod.yml --env-file .env.prod up -d

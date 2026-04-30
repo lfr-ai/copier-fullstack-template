@@ -1,5 +1,7 @@
 """LLM provider gateway."""
 
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
 from typing import Protocol, runtime_checkable
 

@@ -97,6 +97,7 @@ def build_task(spec: TaskSpec) -> Task:
 
 def build_tasks_from_config(
     tasks_config: dict[str, dict[str, object]],
+    *,
     agents: dict[str, Agent],
 ) -> dict[str, Task]:
     """Build multiple tasks from a YAML-style config dict.

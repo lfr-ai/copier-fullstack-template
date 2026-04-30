@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "indexing": {
+    "languages": ["typescript", "python"],
+    "exclude": [
+      "**/node_modules/**",
+      "**/.venv/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/__pycache__/**",
+      "**/.git/**",
+      "**/migrations/versions/**",
+      "**/*.min.js",
+      "**/*.min.css",
+      "**/coverage/**",
+      "**/.tox/**",
+      "**/.pytest_cache/**"
+    ],
+    "include": [
+      "backend/src/**",
+      "frontend/src/**",
+      "backend/tests/**",
+      "frontend/tests/**"
+    ],
+    "skipEmbeddings": false,
+    "workerTimeout": 60
+  },
+  "mcp": {
+    "autoStart": true,
+    "tools": [
+      "query",
+      "context",
+      "impact",
+      "detect_changes",
+      "rename"
+    ]
+  },
+  "hooks": {
+    "postCommit": {
+      "enabled": true,
+      "action": "incremental-index"
+    }
+  }
+}

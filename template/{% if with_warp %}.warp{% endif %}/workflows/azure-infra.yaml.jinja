@@ -1,0 +1,15 @@
+{%- if cloud_provider == 'azure' %}
+---
+name: Azure Infrastructure
+command: task infra:{{action}}
+tags:
+  - azure
+  - infrastructure
+  - iac
+description: "Azure infrastructure operations (validate, what-if, deploy, cleanup)"
+arguments:
+  - name: action
+    description: "Infra action: validate, what-if, deploy, deploy:rg, cleanup"
+    default_value: validate
+---
+{%- endif %}

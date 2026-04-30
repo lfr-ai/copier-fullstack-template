@@ -4,6 +4,8 @@ Store prompt templates as constants or load from files.
 Keep prompts versioned and testable.
 """
 
+from __future__ import annotations
+
 
 SYSTEM_DEFAULT = (
     "You are a helpful assistant. Respond concisely and accurately"

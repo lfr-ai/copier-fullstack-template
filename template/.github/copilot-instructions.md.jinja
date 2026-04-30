@@ -23,6 +23,7 @@ Specialized agents for different workflows:
 
 | Agent | Purpose |
 |-------|---------|
+| `claude-architect` | Architecture design with extended reasoning (Claude-optimized) |
 | `debug` | Diagnostic debugging with systematic root cause analysis |
 | `deep-thinking` | Extended reasoning for complex architectural decisions |
 | `expert-react-frontend-engineer` | Senior React/TypeScript frontend development |
@@ -69,6 +70,32 @@ Active hooks for the Copilot coding agent:
 
 - **tool-guardian** (PreToolUse) — Blocks dangerous operations (force push, `rm -rf`, etc.)
 - **check-licenses** (Stop) — Scans dependencies for license compatibility
+
+## Claude Code Integration
+
+Claude Code (CLI and VS Code agent mode) reads from both `.github/` and `.claude/`:
+
+- **Rules**: `.claude/rules/` (Claude-native format with `paths` array)
+- **Agents**: `.claude/agents/` (Claude-native format with comma-separated tools)
+- **Settings**: `.claude/settings.json` (hooks, permissions, allowlists)
+- **Always-on**: `CLAUDE.md` (project context, loaded every session)
+
+Both formats enforce identical conventions — see `AGENTS.md` for details.
+
+## Reusable Prompts (`.github/prompts/`)
+
+Invoke via `/promptname` in chat. Available prompts:
+
+| Prompt | Purpose | Model |
+|--------|---------|-------|
+| `/new-feature` | Full-stack feature implementation (Clean Architecture) | Claude Sonnet 4 |
+| `/new-endpoint` | API endpoint with schema, service, route, and tests | Claude Sonnet 4 |
+| `/new-component` | React component with shadcn/ui and tests | Claude Sonnet 4 |
+| `/new-migration` | Alembic migration with rollback verification | Claude Sonnet 4 |
+| `/scaffold-crud` | Complete CRUD resource across all layers | Claude Sonnet 4 |
+| `/review` | Comprehensive code review (security, arch, quality) | Claude Sonnet 4 |
+| `/fix-test` | Diagnose and fix failing tests | Claude Sonnet 4 |
+| `/refactor` | Behavior-preserving code improvement | Claude Sonnet 4 |
 
 ## Documentation Policy
 
@@ -347,7 +374,7 @@ This project follows Clean Architecture. The Dependency Rule is the fundamental 
 - Use '@unique' decorator from 'enum' module to prevent duplicate values
 - Use 'StrEnum' for string-valued enums
 - Use 'IntEnum' for integer-valued enums
-- Use 'auto()' for automatic value assignment when exact values don't matter
+- NEVER use 'auto()' — always explicit string values for clarity and stability
 
 
 - Always use enum members, not raw values: 'Environment.PROD' not '"prod"'

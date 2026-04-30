@@ -1,0 +1,19 @@
+{% if use_auth %}
+# JWT Setup
+
+Generate a key and paste it into your `.env`:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(64))"
+```
+
+```env
+{{ project_slug | upper }}_JWT_SECRET_KEY=<paste-here>
+{{ project_slug | upper }}_JWT_EXPIRE_MINUTES=30
+```
+
+Staging/prod require a key of at least 32 characters (app refuses to start otherwise).
+Local dev works with the default value.
+
+Tokens are sent as `Authorization: Bearer <token>`. Algorithm: HS256.
+{% endif %}

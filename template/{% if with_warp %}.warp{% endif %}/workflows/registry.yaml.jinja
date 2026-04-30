@@ -1,0 +1,12 @@
+---
+name: Registry Operations
+command: task registry:{{action}}
+tags:
+  - registry
+  - codegen
+description: "Naming registry operations (validate, generate, check, test, diff)"
+arguments:
+  - name: action
+    description: "Registry action: validate, generate, check, test, diff"
+    default_value: check
+---

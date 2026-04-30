@@ -8,6 +8,8 @@ knowledge at each reasoning step.
 Reference: DeepRAG (Guan et al., 2025) -- arXiv:2502.01142
 """
 
+from __future__ import annotations
+
 import operator
 from typing import Annotated, TypedDict
 

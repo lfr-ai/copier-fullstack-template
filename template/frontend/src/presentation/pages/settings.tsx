@@ -15,7 +15,7 @@ import { Controller, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { PlusIcon, TrashIcon } from 'lucide-react';
-import { useZodForm } from '@/application/hooks/useZodForm';
+import { useZodForm } from '@/application/hooks/use-zod-form';
 import {
   Card,
   CardContent,

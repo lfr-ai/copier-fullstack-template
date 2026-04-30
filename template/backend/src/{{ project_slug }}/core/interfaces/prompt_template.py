@@ -4,6 +4,8 @@ Concrete adapters may use LangChain's 'ChatPromptTemplate',
 LlamaIndex's prompt system, or simple f-string templates.
 """
 
+from __future__ import annotations
+
 from typing import Protocol, runtime_checkable
 
 

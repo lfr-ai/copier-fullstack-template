@@ -32,7 +32,12 @@
         "recommended": true
       },
       "nursery": {
-        "useSortedClasses": "warn"
+        "useSortedClasses": {
+          "level": "warn",
+          "options": {
+            "functions": ["cn", "clsx", "cva"]
+          }
+        }
       }
     }
   },

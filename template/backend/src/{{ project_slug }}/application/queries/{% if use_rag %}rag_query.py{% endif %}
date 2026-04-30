@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import override
+from typing import final, override
 
 import structlog
 
@@ -19,6 +19,7 @@ _DEFAULT_MAX_TOKENS = 2048
 _DEFAULT_SIMILARITY_TOP_K = 5
 
 
+@final
 @dataclass(frozen=True, slots=True)
 class RAGQuery:
     """Query for retrieval-augmented generation."""
@@ -29,6 +30,7 @@ class RAGQuery:
     use_graph: bool = False
 
 
+@final
 class RAGQueryHandler(QueryHandler[RAGQuery, RAGResponseDTO]):
     """Handles RAG queries by retrieving context and generating answers."""
 

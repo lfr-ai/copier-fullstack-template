@@ -95,7 +95,6 @@ database_backend:
     SQLite (file-based, no server): "sqlite"
     PostgreSQL (local container): "postgresql"
     Azure Database for PostgreSQL Flexible Server: "azure_postgresql"
-  when: "{{ cloud_provider == 'none' or cloud_provider == 'azure' }}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  Feature flags
@@ -145,6 +144,16 @@ use_devcontainer:
   type: bool
   help: "Include devcontainer configuration"
   default: true
+
+with_warp:
+  type: bool
+  help: "Include Warp terminal configuration (.warp/ directory with shared workflows)"
+  default: false
+
+with_gitnexus:
+  type: bool
+  help: "Include GitNexus graph-powered code intelligence (MCP integration for AI agents)"
+  default: false
 
 with_gsd:
   type: bool

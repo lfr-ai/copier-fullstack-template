@@ -2,6 +2,11 @@
 
 services:
   app:
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.test
+        required: false
     environment:
       {{ project_slug | upper }}_ENVIRONMENT: test
       {{ project_slug | upper }}_DEBUG: "false"
@@ -17,6 +22,11 @@ services:
 {%- if use_celery %}
 
   worker:
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.test
+        required: false
     environment:
       {{ project_slug | upper }}_ENVIRONMENT: test
       {{ project_slug | upper }}_DEBUG: "false"
@@ -33,7 +43,7 @@ services:
   db:
     tmpfs:
       - /var/lib/postgresql/data:size=256m
-    volumes: !reset []
+    volumes: []
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: test-password

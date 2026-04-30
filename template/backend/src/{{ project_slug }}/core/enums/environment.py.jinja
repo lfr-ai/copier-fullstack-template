@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from enum import auto, unique
+from enum import unique
 
 from {{ project_slug }}.core.enums.base import ParseableEnum
+
+
 @unique
 class Environment(ParseableEnum):
     """Deployment environment enumeration."""
 
-    LOCAL = auto()
-    DEV = auto()
-    TEST = auto()
-    STAGING = auto()
-    PROD = auto()
+    LOCAL = "local"
+    DEV = "dev"
+    TEST = "test"
+    STAGING = "staging"
+    PROD = "prod"

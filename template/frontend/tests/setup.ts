@@ -1,21 +1,9 @@
-/**
- * @module tests/setup
- *
- * Vitest global setup file executed before every test suite.
- *
- * Responsibilities:
- * - Clears the DOM and resets mocks after each test.
- * - Stubs browser APIs unavailable in happy-dom
- *   (`matchMedia`, `IntersectionObserver`, `ResizeObserver`).
- * - Provides {@link mockApiSuccess} and {@link mockApiError}
- *   helpers for declarative `fetch` stubbing.
- */
-
+import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 
 afterEach(() => {
   document.body.replaceChildren();
-  vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 Object.defineProperty(window, 'matchMedia', {

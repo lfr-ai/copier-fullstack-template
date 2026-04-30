@@ -2,3 +2,6 @@ trustedRegistries:
   - docker.io
   - ghcr.io
   - mcr.microsoft.com
+
+ignored:
+  - DL3059  # Multiple consecutive RUN — acceptable for readability in multi-tool installs

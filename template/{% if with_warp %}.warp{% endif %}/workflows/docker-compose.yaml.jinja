@@ -1,0 +1,15 @@
+---
+name: Docker Compose Up
+command: task docker:{{action}} {{services}}
+tags:
+  - docker
+  - containers
+description: "Manage {{ container_runtime }} compose services (up, down, restart, logs)"
+arguments:
+  - name: action
+    description: "Compose action: up, down, restart, logs, ps, build"
+    default_value: up
+  - name: services
+    description: Space-separated list of services (empty for all)
+    default_value: ""
+---

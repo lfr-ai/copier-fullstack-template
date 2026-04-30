@@ -1,0 +1,15 @@
+---
+name: Database Migration
+command: task db:{{action}} {{args}}
+tags:
+  - database
+  - migration
+description: "Run database migrations (migrate, revision, downgrade, seed, reset)"
+arguments:
+  - name: action
+    description: "Migration action: migrate, revision, downgrade, seed, reset"
+    default_value: migrate
+  - name: args
+    description: "Additional arguments (e.g., revision message for 'revision')"
+    default_value: ""
+---
