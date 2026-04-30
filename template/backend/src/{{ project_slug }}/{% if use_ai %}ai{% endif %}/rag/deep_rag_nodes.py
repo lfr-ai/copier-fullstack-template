@@ -12,6 +12,8 @@ Implements node functions for the DeepRAG pipeline modeled as an MDP:
 Reference: DeepRAG (Guan et al., 2025) -- arXiv:2502.01142
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 import structlog

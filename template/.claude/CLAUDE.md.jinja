@@ -1,0 +1,51 @@
+---
+description: Project overview and critical rules for Claude Code CLI
+---
+
+# {{ project_name }}
+
+## Project Overview
+
+{{ project_description }}
+
+**Stack**: Python {{ python_version }} (FastAPI + SQLAlchemy) | React 19 (TypeScript + Vite + Bun) | {{ container_runtime | capitalize }}
+
+## Critical Rules
+
+1. **Clean Architecture** — Inner layers never import from outer layers. Dependency direction: presentation → application → core ← infrastructure
+2. **Type Safety** — All public functions must have complete type annotations
+3. **Keyword-Only Args** — Functions with 2+ parameters use `*,` separator
+4. **No `Final[...]`** — Use `@final` decorator or `UPPER_CASE` convention instead
+5. **Structured Logging** — Use `structlog`, never `print()`
+6. **Factory Tests** — Use factory-boy for test data, never raw fixtures
+7. **Conventional Commits** — Format: `type(scope): description`
+
+## Key Paths
+
+| Path | Purpose |
+|------|---------|
+| `backend/src/{{ project_slug }}/` | Backend source (Clean Architecture layers) |
+| `frontend/src/` | Frontend source (React + TypeScript) |
+| `backend/tests/` | Test suite (unit/, integration/, property/) |
+| `registry/naming_registry.json` | Single source of truth for shared constants |
+| `Taskfile.yml` | Task runner commands |
+
+## Commands
+
+- `task dev` — Start development servers
+- `task test` — Run test suite
+- `task lint` — Lint all code
+- `task typecheck` — Type check all code
+- `task format` — Auto-format code
+- `task db:migrate` — Run database migrations
+
+## Architecture Layers
+
+```text
+backend/src/{{ project_slug }}/
+├── core/           # Domain (entities, interfaces, value objects) — NO external deps
+├── application/    # Use cases (services, DTOs, commands) — depends on core only
+├── infrastructure/ # Implementations (DB, cache, APIs) — implements core interfaces
+├── presentation/   # Delivery (routes, schemas, CLI) — depends on application
+└── composition/    # DI wiring — depends on all
+```

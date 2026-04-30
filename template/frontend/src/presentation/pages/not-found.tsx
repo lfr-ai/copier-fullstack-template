@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/pre
 
 export function NotFound() {
   return (
-    <section className="mx-auto flex min-h-[60vh] w-full max-w-3xl items-center justify-center px-6 py-16">
+    <section role="alert" className="mx-auto flex min-h-[60vh] w-full max-w-3xl items-center justify-center px-6 py-16">
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle className="text-3xl tracking-tight">404 — Page not found</CardTitle>

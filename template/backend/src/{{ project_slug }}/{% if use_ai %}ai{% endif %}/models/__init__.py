@@ -1,5 +1,7 @@
 """Pydantic models for AI request/response payloads."""
 
+from __future__ import annotations
+
 from typing import final
 
 from pydantic import BaseModel, ConfigDict, Field

@@ -1,55 +1,50 @@
+# Dependencies & build
 **/node_modules/
 **/.venv/
 **/__pycache__/
-**/*.pyc
-**/*.pyo
 **/dist/
 **/build/
 **/*.egg-info/
-**/.pytest_cache/
-**/.hypothesis/
-**/.ty_cache/
-**/.ruff_cache/
-**/.mypy_cache/
-**/.tox/
-**/.nox/
-**/.vite/
-**/.uv/
+.tox/
+profiles/
 
+# Secrets
 .env
 .env.*
 !.env.example
-
 **/*.key
 **/*.pem
-*.baseline
+**/*.crt
+**/*.p12
+secrets/
 
+# VCS & editor
 .git/
 .github/
 .vscode/
 .idea/
+.devcontainer/
 
-logs/
-*.log
-jscpd-report/
-temp/
-tmp/
+# Claude Code local
+CLAUDE.local.md
+.claude/settings.local.json
 
-*.md
-docs/
-
-playwright-report/
-test-results/
+# Tests & docs (not needed in image)
+**/tests/
 coverage/
 htmlcov/
-
-{%- if secret_backend == "azure_kv" %}
-azure/
-{%- endif %}
+playwright-report/
+storybook-static/
+.lighthouseci/
+*.md
+!README.md
+docs/
 tasks/
-registry/
-backend/seeds/
-tools/
-backend/tests/
 scripts/
-frontend/tests/
+tools/
+registry/
+.task
+.pre-commit-config.yaml
+Taskfile.yml
+.dockerignore
+.containerignore

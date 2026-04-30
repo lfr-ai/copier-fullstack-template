@@ -1,0 +1,64 @@
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "backend/**"
+          - "*.py"
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "frontend/**"
+          - "*.tsx"
+          - "*.ts"
+          - "*.css"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+
+infrastructure:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/Containerfile"
+          - "**/Dockerfile"
+          - "compose*.yml"
+          - "docker-bake.hcl"
+          - "Taskfile.yml"
+          - "tasks/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/dependabot.yml"
+
+configuration:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.toml"
+          - "*.json"
+          - "*.yaml"
+          - "*.yml"
+          - ".env*"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "backend/tests/**"
+          - "frontend/tests/**"
+          - "**/*.test.*"
+          - "**/*.spec.*"
+
+agents:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/agents/**"
+          - ".github/instructions/**"
+          - ".github/skills/**"
+          - ".github/prompts/**"
+          - ".github/hooks/**"
+          - ".claude/**"
+          - "CLAUDE.md"
+          - "AGENTS.md"

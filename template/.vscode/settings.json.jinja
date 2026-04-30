@@ -188,10 +188,32 @@
     ".github/instructions": true,
     ".claude/rules": true
   },
+  "chat.promptFilesLocations": {
+    ".github/prompts": true
+  },
+  "chat.agentFilesLocations": {
+    ".github/agents": true,
+    ".claude/agents": true
+  },
+  "chat.agentSkillsLocations": {
+    ".github/skills": true,
+    ".claude/skills": true
+  },
   "chat.agent.maxRequests": 250,
   "chat.detectParticipant.enabled": false,
   "chat.useAgentSkills": true,
+  "chat.useAgentsMdFile": true,
+  "chat.useClaudeMdFile": true,
+  "chat.useNestedAgentsMdFiles": false,
+  "chat.includeApplyingInstructions": true,
+  "chat.includeReferencedInstructions": true,
   "chat.useCustomizationsInParentRepositories": true,
+
+  // ── Claude Agent (GitHub Copilot Claude mode) ─────────────────
+  "github.copilot.chat.claudeAgent.enabled": true,
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "github.copilot.chat.agent.thinkingProcess": true,
+  "github.copilot.chat.agent.runTasks": true,
 
   // ── Copilot Agent Plugins ─────────────────────────────────────
   "chat.plugins.enabled": true,
@@ -221,10 +243,10 @@
   "chat.useCustomAgentHooks": true,
 
   // ── Copilot Safety ────────────────────────────────────────────
-  // Require manual approval for edits to hook scripts to prevent
-  // the agent from modifying its own safety guardrails
   "chat.tools.edits.autoApprove": {
-    ".github/hooks/**": false
+    ".github/hooks/**": false,
+    ".claude/settings.json": false,
+    ".claude/settings.local.json": false
   },
 
   // ── Copilot Features ──────────────────────────────────────────

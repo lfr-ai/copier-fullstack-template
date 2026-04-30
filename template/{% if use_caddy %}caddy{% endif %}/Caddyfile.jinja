@@ -1,60 +1,181 @@
 {
-admin off
+	admin off
+	persist_config off
+
+	grace_period 10s
+	shutdown_delay 5s
+
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 30s
+			write 60s
+			idle 2m
+		}
+		max_header_size 1MB
+		protocols h1 h2 h3
+		trusted_proxies static private_ranges
+		trusted_proxies_strict
+	}
+
+	log default {
+		output stdout
+		format json
+		level {$CADDY_LOG_LEVEL:INFO}
+	}
+}
+
+(security_headers) {
+	header {
+		>X-Frame-Options "DENY"
+		>X-Content-Type-Options "nosniff"
+		>Referrer-Policy "strict-origin-when-cross-origin"
+		>X-XSS-Protection "0"
+		>Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		>Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		>Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+		>Cross-Origin-Embedder-Policy "require-corp"
+		>Cross-Origin-Opener-Policy "same-origin"
+		>Cross-Origin-Resource-Policy "same-origin"
+		-Server
+		-X-Powered-By
+	}
+}
+
+(proxy_defaults) {
+	lb_policy round_robin
+	lb_try_duration 5s
+	lb_try_interval 250ms
+
+	health_uri /health
+	health_interval 15s
+	health_timeout 5s
+	health_passes 2
+	health_fails 3
+	health_status 2xx
+
+	fail_duration 30s
+	max_fails 3
+	unhealthy_status 5xx
+
+	header_up X-Real-IP {client_ip}
+	header_up X-Forwarded-Proto {scheme}
+	header_up X-Request-ID {http.request.uuid}
+	header_down -Server
+	header_down -X-Powered-By
+
+	transport http {
+		dial_timeout 5s
+		response_header_timeout 60s
+		keepalive 2m
+		keepalive_idle_conns_per_host 32
+		compression off
+	}
 }
 
 {$CADDY_DOMAIN:localhost} {
-log {
-output stdout
-format json
-}
+	log {
+		output stdout
+		format json
+	}
 
-encode gzip zstd
+	encode {
+		zstd
+		gzip 6
+		minimum_length 256
+	}
 
-header {
-X-Frame-Options "DENY"
-X-Content-Type-Options "nosniff"
-Referrer-Policy "strict-origin-when-cross-origin"
-X-XSS-Protection "0"
-Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;
-font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
-Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
--Server
-}
+	import security_headers
 
-handle /health {
-respond "OK" 200
-}
+	handle /health {
+		header Cache-Control "no-store"
+		respond "OK" 200
+	}
 {%- if api_style in ('rest', 'both') %}
 
-handle /api/* {
-reverse_proxy app:{$BACKEND_PORT:8000}
-}
+	handle /api/* {
+		reverse_proxy app:{$BACKEND_PORT:8000} {
+			import proxy_defaults
+		}
+	}
+
+	handle /docs {
+		reverse_proxy app:{$BACKEND_PORT:8000} {
+			import proxy_defaults
+		}
+	}
+
+	handle /openapi.json {
+		reverse_proxy app:{$BACKEND_PORT:8000} {
+			import proxy_defaults
+			header_down Cache-Control "public, max-age=300"
+		}
+	}
 {%- endif %}
 {%- if api_style in ('graphql', 'both') %}
 
-handle /graphql {
-reverse_proxy app:{$BACKEND_PORT:8000}
-}
+	handle /graphql {
+		reverse_proxy app:{$BACKEND_PORT:8000} {
+			import proxy_defaults
+		}
+	}
 
-handle /graphql/* {
-reverse_proxy app:{$BACKEND_PORT:8000}
-}
+	handle /graphql/* {
+		reverse_proxy app:{$BACKEND_PORT:8000} {
+			import proxy_defaults
+		}
+	}
+{%- endif %}
+{%- if use_graphql_subscriptions is defined and use_graphql_subscriptions %}
+
+	handle /graphql/ws {
+		reverse_proxy app:{$BACKEND_PORT:8000} {
+			import proxy_defaults
+			flush_interval -1
+			stream_close_delay 5m
+			transport http {
+				dial_timeout 5s
+				keepalive 0
+				compression off
+			}
+		}
+	}
 {%- endif %}
 
-handle {
-root * /srv
-@production file /index.html
+	handle {
+		root * /srv
+		@production file /index.html
 
-handle @production {
-@immutable path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2
-header @immutable Cache-Control "public, max-age=31536000, immutable"
-try_files {path} /index.html
-file_server
-}
+		handle @production {
+			@immutable path *.js *.css *.woff *.woff2 *.ttf *.eot
+			header @immutable Cache-Control "public, max-age=31536000, immutable"
 
-handle {
-reverse_proxy frontend:{$FRONTEND_PORT:3000}
-}
-}
+			@images path *.png *.jpg *.jpeg *.gif *.ico *.svg *.webp *.avif
+			header @images Cache-Control "public, max-age=86400, stale-while-revalidate=604800"
+
+			@html path /index.html
+			header @html Cache-Control "public, max-age=0, must-revalidate"
+
+			try_files {path} /index.html
+			file_server {
+				precompressed zstd br gzip
+			}
+		}
+
+		handle {
+			reverse_proxy frontend:{$FRONTEND_PORT:3000}
+		}
+	}
+
+	handle_errors {
+		@5xx expression `{err.status_code} >= 500`
+		handle @5xx {
+			header Content-Type "text/plain; charset=utf-8"
+			respond "{err.status_code} {err.status_text}" {err.status_code}
+		}
+		handle {
+			header Content-Type "text/plain; charset=utf-8"
+			respond "{err.status_code} {err.status_text}" {err.status_code}
+		}
+	}
 }

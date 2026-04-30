@@ -118,7 +118,7 @@ class CrewConfigLoader:
         if filter_names:
             raw = {k: v for k, v in raw.items() if k in filter_names}
 
-        return build_tasks_from_config(raw, agents)
+        return build_tasks_from_config(raw, agents=agents)
 
     def build_crew(
         self,

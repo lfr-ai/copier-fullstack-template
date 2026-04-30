@@ -1,0 +1,42 @@
+---
+description: 'Generate a database migration with Alembic including rollback verification'
+name: 'new-migration'
+argument-hint: 'Describe the schema change (e.g., add email_verified column to users table)'
+agent: 'agent'
+model: 'Claude Sonnet 4'
+tools:
+  [
+    search/codebase,
+    search/fileSearch,
+    read/readFile,
+    edit/editFiles,
+    execute/runInTerminal,
+  ]
+---
+
+# New Database Migration
+
+Create an Alembic migration for the described schema change.
+
+## Steps
+
+1. **Modify model** — Update the SQLAlchemy model in `backend/src/{{ project_slug }}/infrastructure/persistence/models/`
+2. **Generate migration** — Run `task db:revision` with a descriptive message
+3. **Review migration** — Check the generated file for correctness
+4. **Test upgrade** — Run `task db:migrate`
+5. **Test downgrade** — Run `task db:downgrade` to verify rollback works
+6. **Re-upgrade** — Run `task db:migrate` again to confirm idempotency
+
+## Conventions
+
+- Migration message format: `"add_{column}_to_{table}"` or `"create_{table}_table"`
+- Always include both `upgrade()` and `downgrade()` functions
+- Use `batch_alter_table` for SQLite compatibility when applicable
+- Add indexes for columns used in WHERE/JOIN/ORDER BY clauses
+- Use `server_default` for new non-nullable columns on existing tables
+
+## Verification
+
+```bash
+cd backend && uv run alembic check
+```

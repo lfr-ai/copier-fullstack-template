@@ -1,0 +1,33 @@
+# Dependencies & build
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/dist/
+**/build/
+
+# Secrets
+.env
+.env.*
+!.env.example
+**/*.key
+**/*.pem
+**/*.crt
+
+# VCS & editor
+.git/
+.github/
+.claude/
+.vscode/
+.idea/
+.devcontainer/
+
+# Not needed for Caddy
+backend/tests/
+scripts/
+docs/
+tasks/
+*.md
+!frontend/README.md
+compose*.yml
+Taskfile.yml
+.pre-commit-config.yaml

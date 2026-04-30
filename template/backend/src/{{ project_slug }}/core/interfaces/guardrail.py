@@ -4,6 +4,8 @@ Concrete adapters may use NeMo Guardrails, custom rule-based
 validators, or LLM-based content moderation.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable, final
 

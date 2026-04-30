@@ -8,7 +8,7 @@ Orchestrates multi-hop reasoning by:
 
 from __future__ import annotations
 
-from typing import Any, Optional, final
+from typing import Any, final
 
 import structlog
 
@@ -27,8 +27,8 @@ class MultiHopWorkflow:
     def __init__(
         self,
         *,
-        kg_backend: Optional[KnowledgeGraphBackend],
-        retriever: Optional[RetrieverGateway] = None,
+        kg_backend: KnowledgeGraphBackend | None,
+        retriever: RetrieverGateway | None = None,
         max_hops: int = 5,
     ) -> None:
         """Initialize the multi-hop workflow.

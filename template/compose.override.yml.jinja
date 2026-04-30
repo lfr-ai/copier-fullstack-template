@@ -4,6 +4,13 @@ services:
   app:
     build:
       target: dev
+    ports:
+      - "${{ '{' }}{{ project_slug | upper }}_PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     volumes:
       - ./backend/src:/app/src
       - ./logs:/app/logs
@@ -11,18 +18,62 @@ services:
       {{ project_slug | upper }}_ENVIRONMENT: local
       {{ project_slug | upper }}_DEBUG: "true"
       {{ project_slug | upper }}_LOG_LEVEL: DEBUG
-    command: ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "{{ project_slug }}.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "src"]
 
   frontend:
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
     command: ["bun", "dev", "--host"]
+{%- if use_caddy %}
+
+  caddy:
+    cap_add:
+      - NET_BIND_SERVICE
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CADDY_LOG_LEVEL: DEBUG
+{%- endif %}
+{%- if use_redis %}
+
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+{%- endif %}
+{%- if database_backend == "postgresql" %}
+
+  db:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+{%- endif %}
+{%- if use_knowledge_graph and knowledge_graph_backend == "neo4j" %}
+
+  neo4j:
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+{%- endif %}
+{%- if use_mcp %}
+
+  mcp-server:
+    ports:
+      - "${MCP_PORT:-8001}:8001"
+{%- endif %}
 {%- if use_celery %}
 
   worker:
     build:
       target: dev
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     volumes:
       - ./backend/src:/app/src
     environment:

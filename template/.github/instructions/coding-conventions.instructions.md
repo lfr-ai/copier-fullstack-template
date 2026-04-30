@@ -20,17 +20,17 @@ class MyClass: ...
 
 ```python
 class MyEnum(StrEnum):
-    VALUE = auto()
+    VALUE = "value"
 
 @unique
 class MyEnum(StrEnum):
     """Descriptive purpose. Never starts with articles."""
-    VALUE = auto()
+    VALUE = "value"
 ```
 
-- ALL string enums: 'StrEnum' + '@unique' + 'auto()'
+- ALL string enums: 'StrEnum' + '@unique' + explicit string values
 - ALL integer enums: 'IntEnum' + '@unique'
-- 'auto()' unless exact value is external contract (comment explaining why)
+- NEVER use 'auto()' — always explicit values for clarity and stability
 - Member names: 'UPPER_SNAKE_CASE'
 - Defined in 'utils/enums.py' or 'core/enums/'
 - NEVER use raw string literals where enum members should be
@@ -263,10 +263,7 @@ When '*' is NOT required:
 - Dunder methods following Python protocols ('__eq__', '__hash__')
 - Callbacks matching external contracts (FastAPI DI)
 
-- 'from __future__ import annotations' ONLY in files with:
-  - 'TYPE_CHECKING' blocks importing types
-  - Forward references (types used before definition in return annotations)
-- ZERO in other files — Python 3.11+ doesn't need it for most code
+- 'from __future__ import annotations' in EVERY module for consistent behavior
 - EVERY function has return type (including '-> None')
 - EVERY parameter has type annotation
 - EVERY '@property' has return type

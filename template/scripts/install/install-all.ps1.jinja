@@ -413,6 +413,66 @@ Log-Result "Azure CLI" "FAILED"
 }
 }
 {% endif %}
+{% if with_warp %}
+
+function Install-Warp {
+Write-Host ""
+Write-Host "--- Warp Terminal ---"
+$warpExe = Join-Path $env:LOCALAPPDATA "Programs\Warp\warp.exe"
+if (Test-Path $warpExe) {
+Write-Host "Warp already installed: $warpExe"
+Log-Result "Warp" "OK (existing)"
+return
+}
+try {
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+winget install --id Warp.Warp -e --accept-source-agreements --accept-package-agreements
+}
+else {
+Write-Host "Download Warp from https://www.warp.dev/download"
+}
+Log-Result "Warp" "OK"
+}
+catch {
+Write-Warning "Warp installation failed: $_"
+Log-Result "Warp" "FAILED"
+}
+}
+{% endif %}
+{% if with_gitnexus %}
+
+function Install-GitNexus {
+Write-Host ""
+Write-Host "--- GitNexus (code intelligence) ---"
+if (Get-Command gitnexus -ErrorAction SilentlyContinue) {
+Write-Host "GitNexus already installed: $(gitnexus --version 2>&1)"
+Log-Result "GitNexus" "OK (existing)"
+return
+}
+try {
+if (Get-Command bun -ErrorAction SilentlyContinue) {
+Write-Host "Installing GitNexus via Bun..."
+bun install -g gitnexus@latest
+}
+elseif (Get-Command npm -ErrorAction SilentlyContinue) {
+Write-Host "Installing GitNexus via npm..."
+npm install -g gitnexus@latest
+}
+else {
+Write-Host "NOTE: GitNexus requires Bun or Node.js. Available via npx after Bun install."
+Log-Result "GitNexus" "SKIPPED (no runtime)"
+return
+}
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+[System.Environment]::GetEnvironmentVariable("Path", "User")
+Log-Result "GitNexus" "OK"
+}
+catch {
+Write-Warning "GitNexus installation failed: $_"
+Log-Result "GitNexus" "FAILED"
+}
+}
+{% endif %}
 
 function Print-Summary {
 Write-Host ""
@@ -472,6 +532,14 @@ Install-Neo4j
 {% if cloud_provider == "azure" %}
 
 Install-AzureCLI
+{% endif %}
+{% if with_warp %}
+
+Install-Warp
+{% endif %}
+{% if with_gitnexus %}
+
+Install-GitNexus
 {% endif %}
 
 Print-Summary

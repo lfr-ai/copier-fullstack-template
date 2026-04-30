@@ -153,8 +153,7 @@ DI wiring:
 - `typing` imports ONLY for: `TypeVar`, `Protocol`, `TypeAlias`, `Annotated`,
   `Literal`, `NoReturn`, `Generic`, `runtime_checkable`, `TypedDict`, `final`,
   `overload`, `TYPE_CHECKING`, `Self`, `override`
-- `from __future__ import annotations` ONLY in files with `TYPE_CHECKING` blocks
-  or forward references — Python {{ python_version }}+ does not need it elsewhere
+- `from __future__ import annotations` in EVERY module for consistent behavior
 - Use `match/case` for multi-branch dispatch over types, enums, literals
 - Use `@override` on overriding methods
 - Use `Self` for fluent/builder return types
@@ -173,9 +172,9 @@ DI wiring:
 - ZERO docstring comments on constants — the name and value are self-documenting
 - Never hardcode field/column names — use registry constants
 - `_UPPER_SNAKE_CASE` for ALL internal-only constants
-- `StrEnum` + `@unique` + `auto()` for string enums; `IntEnum` + `@unique` for integer
-  enums
-- `auto()` unless exact value is external contract (comment explaining why)
+- ALL string enums: `StrEnum` + `@unique` + explicit string values
+- `IntEnum` + `@unique` for integer enums
+- NEVER use `auto()` — always explicit values for clarity and stability
 - Enum member names: `UPPER_SNAKE_CASE`; provide `from_str()` classmethod for external
   input parsing
 - Enums defined in `utils/enums.py` or `core/enums/`
@@ -189,8 +188,8 @@ from {{ project_slug }}.core.enums.base import ParseableEnum
 
 @unique
 class MyStatus(ParseableEnum):
-    active = auto()
-    inactive = auto()
+    ACTIVE = "active"
+    INACTIVE = "inactive"
 ```
 
 ### Classes & Decorators
@@ -905,6 +904,7 @@ commands.
 Skills are stored in two locations for cross-agent compatibility:
 
 - `.github/skills/` — GitHub Copilot (VS Code) reads skills from here
+- `.claude/skills/` — Claude Code reads skills from here (also `.github/skills/`)
 - `~/.agents/skills/` — GSD, Claude Code, and industry-standard agents resolve bare
   skill names from this global directory
 
@@ -1042,3 +1042,93 @@ GSD and Copilot agents share the same conventions:
 Both agent systems enforce the same Clean Architecture rules, coding conventions,
 and quality gates.
 {% endif %}
+
+---
+
+## Claude Code
+
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) operates via VS Code
+agent mode or CLI (`claude`). It reads customization from both `.github/` (Copilot
+format) and `.claude/` (native format) directories.
+
+### Configuration Files
+
+| File | Purpose |
+| --- | --- |
+| `CLAUDE.md` | Always-on project context (architecture, conventions, commands) |
+| `CLAUDE.local.md` | Local-only preferences (not committed) |
+| `.claude/settings.json` | Hooks, permissions, tool allowlists |
+| `.claude/settings.local.json` | Local overrides (not committed) |
+| `.claude/rules/` | Scoped instructions (uses `paths` array, not `applyTo`) |
+| `.claude/agents/` | Claude-native agent definitions |
+
+### Claude Rules (`.claude/rules/`)
+
+Claude rules use a `paths` array (YAML list of globs) instead of the Copilot `applyTo`
+string:
+
+```yaml
+---
+name: Python Conventions
+description: Python coding standards
+paths:
+  - "**/*.py"
+---
+```
+
+Rules auto-load when working on matching files. Available rules:
+
+| Rule | Paths | Domain |
+| --- | --- | --- |
+| `architecture.md` | `backend/**/*.py` | Clean Architecture boundaries |
+| `python.md` | `**/*.py` | Type hints, naming, logging |
+| `frontend.md` | `frontend/**/*.{ts,tsx,css}` | React, TypeScript, Tailwind |
+| `testing.md` | `backend/tests/**`, `frontend/tests/**` | Test structure, markers |
+| `shell.md` | `**/*.zsh`, `scripts/**` | zsh scripting standards |
+| `commit.md` | `**` | Conventional Commits format |
+
+### Claude Agents (`.claude/agents/`)
+
+Claude-native agents use comma-separated tool strings:
+
+```yaml
+---
+name: Agent Name
+description: What it does
+tools: "Read, Grep, Glob, Bash, Edit, Write"
+---
+```
+
+Available agents:
+
+| Agent | Purpose |
+| --- | --- |
+| `deep-thinking` | Extended reasoning for complex problems |
+| `debug` | Systematic root cause analysis |
+| `tdd` | Test-Driven Development (red-green-refactor) |
+| `sdd` | Specification-Driven Development |
+| `frontend-engineer` | Senior React/TypeScript development |
+| `modernization` | Dependency upgrades and pattern modernization |
+
+### Claude Hooks (`.claude/settings.json`)
+
+Hooks execute at lifecycle points:
+
+- **PreToolUse** — Validates edits against guard-tool script
+- **PostToolUse** — Runs post-edit checks (formatting, linting)
+- **Stop** — License compatibility scan before session end
+
+### Convention Alignment
+
+Claude Code and Copilot share identical conventions through cross-format discovery:
+
+- **Instructions** — `.github/instructions/` (Copilot) + `.claude/rules/` (Claude)
+  cover the same domains with format-appropriate syntax
+- **Skills** — `.github/skills/` is read by both Copilot and Claude
+- **Agents** — `.github/agents/` (Copilot) + `.claude/agents/` (Claude) define
+  equivalent agents in their respective formats
+- **AGENTS.md** — Read by all agents (Copilot, Claude, GSD, OpenCode)
+- **CLAUDE.md** — Read by Claude Code (CLI and VS Code agent mode)
+
+Both systems enforce the same Clean Architecture rules, coding conventions,
+and quality gates through their respective configuration formats.

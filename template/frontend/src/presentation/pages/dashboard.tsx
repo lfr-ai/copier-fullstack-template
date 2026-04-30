@@ -42,7 +42,7 @@ export function Dashboard() {
         </CardHeader>
         <CardContent>
           {isLoading && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2" role="status" aria-label="Loading dashboard">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-32" />
             </div>

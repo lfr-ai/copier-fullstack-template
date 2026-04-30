@@ -28,7 +28,7 @@ select = [
     "SLF",    # flake8-self
     "SIM",    # flake8-simplify
     "TID",    # flake8-tidy-imports
-    "TCH",    # flake8-type-checking
+    "TC",     # flake8-type-checking
     "ARG",    # flake8-unused-arguments
     "PTH",    # flake8-use-pathlib
     "ERA",    # eradicate
@@ -41,18 +41,19 @@ select = [
     "RUF",    # ruff-specific
     "ANN",    # flake8-annotations
     "D",      # pydocstyle
+    "ASYNC",  # flake8-async
+    "FA",     # flake8-future-annotations
 ]
 ignore = [
     "D100",   # missing docstring in public module
     "D104",   # missing docstring in public package
     "S101",   # use of assert (needed in tests)
-    "I001",   # import sorting handled separately
     "E501",   # line too long (handled by formatter)
     "TRY003", # long exception messages
     "ISC001", # conflicts with formatter
-    "TCH001", # type-checking import placement (application)
-    "TCH002", # type-checking import placement (third-party)
-    "TCH003", # type-checking import placement (stdlib)
+    "TC001",  # type-checking import placement (application)
+    "TC002",  # type-checking import placement (third-party)
+    "TC003",  # type-checking import placement (stdlib)
     "UP046",  # PEP 695 generic type syntax (classes)
     "UP047",  # PEP 695 generic type syntax (functions)
 ]

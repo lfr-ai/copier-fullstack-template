@@ -6,6 +6,8 @@ may use LangChain LCEL, LlamaIndex query engines, or custom
 implementations.
 """
 
+from __future__ import annotations
+
 from typing import Protocol, runtime_checkable
 
 

@@ -1,5 +1,7 @@
 """AI module configuration -- model settings, provider defaults, RAG pipeline constants."""
 
+from __future__ import annotations
+
 
 from ..core.value_objects.model_config import (  # noqa: F401
     DEFAULT_MAX_TOKENS,

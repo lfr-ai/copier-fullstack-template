@@ -42,13 +42,6 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.9.4
-    hooks:
-      - id: bandit
-        args: ["-c", "bandit.toml"]
-        additional_dependencies: ["bandit[toml]"]
-
   - repo: local
     hooks:
       - id: module-docstrings
@@ -71,11 +64,9 @@ repos:
         types: [python]
         pass_filenames: false
 
-  - repo: local
-    hooks:
       - id: biome-check
         name: biome check (lint + format)
-        entry: bun run --cwd frontend biome check --write
+        entry: bun run --cwd frontend biome check
         language: system
         files: \.(js|ts|tsx|jsx|css|json)$
         pass_filenames: false

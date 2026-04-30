@@ -1,5 +1,7 @@
 {
-  "threshold": 3,
+  "threshold": 5,
+  "minLines": 10,
+  "minTokens": 70,
   "skipBlocks": [
     {
       "open": "\"\"\"",

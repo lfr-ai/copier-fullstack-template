@@ -7,8 +7,13 @@ services:
       - ..:/workspace:cached
     command: sleep infinity
     init: true
+    env_file:
+      - path: ../.env
+        required: false
+      - path: ../.env.local
+        required: false
     environment:
-      - {{ project_slug | upper }}_ENVIRONMENT=local
+      - {{ project_slug | upper }}_ENVIRONMENT=${{'{'}}{{ project_slug | upper }}_ENVIRONMENT:-local{{ '}' }}
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
       - {{ project_slug | upper }}_DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/{{ project_slug }}
 {%- endif %}

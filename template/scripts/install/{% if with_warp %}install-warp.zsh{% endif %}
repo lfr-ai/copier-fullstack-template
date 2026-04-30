@@ -1,0 +1,251 @@
+#!/usr/bin/env zsh
+# Install Warp -- modern GPU-accelerated terminal
+# Supports Linux (apt/dnf/pacman/zypper), macOS (brew), and WSL (winget)
+emulate -L zsh
+setopt ERR_EXIT PIPE_FAIL
+
+printf '==> Installing Warp terminal...\n'
+
+# ── Detect platform ────────────────────────────────────────────────
+detect_platform() {
+  emulate -L zsh
+
+  local os_type
+  os_type="$(uname -s)"
+
+  case "${os_type}" in
+    Linux)
+      if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+        print "wsl"
+      else
+        print "linux"
+      fi
+      ;;
+    Darwin) print "macos" ;;
+    MINGW*|MSYS*|CYGWIN*) print "windows" ;;
+    *) print "unknown" ;;
+  esac
+}
+
+# ── Check if already installed ─────────────────────────────────────
+check_existing() {
+  emulate -L zsh
+
+  if command -v warp-terminal &>/dev/null; then
+    printf '  Warp already installed (warp-terminal found in PATH)\n'
+    return 0
+  fi
+
+  # macOS: check Applications
+  if [[ -d "/Applications/Warp.app" ]]; then
+    printf '  Warp already installed: /Applications/Warp.app\n'
+    return 0
+  fi
+
+  # Windows: check common install path
+  if [[ -n "${LOCALAPPDATA:-}" ]] && [[ -f "${LOCALAPPDATA}/Programs/Warp/warp.exe" ]]; then
+    printf '  Warp already installed: %s\n' "${LOCALAPPDATA}/Programs/Warp/warp.exe"
+    return 0
+  fi
+
+  return 1
+}
+
+# ── Install on Linux ───────────────────────────────────────────────
+install_warp_linux() {
+  emulate -L zsh
+  setopt ERR_EXIT PIPE_FAIL
+
+  printf '  Platform: Linux\n'
+
+  if command -v apt-get &>/dev/null; then
+    printf '  Installing via apt (Debian/Ubuntu)...\n'
+    sudo apt-get install -y -qq wget gpg
+    wget -qO- https://releases.warp.dev/linux/keys/warp.asc | gpg --dearmor > /tmp/warpdotdev.gpg
+    sudo install -D -o root -g root -m 644 /tmp/warpdotdev.gpg /etc/apt/keyrings/warpdotdev.gpg
+    rm -f /tmp/warpdotdev.gpg
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/warpdotdev.gpg] https://releases.warp.dev/linux/deb stable main" | \
+      sudo tee /etc/apt/sources.list.d/warpdotdev.list > /dev/null
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq warp-terminal
+
+  elif command -v dnf &>/dev/null; then
+    printf '  Installing via dnf (Fedora/RHEL)...\n'
+    sudo rpm --import https://releases.warp.dev/linux/keys/warp.asc
+    sudo tee /etc/yum.repos.d/warpdotdev.repo > /dev/null <<'REPO'
+[warpdotdev]
+name=warpdotdev
+baseurl=https://releases.warp.dev/linux/rpm/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://releases.warp.dev/linux/keys/warp.asc
+REPO
+    sudo dnf install -y warp-terminal
+
+  elif command -v pacman &>/dev/null; then
+    printf '  Installing via pacman (Arch Linux)...\n'
+    # Use official Warp repository (not AUR)
+    if ! grep -q "warpdotdev" /etc/pacman.conf 2>/dev/null; then
+      printf '\n[warpdotdev]\nServer = https://releases.warp.dev/linux/pacman/$repo/$arch\n' | \
+        sudo tee -a /etc/pacman.conf > /dev/null
+    fi
+    sudo pacman-key -r "linux-maintainers@warp.dev" 2>/dev/null || true
+    sudo pacman-key --lsign-key "linux-maintainers@warp.dev" 2>/dev/null || true
+    sudo pacman -Sy --noconfirm warp-terminal
+
+  elif command -v zypper &>/dev/null; then
+    printf '  Installing via zypper (openSUSE/SLE)...\n'
+    sudo rpm --import https://releases.warp.dev/linux/keys/warp.asc
+    sudo tee /etc/zypp/repos.d/warpdotdev.repo > /dev/null <<'REPO'
+[warpdotdev]
+name=warpdotdev
+type=rpm-md
+baseurl=https://releases.warp.dev/linux/rpm/stable
+enabled=1
+autorefresh=1
+gpgcheck=1
+gpgkey=https://releases.warp.dev/linux/keys/warp.asc
+keeppackages=0
+REPO
+    sudo zypper --non-interactive install warp-terminal
+
+  else
+    printf 'WARNING: Unsupported package manager. Download from https://www.warp.dev/download\n' >&2
+    return 1
+  fi
+}
+
+# ── Install on macOS ───────────────────────────────────────────────
+install_warp_macos() {
+  emulate -L zsh
+  setopt ERR_EXIT PIPE_FAIL
+
+  printf '  Platform: macOS\n'
+
+  if command -v brew &>/dev/null; then
+    printf '  Installing via Homebrew...\n'
+    brew install --cask warp
+  else
+    printf 'ERROR: Homebrew not found. Install from https://www.warp.dev/download\n' >&2
+    return 1
+  fi
+}
+
+# ── Install on WSL ─────────────────────────────────────────────────
+install_warp_wsl() {
+  emulate -L zsh
+  setopt ERR_EXIT PIPE_FAIL
+
+  printf '  Platform: WSL (Windows Subsystem for Linux)\n'
+  printf '  NOTE: Warp runs as a native Windows app for WSL environments.\n'
+  printf '  Attempting Windows-side installation via winget...\n'
+
+  if command -v winget.exe &>/dev/null; then
+    winget.exe install --id Warp.Warp --accept-source-agreements --accept-package-agreements 2>/dev/null || {
+      printf '  winget install failed. Download from https://www.warp.dev/download\n'
+      return 1
+    }
+  elif command -v powershell.exe &>/dev/null; then
+    powershell.exe -NoProfile -Command \
+      "winget install --id Warp.Warp --accept-source-agreements --accept-package-agreements" 2>/dev/null || {
+      printf '  PowerShell winget install failed. Download from https://www.warp.dev/download\n'
+      return 1
+    }
+  else
+    printf '  Cannot access winget from WSL. Install Warp on Windows:\n'
+    printf '    winget install Warp.Warp\n'
+    printf '  Or download from: https://www.warp.dev/download\n'
+    return 1
+  fi
+}
+
+# ── Deploy team settings ──────────────────────────────────────────
+deploy_settings() {
+  emulate -L zsh
+
+  local platform="${1}"
+  local project_root="${2:-$(git rev-parse --show-toplevel 2>/dev/null || echo ".")}"
+  local warp_dir="${project_root}/.warp"
+
+  if [[ ! -d "${warp_dir}" ]]; then
+    printf '  No .warp/ directory found in project -- skipping settings deploy.\n'
+    return 0
+  fi
+
+  local settings_dest theme_dest
+  case "${platform}" in
+    macos)
+      settings_dest="${HOME}/.warp"
+      theme_dest="${HOME}/.warp/themes"
+      ;;
+    linux)
+      settings_dest="${XDG_CONFIG_HOME:-${HOME}/.config}/warp-terminal"
+      theme_dest="${XDG_DATA_HOME:-${HOME}/.local/share}/warp-terminal/themes"
+      ;;
+    wsl)
+      if [[ -n "${LOCALAPPDATA:-}" ]]; then
+        settings_dest="${LOCALAPPDATA}/warp/Warp/config"
+        theme_dest="${APPDATA}/warp/Warp/data/themes"
+      else
+        printf '  Cannot determine Windows Warp paths from WSL.\n'
+        return 0
+      fi
+      ;;
+    *) return 0 ;;
+  esac
+
+  # Deploy themes
+  if [[ -d "${warp_dir}/themes" ]]; then
+    mkdir -p "${theme_dest}"
+    local theme_file
+    for theme_file in "${warp_dir}"/themes/*.yaml; do
+      [[ -f "${theme_file}" ]] || continue
+      cp "${theme_file}" "${theme_dest}/"
+      printf '  Deployed theme: %s -> %s\n' "${theme_file:t}" "${theme_dest}/"
+    done
+  fi
+
+  # Deploy settings (only if user doesn't have custom settings)
+  if [[ -f "${warp_dir}/settings.toml" ]] && [[ ! -f "${settings_dest}/settings.toml" ]]; then
+    mkdir -p "${settings_dest}"
+    cp "${warp_dir}/settings.toml" "${settings_dest}/settings.toml"
+    printf '  Deployed team settings to %s\n' "${settings_dest}/settings.toml"
+  elif [[ -f "${settings_dest}/settings.toml" ]]; then
+    printf '  Existing settings.toml found -- not overwriting (team settings in .warp/settings.toml).\n'
+  fi
+}
+
+# ── Main ───────────────────────────────────────────────────────────
+main() {
+  emulate -L zsh
+  setopt ERR_EXIT PIPE_FAIL
+
+  local platform
+  platform="$(detect_platform)"
+
+  if check_existing; then
+    printf '==> Warp already installed. Deploying project settings...\n'
+    deploy_settings "${platform}"
+    printf '==> Warp setup complete.\n'
+    return 0
+  fi
+
+  case "${platform}" in
+    linux) install_warp_linux ;;
+    macos) install_warp_macos ;;
+    wsl)   install_warp_wsl ;;
+    *)
+      printf 'ERROR: Unsupported platform: %s\n' "${platform}" >&2
+      printf '  Download from: https://www.warp.dev/download\n'
+      return 1
+      ;;
+  esac
+
+  deploy_settings "${platform}"
+
+  printf '==> Warp installation complete.\n'
+  printf '  Launch Warp and sign in to enable AI features and Warp Drive.\n'
+  printf '  Team theme and settings have been deployed.\n'
+}
+
+main "$@"

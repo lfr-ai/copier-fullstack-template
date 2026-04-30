@@ -4,6 +4,8 @@ Concrete adapters may use LangGraph, CrewAI,
 AutoGen, or custom orchestration implementations.
 """
 
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable, final

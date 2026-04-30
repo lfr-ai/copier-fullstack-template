@@ -1,0 +1,114 @@
+# Install GitNexus -- graph-powered code intelligence engine (Windows)
+# Requires: Node.js 18+/npm OR Bun
+#Requires -Version 5.1
+
+$ErrorActionPreference = "Stop"
+
+Write-Host "==> Installing GitNexus..." -ForegroundColor Cyan
+
+# ── Verify runtime ────────────────────────────────────────────────
+$Runtime = $null
+$Runner = $null
+
+if (Get-Command bun -ErrorAction SilentlyContinue) {
+    $BunVersion = bun --version 2>$null
+    Write-Host "  Runtime: Bun $BunVersion"
+    $Runtime = "bun"
+    $Runner = "bunx"
+}
+elseif ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+    $NodeVersion = node --version 2>$null
+    Write-Host "  Runtime: Node.js $NodeVersion"
+
+    # Check minimum version (Node 20+)
+    $Major = [int]($NodeVersion -replace '^v(\d+)\..*', '$1')
+    if ($Major -lt 20) {
+        Write-Host "ERROR: Node.js 20+ required (found $NodeVersion)" -ForegroundColor Red
+        exit 1
+    }
+
+    $Runtime = "node"
+    $Runner = "npx"
+}
+else {
+    Write-Host "ERROR: Neither Bun nor Node.js/npm found." -ForegroundColor Red
+    Write-Host "  Install Bun: irm bun.sh/install.ps1 | iex"
+    Write-Host "  Or Node.js 20+: https://nodejs.org"
+    exit 1
+}
+
+# ── Install globally ──────────────────────────────────────────────
+$AlreadyInstalled = Get-Command gitnexus -ErrorAction SilentlyContinue
+if ($AlreadyInstalled) {
+    $CurrentVersion = gitnexus --version 2>$null
+    Write-Host "  GitNexus already installed: $CurrentVersion" -ForegroundColor Gray
+    Write-Host "  Updating to latest..."
+}
+else {
+    Write-Host "  Installing gitnexus globally..."
+}
+
+try {
+    if ($Runtime -eq "bun") {
+        bun install -g gitnexus@latest
+    }
+    else {
+        npm install -g gitnexus@latest
+    }
+}
+catch {
+    Write-Host "  Install failed: $_" -ForegroundColor Yellow
+    Write-Host "  Trying via $Runner instead..."
+}
+
+# ── Verify installation ──────────────────────────────────────────
+if (Get-Command gitnexus -ErrorAction SilentlyContinue) {
+    $Version = gitnexus --version 2>$null
+    Write-Host "  GitNexus installed: $Version" -ForegroundColor Green
+}
+else {
+    Write-Host "  GitNexus available via $Runner (not in PATH globally)" -ForegroundColor Yellow
+}
+
+# ── Configure MCP ─────────────────────────────────────────────────
+Write-Host "  Configuring MCP integration for AI editors..."
+
+try {
+    if (Get-Command gitnexus -ErrorAction SilentlyContinue) {
+        gitnexus setup 2>$null
+        Write-Host "  MCP configured for detected editors." -ForegroundColor Gray
+    }
+    else {
+        & $Runner -y gitnexus@latest setup 2>$null
+        Write-Host "  MCP configured via $Runner." -ForegroundColor Gray
+    }
+}
+catch {
+    Write-Host "  NOTE: MCP setup deferred. Run 'gitnexus setup' after installing editors." -ForegroundColor Yellow
+}
+
+# ── Index current repository ──────────────────────────────────────
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+
+if (Test-Path (Join-Path $ProjectRoot ".git")) {
+    Write-Host "  Indexing repository for code intelligence..."
+    try {
+        if (Get-Command gitnexus -ErrorAction SilentlyContinue) {
+            gitnexus analyze $ProjectRoot --skip-embeddings 2>$null
+        }
+        else {
+            & $Runner -y gitnexus@latest analyze $ProjectRoot --skip-embeddings 2>$null
+        }
+        Write-Host "  Index built successfully." -ForegroundColor Green
+    }
+    catch {
+        Write-Host "  NOTE: Index deferred. Run 'gitnexus analyze' manually." -ForegroundColor Yellow
+    }
+}
+else {
+    Write-Host "  Not a git repository -- skipping initial index." -ForegroundColor Gray
+}
+
+Write-Host "==> GitNexus installation complete." -ForegroundColor Green
+Write-Host "  Run 'gitnexus status' to check index health."
+Write-Host "  MCP server auto-starts when AI editors connect."

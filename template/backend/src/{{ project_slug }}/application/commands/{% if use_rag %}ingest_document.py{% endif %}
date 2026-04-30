@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import override
+from typing import final, override
 
 import structlog
 
@@ -21,6 +21,7 @@ _DEFAULT_CHUNK_OVERLAP = 64
 logger = structlog.get_logger(__name__)
 
 
+@final
 @dataclass(frozen=True, slots=True)
 class IngestDocumentCommand:
     """Command to ingest a document into the RAG pipeline."""
@@ -31,6 +32,7 @@ class IngestDocumentCommand:
     chunk_overlap: int = _DEFAULT_CHUNK_OVERLAP
 
 
+@final
 class IngestDocumentHandler(CommandHandler[IngestDocumentCommand, IngestionResultDTO]):
     """Handles document ingestion through the RAG pipeline."""
 

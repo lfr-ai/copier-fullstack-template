@@ -1,0 +1,71 @@
+# {{ project_name }} — Warp Terminal Team Settings
+# Copy to your Warp settings directory or symlink for consistent team experience.
+# Locations:
+#   macOS:   ~/.warp/settings.toml
+#   Linux:   ~/.config/warp-terminal/settings.toml
+#   Windows: %LOCALAPPDATA%\warp\Warp\config\settings.toml
+#
+# Hot-reloads on save. Delete to reset to defaults.
+
+[general]
+session_restore = true
+tab_placement = "top"
+
+[appearance.text]
+font_name = "JetBrains Mono"
+font_size = 13
+line_height_ratio = 1.4
+ligatures = true
+
+[appearance.themes]
+theme = "{{ project_slug }}"
+
+[appearance.cursor]
+blinking = true
+
+[terminal.input]
+syntax_highlighting = true
+honor_ps1 = true
+
+[text_editing]
+vim_mode_enabled = false
+
+[agents.profiles.default]
+# Safe commands that agents can run without asking
+allowed_commands = [
+  "cat",
+  "ls",
+  "find",
+  "grep",
+  "rg",
+  "head",
+  "tail",
+  "wc",
+  "diff",
+  "git status",
+  "git log",
+  "git diff",
+  "git branch",
+  "task --list",
+  "task lint",
+  "task format",
+  "task typecheck",
+  "task test:unit",
+  "task registry:check",
+  "bun --version",
+  "python --version",
+  "uv --version",
+]
+
+# Commands that always require confirmation
+denied_commands = [
+  "rm -rf",
+  "git push --force",
+  "git reset --hard",
+  "sudo rm",
+  "DROP TABLE",
+  "DROP DATABASE",
+]
+
+[agents.warp_agent.input]
+auto_complete = true

@@ -1,5 +1,7 @@
 """Email gateway -- contract for sending email messages."""
 
+from __future__ import annotations
+
 from typing import Protocol, runtime_checkable
 
 

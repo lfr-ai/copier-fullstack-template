@@ -3,6 +3,8 @@
 Use 'Jinja2PromptTemplate' directly for new code.
 """
 
+from __future__ import annotations
+
 from typing import final
 
 from .jinja2_templates import Jinja2PromptTemplate

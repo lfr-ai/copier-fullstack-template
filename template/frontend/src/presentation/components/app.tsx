@@ -16,27 +16,27 @@ import { cn } from '@/lib/utils';
 
 /** Lazy-loaded route components for code-splitting. */
 const HomePage = lazy(() =>
-  import('@/presentation/pages/Home').then((module) => ({
+  import('@/presentation/pages/home').then((module) => ({
     default: module.Home,
   })),
 );
 const DashboardPage = lazy(() =>
-  import('@/presentation/pages/Dashboard').then((module) => ({
+  import('@/presentation/pages/dashboard').then((module) => ({
     default: module.Dashboard,
   })),
 );
 const FormsPage = lazy(() =>
-  import('@/presentation/pages/Forms').then((module) => ({
+  import('@/presentation/pages/forms').then((module) => ({
     default: module.Forms,
   })),
 );
 const SettingsPage = lazy(() =>
-  import('@/presentation/pages/Settings').then((module) => ({
+  import('@/presentation/pages/settings').then((module) => ({
     default: module.Settings,
   })),
 );
 const NotFoundPage = lazy(() =>
-  import('@/presentation/pages/NotFound').then((module) => ({
+  import('@/presentation/pages/not-found').then((module) => ({
     default: module.NotFound,
   })),
 );

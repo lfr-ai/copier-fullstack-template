@@ -1,5 +1,7 @@
 """Base chain -- abstract foundation for LLM chain compositions."""
 
+from __future__ import annotations
+
 from typing import final
 
 import abc

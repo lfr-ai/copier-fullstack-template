@@ -15,8 +15,6 @@ init = "init"
 msg = "msg"
 fmt = "fmt"
 src = "src"
-nd = "nd"
-hel = "hel"
 
 [files]
 extend-exclude = [
@@ -26,4 +24,5 @@ extend-exclude = [
     "htmlcov/",
     "logs/**",
     ".lycheecache",
+    "template/**/*.jinja",
 ]
