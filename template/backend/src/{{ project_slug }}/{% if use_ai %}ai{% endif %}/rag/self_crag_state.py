@@ -4,6 +4,8 @@ Defines the state structure for the self-corrective RAG pipeline,
 including query, retrieved documents, relevance scores, and cycle tracking.
 """
 
+from __future__ import annotations
+
 from typing import TypedDict
 
 # Use relative import to avoid template variable issues

@@ -1,0 +1,90 @@
+# Install Warp -- modern GPU-accelerated terminal (Windows)
+# Requires: Windows 10 build 17763+ or Windows 11, winget
+#Requires -Version 5.1
+
+$ErrorActionPreference = "Stop"
+
+Write-Host "==> Installing Warp Terminal (Windows)..." -ForegroundColor Cyan
+
+# ── Check if already installed ─────────────────────────────────────
+$WarpPaths = @(
+    "$env:LOCALAPPDATA\Programs\Warp\warp.exe",
+    "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Warp.Warp_*\warp.exe"
+)
+
+$Found = $false
+foreach ($WarpPath in $WarpPaths) {
+    $resolved = Get-Item $WarpPath -ErrorAction SilentlyContinue
+    if ($resolved) {
+        Write-Host "  Warp already installed: $($resolved.FullName)" -ForegroundColor Green
+        $Found = $true
+        break
+    }
+}
+
+if (-not $Found) {
+    # Check via winget list
+    try {
+        $installed = winget list --id Warp.Warp 2>$null
+        if ($installed -match "Warp.Warp") {
+            Write-Host "  Warp already installed (found via winget)." -ForegroundColor Green
+            $Found = $true
+        }
+    }
+    catch {}
+}
+
+if ($Found) {
+    Write-Host "==> Warp installation complete (already present)."
+}
+else {
+    # ── Install via winget ─────────────────────────────────────────────
+    Write-Host "  Installing via winget (package: Warp.Warp)..."
+
+    try {
+        winget install --id Warp.Warp `
+            --accept-source-agreements `
+            --accept-package-agreements `
+            --silent
+        Write-Host "  Warp installed successfully." -ForegroundColor Green
+    }
+    catch {
+        Write-Host "  winget install failed: $_" -ForegroundColor Yellow
+        Write-Host "  Download manually from: https://www.warp.dev/download" -ForegroundColor Yellow
+        exit 1
+    }
+}
+
+# ── Deploy team settings ───────────────────────────────────────────
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+$WarpDir = Join-Path $ProjectRoot ".warp"
+
+if (Test-Path $WarpDir) {
+    $SettingsDest = "$env:LOCALAPPDATA\warp\Warp\config"
+    $ThemeDest = "$env:APPDATA\warp\Warp\data\themes"
+
+    # Deploy themes
+    $ThemesDir = Join-Path $WarpDir "themes"
+    if (Test-Path $ThemesDir) {
+        New-Item -ItemType Directory -Force -Path $ThemeDest | Out-Null
+        Get-ChildItem -Path $ThemesDir -Filter "*.yaml" | ForEach-Object {
+            Copy-Item $_.FullName -Destination $ThemeDest -Force
+            Write-Host "  Deployed theme: $($_.Name)" -ForegroundColor Gray
+        }
+    }
+
+    # Deploy settings (only if no existing settings)
+    $SettingsSource = Join-Path $WarpDir "settings.toml"
+    $SettingsTarget = Join-Path $SettingsDest "settings.toml"
+    if ((Test-Path $SettingsSource) -and -not (Test-Path $SettingsTarget)) {
+        New-Item -ItemType Directory -Force -Path $SettingsDest | Out-Null
+        Copy-Item $SettingsSource -Destination $SettingsTarget
+        Write-Host "  Deployed team settings." -ForegroundColor Gray
+    }
+    elseif (Test-Path $SettingsTarget) {
+        Write-Host "  Existing settings.toml found -- not overwriting." -ForegroundColor Gray
+    }
+}
+
+Write-Host "==> Warp installation complete." -ForegroundColor Green
+Write-Host "  Launch Warp and sign in to enable AI features and Warp Drive."

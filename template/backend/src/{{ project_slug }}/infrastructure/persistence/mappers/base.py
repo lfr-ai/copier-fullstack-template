@@ -7,6 +7,8 @@ This enforces the Dependency Rule: adapters depend on core,
 never the reverse.
 """
 
+from __future__ import annotations
+
 from typing import Protocol, TypeVar
 
 EntityT = TypeVar("EntityT")

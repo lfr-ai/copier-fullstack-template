@@ -1,0 +1,78 @@
+# GitNexus Configuration
+
+This directory contains [GitNexus](https://github.com/abhigyanpatwari/GitNexus)
+configuration for the **{{ project_name }}** project.
+
+GitNexus is a zero-server code intelligence engine that indexes the codebase into a
+knowledge graph, exposing structure-aware context to AI coding agents via MCP.
+
+## Contents
+
+| Path | Purpose |
+|------|---------|
+| `config.json` | Indexing and MCP configuration |
+| `hooks/post-commit` | Git hook for incremental index updates |
+
+## How It Works
+
+1. **Indexing** — GitNexus parses the codebase with Tree-sitter, extracting functions,
+   classes, imports, and call relationships into a knowledge graph.
+2. **MCP Server** — Exposes tools (`query`, `context`, `impact`, `detect_changes`,
+   `rename`) to AI agents via Model Context Protocol.
+3. **Incremental Updates** — The post-commit hook triggers lightweight re-indexing
+   after each commit, keeping the graph current.
+
+## MCP Tools Available to AI Agents
+
+| Tool | Purpose |
+|------|---------|
+| `query` | Hybrid search (BM25 + semantic + rank fusion) |
+| `context` | 360-degree symbol view with categorized references |
+| `impact` | Blast radius analysis with depth grouping |
+| `detect_changes` | Map git diff to affected processes |
+| `rename` | Multi-file coordinated rename |
+
+## Commands
+
+```bash
+# Build initial index
+gitnexus analyze
+
+# Force complete re-index
+gitnexus analyze --force
+
+# Check index status
+gitnexus status
+
+# Start MCP server manually
+gitnexus mcp
+
+# Generate skill files for AI editors
+gitnexus analyze --skills
+
+# Generate documentation from knowledge graph
+gitnexus wiki
+
+# Clean index data
+gitnexus clean
+```
+
+## Editor Integration
+
+GitNexus MCP is configured in:
+- `.vscode/mcp.json` — VS Code / GitHub Copilot
+{% if with_gsd %}- `.gsd/mcp.json` — GSD-2
+{% endif %}
+
+## Data Storage
+
+Index data (databases, caches, embeddings) is stored in `.gitnexus/` subdirectories
+and gitignored. Only `config.json` and `hooks/` are committed.
+
+## Configuration
+
+Edit `config.json` to adjust:
+- **languages** — Which languages to parse
+- **include/exclude** — File glob patterns for indexing scope
+- **mcp.tools** — Which MCP tools to expose
+- **hooks** — Post-commit behavior

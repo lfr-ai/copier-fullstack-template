@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import override
+from typing import final, override
 
 import structlog
 
@@ -15,6 +15,7 @@ logger = structlog.get_logger(__name__)
 _DEFAULT_QUERY_LIMIT = 50
 
 
+@final
 @dataclass(frozen=True, slots=True)
 class KnowledgeGraphQueryResult:
     """Result from a knowledge graph query."""
@@ -25,6 +26,7 @@ class KnowledgeGraphQueryResult:
     entity_count: int
 
 
+@final
 @dataclass(frozen=True, slots=True)
 class KnowledgeGraphQuery:
     """Query for knowledge graph traversal."""
@@ -34,6 +36,7 @@ class KnowledgeGraphQuery:
     limit: int = _DEFAULT_QUERY_LIMIT
 
 
+@final
 class KnowledgeGraphQueryHandler(QueryHandler[KnowledgeGraphQuery, KnowledgeGraphQueryResult]):
     """Handles knowledge graph neighborhood queries."""
 

@@ -22,6 +22,14 @@ tools:
     context7/get-library-docs,
     context7/resolve-library-id,
   ]
+model: ['Claude Sonnet 4', 'Claude Opus 4']
+handoffs:
+  - label: 'Write regression test'
+    agent: tdd
+    prompt: 'Write a regression test for the bug that was just fixed'
+  - label: 'Deep analysis needed'
+    agent: deep-thinking
+    prompt: 'This bug requires deeper analysis of the system interactions'
 ---
 
 # Debug Mode Instructions

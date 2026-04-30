@@ -1,0 +1,215 @@
+#!/usr/bin/env zsh
+# Install GitNexus -- graph-powered code intelligence engine for AI agents
+# Requires Node.js/npm OR Bun (uses bun/npm for global install)
+emulate -L zsh
+setopt ERR_EXIT PIPE_FAIL
+
+printf '==> Installing GitNexus...\n'
+
+# ── Verify runtime ─────────────────────────────────────────────────
+RUNTIME=""
+RUNNER=""
+
+verify_runtime() {
+  emulate -L zsh
+
+  if command -v bun &>/dev/null; then
+    printf '  Runtime: Bun %s\n' "$(bun --version 2>/dev/null)"
+    RUNTIME="bun"
+    RUNNER="bunx"
+    return 0
+  fi
+
+  if command -v node &>/dev/null && command -v npm &>/dev/null; then
+    local node_version
+    node_version="$(node --version 2>/dev/null)"
+    printf '  Runtime: Node.js %s\n' "${node_version}"
+
+    # GitNexus requires Node 20+
+    local major="${node_version#v}"
+    major="${major%%.*}"
+    if (( major < 20 )); then
+      printf 'ERROR: Node.js 20+ required (found %s)\n' "${node_version}" >&2
+      return 1
+    fi
+
+    RUNTIME="node"
+    RUNNER="npx"
+    return 0
+  fi
+
+  printf 'ERROR: Neither Bun nor Node.js/npm found.\n' >&2
+  printf '  Install Bun: curl -fsSL https://bun.sh/install | bash\n' >&2
+  printf '  Or Node.js 20+: https://nodejs.org\n' >&2
+  return 1
+}
+
+# ── Install globally ───────────────────────────────────────────────
+install_gitnexus() {
+  emulate -L zsh
+  setopt ERR_EXIT PIPE_FAIL
+
+  if command -v gitnexus &>/dev/null; then
+    local current_version
+    current_version="$(gitnexus --version 2>/dev/null || echo 'unknown')"
+    printf '  GitNexus already installed: %s\n' "${current_version}"
+    printf '  Updating to latest...\n'
+  else
+    printf '  Installing gitnexus globally...\n'
+  fi
+
+  case "${RUNTIME}" in
+    bun)
+      bun install -g gitnexus@latest 2>&1 | tail -3
+      ;;
+    node)
+      npm install -g gitnexus@latest 2>&1 | tail -3
+      ;;
+  esac
+}
+
+# ── Configure MCP for editors ──────────────────────────────────────
+configure_mcp() {
+  emulate -L zsh
+
+  printf '  Configuring MCP integration for AI editors...\n'
+
+  # Run gitnexus setup (auto-detects Claude Code, Cursor, Windsurf, etc.)
+  if command -v gitnexus &>/dev/null; then
+    gitnexus setup 2>/dev/null || {
+      printf '  NOTE: gitnexus setup did not complete (editors may not be detected).\n'
+      printf '  Run "gitnexus setup" manually after installing your editors.\n'
+    }
+  else
+    ${RUNNER} -y gitnexus@latest setup 2>/dev/null || {
+      printf '  NOTE: gitnexus setup via %s did not complete.\n' "${RUNNER}"
+    }
+  fi
+}
+
+# ── Index current repository ───────────────────────────────────────
+index_repository() {
+  emulate -L zsh
+
+  local project_root="${1:-.}"
+
+  if [[ ! -d "${project_root}/.git" ]]; then
+    printf '  Not a git repository -- skipping initial index.\n'
+    return 0
+  fi
+
+  printf '  Indexing repository for code intelligence...\n'
+  if command -v gitnexus &>/dev/null; then
+    gitnexus analyze "${project_root}" --skip-embeddings 2>&1 | while IFS= read -r line; do
+      printf '    %s\n' "${line}"
+    done || {
+      printf '  NOTE: Initial index deferred. Run "gitnexus analyze" manually.\n'
+    }
+  else
+    ${RUNNER} -y gitnexus@latest analyze "${project_root}" --skip-embeddings 2>/dev/null || {
+      printf '  NOTE: Initial index deferred. Run "gitnexus analyze" manually.\n'
+    }
+  fi
+}
+
+# ── Install git hooks ─────────────────────────────────────────────
+install_hooks() {
+  emulate -L zsh
+
+  local project_root="${1:-.}"
+  local hooks_dir="${project_root}/.git/hooks"
+
+  if [[ ! -d "${hooks_dir}" ]]; then
+    printf '  No .git/hooks directory -- skipping hook installation.\n'
+    return 0
+  fi
+
+  # Create a post-commit hook that incrementally indexes
+  local target="${hooks_dir}/post-commit"
+  local hook_content='#!/usr/bin/env zsh
+# GitNexus incremental index on commit
+if command -v gitnexus &>/dev/null; then
+  gitnexus analyze . --incremental &>/dev/null &
+elif command -v bunx &>/dev/null; then
+  bunx -y gitnexus@latest analyze . --incremental &>/dev/null &
+fi'
+
+  if [[ -f "${target}" ]]; then
+    if grep -q "gitnexus" "${target}" 2>/dev/null; then
+      printf '  GitNexus hook already present in post-commit.\n'
+      return 0
+    fi
+    printf '  Appending GitNexus hook to existing post-commit...\n'
+    printf '\n# GitNexus incremental index\n' >> "${target}"
+    printf 'if command -v gitnexus &>/dev/null; then\n' >> "${target}"
+    printf '  gitnexus analyze . --incremental &>/dev/null &\n' >> "${target}"
+    printf 'elif command -v bunx &>/dev/null; then\n' >> "${target}"
+    printf '  bunx -y gitnexus@latest analyze . --incremental &>/dev/null &\n' >> "${target}"
+    printf 'fi\n' >> "${target}"
+  else
+    printf '  Installing GitNexus post-commit hook...\n'
+    printf '%s\n' "${hook_content}" > "${target}"
+    chmod +x "${target}"
+  fi
+}
+
+# ── Generate skill files ──────────────────────────────────────────
+generate_skills() {
+  emulate -L zsh
+
+  local project_root="${1:-.}"
+
+  printf '  Generating repository skill files...\n'
+  if command -v gitnexus &>/dev/null; then
+    gitnexus analyze "${project_root}" --skills 2>/dev/null || {
+      printf '  NOTE: Skill generation deferred. Run "gitnexus analyze --skills" manually.\n'
+    }
+  else
+    ${RUNNER} -y gitnexus@latest analyze "${project_root}" --skills 2>/dev/null || {
+      printf '  NOTE: Skill generation deferred.\n'
+    }
+  fi
+}
+
+# ── Verify installation ───────────────────────────────────────────
+verify_install() {
+  emulate -L zsh
+
+  if command -v gitnexus &>/dev/null; then
+    printf '  GitNexus installed: %s\n' "$(gitnexus --version 2>/dev/null || echo 'unknown')"
+    return 0
+  fi
+
+  # Check if accessible via runner
+  if ${RUNNER} -y gitnexus@latest --version &>/dev/null 2>&1; then
+    printf '  GitNexus available via %s (not installed globally)\n' "${RUNNER}"
+    return 0
+  fi
+
+  printf 'WARNING: GitNexus command not found after install. Check PATH.\n' >&2
+  return 1
+}
+
+# ── Main ───────────────────────────────────────────────────────────
+main() {
+  emulate -L zsh
+  setopt ERR_EXIT PIPE_FAIL
+
+  local project_root
+  project_root="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
+
+  verify_runtime
+  install_gitnexus
+  verify_install
+  configure_mcp
+  index_repository "${project_root}"
+  install_hooks "${project_root}"
+  generate_skills "${project_root}"
+
+  printf '==> GitNexus installation complete.\n'
+  printf '  Code intelligence graph built for: %s\n' "${project_root}"
+  printf '  MCP server available for AI agents (Claude Code, Cursor, Windsurf).\n'
+  printf '  Post-commit hook installed for incremental indexing.\n'
+}
+
+main "$@"

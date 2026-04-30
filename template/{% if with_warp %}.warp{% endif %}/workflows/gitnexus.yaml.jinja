@@ -1,0 +1,18 @@
+{%- if with_gitnexus %}
+---
+name: GitNexus Code Intelligence
+command: gitnexus {{action}} {{args}}
+tags:
+  - gitnexus
+  - code-intelligence
+  - ai
+description: "GitNexus graph-powered code intelligence (analyze, status, query, wiki)"
+arguments:
+  - name: action
+    description: "GitNexus action: analyze, status, clean, wiki, mcp, list"
+    default_value: status
+  - name: args
+    description: "Additional arguments (e.g., --force for re-index, path for analyze)"
+    default_value: ""
+---
+{%- endif %}

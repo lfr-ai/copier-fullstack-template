@@ -1,5 +1,7 @@
 """Standard error response schemas for API endpoints."""
 
+from __future__ import annotations
+
 from typing import Annotated, final
 
 from pydantic import Field

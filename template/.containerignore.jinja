@@ -1,71 +1,50 @@
-# ── Build artifacts & caches ──────────────────────────────────────────────────
+# Dependencies & build
 **/node_modules/
 **/.venv/
 **/__pycache__/
-**/*.pyc
-**/*.pyo
-*$py.class
 **/dist/
 **/build/
 **/*.egg-info/
-**/.pytest_cache/
-**/.hypothesis/
-**/.ty_cache/
-**/.ruff_cache/
-**/.mypy_cache/
-**/.tox/
-**/.nox/
-**/.vite/
-**/.uv/
-.tox
-.bun
+.tox/
+profiles/
 
-# ── Environment & secrets ────────────────────────────────────────────────────
+# Secrets
 .env
 .env.*
 !.env.example
 **/*.key
 **/*.pem
-*.baseline
+**/*.crt
+**/*.p12
+secrets/
 
-# ── VCS & editor ─────────────────────────────────────────────────────────────
+# VCS & editor
 .git/
 .github/
 .vscode/
 .idea/
-*.swp
-*.swo
+.devcontainer/
 
-# ── Logs & reports ───────────────────────────────────────────────────────────
-logs/
-*.log
-jscpd-report/
-temp/
-tmp/
-playwright-report/
-test-results/
+# Claude Code local
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Tests & docs (not needed in image)
+**/tests/
 coverage/
 htmlcov/
-
-# ── Documentation & tooling (not needed in image) ───────────────────────────
+playwright-report/
+storybook-static/
+.lighthouseci/
 *.md
 !README.md
 docs/
-{%- if secret_backend == "azure_kv" %}
-azure/
-{%- endif %}
 tasks/
-registry/
-backend/seeds/
-backend/tests/
 scripts/
-frontend/tests/
-data/*.db
+tools/
+registry/
 .task
+.pre-commit-config.yaml
+Taskfile.yml
 .dockerignore
 .containerignore
-.editorconfig
-.pre-commit-config.yaml
-.secrets.baseline
-renovate.json5
-copier.yml

@@ -1,5 +1,7 @@
 """CrewAI configuration -- constants and defaults for crew orchestration."""
 
+from __future__ import annotations
+
 
 # ── Crew defaults ───────────────────────────────────────────────────
 DEFAULT_CREW_MAX_RPM = 30

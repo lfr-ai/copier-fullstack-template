@@ -1,0 +1,68 @@
+#!/usr/bin/env zsh
+# Setup GitNexus code intelligence for the project
+# Called during bootstrap to index the codebase and configure MCP
+emulate -L zsh
+setopt PIPE_FAIL
+
+SCRIPT_DIR="${0:A:h}"
+PROJECT_ROOT="${SCRIPT_DIR:h}"
+
+printf '==> Setting up GitNexus code intelligence...\n'
+
+# ── Determine runner ────────────────────────────────────────────────
+GITNEXUS_CMD=""
+if command -v gitnexus &>/dev/null; then
+  GITNEXUS_CMD="gitnexus"
+elif command -v bunx &>/dev/null; then
+  GITNEXUS_CMD="bunx -y gitnexus@latest"
+elif command -v npx &>/dev/null; then
+  GITNEXUS_CMD="npx -y gitnexus@latest"
+else
+  printf 'WARNING: No suitable runtime for GitNexus (need gitnexus, bunx, or npx).\n' >&2
+  printf '  Install with: bun install -g gitnexus@latest\n'
+  exit 0
+fi
+
+# ── Index the repository ────────────────────────────────────────────
+cd "${PROJECT_ROOT}"
+
+if [[ -d ".git" ]]; then
+  printf '  Analyzing repository structure...\n'
+  ${=GITNEXUS_CMD} analyze . --skip-embeddings 2>&1 | while IFS= read -r line; do
+    printf '    %s\n' "${line}"
+  done || {
+    printf '  NOTE: Initial analysis incomplete. Run "gitnexus analyze" manually.\n'
+  }
+else
+  printf '  WARNING: Not a git repository. Skipping analysis.\n'
+fi
+
+# ── Install git hooks ───────────────────────────────────────────────
+if [[ -d ".git/hooks" ]]; then
+  local hook_file=".git/hooks/post-commit"
+  if [[ -f "${hook_file}" ]]; then
+    if ! grep -q "gitnexus" "${hook_file}" 2>/dev/null; then
+      printf '\n# GitNexus incremental index\n' >> "${hook_file}"
+      printf 'if command -v gitnexus &>/dev/null; then\n' >> "${hook_file}"
+      printf '  gitnexus analyze . --incremental &>/dev/null &\n' >> "${hook_file}"
+      printf 'elif command -v bunx &>/dev/null; then\n' >> "${hook_file}"
+      printf '  bunx -y gitnexus@latest analyze . --incremental &>/dev/null &\n' >> "${hook_file}"
+      printf 'fi\n' >> "${hook_file}"
+      printf '  Added GitNexus to existing post-commit hook.\n'
+    fi
+  else
+    printf '#!/usr/bin/env zsh\n' > "${hook_file}"
+    printf '# GitNexus incremental index on commit\n' >> "${hook_file}"
+    printf 'if command -v gitnexus &>/dev/null; then\n' >> "${hook_file}"
+    printf '  gitnexus analyze . --incremental &>/dev/null &\n' >> "${hook_file}"
+    printf 'elif command -v bunx &>/dev/null; then\n' >> "${hook_file}"
+    printf '  bunx -y gitnexus@latest analyze . --incremental &>/dev/null &\n' >> "${hook_file}"
+    printf 'fi\n' >> "${hook_file}"
+    chmod +x "${hook_file}"
+    printf '  Installed GitNexus post-commit hook.\n'
+  fi
+fi
+
+printf '==> GitNexus setup complete.\n'
+printf '  The knowledge graph will update incrementally on each commit.\n'
+printf '  AI editors (Claude Code, Cursor, Windsurf) can now query code structure via MCP.\n'

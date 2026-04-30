@@ -1,0 +1,12 @@
+---
+name: Backend Tests
+command: task backend:test:{{type}}
+tags:
+  - test
+  - backend
+description: Run backend tests by type (unit, integration, property, coverage)
+arguments:
+  - name: type
+    description: "Test type: unit, integration, property, performance, coverage"
+    default_value: unit
+---

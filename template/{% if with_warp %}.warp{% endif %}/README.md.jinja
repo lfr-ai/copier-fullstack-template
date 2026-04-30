@@ -1,0 +1,73 @@
+# Warp Terminal Configuration
+
+This directory contains shared [Warp](https://warp.dev) terminal configuration for
+the **{{ project_name }}** development team.
+
+## Contents
+
+| Path | Purpose |
+|------|---------|
+| `settings.toml` | Recommended team terminal settings (agent profiles, appearance) |
+| `themes/{{ project_slug }}.yaml` | Custom project color theme |
+| `workflows/*.yaml` | Parameterized command workflows accessible from Warp |
+| `notebooks/onboarding.md` | Interactive onboarding notebook |
+| `AGENTS.md` | Warp Agent Mode project rules |
+
+## Setup
+
+Settings and themes are deployed automatically by `scripts/install/install-warp.zsh`.
+
+To deploy manually:
+
+```bash
+# macOS
+cp settings.toml ~/.warp/settings.toml
+cp themes/*.yaml ~/.warp/themes/
+
+# Linux
+cp settings.toml ~/.config/warp-terminal/settings.toml
+cp themes/*.yaml ~/.local/share/warp-terminal/themes/
+
+# Windows
+copy settings.toml %LOCALAPPDATA%\warp\Warp\config\settings.toml
+copy themes\*.yaml %APPDATA%\warp\Warp\data\themes\
+```
+
+## Workflows
+
+Warp workflows are parameterized commands shared across the team. They appear in
+Warp's command palette and support tab-completion for arguments.
+
+Available workflows:
+
+- **Start Development** — `task dev`
+- **Bootstrap Project** — Full environment setup
+- **Docker Compose** — Container lifecycle management
+- **Run All Tests** — Full test suite
+- **Backend Tests** — By type (unit/integration/property)
+- **Type Check** — Backend + frontend type checking
+- **Lint & Format** — Code quality enforcement
+- **Security Audit** — Vulnerability scanning
+- **Database Migration** — Schema management
+- **Deploy** — Environment-specific deployment
+- **Profile** — CPU/memory profiling
+- **Registry** — Naming registry operations
+- **Frontend Build** — Mode-specific builds
+- **Health Check** — Service health verification
+- **Git Workflow** — Common git operations
+{% if use_ai %}- **AI Ops** — AI infrastructure management
+{% endif %}{% if cloud_provider == 'azure' %}- **Azure Infrastructure** — IaC operations
+{% endif %}{% if with_gitnexus %}- **GitNexus** — Code intelligence operations
+{% endif %}
+
+## Agent Mode
+
+The `AGENTS.md` file provides project context to Warp's built-in AI agent. It
+understands the project architecture, available commands, and coding conventions.
+
+## Customization
+
+- **Settings**: Edit `settings.toml` and commit for team-wide updates
+- **Theme**: Modify `themes/{{ project_slug }}.yaml` for custom colors
+- **Workflows**: Add new `.yaml` files to `workflows/` following the format
+- **Agent rules**: Update `AGENTS.md` with new conventions

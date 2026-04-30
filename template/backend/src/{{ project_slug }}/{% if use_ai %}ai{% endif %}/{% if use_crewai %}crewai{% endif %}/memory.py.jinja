@@ -93,6 +93,7 @@ def create_memory(
 
 def create_agent_scoped_memory(
     memory: object,
+    *,
     agent_name: str,
 ) -> object:
     """Create a scope-restricted memory view for a specific agent.
@@ -117,6 +118,7 @@ def create_agent_scoped_memory(
 
 def create_read_only_slice(
     memory: object,
+    *,
     scopes: list[str],
 ) -> object:
     """Create a read-only memory slice across multiple scope branches.

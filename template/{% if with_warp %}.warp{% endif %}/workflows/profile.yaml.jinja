@@ -1,0 +1,12 @@
+---
+name: Profile Performance
+command: task profile:{{type}}
+tags:
+  - profile
+  - performance
+description: "Run CPU or memory profiler on the backend application"
+arguments:
+  - name: type
+    description: "Profile type: cpu (pyinstrument) or memory (tracemalloc)"
+    default_value: cpu
+---

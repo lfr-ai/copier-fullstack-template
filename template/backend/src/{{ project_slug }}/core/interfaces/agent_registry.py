@@ -1,5 +1,7 @@
 """Agent registry gateway -- abstract interface for agent discovery and management."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable, final
 

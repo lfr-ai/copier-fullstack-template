@@ -1,6 +1,6 @@
 /**
  * Shared React hooks — barrel export.
  */
-export { useMediaQuery } from './useMediaQuery';
-export { useDebounce } from './useDebounce';
-export { useZodForm } from './useZodForm';
+export { useMediaQuery } from './use-media-query';
+export { useDebounce } from './use-debounce';
+export { useZodForm } from './use-zod-form';

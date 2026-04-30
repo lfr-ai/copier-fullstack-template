@@ -1,5 +1,7 @@
 """Provide concrete LLM gateway adapter implementation."""
 
+from __future__ import annotations
+
 from .llm_hallucination_detector import HallucinationDetector
 from ..interfaces.llm import LLMGateway
 from ..interfaces.reranker import RerankerGateway

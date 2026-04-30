@@ -1,5 +1,7 @@
 """Checkpoint adapters for durable LangGraph workflow execution."""
 
+from __future__ import annotations
+
 import structlog
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)

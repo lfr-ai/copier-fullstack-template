@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import final
 
 import jwt
 import structlog
@@ -16,6 +17,7 @@ _DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
 ALGORITHM = "HS256"
 
 
+@final
 @dataclass(frozen=True, slots=True)
 class TokenPayload:
 """Decoded JWT token payload."""
@@ -24,6 +26,7 @@ sub: str
 exp: datetime
 
 
+@final
 class JWTAdapter:
 """JWT token generation and verification adapter.
 

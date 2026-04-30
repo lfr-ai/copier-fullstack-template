@@ -1,5 +1,7 @@
 """Base enum with reusable parsing support."""
 
+from __future__ import annotations
+
 from enum import StrEnum
 from typing import Self
 

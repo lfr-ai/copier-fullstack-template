@@ -1,5 +1,7 @@
 """Model configuration value object."""
 
+from __future__ import annotations
+
 from typing import final
 
 from dataclasses import dataclass, field

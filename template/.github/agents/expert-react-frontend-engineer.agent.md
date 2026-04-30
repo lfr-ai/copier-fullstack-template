@@ -19,6 +19,14 @@ tools:
     context7/get-library-docs,
     context7/resolve-library-id,
   ]
+model: ['Claude Sonnet 4', 'Claude Opus 4']
+handoffs:
+  - label: 'Write component tests'
+    agent: tdd
+    prompt: 'Write tests for the frontend component using React Testing Library'
+  - label: 'Debug UI issue'
+    agent: debug
+    prompt: 'Debug this frontend rendering or interaction issue'
 ---
 
 # Expert React Frontend Engineer

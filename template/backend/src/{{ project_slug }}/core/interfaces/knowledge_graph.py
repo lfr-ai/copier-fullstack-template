@@ -4,6 +4,8 @@ Concrete adapters may use NetworkX, Neo4j, RDFLib, or external knowledge
 graphs (Wikidata, DBpedia) via SPARQL.
 """
 
+from __future__ import annotations
+
 from typing import Protocol, runtime_checkable
 
 DEFAULT_NEIGHBOR_DEPTH = 1

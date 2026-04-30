@@ -148,6 +148,12 @@ run_installer "Cloud CLI" "${SCRIPT_DIR}/install-cloud-cli.zsh"
 {% if with_gsd %}
 run_installer "GSD-2" "${SCRIPT_DIR}/install-gsd.zsh"
 {% endif %}
+{% if with_warp %}
+run_installer "Warp" "${SCRIPT_DIR}/install-warp.zsh"
+{% endif %}
+{% if with_gitnexus %}
+run_installer "GitNexus" "${SCRIPT_DIR}/install-gitnexus.zsh"
+{% endif %}
 
 print_summary
 save_log

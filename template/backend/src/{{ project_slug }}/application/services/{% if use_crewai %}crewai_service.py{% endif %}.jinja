@@ -9,7 +9,7 @@ Provides high-level operations for the CrewAI multi-agent subsystem:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
@@ -21,6 +21,7 @@ from {{ project_slug }}.ai.crewai.hmas import CrewAIHMASSupervisor
 _LOG_TASK_TRUNCATE_LEN = 200
 
 
+@final
 class CrewAIService(BaseService):
 """Application-layer CrewAI service.
 
