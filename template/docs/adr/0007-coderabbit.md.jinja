@@ -1,0 +1,88 @@
+# ADR-0007 — CodeRabbit AI Code Review
+{% if use_coderabbit %}
+## Status
+
+Accepted
+
+## Context
+
+{{ project_name }} requires automated code review to:
+- Catch issues before human review (reducing review burden)
+- Enforce Clean Architecture boundaries automatically
+- Provide consistent feedback across all pull requests
+- Enable AI-assisted documentation and test generation
+
+The team evaluated several AI code review tools:
+- **CodeRabbit** (free tier available, comprehensive rules, GitHub native)
+- **GitHub Copilot Code Review** (requires paid Copilot subscription)
+- **Codium PR-Agent** (open source, self-hosted)
+- **Sourcery** (Python-focused, freemium)
+
+## Decision
+
+Adopt **CodeRabbit** (free tier) for AI-powered code review:
+
+- **Native GitHub Integration** — Works as a GitHub App, appears as PR comments
+- **Configurable Rules** — `.coderabbit.yaml` allows project-specific instructions
+- **Path-Specific Reviews** — Different rules for different code areas
+- **Tool Integration** — Integrates with Ruff, Biome, ShellCheck, etc.
+- **Free for Public Repos** — No cost for open-source projects
+- **Teachable** — Learns from past reviews and code patterns
+
+### Configuration Strategy
+
+The `.coderabbit.yaml` file is structured to:
+
+1. **Enforce Clean Architecture** — Path instructions for each layer
+2. **Detect Security Issues** — Integrated security scanning
+3. **Maintain Quality Gates** — Pre-merge checks for coverage, docs
+4. **Suggest Labels** — Auto-categorize PRs by changed areas
+5. **Generate Content** — AI-assisted docstrings and tests
+
+### Path Instructions
+
+Each architectural layer has specific review instructions:
+- `core/` — No framework imports, domain purity
+- `application/` — Use case isolation, CQRS patterns
+- `infrastructure/` — Proper interface implementation
+- `presentation/` — API best practices, Pydantic usage
+- `tests/` — Coverage, factory patterns, naming
+
+## Consequences
+
+### Positive
+
+- Reduced human review burden for common issues
+- Consistent enforcement of architecture rules
+- Earlier detection of dependency rule violations
+- Automated suggestion of improvements
+
+### Negative
+
+- AI suggestions may sometimes be incorrect
+- Requires team to maintain `.coderabbit.yaml` config
+- Free tier has limitations for private repositories
+- Network dependency (cloud-based service)
+
+### Neutral
+
+- Complements but does not replace human review
+- Team must learn to interact with CodeRabbit commands
+- Configuration may need tuning over time
+{% else %}
+## Status
+
+Deferred
+
+## Context
+
+CodeRabbit AI code review was considered but not enabled for this project.
+
+## Decision
+
+CodeRabbit is not included. To enable it, regenerate the project with `use_coderabbit: true`.
+
+## Consequences
+
+Manual code review is required for all pull requests.
+{% endif %}

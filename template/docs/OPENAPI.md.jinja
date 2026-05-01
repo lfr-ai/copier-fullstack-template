@@ -1,0 +1,264 @@
+# OpenAPI Specification & Tooling
+{% if use_openspec %}
+This project includes comprehensive OpenAPI specification tooling for API documentation, validation, and client generation.
+
+## Tools Included
+
+| Tool | Purpose | Command |
+|------|---------|---------|
+| [Spectral](https://stoplight.io/open-source/spectral) | OpenAPI linting | `npx spectral lint docs/api/openapi.yaml` |
+| [Redocly CLI](https://redocly.com/docs/cli/) | Validation & docs | `npx @redocly/cli lint docs/api/openapi.yaml` |
+| [oasdiff](https://github.com/Tufin/oasdiff) | Breaking change detection | `oasdiff diff old.yaml new.yaml` |
+| [openapi-generator](https://openapi-generator.tech/) | Client code generation | `npx @openapitools/openapi-generator-cli generate` |
+
+## Spectral Configuration
+
+The `.spectral.yaml` file extends `spectral:oas` with production-ready rules:
+
+### Custom Rules
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `operation-operationId-valid-in-url` | error | operationId must be URL-safe |
+| `request-body-example` | warn | Request bodies need examples |
+| `response-success-example` | warn | Success responses need examples |
+| `parameter-description` | warn | Parameters need descriptions |
+| `component-schema-description` | warn | Schemas need descriptions |
+| `operation-summary` | warn | Operations need summaries |
+| `no-generic-response-description` | warn | No generic "OK" descriptions |
+| `error-response-schema` | info | Error responses need structure |
+| `info-version-semver` | warn | Use semantic versioning |
+| `security-defined` | warn | Define security requirements |
+| `path-casing` | warn | Paths use kebab-case |
+| `property-casing` | warn | Properties use snake_case |
+| `schema-names-pascal-case` | warn | Schemas use PascalCase |
+
+### Running Spectral
+
+```bash
+# Lint OpenAPI spec
+npx @stoplight/spectral-cli lint docs/api/openapi.yaml
+
+# With custom ruleset
+npx @stoplight/spectral-cli lint docs/api/openapi.yaml --ruleset .spectral.yaml
+
+# Output formats
+npx @stoplight/spectral-cli lint docs/api/openapi.yaml --format stylish
+npx @stoplight/spectral-cli lint docs/api/openapi.yaml --format junit
+```
+
+## Extracting OpenAPI Spec from FastAPI
+
+The OpenAPI specification is auto-generated from FastAPI. To extract it:
+
+```bash
+cd backend
+uv run python -c "
+import json
+import sys
+sys.path.insert(0, 'src')
+from {{ project_slug }}.composition.container import create_app
+app = create_app()
+spec = app.openapi()
+with open('../docs/api/openapi.json', 'w') as f:
+    json.dump(spec, f, indent=2)
+"
+```
+
+Or use the task runner:
+
+```bash
+task api:spec           # Extract OpenAPI spec
+task api:spec:lint      # Lint the spec
+task api:spec:validate  # Validate the spec
+```
+
+## CI/CD Integration
+
+The `openapi-spec.yml` workflow runs on PRs and pushes:
+
+1. **Extract Spec** — Extracts OpenAPI spec from FastAPI
+2. **Lint Spec** — Runs Spectral with custom rules
+3. **Validate Spec** — Validates with Redocly CLI
+4. **Diff Spec** — Shows changes on PRs using oasdiff
+5. **Breaking Changes** — Detects API breaking changes
+6. **Generate Docs** — Generates HTML docs on main branch
+
+### Breaking Change Detection
+
+The workflow automatically detects breaking changes:
+
+```yaml
+# PR comment shows:
+## ⚠️ Breaking Changes Detected
+- endpoint GET /api/users/{id} was deleted
+- parameter 'email' in path '/api/users' was added as required
+```
+
+## Generating API Clients
+
+### TypeScript/Axios Client
+
+```bash
+npx @openapitools/openapi-generator-cli generate \
+  -i docs/api/openapi.json \
+  -g typescript-axios \
+  -o frontend/src/api/generated \
+  --additional-properties=supportsES6=true,withInterfaces=true
+```
+
+### Python Client
+
+```bash
+npx @openapitools/openapi-generator-cli generate \
+  -i docs/api/openapi.json \
+  -g python \
+  -o clients/python \
+  --additional-properties=packageName={{ project_slug }}_client
+```
+
+## API Documentation
+
+### Swagger UI (Development)
+
+Available at `/api/docs` when the server is running.
+
+### ReDoc (Development)
+
+Available at `/api/redoc` when the server is running.
+
+### Static HTML (Production)
+
+Generate static HTML documentation:
+
+```bash
+npx @redocly/cli build-docs docs/api/openapi.json \
+  --output docs/api/index.html \
+  --title "{{ project_name }} API Documentation"
+```
+
+## Pre-commit Hook
+
+The Spectral pre-commit hook runs automatically:
+
+```yaml
+# .pre-commit-config.yaml
+- repo: local
+  hooks:
+    - id: spectral-lint
+      name: spectral openapi lint
+      entry: npx @stoplight/spectral-cli lint docs/api/openapi.yaml --ruleset .spectral.yaml
+      language: system
+      files: ^docs/api/openapi.*\.(yaml|yml|json)$
+```
+
+## Best Practices
+
+### Writing Good OpenAPI Specs
+
+1. **Use meaningful operationIds** — `createUser`, `getUserById`, not `post_users`
+2. **Include examples** — Every request/response should have an example
+3. **Document errors** — Include 400, 401, 403, 404, 500 responses
+4. **Use components** — Define reusable schemas, responses, parameters
+5. **Version your API** — Use `info.version` with semver
+6. **Security first** — Define security schemes and requirements
+
+### Schema Conventions (This Project)
+
+| Convention | Example |
+|------------|---------|
+| Schema names | `PascalCase` — `UserResponse`, `CreateUserRequest` |
+| Property names | `snake_case` — `user_id`, `created_at` |
+| Path segments | `kebab-case` — `/api/user-profiles/{id}` |
+| Query parameters | `snake_case` — `?page_size=10` |
+| operationId | `camelCase` — `getUserById` |
+
+### Error Response Format
+
+All error responses follow this structure:
+
+```json
+{
+  "detail": "Human-readable error message",
+  "code": "ERROR_CODE",
+  "errors": [
+    {
+      "field": "email",
+      "message": "Invalid email format"
+    }
+  ]
+}
+```
+{% else %}
+OpenAPI specification tooling is not enabled for this project.
+
+To enable it, regenerate the project with `use_openspec: true` (requires `api_style: rest` or `api_style: both`).
+{% endif %}
+{% if use_coderabbit %}
+## CodeRabbit AI Code Review
+
+This project includes [CodeRabbit](https://coderabbit.ai) configuration for AI-powered code reviews.
+
+### Features
+
+- **Automated PR Reviews** — AI reviews every pull request
+- **Clean Architecture Checks** — Validates dependency rule compliance
+- **Path-Specific Instructions** — Tailored review for each layer
+- **Breaking Change Detection** — Identifies API breaking changes
+- **Code Quality Tools** — Integrated Ruff, Biome, ShellCheck, etc.
+
+### Configuration
+
+The `.coderabbit.yaml` file includes:
+
+| Section | Purpose |
+|---------|---------|
+| `reviews.path_instructions` | Layer-specific Clean Architecture rules |
+| `reviews.path_filters` | Exclude generated/vendored files |
+| `reviews.labeling_instructions` | Auto-label PRs by type |
+| `reviews.tools` | Enable/disable linting tools |
+| `reviews.finishing_touches` | Auto-generate docstrings, tests |
+| `reviews.pre_merge_checks` | Quality gates before merge |
+
+### Commands
+
+Interact with CodeRabbit in PR comments:
+
+| Command | Action |
+|---------|--------|
+| `@coderabbitai summary` | Generate PR summary |
+| `@coderabbitai review` | Request full review |
+| `@coderabbitai resolve` | Resolve all threads |
+| `@coderabbitai ignore` | Ignore file/path |
+| `@coderabbitai help` | Show all commands |
+
+### Customizing Reviews
+
+Add path-specific instructions in `.coderabbit.yaml`:
+
+```yaml
+reviews:
+  path_instructions:
+    - path: "backend/src/my_module/**"
+      instructions: |
+        This module handles X. Review for:
+        - Y patterns
+        - Z constraints
+```
+
+### Disabling for Specific PRs
+
+Add to PR title or body:
+- `[skip review]` — Skip CodeRabbit review entirely
+- `WIP` or `DRAFT` — Skip review for work-in-progress
+
+### Free Tier Limitations
+
+CodeRabbit free tier includes:
+- Unlimited public repositories
+- AI-powered code reviews
+- Basic tool integrations
+- Community support
+
+For private repos or advanced features, see [CodeRabbit pricing](https://coderabbit.ai/pricing).
+{% endif %}

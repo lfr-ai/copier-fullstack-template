@@ -134,7 +134,17 @@ repos:
     rev: v1.7.12
     hooks:
       - id: actionlint
-
+{% if api_style in ("rest", "both") %}
+  - repo: local
+    hooks:
+      - id: spectral-lint
+        name: spectral openapi lint
+        entry: npx @stoplight/spectral-cli lint docs/api/openapi.yaml --ruleset .spectral.yaml
+        language: system
+        files: ^docs/api/openapi.*\.(yaml|yml|json)$
+        pass_filenames: false
+        stages: [pre-commit, pre-push, manual]
+{% endif %}
   - repo: local
     hooks:
       - id: jscpd

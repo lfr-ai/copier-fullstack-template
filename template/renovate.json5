@@ -41,6 +41,13 @@
       automerge: true,
       matchUpdateTypes: ['minor', 'patch'],
     },
+    // OpenAPI tooling (Spectral, Redocly, openapi-generator)
+    {
+      matchPackagePatterns: ['^@stoplight/', '^@redocly/', '^@openapitools/'],
+      groupName: 'openapi tooling',
+      automerge: true,
+      matchUpdateTypes: ['minor', 'patch'],
+    },
     {
       matchUpdateTypes: ['major'],
       automerge: false,
