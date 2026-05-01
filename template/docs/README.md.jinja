@@ -21,6 +21,9 @@
 {%- if api_style in ('graphql', 'both') %}
 - [GraphQL](GRAPHQL.md) — GraphQL schema and queries
 {%- endif %}
+{%- if use_openspec or use_coderabbit %}
+- [OpenAPI & Code Review](OPENAPI.md) — OpenAPI tooling and CodeRabbit configuration
+{%- endif %}
 - [Configuration](CONFIG.md) — Environment variables and settings
 - [Contributing](CONTRIBUTING.md) — Contribution guidelines
 {%- if use_sftp %}

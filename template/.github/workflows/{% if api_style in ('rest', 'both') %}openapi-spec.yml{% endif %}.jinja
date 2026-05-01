@@ -1,0 +1,251 @@
+{% raw %}
+name: OpenAPI Specification
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "docs/api/**"
+      - "backend/src/**/presentation/api/**"
+      - ".spectral.yaml"
+  pull_request:
+    paths:
+      - "docs/api/**"
+      - "backend/src/**/presentation/api/**"
+      - ".spectral.yaml"
+
+concurrency:
+  group: openapi-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  extract-spec:
+    name: Extract OpenAPI Spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    outputs:
+      spec-generated: ${{ steps.extract.outputs.generated }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v8.0.0
+        with:
+          python-version: "{% endraw %}{{ python_version }}{% raw %}"
+          enable-cache: true
+
+      - run: uv sync --frozen
+
+      - name: Extract OpenAPI spec from FastAPI
+        id: extract
+        run: |
+          uv run python -c "
+          import json
+          import sys
+          sys.path.insert(0, 'src')
+          from {% endraw %}{{ project_slug }}{% raw %}.composition.container import create_app
+          app = create_app()
+          spec = app.openapi()
+          with open('../docs/api/openapi.generated.json', 'w') as f:
+              json.dump(spec, f, indent=2)
+          print('OpenAPI spec extracted successfully')
+          "
+          echo "generated=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upload generated spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: docs/api/openapi.generated.json
+          retention-days: 7
+
+  lint-spec:
+    name: Lint OpenAPI Spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: extract-spec
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download generated spec
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-spec
+          path: docs/api/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package.json
+
+      - name: Install Spectral
+        run: npm install -g @stoplight/spectral-cli
+
+      - name: Lint OpenAPI specification
+        run: |
+          spectral lint docs/api/openapi.generated.json \
+            --ruleset .spectral.yaml \
+            --format stylish \
+            --format junit --output spectral-results.xml
+
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectral-results
+          path: spectral-results.xml
+          retention-days: 7
+
+      - name: Publish lint results
+        if: always() && github.event_name == 'pull_request'
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: spectral-results.xml
+          check_name: OpenAPI Spectral Lint
+          fail_on_failure: false
+
+  validate-spec:
+    name: Validate OpenAPI Spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: extract-spec
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download generated spec
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-spec
+          path: docs/api/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli
+
+      - name: Validate OpenAPI spec
+        run: |
+          redocly lint docs/api/openapi.generated.json \
+            --format=stylish \
+            --skip-rule=no-path-trailing-slash
+
+  diff-spec:
+    name: Diff OpenAPI Spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: extract-spec
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download generated spec
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-spec
+          path: docs/api/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install oasdiff
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/Tufin/oasdiff/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Check out base branch spec
+        run: |
+          git show origin/${{ github.base_ref }}:docs/api/openapi.yaml > /tmp/base-spec.yaml 2>/dev/null || echo "{}" > /tmp/base-spec.yaml
+
+      - name: Diff OpenAPI specs
+        id: diff
+        run: |
+          oasdiff diff /tmp/base-spec.yaml docs/api/openapi.generated.json \
+            --format=text > /tmp/oasdiff.txt || true
+
+          if [ -s /tmp/oasdiff.txt ]; then
+            echo "changes=true" >> "$GITHUB_OUTPUT"
+            echo "## OpenAPI Specification Changes" >> /tmp/pr-comment.md
+            echo "" >> /tmp/pr-comment.md
+            echo '```' >> /tmp/pr-comment.md
+            cat /tmp/oasdiff.txt >> /tmp/pr-comment.md
+            echo '```' >> /tmp/pr-comment.md
+          else
+            echo "changes=false" >> "$GITHUB_OUTPUT"
+            echo "No OpenAPI specification changes detected." >> /tmp/pr-comment.md
+          fi
+
+      - name: Check for breaking changes
+        id: breaking
+        run: |
+          oasdiff breaking /tmp/base-spec.yaml docs/api/openapi.generated.json \
+            --format=text > /tmp/breaking.txt || true
+
+          if [ -s /tmp/breaking.txt ]; then
+            echo "breaking=true" >> "$GITHUB_OUTPUT"
+            echo "" >> /tmp/pr-comment.md
+            echo "## ⚠️ Breaking Changes Detected" >> /tmp/pr-comment.md
+            echo "" >> /tmp/pr-comment.md
+            echo '```' >> /tmp/pr-comment.md
+            cat /tmp/breaking.txt >> /tmp/pr-comment.md
+            echo '```' >> /tmp/pr-comment.md
+          else
+            echo "breaking=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on PR
+        if: steps.diff.outputs.changes == 'true' || steps.breaking.outputs.breaking == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: openapi-diff
+          path: /tmp/pr-comment.md
+
+  generate-docs:
+    name: Generate API Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [lint-spec, validate-spec]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download generated spec
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-spec
+          path: docs/api/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli
+
+      - name: Generate HTML documentation
+        run: |
+          redocly build-docs docs/api/openapi.generated.json \
+            --output docs/api/index.html \
+            --title "{% endraw %}{{ project_name }}{% raw %} API Documentation"
+
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: docs/api/index.html
+          retention-days: 30
+{% endraw %}

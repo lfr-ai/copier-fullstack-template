@@ -64,6 +64,12 @@ secrets/
 temp/
 tmp/
 .bootstrap/
+{% if use_openspec %}
+# OpenAPI Generated
+docs/api/openapi.generated.json
+docs/api/index.html
+clients/
+{% endif %}
 {% if with_gitnexus %}
 # GitNexus
 .gitnexus/db/

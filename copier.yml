@@ -316,6 +316,21 @@ use_document_intelligence:
   when: "{{ cloud_provider == 'azure' and use_ai }}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Code review & API specification
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+use_coderabbit:
+  type: bool
+  help: "Include CodeRabbit AI code review configuration (.coderabbit.yaml)"
+  default: true
+
+use_openspec:
+  type: bool
+  help: "Include OpenAPI specification tooling (Spectral linting, oasdiff, Redocly)"
+  default: true
+  when: "{{ api_style in ('rest', 'both') }}"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  SSH / SFTP remote access
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

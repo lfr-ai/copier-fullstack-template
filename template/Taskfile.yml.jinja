@@ -6,6 +6,9 @@ includes:
   backend: ./tasks/backend.yml
   frontend: ./tasks/frontend.yml
   docker: ./tasks/docker.yml
+{%- if use_openspec %}
+  api: ./tasks/api.yml
+{%- endif %}
 {%- if cloud_provider == "azure" %}
   infra: ./tasks/infra.yml
 {%- endif %}

@@ -1,0 +1,147 @@
+# ADR-0008 — OpenAPI Specification Tooling
+{% if use_openspec %}
+## Status
+
+Accepted
+
+## Context
+
+{{ project_name }} exposes a REST API via FastAPI, which auto-generates OpenAPI
+specifications. The team needed tooling to:
+- Validate OpenAPI specs against best practices
+- Detect breaking changes between versions
+- Generate API documentation
+- Generate typed client libraries
+- Enforce naming conventions (snake_case, kebab-case)
+
+The team evaluated several approaches:
+- **Spectral** (OpenAPI linting, extensible rules, industry standard)
+- **Redocly CLI** (validation, docs generation, enterprise features)
+- **OpenAPI-Spec-Validator** (Python-native, minimal features)
+- **oasdiff** (diff and breaking change detection)
+- **openapi-generator** (client/server code generation)
+
+## Decision
+
+Adopt a **comprehensive OpenAPI toolchain**:
+
+### Spectral — API Linting
+
+```yaml
+extends: ["spectral:oas"]
+rules:
+  property-casing: warn        # snake_case for properties
+  path-casing: warn            # kebab-case for paths
+  schema-names-pascal-case: warn
+  ...
+```
+
+### Redocly CLI — Validation & Documentation
+
+- Production-grade OpenAPI validation
+- Static HTML documentation generation
+- Bundling and dereferencing support
+
+### oasdiff — Change Detection
+
+- Diff between OpenAPI versions
+- Breaking change detection for CI/CD
+- PR comments with API changes
+
+### openapi-generator — Client Generation
+
+- TypeScript/Axios client for frontend
+- Python client for testing/integration
+- Fully typed from OpenAPI spec
+
+## Implementation
+
+### Pre-commit Hook
+
+```yaml
+- id: spectral-lint
+  entry: npx @stoplight/spectral-cli lint docs/api/openapi.yaml
+  files: ^docs/api/openapi.*\.(yaml|yml|json)$
+```
+
+### CI/CD Workflow
+
+The `openapi-spec.yml` workflow:
+1. Extracts OpenAPI from FastAPI
+2. Lints with Spectral
+3. Validates with Redocly
+4. Diffs against base branch (PRs)
+5. Detects breaking changes
+6. Generates HTML docs (main branch)
+
+### Task Commands
+
+```bash
+task api:spec           # Extract spec from FastAPI
+task api:spec:lint      # Lint with Spectral
+task api:spec:validate  # Validate with Redocly
+task api:spec:diff      # Show diff vs committed spec
+task api:spec:breaking  # Check for breaking changes
+task api:docs           # Generate HTML documentation
+task api:client:typescript  # Generate TS client
+task api:client:python  # Generate Python client
+```
+
+## Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Schema names | PascalCase | `UserResponse` |
+| Property names | snake_case | `user_id`, `created_at` |
+| Path segments | kebab-case | `/user-profiles/{id}` |
+| Query params | snake_case | `?page_size=10` |
+| operationId | camelCase | `getUserById` |
+
+## Consequences
+
+### Positive
+
+- Consistent API design across endpoints
+- Early detection of breaking changes
+- Auto-generated typed clients
+- Self-documenting API with HTML docs
+- Pre-commit enforcement of conventions
+
+### Negative
+
+- Additional CI/CD time for spec extraction
+- Learning curve for Spectral rules
+- Generated clients need version management
+- Spec extraction requires running FastAPI
+
+### Neutral
+
+- Team must maintain `.spectral.yaml` rules
+- Generated clients should not be edited manually
+- HTML docs require regeneration on changes
+{% else %}
+## Status
+
+Deferred
+
+## Context
+
+OpenAPI specification tooling was considered but not enabled.
+This project uses `api_style: {{ api_style }}` which
+{% if api_style == "graphql" %}
+uses GraphQL instead of REST, so OpenAPI tooling is not applicable.
+{% else %}
+could benefit from OpenAPI tooling but it was not enabled.
+{% endif %}
+
+## Decision
+
+OpenAPI tooling is not included. To enable:
+1. Set `api_style: rest` or `api_style: both`
+2. Set `use_openspec: true`
+3. Regenerate the project
+
+## Consequences
+
+Manual OpenAPI spec management is required.
+{% endif %}
