@@ -82,6 +82,20 @@ use_storybook:
   help: "Include Storybook component development environment"
   default: true
 
+vcs_platform:
+  type: str
+  help: "Version control platform for CI/CD scaffolding (mutually exclusive)"
+  default: "github"
+  choices:
+    GitHub Actions: "github"
+    Azure DevOps Pipelines: "azuredevops"
+  validator: "{% if vcs_platform not in ['github', 'azuredevops'] %}Must be 'github' or 'azuredevops'{% endif %}"
+
+with_ai_assistants:
+  type: bool
+  help: "Include AI assistant configurations (.github/copilot-instructions.md, .claude/)"
+  default: true
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  Database
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
