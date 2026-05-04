@@ -139,3 +139,11 @@ jscpd-report/
 # Workspace files
 # ──────────────────────────────────────────────
 *.code-workspace
+
+# ── GSD baseline (auto-generated) ──
+.vscode/
+.env.*
+*.pyc
+target/
+vendor/
+.cache/
