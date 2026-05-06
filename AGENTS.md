@@ -9,6 +9,15 @@ This is a **Copier template repository**, NOT a generated project. All template 
 files live under `template/` and use the `.jinja` suffix. The root directory contains
 only template development tooling.
 
+There are multiple `CLAUDE.md` files by design:
+
+- `CLAUDE.md` (root): concise, repo-level orientation for AI agents
+- `.claude/CLAUDE.md`: Claude Code runtime configuration and operational guide
+- `template/CLAUDE.md.jinja` and `template/.claude/CLAUDE.md.jinja`: generated-project
+  equivalents (template source)
+
+Treat these as **scoped documentation**, not duplicates.
+
 > **GitHub Copilot users**: See `.github/copilot-instructions.md` for detailed,
 > Copilot-specific instructions including scoped instructions, hooks, and Jinja2 rules.
 
@@ -29,12 +38,13 @@ copier-fullstack-template/
 │   ├── frontend/              # React/TypeScript frontend template
 │   ├── .github/               # GitHub config for GENERATED projects
 │   └── ...                    # Other template files
+├── .claude/                   # Claude Code config (agents, rules, skills, hooks)
 ├── .github/                   # GitHub config for THIS repo (subset)
-│   ├── agents/                # Copilot agent definitions
 │   ├── hooks/                 # Copilot coding agent hooks
 │   ├── instructions/          # Scoped instructions
 │   ├── skills/                # Domain knowledge playbooks
 │   └── workflows/             # CI/CD for template development
+├── .mcp.json                  # MCP servers (context7, shadcn)
 ├── scripts/                   # Template verification scripts
 ├── .pre-commit-config.yaml    # Pre-commit hooks
 ├── .cz.toml                   # Commitizen configuration

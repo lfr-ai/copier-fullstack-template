@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+# Configure Azure DevOps branch policies for main branch
+# Requires: Azure CLI with az devops extension
+# Usage: ./configure-policies.sh <organization> <project-name> [repo-name] [branch-name]
+
+set -euo pipefail
+
+# Color codes for output
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly NC='\033[0m' # No Color
+
+# Script configuration
+readonly BRANCH_NAME="${4:-main}"
+readonly REPO_NAME="${3:-${2}}"  # Default to project name if not specified
+
+# Validate required arguments
+if [[ $# -lt 2 ]]; then
+    echo -e "${RED}Error: Missing required arguments${NC}"
+    echo "Usage: $0 <organization> <project-name> [repo-name] [branch-name]"
+    echo "Example: $0 myorg myproject myrepo main"
+    exit 1
+fi
+
+readonly ORGANIZATION="$1"
+readonly PROJECT_NAME="$2"
+
+# Helper functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $*"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $*"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $*"
+}
+
+# Check prerequisites
+check_prerequisites() {
+    log_info "Checking prerequisites..."
+
+    if ! command -v az &> /dev/null; then
+        log_error "Azure CLI not found. Install from: https://docs.microsoft.com/cli/azure/install-azure-cli"
+        exit 1
+    fi
+
+    if ! az extension list --output tsv | grep -q "azure-devops"; then
+        log_error "Azure DevOps extension not installed. Run: az extension add --name azure-devops"
+        exit 1
+    fi
+
+    # Check if logged in
+    if ! az account show &> /dev/null; then
+        log_error "Not logged in to Azure CLI. Run: az login"
+        exit 1
+    fi
+
+    log_info "Prerequisites check passed"
+}
+
+# Configure Azure DevOps defaults
+configure_defaults() {
+    log_info "Configuring Azure DevOps defaults..."
+    az devops configure --defaults organization="https://dev.azure.com/${ORGANIZATION}" project="${PROJECT_NAME}"
+}
+
+# Get repository ID
+get_repository_id() {
+    log_info "Getting repository ID for '${REPO_NAME}'..."
+
+    local repo_info
+    repo_info=$(az repos show \
+        --repository "${REPO_NAME}" \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --output json 2>/dev/null)
+
+    if [[ -z "${repo_info}" ]]; then
+        log_error "Repository '${REPO_NAME}' not found"
+        exit 1
+    fi
+
+    echo "${repo_info}" | jq -r '.id'
+}
+
+# Configure minimum approver count policy
+configure_approver_count_policy() {
+    local repo_id="$1"
+    log_info "Configuring minimum approver count policy..."
+
+    # Check if policy already exists
+    local existing_policies
+    existing_policies=$(az repos policy approver-count list \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --output json)
+
+    local policy_exists=false
+    for policy in $(echo "${existing_policies}" | jq -r '.[] | @base64'); do
+        local policy_json=$(echo "${policy}" | base64 --decode)
+        local scope_repo_id=$(echo "${policy_json}" | jq -r '.settings.scope[0].repositoryId // empty')
+        local scope_branch=$(echo "${policy_json}" | jq -r '.settings.scope[0].refName // empty')
+
+        if [[ "${scope_repo_id}" == "${repo_id}" && "${scope_branch}" == "refs/heads/${BRANCH_NAME}" ]]; then
+            policy_exists=true
+            log_warn "Minimum approver count policy already exists for branch '${BRANCH_NAME}', skipping"
+            break
+        fi
+    done
+
+    if [[ "${policy_exists}" == false ]]; then
+        az repos policy approver-count create \
+            --allow-downvotes false \
+            --blocking true \
+            --branch "${BRANCH_NAME}" \
+            --creator-vote-counts false \
+            --enabled true \
+            --minimum-approver-count 1 \
+            --repository-id "${repo_id}" \
+            --reset-on-source-push false \
+            --organization "https://dev.azure.com/${ORGANIZATION}" \
+            --project "${PROJECT_NAME}" \
+            --output table
+
+        log_info "Minimum approver count policy created"
+    fi
+}
+
+# Configure work item linking policy
+configure_work_item_policy() {
+    local repo_id="$1"
+    log_info "Configuring work item linking policy..."
+
+    # Check if policy already exists
+    local existing_policies
+    existing_policies=$(az repos policy work-item-linking list \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --output json)
+
+    local policy_exists=false
+    for policy in $(echo "${existing_policies}" | jq -r '.[] | @base64'); do
+        local policy_json=$(echo "${policy}" | base64 --decode)
+        local scope_repo_id=$(echo "${policy_json}" | jq -r '.settings.scope[0].repositoryId // empty')
+        local scope_branch=$(echo "${policy_json}" | jq -r '.settings.scope[0].refName // empty')
+
+        if [[ "${scope_repo_id}" == "${repo_id}" && "${scope_branch}" == "refs/heads/${BRANCH_NAME}" ]]; then
+            policy_exists=true
+            log_warn "Work item linking policy already exists for branch '${BRANCH_NAME}', skipping"
+            break
+        fi
+    done
+
+    if [[ "${policy_exists}" == false ]]; then
+        az repos policy work-item-linking create \
+            --blocking false \
+            --branch "${BRANCH_NAME}" \
+            --enabled true \
+            --repository-id "${repo_id}" \
+            --organization "https://dev.azure.com/${ORGANIZATION}" \
+            --project "${PROJECT_NAME}" \
+            --output table
+
+        log_info "Work item linking policy created"
+    fi
+}
+
+# Configure comment resolution policy
+configure_comment_resolution_policy() {
+    local repo_id="$1"
+    log_info "Configuring comment resolution policy..."
+
+    # Check if policy already exists
+    local existing_policies
+    existing_policies=$(az repos policy comment-required list \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --output json)
+
+    local policy_exists=false
+    for policy in $(echo "${existing_policies}" | jq -r '.[] | @base64'); do
+        local policy_json=$(echo "${policy}" | base64 --decode)
+        local scope_repo_id=$(echo "${policy_json}" | jq -r '.settings.scope[0].repositoryId // empty')
+        local scope_branch=$(echo "${policy_json}" | jq -r '.settings.scope[0].refName // empty')
+
+        if [[ "${scope_repo_id}" == "${repo_id}" && "${scope_branch}" == "refs/heads/${BRANCH_NAME}" ]]; then
+            policy_exists=true
+            log_warn "Comment resolution policy already exists for branch '${BRANCH_NAME}', skipping"
+            break
+        fi
+    done
+
+    if [[ "${policy_exists}" == false ]]; then
+        az repos policy comment-required create \
+            --blocking true \
+            --branch "${BRANCH_NAME}" \
+            --enabled true \
+            --repository-id "${repo_id}" \
+            --organization "https://dev.azure.com/${ORGANIZATION}" \
+            --project "${PROJECT_NAME}" \
+            --output table
+
+        log_info "Comment resolution policy created"
+    fi
+}
+
+# Configure build validation policy
+configure_build_validation_policy() {
+    local repo_id="$1"
+    log_info "Configuring build validation policy..."
+
+    # Try to get CI pipeline ID
+    local pipeline_name="${PROJECT_NAME}-ci"
+    local pipeline_id
+    pipeline_id=$(az pipelines show \
+        --name "${pipeline_name}" \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --output json 2>/dev/null | jq -r '.id // empty')
+
+    if [[ -z "${pipeline_id}" ]]; then
+        log_warn "CI pipeline '${pipeline_name}' not found. Skipping build validation policy."
+        log_warn "You can add this policy later after creating the pipeline."
+        return 0
+    fi
+
+    # Check if policy already exists
+    local existing_policies
+    existing_policies=$(az repos policy build list \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --output json)
+
+    local policy_exists=false
+    for policy in $(echo "${existing_policies}" | jq -r '.[] | @base64'); do
+        local policy_json=$(echo "${policy}" | base64 --decode)
+        local scope_repo_id=$(echo "${policy_json}" | jq -r '.settings.scope[0].repositoryId // empty')
+        local scope_branch=$(echo "${policy_json}" | jq -r '.settings.scope[0].refName // empty')
+        local build_id=$(echo "${policy_json}" | jq -r '.settings.buildDefinitionId // empty')
+
+        if [[ "${scope_repo_id}" == "${repo_id}" && "${scope_branch}" == "refs/heads/${BRANCH_NAME}" && "${build_id}" == "${pipeline_id}" ]]; then
+            policy_exists=true
+            log_warn "Build validation policy already exists for branch '${BRANCH_NAME}', skipping"
+            break
+        fi
+    done
+
+    if [[ "${policy_exists}" == false ]]; then
+        az repos policy build create \
+            --blocking true \
+            --branch "${BRANCH_NAME}" \
+            --build-definition-id "${pipeline_id}" \
+            --display-name "CI Build Validation" \
+            --enabled true \
+            --manual-queue-only false \
+            --queue-on-source-update-only true \
+            --repository-id "${repo_id}" \
+            --valid-duration 720 \
+            --organization "https://dev.azure.com/${ORGANIZATION}" \
+            --project "${PROJECT_NAME}" \
+            --output table
+
+        log_info "Build validation policy created"
+    fi
+}
+
+# Main execution
+main() {
+    log_info "Starting Azure DevOps branch policy configuration..."
+    log_info "Organization: ${ORGANIZATION}"
+    log_info "Project: ${PROJECT_NAME}"
+    log_info "Repository: ${REPO_NAME}"
+    log_info "Branch: ${BRANCH_NAME}"
+    echo ""
+
+    check_prerequisites
+    configure_defaults
+
+    local repo_id
+    repo_id=$(get_repository_id)
+    log_info "Repository ID: ${repo_id}"
+
+    configure_approver_count_policy "${repo_id}"
+    configure_work_item_policy "${repo_id}"
+    configure_comment_resolution_policy "${repo_id}"
+    configure_build_validation_policy "${repo_id}"
+
+    echo ""
+    log_info "Branch policy configuration completed successfully!"
+    log_info "Configured policies for branch: ${BRANCH_NAME}"
+    log_info "  - Minimum 1 approver required"
+    log_info "  - Work item linking (non-blocking)"
+    log_info "  - Comment resolution required"
+    log_info "  - Build validation (if CI pipeline exists)"
+}
+
+main "$@"

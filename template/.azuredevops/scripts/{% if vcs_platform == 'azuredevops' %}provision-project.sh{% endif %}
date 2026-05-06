@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+# Provision Azure DevOps project, repository, and pipelines
+# Requires: Azure CLI with az devops extension
+# Usage: ./provision-project.sh <organization> <project-name>
+
+set -euo pipefail
+
+# Color codes for output
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly NC='\033[0m' # No Color
+
+# Script configuration
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_NAME="${3:-${2}}"  # Default to project name if not specified
+readonly DESCRIPTION="${4:-Scaffolded by copier-fullstack-template}"
+
+# Validate required arguments
+if [[ $# -lt 2 ]]; then
+    echo -e "${RED}Error: Missing required arguments${NC}"
+    echo "Usage: $0 <organization> <project-name> [repo-name] [description]"
+    echo "Example: $0 myorg myproject myrepo 'Project description'"
+    exit 1
+fi
+
+readonly ORGANIZATION="$1"
+readonly PROJECT_NAME="$2"
+
+# Helper functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $*"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $*"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $*"
+}
+
+# Check prerequisites
+check_prerequisites() {
+    log_info "Checking prerequisites..."
+
+    if ! command -v az &> /dev/null; then
+        log_error "Azure CLI not found. Install from: https://docs.microsoft.com/cli/azure/install-azure-cli"
+        exit 1
+    fi
+
+    if ! az extension list --output tsv | grep -q "azure-devops"; then
+        log_error "Azure DevOps extension not installed. Run: az extension add --name azure-devops"
+        exit 1
+    fi
+
+    # Check if logged in
+    if ! az account show &> /dev/null; then
+        log_error "Not logged in to Azure CLI. Run: az login"
+        exit 1
+    fi
+
+    log_info "Prerequisites check passed"
+}
+
+# Configure Azure DevOps defaults
+configure_defaults() {
+    log_info "Configuring Azure DevOps defaults..."
+    az devops configure --defaults organization="https://dev.azure.com/${ORGANIZATION}" project="${PROJECT_NAME}" --use-git-aliases true
+}
+
+# Create project if it doesn't exist
+create_project() {
+    log_info "Checking if project '${PROJECT_NAME}' exists..."
+
+    if az devops project show --project "${PROJECT_NAME}" --organization "https://dev.azure.com/${ORGANIZATION}" &> /dev/null; then
+        log_warn "Project '${PROJECT_NAME}' already exists, skipping creation"
+        return 0
+    fi
+
+    log_info "Creating project '${PROJECT_NAME}'..."
+    az devops project create \
+        --name "${PROJECT_NAME}" \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --description "${DESCRIPTION}" \
+        --process Agile \
+        --source-control git \
+        --visibility private \
+        --output table
+
+    log_info "Project '${PROJECT_NAME}' created successfully"
+}
+
+# Create repository if it doesn't exist
+create_repository() {
+    log_info "Checking if repository '${REPO_NAME}' exists..."
+
+    if az repos show --repository "${REPO_NAME}" --organization "https://dev.azure.com/${ORGANIZATION}" --project "${PROJECT_NAME}" &> /dev/null; then
+        log_warn "Repository '${REPO_NAME}' already exists, skipping creation"
+        return 0
+    fi
+
+    log_info "Creating repository '${REPO_NAME}'..."
+    az repos create \
+        --name "${REPO_NAME}" \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --output table
+
+    log_info "Repository '${REPO_NAME}' created successfully"
+}
+
+# Register CI pipeline
+register_ci_pipeline() {
+    log_info "Checking if CI pipeline exists..."
+
+    local pipeline_name="${PROJECT_NAME}-ci"
+
+    if az pipelines show --name "${pipeline_name}" --organization "https://dev.azure.com/${ORGANIZATION}" --project "${PROJECT_NAME}" &> /dev/null; then
+        log_warn "Pipeline '${pipeline_name}' already exists, skipping registration"
+        return 0
+    fi
+
+    log_info "Registering CI pipeline..."
+    az pipelines create \
+        --name "${pipeline_name}" \
+        --repository "${REPO_NAME}" \
+        --repository-type tfsgit \
+        --branch main \
+        --yml-path .azuredevops/pipelines/ci.yml \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --skip-first-run \
+        --output table || {
+            log_warn "CI pipeline registration failed. This is expected if the pipeline YAML doesn't exist yet."
+            log_warn "You can register pipelines manually after pushing code to the repository."
+        }
+
+    log_info "CI pipeline registration completed"
+}
+
+# Register Renovate pipeline
+register_renovate_pipeline() {
+    log_info "Checking if Renovate pipeline exists..."
+
+    local pipeline_name="${PROJECT_NAME}-renovate"
+
+    if az pipelines show --name "${pipeline_name}" --organization "https://dev.azure.com/${ORGANIZATION}" --project "${PROJECT_NAME}" &> /dev/null; then
+        log_warn "Pipeline '${pipeline_name}' already exists, skipping registration"
+        return 0
+    fi
+
+    log_info "Registering Renovate pipeline..."
+    az pipelines create \
+        --name "${pipeline_name}" \
+        --repository "${REPO_NAME}" \
+        --repository-type tfsgit \
+        --branch main \
+        --yml-path .azuredevops/pipelines/renovate.yml \
+        --organization "https://dev.azure.com/${ORGANIZATION}" \
+        --project "${PROJECT_NAME}" \
+        --skip-first-run \
+        --output table || {
+            log_warn "Renovate pipeline registration failed. This is expected if the pipeline YAML doesn't exist yet."
+            log_warn "You can register pipelines manually after pushing code to the repository."
+        }
+
+    log_info "Renovate pipeline registration completed"
+}
+
+# Main execution
+main() {
+    log_info "Starting Azure DevOps provisioning..."
+    log_info "Organization: ${ORGANIZATION}"
+    log_info "Project: ${PROJECT_NAME}"
+    log_info "Repository: ${REPO_NAME}"
+    echo ""
+
+    check_prerequisites
+    configure_defaults
+    create_project
+    create_repository
+    register_ci_pipeline
+    register_renovate_pipeline
+
+    echo ""
+    log_info "Provisioning completed successfully!"
+    log_info "Next steps:"
+    log_info "  1. Run ./configure-policies.sh to set up branch policies"
+    log_info "  2. Push your code to the repository: git remote add azure https://dev.azure.com/${ORGANIZATION}/${PROJECT_NAME}/_git/${REPO_NAME}"
+    log_info "  3. Set up service connections for any external services (Azure, Docker, etc.)"
+}
+
+main "$@"
