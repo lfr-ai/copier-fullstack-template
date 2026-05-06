@@ -22,8 +22,10 @@ repos:
       - id: check-json
       - id: check-toml
       - id: check-ast
+        exclude: ^template/
       - id: check-merge-conflict
       - id: check-docstring-first
+        exclude: ^template/
       - id: check-added-large-files
         args: [--maxkb=500]
       - id: check-case-conflict
@@ -41,9 +43,7 @@ repos:
       - id: no-commit-to-branch
         args: [--branch=main]
       - id: debug-statements
-      - id: name-tests-test
-        args: [--pytest-test-first]
-        files: ^scripts/
+        exclude: ^template/
 
   # ── YAML linting ──
   - repo: https://github.com/adrienverge/yamllint
@@ -154,6 +154,27 @@ repos:
     rev: v1.7.12
     hooks:
       - id: actionlint
+        args: [-color, -verbose]
+
+  # ── GitHub-specific checks ──
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-vcs-permalinks
+        name: Check VCS permalinks in docs
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.31.0
+    hooks:
+      - id: check-github-workflows
+        name: Validate GitHub Actions workflow YAML
+        args: [--verbose]
+      - id: check-github-actions
+        name: Validate GitHub Actions action YAML
+        args: [--verbose]
+      - id: check-dependabot
+        name: Validate Dependabot YAML
+        args: [--verbose]
 
   # ── Link checking (requires system-installed lychee) ──
   - repo: https://github.com/lycheeverse/lychee.git

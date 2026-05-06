@@ -85,7 +85,8 @@ template/           # Everything inside here gets rendered by Copier
 
 `type(scope): description`
 
-**Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`, `revert`
+**Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`,
+`chore`, `perf`, `ci`, `build`, `revert`
 
 **Scopes**: `backend`, `frontend`, `infra`, `ci`, `copier`, `docs`
 

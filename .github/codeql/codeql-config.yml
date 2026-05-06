@@ -1,0 +1,29 @@
+name: "CodeQL Configuration"
+
+disable-default-queries: false
+
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+
+paths-ignore:
+  - '**/*test*.py'
+  - '**/*test*.js'
+  - '**/*test*.ts'
+  - '**/tests/**'
+  - '**/test/**'
+  - '**/__tests__/**'
+  - '**/*.spec.*'
+  - '**/*.test.*'
+  - '**/node_modules/**'
+  - '**/.venv/**'
+  - '**/__pycache__/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '.pre-commit-cache/**'
+
+paths:
+  - 'template/backend/src/**'
+  - 'template/frontend/src/**'
+  - 'scripts/**'
+  - '.github/**'

@@ -1,0 +1,92 @@
+# Dependabot configuration for copier-fullstack-template
+# https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+updates:
+  # ═══════════════════════════════════════════════════════════
+  # GitHub Actions
+  # ═══════════════════════════════════════════════════════════
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Copenhagen"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    reviewers:
+      - "@anthropics/claude-code"
+    assignees:
+      - "@anthropics/claude-code"
+
+  # ═══════════════════════════════════════════════════════════
+  # Python (uv) — Scripts and validation tooling
+  # ═══════════════════════════════════════════════════════════
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Copenhagen"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+      - "scripts"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      linting:
+        patterns:
+          - "ruff*"
+          - "pre-commit*"
+          - "bandit*"
+          - "mypy*"
+          - "ty*"
+      testing:
+        patterns:
+          - "pytest*"
+          - "hypothesis*"
+      copier:
+        patterns:
+          - "copier*"
+          - "jinja*"
+    reviewers:
+      - "@anthropics/claude-code"
+
+  # ═══════════════════════════════════════════════════════════
+  # Docker — Base images
+  # ═══════════════════════════════════════════════════════════
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Copenhagen"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      docker-images:
+        patterns:
+          - "*"

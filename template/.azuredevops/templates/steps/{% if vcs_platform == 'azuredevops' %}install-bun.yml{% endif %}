@@ -1,0 +1,30 @@
+# Reusable step template for Bun setup and dependency installation
+# Usage: - template: templates/steps/install-bun.yml
+#          parameters:
+#            workingDirectory: 'frontend'
+
+parameters:
+  - name: bunVersion
+    type: string
+    default: '1.2'
+  - name: workingDirectory
+    type: string
+    default: 'frontend'
+
+steps:
+  - script: |
+      curl -fsSL https://bun.sh/install | bash -s "bun-v${{ parameters.bunVersion }}"
+      echo "##vso[task.prependpath]$HOME/.bun/bin"
+    displayName: 'Install Bun ${{ parameters.bunVersion }}'
+
+  - task: Cache@2
+    displayName: 'Cache Bun dependencies'
+    inputs:
+      key: 'bun | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/bun.lock'
+      restoreKeys: |
+        bun | "$(Agent.OS)"
+      path: '${{ parameters.workingDirectory }}/node_modules'
+
+  - script: bun install --frozen-lockfile
+    displayName: 'Install frontend dependencies'
+    workingDirectory: '${{ parameters.workingDirectory }}'

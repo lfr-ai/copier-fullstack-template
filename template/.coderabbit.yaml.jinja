@@ -1,0 +1,82 @@
+# CodeRabbit configuration for {{ project_name }}
+# https://docs.coderabbit.ai/guides/configure-coderabbit/
+
+language: "en-US"
+early_access: true
+enable_free_tier: true
+
+reviews:
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  collapse_walkthrough: false
+
+  path_instructions:
+    - path: "backend/src/{{ project_slug }}/core/**"
+      instructions: |
+        Core domain: zero framework imports. No FastAPI, SQLAlchemy, or Pydantic models.
+        Only stdlib + {{ project_slug }}.utils/{{ project_slug }}.config. Flag imports from
+        application/, infrastructure/, or presentation/ as CRITICAL violations.
+        Dataclasses need frozen=True, slots=True.
+
+    - path: "backend/src/{{ project_slug }}/application/**"
+      instructions: |
+        Application layer: orchestrates use cases. May import core, infrastructure (via
+        protocols), config, utils. Must NOT import presentation. Business logic belongs
+        here, not in route handlers. Services depend on protocols, not concrete adapters.
+
+    - path: "backend/src/{{ project_slug }}/infrastructure/**"
+      instructions: |
+        Infrastructure: concrete adapters implementing core/interfaces protocols. No imports
+        from application/ or presentation/. SQLAlchemy models live here. Async session
+        management with proper commit/rollback.
+{% if use_ai %}
+    - path: "backend/src/{{ project_slug }}/ai/**"
+      instructions: |
+        AI vertical: LangChain{% if use_crewai %}, CrewAI{% endif %}, embeddings. Import from
+        core/config/utils ONLY — not infrastructure, application, or presentation.
+{% endif %}
+    - path: "backend/src/{{ project_slug }}/presentation/**"
+      instructions: |
+        Presentation: FastAPI routes{% if api_style in ('graphql', 'both') %} + Strawberry GraphQL{% endif %}.
+        Route handlers must delegate to application services — no business logic inline.
+        Use fastapi.status constants, never raw integers. DI via Depends() in dependencies.py.
+
+    - path: "tests/**"
+      instructions: |
+        All test functions must have a @pytest.mark.* marker (unit, integration, asyncio, slow,
+        property, performance). Use factory-boy for test data from tests/factories/. Shared
+        fixtures belong in conftest.py. No mocking of internal business logic.
+
+    - path: "frontend/src/**"
+      instructions: |
+        React 19 + TypeScript strict mode. Named exports only. Use cn() from lib/utils. Semantic
+        color tokens only (bg-primary, not bg-blue-500). Zod schemas at all API boundaries.
+        Zustand stores in application/stores/. Install shadcn components via CLI only.
+
+    - path: "registry/**"
+      instructions: |
+        Naming registry is the single source of truth for cross-layer constants. Changes here
+        require regenerating core/registry_constants.py via `task registry:generate`. Never
+        duplicate registry values as magic strings elsewhere.
+{% if vcs_platform == 'github' %}
+    - path: ".github/workflows/**"
+      instructions: |
+        Pin action versions to full SHA or semver tags — never @main or @latest. Secrets via
+        ${{ '{{' }} secrets.NAME {{ '}}' }} only. Jobs must have explicit timeout-minutes.
+{% endif %}
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings: true
+
+tone_instructions: |
+  Concise, constructive reviews. Prioritize:
+  - Architecture violations (Clean Architecture) — CRITICAL
+  - Security issues (OWASP Top 10) — CRITICAL
+  - Performance regressions (N+1 queries, unnecessary re-renders)
+  - Type safety (missing annotations, use of Any)
+  - Missing tests for new behaviour
+  Include file path, line, and a concrete fix. Skip style issues handled by ruff or Biome.

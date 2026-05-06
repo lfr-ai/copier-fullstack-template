@@ -1,0 +1,75 @@
+# Renovate Dependency Automation Pipeline
+# Runs weekly to check for dependency updates and create pull requests
+# Requires: Azure CLI and az devops extension
+# Authentication: Uses System.AccessToken with build service permissions
+
+trigger: none  # Manual and scheduled runs only
+
+pr: none  # Don't run on pull requests
+
+schedules:
+  - cron: '0 3 * * 1'  # Monday 3:00 AM UTC
+    displayName: Weekly dependency update check
+    branches:
+      include:
+        - {% if default_branch %}{{ default_branch }}{% else %}main{% endif %}
+    always: true  # Run even if there are no code changes
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - name: NODE_VERSION
+    value: '20.x'
+  - name: RENOVATE_VERSION
+    value: 'latest'
+
+jobs:
+  - job: renovate
+    displayName: Run Renovate
+    steps:
+      - checkout: self
+        fetchDepth: 0
+        persistCredentials: true
+
+      - task: NodeTool@0
+        displayName: Install Node.js
+        inputs:
+          versionSpec: $(NODE_VERSION)
+
+      - script: |
+          npm install -g renovate@$(RENOVATE_VERSION)
+        displayName: Install Renovate
+
+      - script: |
+          renovate --platform azure --token $(System.AccessToken)
+        displayName: Run Renovate
+        env:
+          # Required: Azure DevOps authentication
+          RENOVATE_TOKEN: $(System.AccessToken)
+          # Required: Azure DevOps organization endpoint
+          RENOVATE_ENDPOINT: https://dev.azure.com/{{ organization_name }}/
+          # Optional: Configure Renovate behavior
+          RENOVATE_AUTODISCOVER: false
+          RENOVATE_BASE_BRANCHES: {% if default_branch %}{{ default_branch }}{% else %}main{% endif %}
+          RENOVATE_GIT_AUTHOR: 'Renovate Bot <bot@renovateapp.com>'
+          # Logging configuration
+          LOG_LEVEL: info
+          RENOVATE_PR_FOOTER: |
+            🤖 This PR was created by Renovate Bot
+            📅 Schedule: Weekly on Monday at 3:00 AM UTC
+            🔄 Automerge: Enabled for security patches
+
+            ---
+            Questions? Check the [Renovate docs](https://docs.renovatebot.com/)
+            or contact {{ github_username }}.
+        continueOnError: true  # Don't fail the build if Renovate has issues
+
+      - task: PublishBuildArtifacts@1
+        displayName: Publish Renovate logs
+        condition: always()
+        inputs:
+          pathToPublish: $(System.DefaultWorkingDirectory)/renovate-log.json
+          artifactName: renovate-logs
+          publishLocation: Container
+        continueOnError: true

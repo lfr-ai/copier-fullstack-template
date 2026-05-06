@@ -1,0 +1,134 @@
+# Dependabot configuration for {{ project_name }}
+# https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+updates:
+  # ═══════════════════════════════════════════════════════════
+  # Python (uv) — Backend Dependencies
+  # ═══════════════════════════════════════════════════════════
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Copenhagen"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      fastapi-ecosystem:
+        patterns:
+          - "fastapi*"
+          - "uvicorn*"
+          - "starlette*"
+          - "pydantic*"
+      sqlalchemy-ecosystem:
+        patterns:
+          - "sqlalchemy*"
+          - "alembic*"
+{% if database_backend == 'sqlite' %}          - "aiosqlite*"
+{% elif database_backend in ('postgresql', 'azure_postgresql') %}          - "asyncpg*"
+{% endif %}{% if use_celery %}      celery-ecosystem:
+        patterns:
+          - "celery*"
+          - "redis*"
+{% endif %}{% if use_ai %}      ai-ecosystem:
+        patterns:
+          - "langchain*"
+{% if use_crewai %}          - "crewai*"
+{% endif %}{% endif %}      testing:
+        patterns:
+          - "pytest*"
+          - "hypothesis*"
+          - "factory-boy*"
+      linting:
+        patterns:
+          - "ruff*"
+          - "ty*"
+          - "bandit*"
+
+  # ═══════════════════════════════════════════════════════════
+  # JavaScript (bun) — Frontend Dependencies
+  # ═══════════════════════════════════════════════════════════
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Copenhagen"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "javascript"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "@vitejs/*"
+      ui-components:
+        patterns:
+          - "@radix-ui/*"
+          - "lucide-react*"
+          - "tailwindcss*"
+      testing:
+        patterns:
+          - "@testing-library/*"
+          - "vitest*"
+          - "@playwright/*"
+      linting:
+        patterns:
+          - "@biomejs/*"
+
+  # ═══════════════════════════════════════════════════════════
+  # GitHub Actions
+  # ═══════════════════════════════════════════════════════════
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Copenhagen"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # ═══════════════════════════════════════════════════════════
+  # Docker
+  # ═══════════════════════════════════════════════════════════
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Copenhagen"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"

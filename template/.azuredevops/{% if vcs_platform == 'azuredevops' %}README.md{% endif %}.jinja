@@ -1,0 +1,304 @@
+# Azure DevOps Setup Guide
+
+This directory contains Azure CLI provisioning scripts and Azure Pipelines YAML configuration for {{ project_name }}.
+
+## Overview
+
+Azure DevOps does not support Infrastructure as Code via Bicep or ARM templates for organization/project resources. This directory provides Azure CLI scripts for provisioning and configuring Azure DevOps projects, repositories, pipelines, and branch policies.
+
+## Directory Structure
+
+```
+.azuredevops/
+├── scripts/              # Azure CLI provisioning scripts
+│   ├── provision-project.sh       # Bash: Create ADO project, repo, pipelines
+│   ├── provision-project.ps1      # PowerShell equivalent
+│   ├── configure-policies.sh      # Bash: Configure branch policies
+│   └── configure-policies.ps1     # PowerShell equivalent
+├── pipelines/            # Azure Pipelines YAML definitions
+│   ├── ci.yml           # Continuous Integration pipeline
+│   └── renovate.yml     # Renovate dependency automation
+└── templates/            # Reusable pipeline step templates
+    └── steps/
+        ├── install-python.yml    # Python/uv setup steps
+        └── install-bun.yml       # Bun/Node setup steps
+```
+
+## Prerequisites
+
+### Required Tools
+
+1. **Azure CLI** (version 2.40.0 or later)
+   - Install: https://docs.microsoft.com/cli/azure/install-azure-cli
+   - Verify: `az --version`
+
+2. **Azure DevOps Extension for Azure CLI**
+   ```bash
+   az extension add --name azure-devops
+   az extension update --name azure-devops  # Update to latest
+   ```
+
+3. **jq** (for Bash scripts on Linux/macOS)
+   - Linux: `sudo apt-get install jq` or `sudo yum install jq`
+   - macOS: `brew install jq`
+   - Windows: Install via Chocolatey `choco install jq` or download from https://stedolan.github.io/jq/
+
+4. **PowerShell 7+** (for .ps1 scripts, cross-platform)
+   - Install: https://docs.microsoft.com/powershell/scripting/install/installing-powershell
+
+### Azure DevOps Permissions
+
+You need the following permissions in your Azure DevOps organization:
+
+- **Project Creation**: Organization-level "Create new projects" permission
+- **Repository Management**: Project-level "Create repository" permission
+- **Pipeline Management**: Project-level "Administer build permissions" permission
+- **Branch Policy Configuration**: Repository-level "Manage policies" permission
+
+To check/grant permissions:
+1. Navigate to Organization Settings → Permissions → Users
+2. Select your user or group
+3. Verify the permissions listed above are enabled
+
+## Authentication
+
+### Step 1: Azure CLI Login
+
+```bash
+# Interactive browser login
+az login
+
+# Or use device code flow (for SSH/remote sessions)
+az login --use-device-code
+
+# Verify login
+az account show
+```
+
+### Step 2: Configure Azure DevOps Defaults (Optional)
+
+Set default organization and project to avoid passing them every time:
+
+```bash
+az devops configure --defaults organization=https://dev.azure.com/YOUR_ORG project=YOUR_PROJECT
+```
+
+## Provisioning Scripts
+
+### Script 1: provision-project
+
+Creates an Azure DevOps project, repository, and registers pipelines.
+
+**Bash:**
+```bash
+cd .azuredevops/scripts
+chmod +x provision-project.sh
+./provision-project.sh <organization> <project-name> [repo-name] [description]
+```
+
+**PowerShell:**
+```powershell
+cd .azuredevops/scripts
+.\provision-project.ps1 -Organization <org> -ProjectName <project> [-RepoName <repo>] [-Description <desc>]
+```
+
+**Example:**
+```bash
+./provision-project.sh myorg {{ project_slug }} {{ project_slug }}-repo "{{ project_name }}"
+```
+
+**What it does:**
+- ✅ Creates project if it doesn't exist (Agile process, Git source control, private visibility)
+- ✅ Creates repository if it doesn't exist
+- ✅ Registers CI pipeline (`.azuredevops/pipelines/ci.yml`)
+- ✅ Registers Renovate pipeline (`.azuredevops/pipelines/renovate.yml`)
+- ✅ Idempotent: Safe to run multiple times, skips existing resources
+
+**Note:** Pipeline registration will warn if YAML files don't exist yet. This is expected. Pipelines will activate after you push code to the repository.
+
+### Script 2: configure-policies
+
+Configures branch protection policies for the main branch.
+
+**Bash:**
+```bash
+cd .azuredevops/scripts
+chmod +x configure-policies.sh
+./configure-policies.sh <organization> <project-name> [repo-name] [branch-name]
+```
+
+**PowerShell:**
+```powershell
+cd .azuredevops/scripts
+.\configure-policies.ps1 -Organization <org> -ProjectName <project> [-RepoName <repo>] [-BranchName <branch>]
+```
+
+**Example:**
+```bash
+./configure-policies.sh myorg {{ project_slug }} {{ project_slug }}-repo main
+```
+
+**Policies configured:**
+- ✅ **Minimum 1 approver** (blocking) - PRs require at least one approval
+- ✅ **Work item linking** (non-blocking) - Encourages linking PRs to work items
+- ✅ **Comment resolution** (blocking) - All comments must be resolved before merge
+- ✅ **Build validation** (blocking) - CI pipeline must pass (if pipeline exists)
+
+## Manual Setup Steps
+
+Some Azure DevOps resources cannot be automated via CLI and require manual setup:
+
+### 1. Service Connections
+
+For deploying to Azure, Docker registries, or other external services, create service connections:
+
+1. Navigate to **Project Settings** → **Service connections**
+2. Click **New service connection**
+3. Select connection type:
+   - **Azure Resource Manager** - for Azure deployments
+   - **Docker Registry** - for container registries (ACR, Docker Hub)
+   - **Generic** - for other services
+4. Configure authentication (Service Principal, Managed Identity, or Personal Access Token)
+5. Name the connection (referenced in pipeline YAML)
+
+### 2. Variable Groups
+
+For shared secrets and configuration:
+
+1. Navigate to **Pipelines** → **Library** → **Variable groups**
+2. Click **+ Variable group**
+3. Add variables (mark as secret for sensitive values)
+4. Link to pipelines in YAML with `variables: - group: your-variable-group`
+
+### 3. Agent Pools (Optional)
+
+For self-hosted agents:
+
+1. Navigate to **Organization Settings** → **Agent pools**
+2. Click **Add pool** → **New agent pool**
+3. Download and configure agent on your infrastructure
+4. Reference pool in pipeline YAML: `pool: name: your-pool-name`
+
+## Pipeline Configuration
+
+### CI Pipeline
+
+Triggered on:
+- **Push** to `main` or `develop` branches
+- **Pull Request** to any branch
+
+Jobs:
+- `lint` - Code quality (ruff, shellcheck)
+- `typecheck` - Static type checking (mypy, tsc)
+- `security` - Security scanning (bandit, npm audit)
+- `test` - Unit/integration tests (pytest, vitest)
+- `frontend` - Frontend build (bun build)
+- `container` - Docker image build
+
+### Renovate Pipeline
+
+Runs **weekly** (Monday 3:00 AM UTC) to check for dependency updates.
+
+Configuration in `renovate.json` at repository root.
+
+## Troubleshooting
+
+### Issue: "TF401349: An organization with the name already exists"
+
+**Cause:** Organization name conflicts with existing organization.
+
+**Solution:** Use a different organization name or verify you have access to the existing organization.
+
+### Issue: "TF401019: The Git repository with name or identifier does not exist"
+
+**Cause:** Repository hasn't been created yet or wrong repository name.
+
+**Solution:**
+1. Verify repository was created: `az repos list --project <project> --output table`
+2. Check repository name spelling matches exactly
+3. Run `provision-project` script first if repository doesn't exist
+
+### Issue: "VS403403: The pipeline is not valid. Job lint: Step AzureCLI input 'scriptLocation' is invalid"
+
+**Cause:** Pipeline YAML syntax error or missing template reference.
+
+**Solution:**
+1. Validate YAML syntax: `yamllint .azuredevops/pipelines/ci.yml`
+2. Check template paths are correct (relative to repo root)
+3. Ensure all referenced templates exist under `.azuredevops/templates/`
+
+### Issue: "The user is not authorized to access this resource"
+
+**Cause:** Insufficient permissions for the operation.
+
+**Solution:**
+1. Verify you have necessary permissions (see [Azure DevOps Permissions](#azure-devops-permissions))
+2. Contact your Azure DevOps organization administrator
+3. Check if organization requires MFA/conditional access and complete authentication
+
+### Issue: "This command requires the extension azure-devops"
+
+**Cause:** Azure DevOps CLI extension not installed.
+
+**Solution:**
+```bash
+az extension add --name azure-devops
+az extension update --name azure-devops  # Update if already installed
+```
+
+### Issue: "Please run 'az login' to setup account"
+
+**Cause:** Not authenticated to Azure CLI.
+
+**Solution:**
+```bash
+az login                    # Interactive browser login
+# OR
+az login --use-device-code  # For remote sessions
+```
+
+### Issue: Pipeline registration warns "YAML file doesn't exist"
+
+**Cause:** Pipeline YAML files haven't been pushed to repository yet.
+
+**Solution:** This is expected behavior. The pipeline will activate automatically after you push code:
+```bash
+git remote add azure https://dev.azure.com/<org>/<project>/_git/<repo>
+git push azure main
+```
+
+### Issue: "jq: command not found" (Bash scripts)
+
+**Cause:** `jq` is not installed (required for JSON parsing).
+
+**Solution:**
+- Linux: `sudo apt-get install jq` or `sudo yum install jq`
+- macOS: `brew install jq`
+- Windows Git Bash: Download from https://stedolan.github.io/jq/download/
+
+### Issue: Build validation policy not created
+
+**Cause:** CI pipeline doesn't exist yet when running `configure-policies`.
+
+**Solution:**
+1. Push pipeline YAML to repository first
+2. Verify pipeline exists: `az pipelines list --project <project> --output table`
+3. Re-run `configure-policies` script to add build validation policy
+
+## Additional Resources
+
+- [Azure DevOps CLI Documentation](https://docs.microsoft.com/cli/azure/devops)
+- [Azure Pipelines YAML Schema](https://docs.microsoft.com/azure/devops/pipelines/yaml-schema)
+- [Branch Policies Documentation](https://docs.microsoft.com/azure/devops/repos/git/branch-policies)
+- [Service Connections](https://docs.microsoft.com/azure/devops/pipelines/library/service-endpoints)
+- [Renovate Documentation](https://docs.renovatebot.com/)
+
+## Support
+
+For issues specific to this template:
+- Repository: https://github.com/{{ github_username }}/{{ project_slug }}
+- Issues: https://github.com/{{ github_username }}/{{ project_slug }}/issues
+
+For Azure DevOps issues:
+- [Azure DevOps Support](https://developercommunity.visualstudio.com/AzureDevOps)
+- [Stack Overflow - azure-devops](https://stackoverflow.com/questions/tagged/azure-devops)

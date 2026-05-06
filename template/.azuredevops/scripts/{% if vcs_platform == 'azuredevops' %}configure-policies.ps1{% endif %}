@@ -1,0 +1,294 @@
+#!/usr/bin/env pwsh
+# Configure Azure DevOps branch policies for main branch
+# Requires: Azure CLI with az devops extension
+# Usage: .\configure-policies.ps1 <organization> <project-name> [repo-name] [branch-name]
+
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true, Position = 0)]
+    [string]$Organization,
+
+    [Parameter(Mandatory = $true, Position = 1)]
+    [string]$ProjectName,
+
+    [Parameter(Mandatory = $false, Position = 2)]
+    [string]$RepoName,
+
+    [Parameter(Mandatory = $false, Position = 3)]
+    [string]$BranchName = "main"
+)
+
+$ErrorActionPreference = 'Stop'
+$InformationPreference = 'Continue'
+
+# Set defaults
+if (-not $RepoName) {
+    $RepoName = $ProjectName
+}
+
+# Helper functions
+function Write-InfoLog {
+    param([string]$Message)
+    Write-Host "[INFO] $Message" -ForegroundColor Green
+}
+
+function Write-WarnLog {
+    param([string]$Message)
+    Write-Host "[WARN] $Message" -ForegroundColor Yellow
+}
+
+function Write-ErrorLog {
+    param([string]$Message)
+    Write-Host "[ERROR] $Message" -ForegroundColor Red
+}
+
+# Check prerequisites
+function Test-Prerequisites {
+    Write-InfoLog "Checking prerequisites..."
+
+    # Check Azure CLI
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+        Write-ErrorLog "Azure CLI not found. Install from: https://docs.microsoft.com/cli/azure/install-azure-cli"
+        exit 1
+    }
+
+    # Check Azure DevOps extension
+    $extensions = az extension list --output json | ConvertFrom-Json
+    if (-not ($extensions | Where-Object { $_.name -eq 'azure-devops' })) {
+        Write-ErrorLog "Azure DevOps extension not installed. Run: az extension add --name azure-devops"
+        exit 1
+    }
+
+    # Check if logged in
+    try {
+        az account show --output none 2>$null
+    }
+    catch {
+        Write-ErrorLog "Not logged in to Azure CLI. Run: az login"
+        exit 1
+    }
+
+    Write-InfoLog "Prerequisites check passed"
+}
+
+# Configure Azure DevOps defaults
+function Set-AzureDevOpsDefaults {
+    Write-InfoLog "Configuring Azure DevOps defaults..."
+    az devops configure --defaults `
+        organization="https://dev.azure.com/$Organization" `
+        project="$ProjectName"
+}
+
+# Get repository ID
+function Get-RepositoryId {
+    Write-InfoLog "Getting repository ID for '$RepoName'..."
+
+    try {
+        $repoInfo = az repos show `
+            --repository "$RepoName" `
+            --organization "https://dev.azure.com/$Organization" `
+            --project "$ProjectName" `
+            --output json | ConvertFrom-Json
+
+        return $repoInfo.id
+    }
+    catch {
+        Write-ErrorLog "Repository '$RepoName' not found"
+        exit 1
+    }
+}
+
+# Configure minimum approver count policy
+function Set-ApproverCountPolicy {
+    param([string]$RepoId)
+
+    Write-InfoLog "Configuring minimum approver count policy..."
+
+    # Check if policy already exists
+    $existingPolicies = az repos policy approver-count list `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output json | ConvertFrom-Json
+
+    $policyExists = $existingPolicies | Where-Object {
+        $_.settings.scope[0].repositoryId -eq $RepoId -and
+        $_.settings.scope[0].refName -eq "refs/heads/$BranchName"
+    }
+
+    if ($policyExists) {
+        Write-WarnLog "Minimum approver count policy already exists for branch '$BranchName', skipping"
+        return
+    }
+
+    az repos policy approver-count create `
+        --allow-downvotes false `
+        --blocking true `
+        --branch "$BranchName" `
+        --creator-vote-counts false `
+        --enabled true `
+        --minimum-approver-count 1 `
+        --repository-id "$RepoId" `
+        --reset-on-source-push false `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output table
+
+    Write-InfoLog "Minimum approver count policy created"
+}
+
+# Configure work item linking policy
+function Set-WorkItemPolicy {
+    param([string]$RepoId)
+
+    Write-InfoLog "Configuring work item linking policy..."
+
+    # Check if policy already exists
+    $existingPolicies = az repos policy work-item-linking list `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output json | ConvertFrom-Json
+
+    $policyExists = $existingPolicies | Where-Object {
+        $_.settings.scope[0].repositoryId -eq $RepoId -and
+        $_.settings.scope[0].refName -eq "refs/heads/$BranchName"
+    }
+
+    if ($policyExists) {
+        Write-WarnLog "Work item linking policy already exists for branch '$BranchName', skipping"
+        return
+    }
+
+    az repos policy work-item-linking create `
+        --blocking false `
+        --branch "$BranchName" `
+        --enabled true `
+        --repository-id "$RepoId" `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output table
+
+    Write-InfoLog "Work item linking policy created"
+}
+
+# Configure comment resolution policy
+function Set-CommentResolutionPolicy {
+    param([string]$RepoId)
+
+    Write-InfoLog "Configuring comment resolution policy..."
+
+    # Check if policy already exists
+    $existingPolicies = az repos policy comment-required list `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output json | ConvertFrom-Json
+
+    $policyExists = $existingPolicies | Where-Object {
+        $_.settings.scope[0].repositoryId -eq $RepoId -and
+        $_.settings.scope[0].refName -eq "refs/heads/$BranchName"
+    }
+
+    if ($policyExists) {
+        Write-WarnLog "Comment resolution policy already exists for branch '$BranchName', skipping"
+        return
+    }
+
+    az repos policy comment-required create `
+        --blocking true `
+        --branch "$BranchName" `
+        --enabled true `
+        --repository-id "$RepoId" `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output table
+
+    Write-InfoLog "Comment resolution policy created"
+}
+
+# Configure build validation policy
+function Set-BuildValidationPolicy {
+    param([string]$RepoId)
+
+    Write-InfoLog "Configuring build validation policy..."
+
+    # Try to get CI pipeline ID
+    $pipelineName = "$ProjectName-ci"
+    try {
+        $pipeline = az pipelines show `
+            --name "$pipelineName" `
+            --organization "https://dev.azure.com/$Organization" `
+            --project "$ProjectName" `
+            --output json 2>$null | ConvertFrom-Json
+
+        $pipelineId = $pipeline.id
+    }
+    catch {
+        Write-WarnLog "CI pipeline '$pipelineName' not found. Skipping build validation policy."
+        Write-WarnLog "You can add this policy later after creating the pipeline."
+        return
+    }
+
+    # Check if policy already exists
+    $existingPolicies = az repos policy build list `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output json | ConvertFrom-Json
+
+    $policyExists = $existingPolicies | Where-Object {
+        $_.settings.scope[0].repositoryId -eq $RepoId -and
+        $_.settings.scope[0].refName -eq "refs/heads/$BranchName" -and
+        $_.settings.buildDefinitionId -eq $pipelineId
+    }
+
+    if ($policyExists) {
+        Write-WarnLog "Build validation policy already exists for branch '$BranchName', skipping"
+        return
+    }
+
+    az repos policy build create `
+        --blocking true `
+        --branch "$BranchName" `
+        --build-definition-id "$pipelineId" `
+        --display-name "CI Build Validation" `
+        --enabled true `
+        --manual-queue-only false `
+        --queue-on-source-update-only true `
+        --repository-id "$RepoId" `
+        --valid-duration 720 `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output table
+
+    Write-InfoLog "Build validation policy created"
+}
+
+# Main execution
+function Main {
+    Write-InfoLog "Starting Azure DevOps branch policy configuration..."
+    Write-InfoLog "Organization: $Organization"
+    Write-InfoLog "Project: $ProjectName"
+    Write-InfoLog "Repository: $RepoName"
+    Write-InfoLog "Branch: $BranchName"
+    Write-Host ""
+
+    Test-Prerequisites
+    Set-AzureDevOpsDefaults
+
+    $repoId = Get-RepositoryId
+    Write-InfoLog "Repository ID: $repoId"
+
+    Set-ApproverCountPolicy -RepoId $repoId
+    Set-WorkItemPolicy -RepoId $repoId
+    Set-CommentResolutionPolicy -RepoId $repoId
+    Set-BuildValidationPolicy -RepoId $repoId
+
+    Write-Host ""
+    Write-InfoLog "Branch policy configuration completed successfully!"
+    Write-InfoLog "Configured policies for branch: $BranchName"
+    Write-InfoLog "  - Minimum 1 approver required"
+    Write-InfoLog "  - Work item linking (non-blocking)"
+    Write-InfoLog "  - Comment resolution required"
+    Write-InfoLog "  - Build validation (if CI pipeline exists)"
+}
+
+# Execute main function
+Main

@@ -1,0 +1,125 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/pyproject.toml"
+      - "**/requirements*.txt"
+      - "**/package.json"
+      - "**/package-lock.json"
+      - "**/bun.lockb"
+      - "**/Pipfile.lock"
+      - "**/poetry.lock"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Review dependency changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          allow-licenses: >-
+            MIT,
+            Apache-2.0,
+            BSD-2-Clause,
+            BSD-3-Clause,
+            ISC,
+            CC0-1.0,
+            0BSD,
+            MPL-2.0,
+            Python-2.0,
+            PSF-2.0,
+            Unlicense
+          deny-licenses: >-
+            GPL-2.0,
+            GPL-3.0,
+            AGPL-3.0,
+            LGPL-2.0,
+            LGPL-2.1,
+            LGPL-3.0,
+            CC-BY-NC,
+            CC-BY-AND,
+            SSPL
+          comment-summary-in-pr: always
+          warn-only: false
+
+  python-security:
+    name: Python dependency security scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: contains(github.event.pull_request.changed_files, 'pyproject.toml')
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.0.0
+        with:
+          enable-cache: true
+
+      - name: Scan Python dependencies with pip-audit
+        run: |
+          cd template/backend
+          uvx pip-audit --desc --require-hashes=false
+        continue-on-error: true
+
+      - name: Check for known vulnerabilities with safety
+        run: |
+          cd template/backend
+          uvx safety check --json || true
+        continue-on-error: true
+
+  javascript-security:
+    name: JavaScript dependency security scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: contains(github.event.pull_request.changed_files, 'package.json')
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Audit npm dependencies
+        working-directory: template/frontend
+        run: |
+          bun install
+          bun pm check || true
+        continue-on-error: true
+
+  license-check:
+    name: License compliance check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check Python licenses
+        if: contains(github.event.pull_request.changed_files, 'pyproject.toml')
+        run: |
+          cd template/backend
+          uvx pip-licenses --format=markdown --with-urls --order=license
+        continue-on-error: true
+
+      - name: Check JavaScript licenses
+        if: contains(github.event.pull_request.changed_files, 'package.json')
+        uses: fossas/fossa-action@v1
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+          run-tests: true
+        continue-on-error: true
