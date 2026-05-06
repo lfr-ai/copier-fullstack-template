@@ -1,0 +1,100 @@
+# {{ project_name }} Knowledge Graph
+
+## Project Identity
+
+- **Name**: {{ project_name }}
+- **Description**: {{ project_description }}
+- **Type**: Fullstack Python + React application
+- **Architecture**: Clean Architecture with strict layered boundaries
+- **Author**: {{ author_name }} <{{ author_email }}>
+- **License**: {{ license }}
+
+## Technology Stack
+
+### Backend
+
+- Python {{ python_version }}, FastAPI, Uvicorn
+- SQLAlchemy 2.0+ async{% if database_backend == 'sqlite' %}, aiosqlite (SQLite){% elif database_backend == 'postgresql' %}, asyncpg (PostgreSQL){% elif database_backend == 'azure_postgresql' %}, asyncpg (Azure PostgreSQL Flexible Server){% endif %}
+- Pydantic v2, structlog
+{% if api_style in ('graphql', 'both') %}- Strawberry GraphQL (subscriptions via WebSocket)
+{% endif %}- Alembic (database migrations)
+{% if use_celery %}- Celery + Redis (async task queue){% endif %}
+{% if use_ai %}- LangChain{% if use_crewai %}, CrewAI{% endif %} (AI pipeline){% endif %}
+
+### Frontend
+
+- React 19, TypeScript 5.x
+- Vite 6 + SWC
+- shadcn/ui (Radix + Tailwind CSS v4)
+- Zustand 5, TanStack React Query 5
+- Biome (lint + format)
+- Vitest + React Testing Library
+
+### DevOps
+
+- uv (Python), bun (frontend)
+- Taskfile.yml
+- {{ container_runtime | capitalize }}{% if use_caddy %} + Caddy (reverse proxy){% endif %}
+{% if vcs_platform == 'github' %}- GitHub Actions CI/CD{% elif vcs_platform == 'azuredevops' %}- Azure DevOps Pipelines{% endif %}
+- CodeRabbit (AI code review)
+
+## Architecture Layers
+
+### Core (innermost — no external deps)
+
+- Entities: domain objects with business rules
+- Value Objects: immutable data containers
+- Interfaces: port protocols (defined here, implemented in infrastructure)
+- Exceptions: domain error hierarchy
+- Enums: `StrEnum` + `@unique`
+- **Dependencies**: stdlib, utils, config ONLY
+
+### Application
+
+- DTOs: data transfer objects
+- Services: use case orchestration
+- Handlers: application-level handlers
+- Mappers: entity ↔ DTO conversion
+- **Dependencies**: core, infrastructure, config
+
+### Infrastructure
+
+- DB: SQLAlchemy models, async repositories
+- Adapters: external service adapters
+- Concurrency: queue and thread managers
+- **Dependencies**: core, config
+
+### Presentation
+
+- API: FastAPI routes, Pydantic request/response schemas
+{% if api_style in ('graphql', 'both') %}- GraphQL: Strawberry schema, resolvers, subscriptions
+{% endif %}- Middleware: auth, rate limiting, error handling
+- **Dependencies**: application, core
+
+### Composition (outermost)
+
+- Container: DI wiring with `@cached_property`
+- App Factory: creates and configures FastAPI application
+- **Dependencies**: all layers
+
+## Key Paths
+
+| Path | Purpose |
+|------|---------|
+| `backend/src/{{ project_slug }}/` | Backend source (Clean Architecture layers) |
+| `frontend/src/` | Frontend source (React + TypeScript) |
+| `tests/` | Test suite (unit/, integration/, property/, e2e/) |
+| `registry/naming_registry.json` | Shared naming constants (never hardcode) |
+| `Taskfile.yml` | Task runner (includes `tasks/*.yml`) |
+| `.claude/agents/` | Claude Code specialized agents |
+| `.github/agents/` | GitHub Copilot specialized agents |
+| `.github/instructions/` | File-scoped Copilot instructions |
+| `.github/prompts/` | Reusable Copilot prompt files |
+
+## Development Workflow
+
+1. `task dev` — Start all services (backend + frontend)
+2. `task check` — Full quality gate before committing (lint + tests + typecheck)
+3. `task db:revision` — Create new Alembic migration
+4. `task registry:generate` — Regenerate naming constants after registry changes
+5. `/commit` in Claude Code — Create conventional commit from staged changes

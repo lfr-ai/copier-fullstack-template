@@ -1,0 +1,247 @@
+#!/usr/bin/env pwsh
+# Provision Azure DevOps project, repository, and pipelines
+# Requires: Azure CLI with az devops extension
+# Usage: .\provision-project.ps1 <organization> <project-name> [repo-name] [description]
+
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true, Position = 0)]
+    [string]$Organization,
+
+    [Parameter(Mandatory = $true, Position = 1)]
+    [string]$ProjectName,
+
+    [Parameter(Mandatory = $false, Position = 2)]
+    [string]$RepoName,
+
+    [Parameter(Mandatory = $false, Position = 3)]
+    [string]$Description = "Scaffolded by copier-fullstack-template"
+)
+
+$ErrorActionPreference = 'Stop'
+$InformationPreference = 'Continue'
+
+# Set defaults
+if (-not $RepoName) {
+    $RepoName = $ProjectName
+}
+
+# Helper functions
+function Write-InfoLog {
+    param([string]$Message)
+    Write-Host "[INFO] $Message" -ForegroundColor Green
+}
+
+function Write-WarnLog {
+    param([string]$Message)
+    Write-Host "[WARN] $Message" -ForegroundColor Yellow
+}
+
+function Write-ErrorLog {
+    param([string]$Message)
+    Write-Host "[ERROR] $Message" -ForegroundColor Red
+}
+
+# Check prerequisites
+function Test-Prerequisites {
+    Write-InfoLog "Checking prerequisites..."
+
+    # Check Azure CLI
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+        Write-ErrorLog "Azure CLI not found. Install from: https://docs.microsoft.com/cli/azure/install-azure-cli"
+        exit 1
+    }
+
+    # Check Azure DevOps extension
+    $extensions = az extension list --output json | ConvertFrom-Json
+    if (-not ($extensions | Where-Object { $_.name -eq 'azure-devops' })) {
+        Write-ErrorLog "Azure DevOps extension not installed. Run: az extension add --name azure-devops"
+        exit 1
+    }
+
+    # Check if logged in
+    try {
+        az account show --output none 2>$null
+    }
+    catch {
+        Write-ErrorLog "Not logged in to Azure CLI. Run: az login"
+        exit 1
+    }
+
+    Write-InfoLog "Prerequisites check passed"
+}
+
+# Configure Azure DevOps defaults
+function Set-AzureDevOpsDefaults {
+    Write-InfoLog "Configuring Azure DevOps defaults..."
+    az devops configure --defaults `
+        organization="https://dev.azure.com/$Organization" `
+        project="$ProjectName" `
+        --use-git-aliases true
+}
+
+# Create project if it doesn't exist
+function New-AzureDevOpsProject {
+    Write-InfoLog "Checking if project '$ProjectName' exists..."
+
+    try {
+        az devops project show `
+            --project "$ProjectName" `
+            --organization "https://dev.azure.com/$Organization" `
+            --output none 2>$null
+
+        Write-WarnLog "Project '$ProjectName' already exists, skipping creation"
+        return
+    }
+    catch {
+        # Project doesn't exist, create it
+    }
+
+    Write-InfoLog "Creating project '$ProjectName'..."
+    az devops project create `
+        --name "$ProjectName" `
+        --organization "https://dev.azure.com/$Organization" `
+        --description "$Description" `
+        --process Agile `
+        --source-control git `
+        --visibility private `
+        --output table
+
+    Write-InfoLog "Project '$ProjectName' created successfully"
+}
+
+# Create repository if it doesn't exist
+function New-AzureDevOpsRepository {
+    Write-InfoLog "Checking if repository '$RepoName' exists..."
+
+    try {
+        az repos show `
+            --repository "$RepoName" `
+            --organization "https://dev.azure.com/$Organization" `
+            --project "$ProjectName" `
+            --output none 2>$null
+
+        Write-WarnLog "Repository '$RepoName' already exists, skipping creation"
+        return
+    }
+    catch {
+        # Repository doesn't exist, create it
+    }
+
+    Write-InfoLog "Creating repository '$RepoName'..."
+    az repos create `
+        --name "$RepoName" `
+        --organization "https://dev.azure.com/$Organization" `
+        --project "$ProjectName" `
+        --output table
+
+    Write-InfoLog "Repository '$RepoName' created successfully"
+}
+
+# Register CI pipeline
+function Register-CIPipeline {
+    Write-InfoLog "Checking if CI pipeline exists..."
+
+    $pipelineName = "$ProjectName-ci"
+
+    try {
+        az pipelines show `
+            --name "$pipelineName" `
+            --organization "https://dev.azure.com/$Organization" `
+            --project "$ProjectName" `
+            --output none 2>$null
+
+        Write-WarnLog "Pipeline '$pipelineName' already exists, skipping registration"
+        return
+    }
+    catch {
+        # Pipeline doesn't exist, create it
+    }
+
+    Write-InfoLog "Registering CI pipeline..."
+    try {
+        az pipelines create `
+            --name "$pipelineName" `
+            --repository "$RepoName" `
+            --repository-type tfsgit `
+            --branch main `
+            --yml-path .azuredevops/pipelines/ci.yml `
+            --organization "https://dev.azure.com/$Organization" `
+            --project "$ProjectName" `
+            --skip-first-run `
+            --output table
+    }
+    catch {
+        Write-WarnLog "CI pipeline registration failed. This is expected if the pipeline YAML doesn't exist yet."
+        Write-WarnLog "You can register pipelines manually after pushing code to the repository."
+    }
+
+    Write-InfoLog "CI pipeline registration completed"
+}
+
+# Register Renovate pipeline
+function Register-RenovatePipeline {
+    Write-InfoLog "Checking if Renovate pipeline exists..."
+
+    $pipelineName = "$ProjectName-renovate"
+
+    try {
+        az pipelines show `
+            --name "$pipelineName" `
+            --organization "https://dev.azure.com/$Organization" `
+            --project "$ProjectName" `
+            --output none 2>$null
+
+        Write-WarnLog "Pipeline '$pipelineName' already exists, skipping registration"
+        return
+    }
+    catch {
+        # Pipeline doesn't exist, create it
+    }
+
+    Write-InfoLog "Registering Renovate pipeline..."
+    try {
+        az pipelines create `
+            --name "$pipelineName" `
+            --repository "$RepoName" `
+            --repository-type tfsgit `
+            --branch main `
+            --yml-path .azuredevops/pipelines/renovate.yml `
+            --organization "https://dev.azure.com/$Organization" `
+            --project "$ProjectName" `
+            --skip-first-run `
+            --output table
+    }
+    catch {
+        Write-WarnLog "Renovate pipeline registration failed. This is expected if the pipeline YAML doesn't exist yet."
+        Write-WarnLog "You can register pipelines manually after pushing code to the repository."
+    }
+
+    Write-InfoLog "Renovate pipeline registration completed"
+}
+
+# Main execution
+function Main {
+    Write-InfoLog "Starting Azure DevOps provisioning..."
+    Write-InfoLog "Organization: $Organization"
+    Write-InfoLog "Project: $ProjectName"
+    Write-InfoLog "Repository: $RepoName"
+    Write-Host ""
+
+    Test-Prerequisites
+    Set-AzureDevOpsDefaults
+    New-AzureDevOpsProject
+    New-AzureDevOpsRepository
+    Register-CIPipeline
+    Register-RenovatePipeline
+
+    Write-Host ""
+    Write-InfoLog "Provisioning completed successfully!"
+    Write-InfoLog "Next steps:"
+    Write-InfoLog "  1. Run .\configure-policies.ps1 to set up branch policies"
+    Write-InfoLog "  2. Push your code to the repository: git remote add azure https://dev.azure.com/$Organization/$ProjectName/_git/$RepoName"
+    Write-InfoLog "  3. Set up service connections for any external services (Azure, Docker, etc.)"
+}
+
+# Execute main function
+Main

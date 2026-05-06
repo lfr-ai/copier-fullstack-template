@@ -1,21 +1,67 @@
 ---
-description: Coding conventions and guidelines
+description: Repository development conventions for {{ project_name }}
 applyTo: "**"
 ---
 
-# {{ project_name }} — Coding Conventions
+# {{ project_name }} — Development Instructions
 
-This document defines coding standards, conventions, and best practices for this
-codebase. It serves as the repo-wide baseline; scoped instructions and skills take
-priority when they apply.
+## Architecture and Boundaries
 
-## Scope and Precedence
+- Follow Clean Architecture dependency direction: `core ← infrastructure/ai ← application ← presentation`
+- `backend/src/{{ project_slug }}/core/` must remain framework-independent — no imports from infrastructure/presentation
+- `backend/src/{{ project_slug }}/application/` can import from `core` and configuration, but not concrete adapters
+- `backend/src/{{ project_slug }}/infrastructure/` implements protocols declared in `core/interfaces/`
+- `backend/src/{{ project_slug }}/composition/` wires everything together via the `Container` DI pattern
+- `backend/src/{{ project_slug }}/presentation/api/` contains FastAPI routers
+{% if api_style in ('graphql', 'both') %}- `backend/src/{{ project_slug }}/presentation/graphql/` contains Strawberry GraphQL schema and resolvers
+{% endif %}
 
-1. **Skills** (`.github/skills/`) — task-specific playbooks (highest specificity)
-2. **Instructions** (`.github/instructions/`) — file-scoped rules for matching globs
-3. **This file** — repo-wide baseline (lowest specificity)
+## Backend Stack
 
-If rules conflict, prefer the **most specific applicable scope**.
+- Python {{ python_version }}+, FastAPI, Pydantic v2, SQLAlchemy 2.0+ async, Alembic
+{% if api_style in ('graphql', 'both') %}- Strawberry GraphQL (subscriptions)
+{% endif %}- Settings: `{{ project_slug }}.config.settings.get_settings()` — env-specific subclasses of `BaseAppConfig`
+- Enums: `ParseableEnum(StrEnum)` + `@unique` + explicit values in `{{ project_slug }}.core.enums/`
+- DI Container: `{{ project_slug }}.composition.Container` with `@cached_property`
+- Testing: pytest, hypothesis, factory-boy, pytest-asyncio, pytest-benchmark
+- Naming registry: `registry/naming_registry.json` → generated constants
+- Linting: ruff (`backend/ruff.toml`), ty for type checking
+
+## Frontend Stack
+
+- React 19, TypeScript, Vite 6 + SWC, Bun
+- UI: shadcn/ui (Radix + Tailwind CSS v4) — use CLI (`bunx shadcn@latest add`), never copy-paste
+- State: Zustand, TanStack React Query
+- Linting: Biome (not Prettier/ESLint)
+- Testing: Vitest + React Testing Library + fast-check, Playwright for E2E
+
+## Project Layout
+
+- `tasks/` — Split Taskfile includes (backend.yml, frontend.yml)
+- `registry/` — Naming registry JSON + code generator
+
+## Tooling and Commands
+
+- Use `uv` for Python dependency and command execution
+- Use `bun` for frontend package management and scripts
+- Root `Taskfile.yml` orchestrates via includes from `tasks/`
+- Run `task check` (lint + tests + typecheck) before finalizing changes
+
+## Quality Rules
+
+- Keep changes minimal and scoped
+- Update docs in the same change when behavior or setup changes
+- Use typed Python signatures; avoid `Any` unless truly unavoidable
+- Use `Final[type]` for module-level constants
+- Use `@dataclass(frozen=True, slots=True)` for all dataclasses (except `Container`)
+- Use `cn()` for Tailwind class merging; semantic color tokens only
+
+## Security Rules
+
+- Never commit secrets
+- Keep `.env.example` updated when new environment variables are introduced
+
+---
 
 ## Agent Modes (`.github/agents/`)
 
@@ -23,19 +69,17 @@ Specialized agents for different workflows:
 
 | Agent | Purpose |
 |-------|---------|
-| `claude-architect` | Architecture design with extended reasoning (Claude-optimized) |
-| `debug` | Diagnostic debugging with systematic root cause analysis |
-| `deep-thinking` | Extended reasoning for complex architectural decisions |
-| `expert-react-frontend-engineer` | Senior React/TypeScript frontend development |
-| `modernization` | Codebase modernization and migration |
-| `prompt-engineering` | Prompt file creation and optimization |
-| `sdd` | Specification-Driven Development workflow |
-| `tdd` | Test-Driven Development (red-green-refactor) workflow |
+| `backend-engineer` | FastAPI, SQLAlchemy, service layer, Clean Architecture |
+| `testing-specialist` | pytest, factory-boy, hypothesis, Playwright |
+| `frontend-react` | React 19, shadcn/ui, Tailwind CSS v4, Zustand |
+| `debug` | Systematic root-cause debugging |
+| `deep-thinking` | Extended reasoning for complex decisions |
+| `modernization` | Dependency upgrades, deprecated pattern replacement |
+| `security-specialist` | Vulnerability analysis, secrets scanning, dep auditing |
 
 ## Agent Skills (`.github/skills/`)
 
-Use agent skills as task-specific playbooks. Each skill is a directory containing
-a `SKILL.md` file:
+Task-specific playbooks — each is a directory containing a `SKILL.md` file:
 
 | Skill | Domain | When to Apply |
 |-------|--------|---------------|
@@ -43,10 +87,7 @@ a `SKILL.md` file:
 | `python-conventions/` | Python | Code quality, typing, idioms |
 | `testing-conventions/` | Testing | Test strategy, markers, coverage gates |
 | `naming-registry/` | Registry | Registry-first constant/code generation |
-| `frontend-react-stack/` | Frontend | React + TypeScript + Router + shadcn/ui |
-
-When a task matches a skill domain, apply that skill guidance first, then apply
-the general conventions in this file.
+| `frontend-react-stack/` | Frontend | React + TypeScript + shadcn/ui |
 
 ## Scoped Instructions (`.github/instructions/`)
 
@@ -58,8 +99,8 @@ File-scoped instructions auto-load for matching globs:
 | `coding-conventions` | `**/*.py` | Python conventions and style |
 | `commit` | `**` | Conventional Commits format |
 | `frontend` | `frontend/**` | TypeScript, components, Vite patterns |
-| `testing` | `backend/tests/**/*.py` | Test structure and markers |
-| `shell` | `**/*.zsh`, `scripts/**` | zsh scripting and Azure CLI |
+| `testing` | `tests/**/*.py` | Test structure and markers |
+| `shell` | `**/*.zsh`, `scripts/**` | zsh scripting standards |
 | `prompt` | `**/*.prompt.md` | Prompt file guidelines |
 | `no-heredoc` | `**` | Prevents heredoc file corruption |
 | `update-docs-on-code-change` | `**/*.{md,ts,py,css}` | Auto-update docs on code changes |
@@ -68,440 +109,36 @@ File-scoped instructions auto-load for matching globs:
 
 Active hooks for the Copilot coding agent:
 
-- **tool-guardian** (PreToolUse) — Blocks dangerous operations (force push, `rm -rf`, etc.)
-- **check-licenses** (Stop) — Scans dependencies for license compatibility
+| Hook | Trigger | Purpose |
+|------|---------|---------|
+| `tool-guardian` | PreToolUse | Blocks dangerous operations (force push, `rm -rf`, etc.) |
+| `check-licenses` | Stop | Scans dependencies for license compatibility |
 
 ## Claude Code Integration
 
-Claude Code (CLI and VS Code agent mode) reads from both `.github/` and `.claude/`:
+Claude Code reads from both `.github/` and `.claude/`:
 
-- **Rules**: `.claude/rules/` (Claude-native format with `paths` array)
-- **Agents**: `.claude/agents/` (Claude-native format with comma-separated tools)
-- **Settings**: `.claude/settings.json` (hooks, permissions, allowlists)
-- **Always-on**: `CLAUDE.md` (project context, loaded every session)
+| Claude Format | Copilot Equivalent |
+|---------------|-------------------|
+| `.claude/rules/*.md` (paths array) | `.github/instructions/*.instructions.md` (applyTo) |
+| `.claude/agents/*.md` | `.github/agents/*.agent.md` |
+| `.claude/settings.json` (hooks, MCP) | `.github/hooks/hooks.json` |
+| `CLAUDE.md` (always-on context) | `.github/copilot-instructions.md` |
 
-Both formats enforce identical conventions — see `AGENTS.md` for details.
+## MCP Servers
+
+| Server | Purpose |
+|--------|---------|
+| `context7` | Library/framework documentation lookup |
+| `shadcn` | shadcn/ui component scaffolding |
+{% if with_gitnexus %}| `gitnexus` | Graph-powered code intelligence |
+{% endif %}
 
 ## Reusable Prompts (`.github/prompts/`)
 
-Invoke via `/promptname` in chat. Available prompts:
-
-| Prompt | Purpose | Model |
-|--------|---------|-------|
-| `/new-feature` | Full-stack feature implementation (Clean Architecture) | Claude Sonnet 4 |
-| `/new-endpoint` | API endpoint with schema, service, route, and tests | Claude Sonnet 4 |
-| `/new-component` | React component with shadcn/ui and tests | Claude Sonnet 4 |
-| `/new-migration` | Alembic migration with rollback verification | Claude Sonnet 4 |
-| `/scaffold-crud` | Complete CRUD resource across all layers | Claude Sonnet 4 |
-| `/review` | Comprehensive code review (security, arch, quality) | Claude Sonnet 4 |
-| `/fix-test` | Diagnose and fix failing tests | Claude Sonnet 4 |
-| `/refactor` | Behavior-preserving code improvement | Claude Sonnet 4 |
-
-## Documentation Policy
-
-- For library/framework/API documentation, prefer Context7 first
-- If Context7 is insufficient, use official vendor docs and cite sources
-
-Apply principles from PEP 20 (The Zen of Python) throughout:
-
-- Beautiful is better than ugly
-- Explicit is better than implicit
-- Simple is better than complex
-- Complex is better than complicated
-- Flat is better than nested
-- Sparse is better than dense
-- Readability counts
-- Special cases aren't special enough to break the rules
-- Although practicality beats purity
-- Errors should never pass silently
-- Unless explicitly silenced
-- In the face of ambiguity, refuse the temptation to guess
-- There should be one-- and preferably only one --obvious way to do it
-- Now is better than never
-- Although never is often better than _right_ now
-- If the implementation is hard to explain, it's a bad idea
-- If the implementation is easy to explain, it may be a good idea
-- Namespaces are one honking great idea — use them consistently
-
----
-
-
-This project follows Clean Architecture. The Dependency Rule is the fundamental invariant.
-
-- **core/**: Domain entities, value objects, interfaces, events (no external deps)
-- **application/**: Use cases, services, DTOs, commands, queries
-- **infrastructure/**: Infrastructure implementations (DB, cache, messaging)
-- **presentation/**: Entry points (API, web, CLI)
-- **config/**: Settings, DI container
-- **utils/**: Shared utilities
-
----
-
-
-
-- Python modules should use snake_case: 'my_module.py'
-- Test files should be prefixed with 'test_': 'test_my_module.py'
-
-
-- Shell scripts MUST use '.zsh' extension: 'setup-ai.zsh'
-- Azure CLI scripts MUST use '.azcli' extension: 'deploy.azcli'
-- Never use '.sh' extension in this repository
-
-
-- Jinja2 HTML templates MUST use '.html.j2' extension if used
-- TypeScript files use '.ts' extension: 'app.ts'
-- CSS files use '.css' extension: 'styles.css'
-
----
-
-
-
-- Always prioritize readability and clarity
-- Write concise, efficient, and idiomatic code that is also easily understandable
-- Enforce use of variables with meaningful names rather than use of comments
-- Comments should be short, concise, and to the point
-- Avoid long explanations or reasoning in comments
-
-
-- Follow a logical structure in code organization
-- **Single Responsibility Principle (SRP):** every module, class, and function has one
-  reason to change — split when responsibilities diverge
-- Make modular code that promotes reusability and separation of concerns
-- Break down complex functions into smaller, more manageable helper functions
-- Ensure functions have descriptive names and include type hints
-- Provide docstrings following Google conventions
-- Ensure that sentences in docstrings are complete and clear and NEVER start with articles such as "a", "an", or "the"
-- Use single quotes ('word') in docstrings to reference identifiers — NEVER double backticks
-
-
-- Account for common edge cases like empty inputs, invalid data types, and large datasets
-- Handle edge cases and write clear exception handling
-- Enforce and ensure that all new code or changes to existing code, under no circumstances introduce regression of existing functionality
-- Never use magic numbers under any circumstance; define them as constants with meaningful names
-
-
-- Always prefer modular and object-oriented design where applicable
-- Adhere to OOP principles where applicable
-- Write code with good maintainability practices, including comments on why certain design decisions were made
-
----
-
-
-
-- Files should always use snake_case
-- Classes should always use PascalCase
-- Functions and variables should always use snake_case
-- Use consistent naming conventions and follow language-specific best practices
-
-
-- Never use magic numbers under any circumstance; define them as constants with meaningful names or make use of enumerations and helper functions where applicable
-
----
-
-
-
-- Use '_' prefix to indicate non-public API in modules, classes, and functions
-- Module-level (global) names: prefix with '_' if intended for internal use only and not part of the public interface exported by the package
-- Class instance variables: prefix with '_' for internal attributes not meant for external access
-- Class methods: prefix with '_' for helper or internal methods not intended for external callers
-- Functions in modules: prefix with '_' when they are internal helpers and not part of the module's public API
-- Class variables: prefix with '_' for internal configuration/state not intended for external access
-
-
-- Avoid '__name' unless you explicitly need Python's name mangling within inheritance; prefer single underscore '_name' for non-public
-
-
-- Prefer public, UPPER_SNAKE_CASE for constants that are part of the public API
-- Use '_UPPER_SNAKE_CASE' for constants that are internal-only to a module or class
-- Do NOT use 'Final' or 'Final[type]' annotations on any constants — plain UPPER_SNAKE_CASE assignment is sufficient
-- The UPPER_SNAKE_CASE naming convention already signals immutability intent
-
-
-- Clearly separate public vs. internal by imports in '__init__.py'; avoid 'from module import *' and explicitly export public names via '__all__' when useful
-- Keep docstrings and documentation aligned: do not document underscored members as public features
-
----
-
-
-
-- Python {{ python_version }}+, type hints everywhere
-- Always use UV for dependency management and project setup
-- Enforce pythonic idioms and best practices
-- Follow the **PEP 8** style guide
-- Never use raw SQL queries; always use ORM
-- Ruff for linting and formatting
-- Taskfile for task running
-
-
-- Prefer modern builtins ('list[int]', 'dict[str, object]') over 'typing' aliases
-- Do NOT import or use the 'typing' module for basic built-in primitives or generic types unless you need advanced typing features not available as builtins (e.g., 'TypedDict', 'Protocol', 'TypeVar')
-- Never use 'Any' as a type hint; use 'object' as the fallback
-- Ensure functions have descriptive names and include precise type hints
-- When types become complex, prefer small type aliases, dataclasses, or pydantic models to keep signatures readable
-
-
-
-- Use 'Annotated' from 'typing' ONLY when runtime metadata is required
-- Valid uses: FastAPI 'Depends()', Pydantic 'Field()' constraints, validation metadata
-- NEVER use 'Annotated' for plain type hints without metadata
-- Prefer plain types when no runtime metadata is attached
-
-
-- Define type aliases using 'TypeAlias' from 'typing' for complex, reusable types
-- Always annotate the alias variable with 'TypeAlias' for clarity
-
-
-- Use 'Literal' from 'typing' for parameters that accept only specific values
-
-
-- Do NOT use 'Final' or 'Final[type]' from 'typing' on any constants
-- Plain UPPER_SNAKE_CASE assignment is sufficient to signal immutability
-- '_UPPER_SNAKE_CASE' prefix signals internal-only scope; no 'Final' needed
-
-
-- Use '@final' from 'typing' to prevent inheritance or method overriding
-- Apply to classes that should not be subclassed
-- Apply to methods that should not be overridden in subclasses
-
-
-- Use 'NoReturn' from 'typing' for functions that always raise exceptions or exit
-
-
-- Always implement sensible rate limiting for API routes
-- Prefer slowapi and configure sensible limits
-
-
-- Favor efficient choices by default: pick the data structure that matches the access pattern:
-  - 'list': ordered, indexable, mutable -- for indexing and appends
-  - 'tuple': immutable, lower overhead -- for fixed-size collections
-  - 'set' / 'frozenset': fast membership and deduplication
-  - 'dict': optimized mapping for key-value lookups
-  - 'collections.deque': pops/pushes at both ends
-
-
-- Use '@dataclass' from 'dataclasses' module for simple data structures
-- Always use 'frozen=True' for immutable data classes to ensure thread safety and hashability
-- Always use 'slots=True' to reduce memory overhead and improve attribute access speed
-- Prefer dataclasses over plain classes for data containers without complex behavior
-
-
-- Prefer 'functools.lru_cache(maxsize=...)' for pure, deterministic functions called frequently with the same inputs
-- Do not cache functions that accept mutable arguments or depend on external mutable state
-- Always specify 'maxsize' explicitly (never rely on defaults)
-
-
-- Use '@cached_property' from 'functools' for expensive computations that should be calculated once per instance
-- Cached properties are evaluated once on first access and then stored on the instance
-- Use for idempotent operations that may be expensive or involve I/O
-
-
-- I/O-bound tasks: prefer threading or async I/O ('threading', 'asyncio')
-- CPU-bound tasks: prefer multiprocessing or process pools
-- Minimize shared mutable state between threads/processes
-- Prefer vectorized operations before introducing parallelism
-
-
-- Always prefer structured logging over print statements
-- Use structured logging with structlog
-- Use '%s' string formatting for log messages, never f-strings or '.format()'
-- Use 'exc_info=True' parameter when logging exceptions to include stack traces
-- For exception handlers, prefer 'logger.exception()' which automatically includes 'exc_info=True'
-- Never log sensitive data (passwords, tokens, PII)
-
-
-- Use '@tenacity.retry()' decorator for operations that may fail transiently
-- Define retry policies in a centralized location (e.g., 'utils/retry_policies.py')
-- Use exponential backoff with jitter for retry delays
-- Always set a maximum number of attempts to prevent infinite loops
-- Set 'reraise=True' to propagate exceptions after exhausting retries
-- Only retry on transient errors (network issues, timeouts, rate limits)
-- Never retry on permanent errors (validation errors, authentication failures)
-
----
-
-
-
-- Never use raw SQL queries; always use ORM
-- Use SQLAlchemy 2.0+ syntax with 'Mapped' and 'mapped_column'
-
-
-- Always add indices to columns used in:
-  - Foreign keys
-  - WHERE clauses in queries
-  - JOIN conditions
-  - ORDER BY clauses
-  - Frequently filtered fields (status, timestamps, user IDs)
-- Use 'index=True' parameter in 'mapped_column()' for single-column indices
-- For composite indices, use the '__table_args__' class attribute
-- Avoid over-indexing; each index adds overhead to write operations
-{% if database_backend == "postgresql" %}
-- Use PostgreSQL native enums with 'sqlalchemy.dialects.postgresql.ENUM'
-{% elif database_backend == "sqlite" %}
-- Use 'String' or 'Enum' types (SQLite has no native enum support)
-- Always use Alembic batch mode ('render_as_batch=True') — ALTER TABLE is limited in SQLite
-- Avoid advanced PostgreSQL-specific types; prefer portable SQLAlchemy types
-{% endif %}
-
-
-- Use 'server_default=func.now()' for creation timestamps
-- Use 'onupdate=func.now()' for modification timestamps
-- Always index timestamp fields used for querying
-
----
-
-
-
-- Always use 'ConfigDict' to configure Pydantic models
-- Enable 'str_strip_whitespace=True' to automatically strip whitespace
-- Enable 'validate_assignment=True' to validate on attribute assignment
-
-
-- Use 'Annotated' with 'Field' for Pydantic model fields that need constraints or metadata
-- For plain settings fields, plain type + default is sufficient
-- Use 'validation_alias' for accepting multiple input field names
-- Use 'serialization_alias' for consistent output field names
-
-
-- Use appropriate validators in 'Field':
-  - 'gt', 'ge', 'lt', 'le' for numeric bounds
-  - 'min_length', 'max_length' for string/collection length
-  - 'pattern' for regex validation
-
----
-
-
-
-- Use '@unique' decorator from 'enum' module to prevent duplicate values
-- Use 'StrEnum' for string-valued enums
-- Use 'IntEnum' for integer-valued enums
-- NEVER use 'auto()' — always explicit string values for clarity and stability
-
-
-- Always use enum members, not raw values: 'Environment.PROD' not '"prod"'
-- Access enum name with '.name' property and value with '.value' property
-
----
-
-
-
-- Always use 'raise ... from e' to preserve exception context
-- Never use bare 'raise' without proper exception chaining
-- Use 'raise ... from None' only when you explicitly want to suppress the original exception
-
-
-- Catch specific exceptions, not bare 'except:'
-- Log exceptions before re-raising or wrapping
-- Include relevant context in error messages using '%s' formatting
-
----
-
-
-
-- Use '*' in function signatures to enforce keyword-only arguments
-- Improves readability and prevents positional argument mistakes
-- Use for functions with multiple optional parameters or boolean flags
-
-
-- Positional arguments first (required parameters)
-- Then '*' to separate keyword-only arguments
-- Then keyword-only arguments (optional parameters)
-- Follow conventional ordering: required, optional, flags, config
-
----
-
-
-- Do NOT use punctuation (periods, commas, semicolons) in:
-  - Short comments
-  - Log messages (unless part of structured data)
-  - Error messages (unless multiline)
-- DO use proper punctuation in:
-  - Docstrings (complete sentences with periods)
-  - Multi-line descriptions in Pydantic 'Field(description=...)'
-  - Documentation files (markdown, README)
-  - User-facing messages
-
----
-{% if use_redis %}
-
-
-- Use the 'redis' library for Redis operations
-- Create connection pools for efficient connection management
-- Always set appropriate timeouts
-- Set appropriate TTL (time-to-live) for all cached data
-- Use structured keys with prefixes: 'app:resource:id'
-
----
-{% endif %}
-
-
-
-- Use 'pytest' for unit and integration tests
-- Use 'hypothesis' for property-based testing
-- Use 'tox' for testing across multiple Python versions
-- Store tests in 'backend/tests/' directory with structure mirroring 'backend/src/'
-
-
-- Always include test cases for critical paths of the application
-- Include comments for edge cases and the expected behavior in those cases
-- Account for common edge cases like empty inputs, invalid data types, and large datasets
-
----
-
-
-
-- Use TypeScript for type safety when possible
-- Prefer shadcn/ui components before custom styled UI markup
-- Use Vite with SWC for build tooling and hot module replacement
-- Use semantic Tailwind tokens from the shared theme (`bg-background`, `text-foreground`, `border-border`)
-- Use Biome for linting, formatting, and import organization
-- Use React Router `NavLink` for active main navigation; use `Link` for static links;
-  reserve `useNavigate` for non-click programmatic flows
-- Build forms with React Hook Form + Zod and prefer `Controller` for controlled
-  shadcn/radix inputs
-
-
-- Use 'bun' for package management and JavaScript runtime
-- Install packages with: 'bun install'
-- Add dependencies with: 'bun add <package>'
-
----
-
-
-- Maintain all naming constants in 'registry/naming_registry.json'
-- Generate Python + TypeScript constants with 'registry/generate_registry.py'
-- Never hardcode field/column names; always use registry constants
-- Update 'naming_registry.json' for any new fields
-- Run 'task registry:generate' after registry changes
-
----
-
-
-
-- Ensure lines do not exceed 88 characters
-- Maintain proper indentation (use 4 spaces for each level of indentation)
-- Use blank lines to separate functions, classes, and code blocks where appropriate
-
-
-- Place function and class docstrings immediately after the relevant keyword
-- Every Python module/file MUST include a module-level docstring as the first
-  significant statement (before imports; shebang/encoding/comments allowed above)
-- Comments should be short, concise, and to the point
-- Avoid long explanations or reasoning in comments
-- Do NOT use multi-line comments
-- Provide docstrings following Google conventions
-- Ensure that sentences in docstrings are complete and clear and NEVER start with articles such as "a", "an", or "the"
-
----
-
-
-- All shell scripts in this repository MUST be written for zsh and follow idiomatic zsh practices
-- Use the shebang: '#!/usr/bin/env zsh'
-- Reset to a known zsh state at the top of scripts: 'emulate -L zsh'
-- Always set 'setopt PIPE_FAIL' and 'setopt ERR_EXIT' for safer scripting
-- Write functions that do not depend on the caller's environment using 'emulate -L zsh'
-- All variables declared inside a function should use 'local'
-- Use 'zparseopts' for option parsing
-
-
-- Azure CLI scripts that are primarily collections of 'az' commands should use the '.azcli' extension
-- '.azcli' files should also be valid zsh scripts (use the same zsh header and idioms)
+| Prompt | Purpose |
+|--------|---------|
+| `/debug` | Systematic debugging workflow |
+| `/refactor` | Safe, behavior-preserving refactoring |
+| `/review` | Comprehensive code review checklist |
+| `/test` | Test writing with pytest + factory-boy |

@@ -1,0 +1,71 @@
+# CodeRabbit configuration for copier-fullstack-template
+# https://docs.coderabbit.ai/guides/configure-coderabbit/
+
+language: "en-US"
+early_access: true
+enable_free_tier: true
+
+reviews:
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  collapse_walkthrough: false
+
+  path_instructions:
+    - path: "copier.yml"
+      instructions: |
+        This is the Copier configuration file. Questions must have type, help, and default
+        (when it aids onboarding). New variables must be used in template files. Validate
+        that conditional logic (when:) is correct Jinja2 boolean expressions.
+
+    - path: "template/**/*.jinja"
+      instructions: |
+        Template files rendered by Copier. Jinja2 syntax only — no raw Python. Variables
+        must be defined in copier.yml. Conditional directories use
+        `{% if var %}dirname{% endif %}/` pattern. Never hardcode project-specific values
+        that should be template variables.
+
+    - path: "template/.github/**"
+      instructions: |
+        These files are the GitHub config for GENERATED projects, not this repo. Ensure
+        agent frontmatter fields (model, tools, permissionMode, effort, maxTurns, skills,
+        color) are valid for Claude Code. GitHub Copilot agent files need tools array and
+        description frontmatter.
+
+    - path: "template/.claude/**"
+      instructions: |
+        Claude Code config for generated projects. settings.json.jinja must not contain
+        mcpServers (belongs in .mcp.json.jinja). Agent frontmatter requires name,
+        description, model, tools, permissionMode fields.
+
+    - path: ".github/**"
+      instructions: |
+        Root-level GitHub config for THIS template repo (not generated projects). Keep
+        in sync with template/.github/ for shared patterns. Workflow files must pin
+        actions to full SHA or semver tags — never @main or @latest.
+
+    - path: "scripts/**/*.py"
+      instructions: |
+        Validation scripts for template testing. Must use uv-compatible imports only.
+        All scripts need module-level docstrings. Use subprocess for external commands,
+        not os.system.
+
+    - path: ".pre-commit-config.yaml"
+      instructions: |
+        Pre-commit hook definitions for the template repo. Hook versions should be pinned.
+        Custom hooks in `scripts/` must be executable and handle both staged and all-files
+        modes.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings: true
+
+tone_instructions: |
+  Concise, constructive reviews. Prioritize:
+  - Template correctness (Jinja2 syntax, valid Copier variables)
+  - Schema validity (Claude Code settings.json, GitHub agent frontmatter)
+  - Documentation alignment (root .github/ vs template .github/)
+  - Broken conditional logic in template files
+  Skip style issues handled by pre-commit hooks.

@@ -24,7 +24,8 @@ following Clean Architecture, modern best practices, and global standards.
 
 ### Usage — Local-First (Recommended)
 
-This template is designed to be used **locally** after cloning or forking — **no remote `gh:your-org/...` URL needed**.
+This template is designed to be used **locally** after cloning
+or forking — **no remote `gh:your-org/...` URL needed**.
 
 ```bash
 # 1. Clone or fork the template repository
@@ -143,7 +144,8 @@ During `copier copy`, you'll be prompted for:
 
 ## What Gets Installed
 
-The `scripts/install/install-all.zsh` script installs the **complete development environment** in order:
+The `scripts/install/install-all.zsh` script installs the
+**complete development environment** in order:
 
 **Always installed:**
 
@@ -160,18 +162,22 @@ The `scripts/install/install-all.zsh` script installs the **complete development
 
 - **DevContainer** — _(if enabled)_ `@devcontainers/cli` setup
 - **Caddy** — _(if enabled)_ reverse proxy with automatic HTTPS
-- **Redis** — _(if enabled)_ installed as a container service for caching and message brokering
+- **Redis** — _(if enabled)_ installed as a container service
+  for caching and message brokering
 - **FAISS** — _(if enabled)_ system deps + `faiss-cpu` Python package
 - **Neo4j** — _(if knowledge graph + neo4j backend)_ graph database + Python driver
 - **Azure CLI + Bicep** — _(if cloud provider is Azure)_ cloud management tooling
 
-After installation, `scripts/bootstrap.zsh` handles project-specific setup:
+After installation, `scripts/bootstrap.zsh` handles
+project-specific setup:
 
-- Prerequisite verification (Git, Task, uv, Bun, container runtime, and conditional Caddy/Azure CLI)
+- Prerequisite verification (Git, Task, uv, Bun,
+  container runtime, and conditional Caddy/Azure CLI)
 - `.env` creation from `.env.example`
 - `uv sync --all-groups` — install all Python dependencies
 - `bun install` — install all frontend dependencies
-- `bunx playwright install --with-deps` — _(if Playwright enabled)_ install browser binaries
+- `bunx playwright install --with-deps` —
+  _(if Playwright enabled)_ install browser binaries
 - `pre-commit install` — activate Git hooks (both `pre-commit` and `commit-msg`)
 
 Environment setup model for generated projects:
@@ -185,7 +191,8 @@ Environment setup model for generated projects:
 
 ## Features
 
-- **Clean Architecture** with the Dependency Rule enforced (presentation/infrastructure → application → core)
+- **Clean Architecture** with the Dependency Rule enforced
+  (presentation/infrastructure → application → core)
 - **FastAPI** backend with Pydantic v2 strict validation and SQLAlchemy 2.0 async
 - **TypeScript frontend** (React 19) with Bun, Vite, SWC, Biome, Tailwind CSS v4, Vitest
 - **React Hook Form** + Zod schema validation, React Aria accessible UI primitives
@@ -193,14 +200,18 @@ Environment setup model for generated projects:
 - **PostgreSQL or SQLite** — production-grade database via repository/unit-of-work pattern
 - **Redis + Celery** — _(conditional)_ async task processing and caching
 - **Caddy** — _(conditional)_ reverse proxy with auto-TLS, compression, security headers
-- **GraphQL** — _(conditional)_ Strawberry GraphQL with DataLoaders, depth limiting, and error masking
+- **GraphQL** — _(conditional)_ Strawberry GraphQL with
+  DataLoaders, depth limiting, and error masking
 - **AI/LLM abstraction** — _(conditional)_ OpenAI, Anthropic, Azure OpenAI via LiteLLM gateway
 - **RAG pipeline** — _(conditional)_ ingestion, vector/graph/hybrid retrieval, reranking
-- **AI agents** — _(conditional)_ ReAct, tool-calling, LangGraph workflow engine with durable checkpointing
-- **Knowledge graphs** — _(conditional)_ NetworkX, Neo4j, RDFLib backends with LLM triplet extraction
+- **AI agents** — _(conditional)_ ReAct, tool-calling,
+  LangGraph workflow engine with durable checkpointing
+- **Knowledge graphs** — _(conditional)_ NetworkX, Neo4j,
+  RDFLib backends with LLM triplet extraction
 - **MCP server** — _(conditional)_ Model Context Protocol with streamable-http transport
 - **CrewAI** — _(conditional)_ multi-agent orchestration with HMAS hierarchical processes
-- **Centralized naming registry** — JSON → generated Python constants, TypeScript enums, and `.env` keys
+- **Centralized naming registry** — JSON → generated Python
+  constants, TypeScript enums, and `.env` keys
 - **Docker Compose** with per-environment overrides (dev, test, staging, prod)
 - **Azure Bicep IaC** — _(conditional)_ infrastructure as code
 - **DevContainer** — _(conditional)_ reproducible development environments
@@ -208,8 +219,10 @@ Environment setup model for generated projects:
 - **Renovate** for automated dependency updates
 - **Pre-commit hooks** — ruff, ty, bandit, xenon, biome, detect-secrets,
   typos, yamllint, shellcheck, hadolint, markdownlint-cli2, jscpd, commitizen
-- **Testing** — pytest (unit, integration, property-based, performance), Vitest, Playwright E2E
-- **Full documentation** — architecture, setup, development, testing, deployment, config, ADRs, conventions
+- **Testing** — pytest (unit, integration, property-based,
+  performance), Vitest, Playwright E2E
+- **Full documentation** — architecture, setup, development,
+  testing, deployment, config, ADRs, conventions
 
 ---
 

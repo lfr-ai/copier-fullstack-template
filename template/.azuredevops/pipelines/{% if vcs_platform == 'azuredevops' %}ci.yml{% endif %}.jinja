@@ -1,0 +1,282 @@
+{% raw %}# Azure Pipelines CI configuration
+# Translated from GitHub Actions ci.yml with Azure Pipelines syntax
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+pr:
+  branches:
+    include:
+      - '*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - name: pythonVersion
+    value: '{% endraw %}{{ python_version }}{% raw %}'
+
+jobs:
+  - job: lint
+    displayName: 'Lint & Format'
+    timeoutInMinutes: 10
+    steps:
+      - checkout: self
+
+      - template: ../templates/steps/install-python.yml
+        parameters:
+          pythonVersion: $(pythonVersion)
+          workingDirectory: 'backend'
+
+      - script: uv run ruff check src/ tests/
+        displayName: 'Ruff lint'
+        workingDirectory: backend
+
+      - script: uv run ruff format --check src/ tests/
+        displayName: 'Ruff format'
+        workingDirectory: backend
+
+  - job: typecheck
+    displayName: 'Type Check'
+    timeoutInMinutes: 10
+    steps:
+      - checkout: self
+
+      - template: ../templates/steps/install-python.yml
+        parameters:
+          pythonVersion: $(pythonVersion)
+          workingDirectory: 'backend'
+
+      - script: uv run ty check src/
+        displayName: 'Type check'
+        workingDirectory: backend
+
+  - job: security
+    displayName: 'Security Scan'
+    timeoutInMinutes: 10
+    steps:
+      - checkout: self
+
+      - template: ../templates/steps/install-python.yml
+        parameters:
+          pythonVersion: $(pythonVersion)
+          workingDirectory: 'backend'
+
+      - script: uv run ruff check --select S src/
+        displayName: 'Bandit via Ruff'
+        workingDirectory: backend
+
+      - script: uv run pip-audit
+        displayName: 'Dependency audit'
+        workingDirectory: backend
+
+  - job: test
+    displayName: 'Test'
+    timeoutInMinutes: 20
+    strategy:
+      matrix:
+        Python{% endraw %}{{ python_version | replace('.', '') }}{% raw %}:
+          python.version: '{% endraw %}{{ python_version }}{% raw %}'
+{% endraw %}{% if python_version == "3.12" %}{% raw %}        Python313:
+          python.version: '3.13'
+{% endraw %}{% endif %}{% raw %}    steps:
+      - checkout: self
+
+      - template: ../templates/steps/install-python.yml
+        parameters:
+          pythonVersion: $(python.version)
+          workingDirectory: 'backend'
+
+      - script: uv run pytest tests/unit tests/property -v --tb=short --cov --cov-report=xml
+        displayName: 'Unit & property tests'
+        workingDirectory: backend
+
+      - task: PublishCodeCoverageResults@2
+        displayName: 'Publish coverage results'
+        condition: and(succeeded(), eq(variables['python.version'], '{% endraw %}{{ python_version }}{% raw %}'))
+        inputs:
+          codeCoverageTool: 'Cobertura'
+          summaryFileLocation: '$(Build.SourcesDirectory)/backend/coverage.xml'
+{% endraw %}
+{% if database_backend in ("postgresql", "sqlite") or use_redis %}
+{% raw %}
+  - job: integration
+    displayName: 'Integration Tests'
+    timeoutInMinutes: 20
+    dependsOn:
+      - lint
+      - typecheck
+{% endraw %}
+{%- if database_backend == "postgresql" or use_redis %}
+{% raw %}    services:
+{% endraw %}
+{%- if database_backend == "postgresql" %}
+{% raw %}      postgres:
+        image: postgres:17-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: {% endraw %}{{ project_slug }}_test{% raw %}
+        options: --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+{% endraw %}
+{%- endif %}
+{%- if use_redis %}
+{% raw %}      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+{% endraw %}
+{%- endif %}
+{%- endif %}
+{% raw %}    variables:
+      {% endraw %}{{ project_slug | upper }}{% raw %}_ENVIRONMENT: test
+{% endraw %}
+{%- if database_backend == "postgresql" %}
+{% raw %}      {% endraw %}{{ project_slug | upper }}{% raw %}_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/{% endraw %}{{ project_slug }}_test{% raw %}
+{% endraw %}
+{%- elif database_backend == "sqlite" %}
+{% raw %}      {% endraw %}{{ project_slug | upper }}{% raw %}_DATABASE_URL: sqlite+aiosqlite:///data/{% endraw %}{{ project_slug }}_test{% raw %}.db
+{% endraw %}
+{%- endif %}
+{%- if use_redis %}
+{% raw %}      {% endraw %}{{ project_slug | upper }}{% raw %}_REDIS_URL: redis://localhost:6379/0
+{% endraw %}
+{%- endif %}
+{% raw %}    steps:
+      - checkout: self
+
+      - template: ../templates/steps/install-python.yml
+        parameters:
+          pythonVersion: $(pythonVersion)
+          workingDirectory: 'backend'
+{% endraw %}
+{%- if database_backend == "sqlite" %}
+{% raw %}
+      - script: mkdir -p data
+        displayName: 'Create SQLite data directory'
+        workingDirectory: backend
+{% endraw %}
+{%- endif %}
+{% raw %}
+      - script: uv run pytest tests/integration -v --tb=short
+        displayName: 'Integration tests'
+        workingDirectory: backend
+{% endraw %}
+{% endif %}
+{% raw %}
+  - job: frontend
+    displayName: 'Frontend Checks'
+    timeoutInMinutes: 15
+    steps:
+      - checkout: self
+
+      - template: ../templates/steps/install-bun.yml
+        parameters:
+          workingDirectory: 'frontend'
+
+      - script: bun run lint
+        displayName: 'Lint frontend'
+        workingDirectory: frontend
+
+      - script: bun run typecheck
+        displayName: 'Type check frontend'
+        workingDirectory: frontend
+
+      - script: bun run test
+        displayName: 'Test frontend'
+        workingDirectory: frontend
+
+  - job: pre_commit
+    displayName: 'Pre-commit (all hooks incl. tests)'
+    timeoutInMinutes: 30
+    steps:
+      - checkout: self
+
+      - template: ../templates/steps/install-python.yml
+        parameters:
+          pythonVersion: $(pythonVersion)
+          workingDirectory: 'backend'
+
+      - template: ../templates/steps/install-bun.yml
+        parameters:
+          workingDirectory: 'frontend'
+
+      - script: |
+          cd backend
+          uv sync --all-extras
+          cd ../frontend
+          bun install --frozen-lockfile
+        displayName: 'Prepare backend/frontend dependencies for local hooks'
+
+      - script: uvx pre-commit run --all-files
+        displayName: 'Run all pre-commit hooks (lint + tests)'
+        env:
+          SKIP: no-commit-to-branch,lychee
+
+  - job: container
+    displayName: 'Container Build & Lint'
+    timeoutInMinutes: 15
+    steps:
+      - checkout: self
+
+      - script: |
+          docker run --rm -i hadolint/hadolint < Containerfile
+        displayName: 'Lint backend Containerfile'
+
+      - script: |
+          docker run --rm -i hadolint/hadolint < frontend/Containerfile
+        displayName: 'Lint frontend Containerfile'
+{% endraw %}
+{%- if use_caddy %}
+{% raw %}
+      - script: |
+          docker run --rm -i hadolint/hadolint < caddy/Containerfile
+        displayName: 'Lint caddy Containerfile'
+{% endraw %}
+{%- endif %}
+{% raw %}
+      - task: Docker@2
+        displayName: 'Build backend production image'
+        inputs:
+          command: build
+          dockerfile: Containerfile
+          arguments: '--target prod --cache-from type=local,src=/tmp/.buildx-cache --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max'
+          tags: 'backend:$(Build.BuildId)'
+
+      - task: Docker@2
+        displayName: 'Build frontend production image'
+        inputs:
+          command: build
+          dockerfile: frontend/Containerfile
+          arguments: '--target prod --cache-from type=local,src=/tmp/.buildx-cache --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max'
+          tags: 'frontend:$(Build.BuildId)'
+{% endraw %}
+{%- if use_caddy %}
+{% raw %}
+      - task: Docker@2
+        displayName: 'Build caddy production image'
+        inputs:
+          command: build
+          dockerfile: caddy/Containerfile
+          arguments: '--cache-from type=local,src=/tmp/.buildx-cache --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max'
+          tags: 'caddy:$(Build.BuildId)'
+{% endraw %}
+{%- endif %}
+{% raw %}
+  - job: spellcheck
+    displayName: 'Spell Check'
+    timeoutInMinutes: 5
+    steps:
+      - checkout: self
+
+      - script: |
+          wget -qO- https://github.com/crate-ci/typos/releases/download/v1.24.6/typos-v1.24.6-x86_64-unknown-linux-musl.tar.gz | tar xvz -C /tmp
+          /tmp/typos
+        displayName: 'Run typos spell checker'
+{% endraw %}

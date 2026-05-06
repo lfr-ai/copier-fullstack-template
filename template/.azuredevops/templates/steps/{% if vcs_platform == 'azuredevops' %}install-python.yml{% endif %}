@@ -1,0 +1,40 @@
+# Reusable step template for Python environment setup with uv
+# Usage: - template: templates/steps/install-python.yml
+#          parameters:
+#            pythonVersion: '3.12'
+#            workingDirectory: 'backend'
+
+parameters:
+  - name: pythonVersion
+    type: string
+    default: '3.12'
+  - name: workingDirectory
+    type: string
+    default: 'backend'
+
+steps:
+  - task: UsePythonVersion@0
+    displayName: 'Set Python ${{ parameters.pythonVersion }}'
+    inputs:
+      versionSpec: '${{ parameters.pythonVersion }}'
+      addToPath: true
+
+  - script: |
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      echo "##vso[task.prependpath]$HOME/.cargo/bin"
+    displayName: 'Install uv'
+    workingDirectory: '${{ parameters.workingDirectory }}'
+
+  - task: Cache@2
+    displayName: 'Cache uv dependencies'
+    inputs:
+      key: 'uv | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/pyproject.toml'
+      restoreKeys: |
+        uv | "$(Agent.OS)"
+      path: '$(Pipeline.Workspace)/.cache/uv'
+
+  - script: |
+      export UV_CACHE_DIR="$(Pipeline.Workspace)/.cache/uv"
+      uv sync --frozen
+    displayName: 'Install Python dependencies with uv'
+    workingDirectory: '${{ parameters.workingDirectory }}'

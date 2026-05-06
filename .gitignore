@@ -147,3 +147,4 @@ jscpd-report/
 target/
 vendor/
 .cache/
+.claude/settings.local.json

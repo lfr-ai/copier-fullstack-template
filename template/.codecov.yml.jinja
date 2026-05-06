@@ -1,0 +1,35 @@
+# Codecov configuration for {{ project_name }}
+# Docs: https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  precision: 2
+  round: down
+  range: 70...100
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 5%
+        informational: false
+    patch:
+      default:
+        target: 80%
+        threshold: 5%
+        informational: false
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+ignore:
+  - "backend/**/__init__.py"
+  - "backend/tests/**"
+  - "backend/**/test_*.py"
+  - "backend/scripts/**"
+  - "frontend/src/**/*.test.ts"
+  - "frontend/src/**/*.test.tsx"
+  - "frontend/src/**/*.spec.ts"
+  - "frontend/src/**/*.spec.tsx"

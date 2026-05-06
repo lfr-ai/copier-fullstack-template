@@ -4,48 +4,156 @@ description: Project overview and critical rules for Claude Code CLI
 
 # {{ project_name }}
 
-## Project Overview
+@AGENTS.md
+
+> **Instruction precedence** (highest to lowest):
+>
+> 1. This file (`CLAUDE.md`) + path-scoped rules (`.claude/rules/*.md`)
+> 2. Skills (`.claude/skills/*/SKILL.md` and `.github/skills/*/SKILL.md`)
+> 3. Copilot instructions (`.github/copilot-instructions.md`)
+> 4. `AGENTS.md` (generic agent guidance, imported above)
+> 5. General model knowledge
+
+---
+
+## 1. Project Overview
 
 {{ project_description }}
 
-**Stack**: Python {{ python_version }} (FastAPI + SQLAlchemy) | React 19 (TypeScript + Vite + Bun) | {{ container_runtime | capitalize }}
+| Attribute | Value |
+|-----------|-------|
+| Runtime | Python {{ python_version }}, FastAPI, Uvicorn |
+| ORM | SQLAlchemy 2.0+ async |
+| Frontend | React 19, TypeScript, Vite 6 + SWC, shadcn/ui, Tailwind CSS v4 |
+| State | Zustand, TanStack React Query |
+| Backend pkg mgr | `uv` |
+| Frontend pkg mgr | `bun` |
+| Task runner | Taskfile.yml |
+| Architecture | Clean Architecture, strict layered boundaries |
+| Container | {{ container_runtime | capitalize }} |
 
-## Critical Rules
+---
 
-1. **Clean Architecture** — Inner layers never import from outer layers. Dependency direction: presentation → application → core ← infrastructure
-2. **Type Safety** — All public functions must have complete type annotations
-3. **Keyword-Only Args** — Functions with 2+ parameters use `*,` separator
-4. **No `Final[...]`** — Use `@final` decorator or `UPPER_CASE` convention instead
-5. **Structured Logging** — Use `structlog`, never `print()`
-6. **Factory Tests** — Use factory-boy for test data, never raw fixtures
-7. **Conventional Commits** — Format: `type(scope): description`
+## 2. Quick Commands
 
-## Key Paths
+```bash
+# Development
+task dev                  # Start backend + frontend
+task dev:backend          # Backend only
+task dev:frontend         # Frontend only
+
+# Testing
+task test                 # All tests
+task test:unit            # Unit tests only
+task test:integration     # Integration tests
+task test:property        # Hypothesis property-based tests
+task test:e2e             # End-to-end tests (Playwright)
+task test:coverage        # Tests with coverage reports
+
+# Quality
+task lint                 # Run all linters
+task format               # Format all code
+task typecheck            # Type check (ty + tsc)
+task xenon                # Cyclomatic complexity gate
+task check                # Full quality gate (lint + test:unit + typecheck + xenon)
+
+# Database
+task db:migrate           # Run Alembic migrations
+task db:revision          # Create new Alembic migration
+task db:downgrade         # Rollback last migration
+task db:reset             # Drop and re-migrate
+
+# Registry
+task registry:generate    # Regenerate constants from naming_registry.json
+```
+
+---
+
+## 3. Architecture Layers
+
+```text
+backend/src/{{ project_slug }}/
+├── core/           # Domain — entities, interfaces, enums (NO external deps)
+├── application/    # Use cases — services, DTOs, handlers (depends on core)
+├── infrastructure/ # Adapters — DB, clients (implements core interfaces)
+├── presentation/   # Delivery — FastAPI routes, GraphQL (depends on application)
+└── composition/    # DI wiring (depends on all layers)
+```
+
+**Dependency rule (NEVER violate):**
+
+```text
+utils → config → core → infrastructure/ai → application → composition → presentation
+```
+
+---
+
+## 4. Critical Rules
+
+1. **Clean Architecture** — Inner layers never import from outer layers
+2. **Type Safety** — All public functions must have complete type annotations; no `Any`
+3. **Keyword-Only Args** — Functions with 3+ parameters use `*,` separator
+4. **Structured Logging** — Use `structlog`, never `print()`; never log PII
+5. **Factory Tests** — Use factory-boy for test data, never raw fixtures
+6. **Conventional Commits** — `type(scope): description` format
+7. **Registry First** — Never hardcode field/column names; use `registry/naming_registry.json`
+8. **No Raw SQL** — SQLAlchemy ORM only
+9. **Frozen Dataclasses** — `@dataclass(frozen=True, slots=True)` for value objects
+10. **No secrets** — Never commit secrets; keep `.env.example` updated
+
+---
+
+## 5. Key Paths
 
 | Path | Purpose |
 |------|---------|
 | `backend/src/{{ project_slug }}/` | Backend source (Clean Architecture layers) |
 | `frontend/src/` | Frontend source (React + TypeScript) |
-| `backend/tests/` | Test suite (unit/, integration/, property/) |
+| `tests/` | Test suite (unit/, integration/, property/, e2e/) |
 | `registry/naming_registry.json` | Single source of truth for shared constants |
-| `Taskfile.yml` | Task runner commands |
+| `Taskfile.yml` | Task runner (includes `tasks/*.yml`) |
+| `.claude/agents/` | Claude Code specialized agents |
+| `.claude/skills/` | Skill packs loaded by Claude agents |
+| `.claude/rules/` | Path-scoped rules loaded automatically |
+| `.claude/commands/` | `/slash` commands for Claude Code |
+| `.github/agents/` | GitHub Copilot specialized agents |
+| `.github/instructions/` | File-scoped Copilot instructions |
+| `.github/prompts/` | Reusable Copilot prompt files |
+| `.github/knowledge/` | Project knowledge graph |
 
-## Commands
+---
 
-- `task dev` — Start development servers
-- `task test` — Run test suite
-- `task lint` — Lint all code
-- `task typecheck` — Type check all code
-- `task format` — Auto-format code
-- `task db:migrate` — Run database migrations
+## 6. AI Agents Quick Reference
 
-## Architecture Layers
+### Claude Code Agents (`.claude/agents/`)
 
-```text
-backend/src/{{ project_slug }}/
-├── core/           # Domain (entities, interfaces, value objects) — NO external deps
-├── application/    # Use cases (services, DTOs, commands) — depends on core only
-├── infrastructure/ # Implementations (DB, cache, APIs) — implements core interfaces
-├── presentation/   # Delivery (routes, schemas, CLI) — depends on application
-└── composition/    # DI wiring — depends on all
-```
+| Agent | Purpose |
+|-------|---------|
+| `architect` | Architecture design, dependency analysis, Clean Architecture reviews |
+| `backend-engineer` | FastAPI, SQLAlchemy, service layer, Clean Architecture |
+| `code-reviewer` | Post-implementation review: correctness, arch, types, security |
+| `debugger` | Systematic root-cause debugging, test failure diagnosis |
+| `devops` | Docker/Podman, CI/CD, migrations, environment config |
+| `frontend-engineer` | React 19, shadcn/ui, Tailwind CSS v4, Zustand |
+| `modernization` | Dependency upgrades, deprecated pattern replacement |
+| `refactorer` | Behavior-preserving code improvement |
+| `researcher` | Technical research, library evaluation, decision reports |
+| `sdd` | Specification-Driven Development (design-first) |
+| `tdd` | Test-Driven Development (red-green-refactor) |
+| `testing-specialist` | pytest, factory-boy, hypothesis, coverage |
+
+### Claude Code Skills (`.claude/skills/`)
+
+| Skill | When to Apply |
+|-------|--------------|
+| `clean-architecture` | **MANDATORY** for all backend work |
+| `python-conventions` | All Python code |
+| `testing-conventions` | All test writing |
+| `naming-registry` | Adding/using shared constants |
+| `frontend-react-stack` | All frontend work |
+
+### Slash Commands (`.claude/commands/`)
+
+| Command | Purpose |
+|---------|---------|
+| `/commit` | Create conventional commit from staged changes |

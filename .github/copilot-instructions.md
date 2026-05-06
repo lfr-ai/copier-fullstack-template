@@ -46,25 +46,12 @@ File-scoped instructions auto-load for matching globs:
 - `shell.instructions.md` — Shell/PowerShell conventions for `**/*.{sh,ps1}`
 - `update-docs-on-code-change.instructions.md` — Auto-update docs when code changes
 
-## Agent Modes (`.github/agents/`)
-
-Specialized agents for template development:
-
-| Agent | Purpose |
-|-------|---------|
-| `debug` | Diagnostic debugging with root cause analysis |
-| `deep-thinking` | Extended reasoning for complex decisions |
-| `modernization` | Codebase modernization and migration |
-
 ## Agent Skills (`.github/skills/`)
 
 | Skill | Domain |
 |-------|--------|
 | `clean-architecture/` | Architecture boundaries and Dependency Rule |
 | `python-conventions/` | Python code quality and typing standards |
-| `testing-conventions/` | Test strategy, markers, and coverage gates |
-| `naming-registry/` | Registry-first constant/code generation |
-| `frontend-react-stack/` | React + TypeScript + Router + shadcn/ui |
 
 ## Copilot Hooks (`.github/hooks/`)
 

@@ -1,0 +1,105 @@
+# Auto-labeler configuration for PRs
+# https://github.com/actions/labeler
+
+version: v1
+
+'template':
+  - changed-files:
+      - any-glob-to-any-file: 'template/**'
+
+'backend':
+  - changed-files:
+      - any-glob-to-any-file: 'template/backend/**'
+
+'frontend':
+  - changed-files:
+      - any-glob-to-any-file: 'template/frontend/**'
+
+'ci':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/workflows/**'
+          - '.github/actions/**'
+
+'github-config':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - '!.github/workflows/**'
+
+'copier':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'copier.yml'
+          - 'copier.yaml'
+
+'dependencies':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/pyproject.toml'
+          - '**/package.json'
+          - '**/requirements*.txt'
+          - '**/Pipfile*'
+          - '**/poetry.lock'
+          - '**/bun.lockb'
+
+'documentation':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**'
+
+'security':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/workflows/codeql.yml'
+          - '.github/workflows/dependency-review.yml'
+          - '**/bandit.yml'
+          - '**/.secrets.baseline'
+
+'agents':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.claude/agents/**'
+          - 'template/.github/agents/**'
+          - 'template/.claude/agents/**'
+
+'claude':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.claude/**'
+          - 'template/.claude/**'
+
+'hooks':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/hooks/**'
+          - 'template/.github/hooks/**'
+          - '.pre-commit-config.yaml'
+
+'skills':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/skills/**'
+          - '.claude/skills/**'
+          - 'template/.github/skills/**'
+
+'scripts':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'scripts/**'
+
+'breaking-change':
+  - head-branch: ['^breaking/', '^major/']
+
+'enhancement':
+  - head-branch: ['^feat/', '^feature/']
+
+'bug':
+  - head-branch: ['^fix/', '^bugfix/', '^hotfix/']
+
+'refactor':
+  - head-branch: ['^refactor/']
+
+'chore':
+  - head-branch: ['^chore/']

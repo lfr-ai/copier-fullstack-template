@@ -1,0 +1,155 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "platform": "azure",
+  "endpoint": "{% raw %}{{ RENOVATE_ENDPOINT }}{% endraw %}",
+  "repositories": ["{% raw %}{{ organization_name }}{% endraw %}/{{ project_slug }}"],
+  "extends": [
+    "config:recommended",
+    ":semanticCommits"
+  ],
+  "timezone": "Europe/Copenhagen",
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "labels": ["dependencies"],
+  "assignees": ["{{ github_username }}"],
+  "packageRules": [
+    {
+      "description": "Group Python framework updates together",
+      "groupName": "python-frameworks",
+      "matchManagers": ["pip_requirements", "pip_setup", "pipenv", "poetry"],
+      "matchPackageNames": [
+        "fastapi",
+        "pydantic",
+        "pydantic-core",
+        "pydantic-settings",
+        "sqlalchemy",
+        "alembic"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "backend"
+    },
+    {
+      "description": "Group Python minor/patch updates",
+      "groupName": "python-minor-patch",
+      "matchManagers": ["pip_requirements", "pip_setup", "pipenv", "poetry"],
+      "excludePackageNames": [
+        "fastapi",
+        "pydantic",
+        "pydantic-core",
+        "pydantic-settings",
+        "sqlalchemy",
+        "alembic"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "backend"
+    },
+    {
+      "description": "Group React ecosystem updates together",
+      "groupName": "react-ecosystem",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "react",
+        "react-dom"
+      ],
+      "matchPackagePatterns": [
+        "^@types/react",
+        "^react-router"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "frontend"
+    },
+    {
+      "description": "Group UI component library updates",
+      "groupName": "ui-components",
+      "matchManagers": ["npm"],
+      "matchPackagePatterns": ["^@radix-ui/"],
+      "matchPackageNames": [
+        "tailwindcss",
+        "class-variance-authority",
+        "clsx",
+        "tailwind-merge"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "frontend"
+    },
+    {
+      "description": "Group dev tooling updates together",
+      "groupName": "dev-tooling",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchPackageNames": [
+        "ruff",
+        "pytest",
+        "pytest-cov",
+        "pytest-asyncio",
+        "mypy",
+        "vitest",
+        "vite",
+        "@vitejs/plugin-react",
+        "typescript",
+        "eslint",
+        "prettier"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "dev"
+    },
+    {
+      "description": "Pin Azure Pipelines tasks to major versions only",
+      "matchManagers": ["azure-pipelines"],
+      "extractVersion": "^(?<version>\\d+)",
+      "versioning": "semver",
+      "semanticCommitType": "ci",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "Auto-merge Python security updates",
+      "matchManagers": ["pip_requirements", "pip_setup", "pipenv", "poetry"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "security"
+    },
+    {
+      "description": "Auto-merge npm security updates",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["patch"],
+      "vulnerabilityAlerts": {
+        "enabled": true
+      },
+      "automerge": true,
+      "automergeType": "pr",
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "security"
+    }{% if container_runtime == 'docker' %},
+    {
+      "description": "Group Docker base image updates",
+      "groupName": "docker-images",
+      "matchDatasources": ["docker"],
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "docker"
+    }
+{% endif %}
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "assignees": ["{{ github_username }}"]
+  },
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 2,
+  "enabledManagers": [
+    "pip_requirements",
+    "pip_setup",
+    "npm",
+    "dockerfile",
+    "docker-compose",
+    "azure-pipelines"
+  ]
+}
