@@ -328,3 +328,4 @@ After setup, use `task --list` to see all available commands:
 ## License
 
 See [LICENSE](LICENSE) for details.
+
