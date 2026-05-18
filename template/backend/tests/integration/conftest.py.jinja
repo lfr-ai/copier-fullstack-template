@@ -7,5 +7,32 @@ under 'tests/integration/'.
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from {{ project_slug }}.infrastructure.persistence.orm.base import ORMBase
 
 pytestmark = pytest.mark.integration
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _isolate_database_state(engine: AsyncEngine) -> None:
+	"""Reset persisted rows between integration tests.
+
+	Keeps schema intact while truncating table contents so each test
+	starts from a clean persistence state.
+
+	Args:
+		engine (AsyncEngine): Shared test database engine.
+	"""
+	async with engine.begin() as conn:
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+		table_names = [table.name for table in ORMBase.metadata.sorted_tables]
+		if table_names:
+			qualified = ", ".join(f'"{name}"' for name in table_names)
+			await conn.execute(text(f"TRUNCATE TABLE {qualified} RESTART IDENTITY CASCADE"))
+{%- elif database_backend == 'sqlite' %}
+		for table in reversed(ORMBase.metadata.sorted_tables):
+			await conn.execute(text(f'DELETE FROM "{table.name}"'))
+{%- endif %}

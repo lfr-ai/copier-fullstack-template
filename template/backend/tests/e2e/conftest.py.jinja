@@ -1,0 +1,11 @@
+"""Shared configuration for backend end-to-end tests.
+
+Automatically applies 'pytest.mark.e2e' to every test collected
+under 'tests/e2e/'.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+pytestmark = pytest.mark.e2e

@@ -1,0 +1,58 @@
+"""End-to-end backend workflow tests.
+
+These tests validate a full user-facing API journey through the ASGI app,
+infrastructure persistence, and response contracts.
+"""
+
+from __future__ import annotations
+
+import pytest
+from fastapi import status
+from httpx import AsyncClient
+
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.e2e,
+]
+
+
+{%- if api_style in ('rest', 'both') %}
+class TestUserApiJourney:
+    """E2E tests covering the user lifecycle over HTTP."""
+
+    async def test_user_create_then_get(self, client: AsyncClient) -> None:
+        """Create a user and retrieve it by identifier."""
+        create_payload = {
+            "email": "e2e-user@example.com",
+            "display_name": "E2E User",
+        }
+
+        create_response = await client.post("/api/v1/users", json=create_payload)
+        assert create_response.status_code == status.HTTP_201_CREATED
+
+        created = create_response.json()
+        assert created["email"] == create_payload["email"]
+        assert created["display_name"] == create_payload["display_name"]
+        assert created["is_active"] is True
+
+        get_response = await client.get(f"/api/v1/users/{created['id']}")
+        assert get_response.status_code == status.HTTP_200_OK
+        fetched = get_response.json()
+        assert fetched["id"] == created["id"]
+        assert fetched["email"] == create_payload["email"]
+
+    async def test_user_create_invalid_payload(self, client: AsyncClient) -> None:
+        """Ensure validation errors are propagated over HTTP."""
+        response = await client.post("/api/v1/users", json={})
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+{%- endif %}
+
+
+class TestSystemProbeJourney:
+    """E2E tests for critical platform health probes."""
+
+    async def test_liveness_probe(self, client: AsyncClient) -> None:
+        """Verify universal liveness probe returns healthy state."""
+        response = await client.get("/health")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["status"] == "healthy"
