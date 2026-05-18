@@ -1,0 +1,29 @@
+# Keploy project configuration
+# Docs: https://keploy.io/docs/running-keploy/configuration-file/
+#
+# This starter config is committed so teams can run Keploy immediately.
+# Override values per environment with CLI flags or env vars.
+
+# Directory where Keploy stores recorded test-sets/mocks/reports
+path: "./keploy"
+
+# Default app command used if `-c/--command` is not provided
+command: "cd backend && uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --port 8000"
+
+# Wait time (seconds) before replay starts (app boot window)
+delay: 10
+
+# Optional additional boot delay for containerized app startup
+buildDelay: 30
+
+record:
+  # Keep mocks human-readable by default
+  mockFormat: "yaml"
+  # Naming strategy: descriptive | sequential
+  testCaseNaming: "descriptive"
+
+# Test-run behavior
+# (Most advanced keys are intentionally omitted from starter config; use
+# `keploy config --generate` if you want full default surface area.)
+test:
+  disableLineCoverage: false
