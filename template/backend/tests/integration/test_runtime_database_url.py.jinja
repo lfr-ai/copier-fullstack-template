@@ -1,0 +1,29 @@
+"""Integration tests for runtime database URL wiring.
+
+Ensures test runtime wiring points application settings and fixtures at
+an isolated test database URL (including Testcontainers-based URLs when enabled).
+"""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
+def test_test_database_url_is_exposed(test_database_url: str) -> None:
+    """Verify resolved test DB URL is available to tests and app settings.
+
+    Args:
+        test_database_url (str): Effective test database URL.
+    """
+    assert test_database_url
+    assert os.environ.get("TEST_DATABASE_URL") == test_database_url
+    assert os.environ.get("{{ project_slug | upper }}_DATABASE_URL") == test_database_url
+
+
+def test_test_environment_is_forced() -> None:
+    """Verify test environment variable is forced to 'test'."""
+    assert os.environ.get("{{ project_slug | upper }}_ENVIRONMENT") == "test"

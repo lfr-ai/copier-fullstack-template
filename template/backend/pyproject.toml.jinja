@@ -98,6 +98,9 @@ dev = [
     "freezegun>=1.4",
     "respx>=0.22",{% if use_celery %}
     "pytest-celery>=1.1",{% endif %}
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+    "testcontainers[postgres]>=4.8",
+{%- endif %}
     "ruff>=0.9",
     "ty>=0.0.1a23",
     "pyinstrument>=5.1",

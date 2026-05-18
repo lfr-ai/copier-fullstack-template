@@ -44,6 +44,12 @@ tasks:
     cmds:
       - uv run tox -e integration
 
+  test:e2e:
+    desc: "Run backend e2e tests via tox"
+    dir: backend
+    cmds:
+      - uv run tox -e e2e
+
   test:property:
     desc: "Run property-based tests via tox"
     dir: backend
