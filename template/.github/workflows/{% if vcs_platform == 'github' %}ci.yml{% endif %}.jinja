@@ -185,6 +185,23 @@ jobs:
 {% endraw %}
 {% endif %}
 {% raw %}
+  keploy:
+    name: Keploy Cloud API Test Suite (optional)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [lint]
+    if: ${{ secrets.KEPLOY_API_KEY != '' && secrets.KEPLOY_APP_ID != '' && secrets.KEPLOY_BASE_PATH != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Keploy CLI
+        run: curl --silent -L https://keploy.io/install.sh | bash
+      - name: Run Keploy cloud test suite
+        env:
+          KEPLOY_API_KEY: ${{ secrets.KEPLOY_API_KEY }}
+          KEPLOY_APP_ID: ${{ secrets.KEPLOY_APP_ID }}
+          KEPLOY_BASE_PATH: ${{ secrets.KEPLOY_BASE_PATH }}
+        run: keploy test-suite --app=${KEPLOY_APP_ID} --base-path=${KEPLOY_BASE_PATH} --cloud
+
   frontend:
     name: Frontend Checks
     runs-on: ubuntu-latest

@@ -1,0 +1,94 @@
+# Keploy Integration Guide
+
+Keploy enables **traffic-based API regression testing** by recording real HTTP/API
+calls plus dependency interactions, then replaying them deterministically.
+
+This template integrates Keploy through Task commands and optional CI hooks.
+
+## Config file in this template
+
+This template already ships a starter `keploy.yml` at project root.
+
+- It gives teams a shared baseline immediately.
+- You can still run Keploy directly with CLI flags when needed.
+
+If you want to replace it with the latest CLI-generated defaults, run:
+
+```bash
+task keploy:config:init
+```
+
+This resets `keploy.yml` and then runs `keploy config --generate -p .`.
+
+## Why Keploy in this template
+
+- Complements unit/integration/e2e tests with production-like traffic replay
+- Reduces manual mocking effort for dependency-heavy API flows
+- Supports CI gating using cloud test-suites (optional)
+
+## Prerequisites
+
+- Linux kernel `5.10+` (or WSL2 on Windows)
+- Keploy CLI installed (`task keploy:install`)
+- A backend app start command that Keploy can wrap
+
+## Local setup
+
+```bash
+task keploy:install
+task keploy:login
+# Optional: regenerate config from Keploy CLI defaults
+# task keploy:config:init
+```
+
+## Record test traffic
+
+Run your backend under Keploy record mode:
+
+```bash
+task keploy:record -- "cd backend && uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --port 8000"
+```
+
+Then trigger real API traffic (frontend usage, Postman, curl, etc.).
+
+## Replay recorded traffic
+
+```bash
+task keploy:test -- "cd backend && uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --port 8000"
+```
+
+`KEPLOY_DELAY` controls replay startup delay (seconds) and defaults to `10`.
+
+## Cloud test-suite mode (optional)
+
+If using Keploy cloud-managed suites:
+
+- `KEPLOY_API_KEY`
+- `KEPLOY_APP_ID`
+- `KEPLOY_BASE_PATH`
+
+Run:
+
+```bash
+task keploy:test-suite
+```
+
+Use your CI secret manager for API keys.
+
+## Recommended workflow
+
+1. Record traffic in local/dev/staging from realistic API usage.
+2. Review generated test/mocks and remove noisy/non-deterministic cases.
+3. Replay locally during development (`task test:keploy`).
+4. Optionally gate PRs with Keploy cloud suites in CI.
+
+## Troubleshooting
+
+- **`keploy: command not found`**
+  - Re-run `task keploy:install` and restart shell.
+- **Replay fails before app is ready**
+  - Increase `KEPLOY_DELAY` in `.env`.
+- **No traffic recorded**
+  - Ensure requests are actually reaching the process wrapped by `keploy record`.
+- **Unsupported platform**
+  - Prefer Linux/WSL for eBPF-based instrumentation.
