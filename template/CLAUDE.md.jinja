@@ -70,6 +70,9 @@ All commands use [Task](https://taskfile.dev/):
 ```bash
 task dev              # Start full development stack
 task test             # Run all tests (backend + frontend)
+task test:keploy -- "<app cmd>"  # Replay Keploy recorded tests
+task keploy:record -- "<app cmd>" # Record traffic into Keploy tests
+task keploy:test-suite # Run Keploy cloud test suite
 task lint             # Lint all code
 task format           # Format all code
 task typecheck        # Type-check all code

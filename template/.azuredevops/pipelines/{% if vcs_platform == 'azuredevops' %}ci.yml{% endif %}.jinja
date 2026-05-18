@@ -178,6 +178,23 @@ jobs:
 {% endraw %}
 {% endif %}
 {% raw %}
+  - job: keploy_cloud
+    displayName: 'Keploy Cloud API Test Suite (optional)'
+    timeoutInMinutes: 10
+    dependsOn:
+      - lint
+    condition: and(succeeded(), ne(variables['KEPLOY_API_KEY'], ''), ne(variables['KEPLOY_APP_ID'], ''), ne(variables['KEPLOY_BASE_PATH'], ''))
+    steps:
+      - checkout: self
+
+      - script: curl --silent -L https://keploy.io/install.sh | bash
+        displayName: 'Install Keploy CLI'
+
+      - script: keploy test-suite --app=$(KEPLOY_APP_ID) --base-path=$(KEPLOY_BASE_PATH) --cloud
+        displayName: 'Run Keploy cloud test suite'
+        env:
+          KEPLOY_API_KEY: $(KEPLOY_API_KEY)
+
   - job: frontend
     displayName: 'Frontend Checks'
     timeoutInMinutes: 15

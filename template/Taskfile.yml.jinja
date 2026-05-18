@@ -116,6 +116,11 @@ tasks:
     cmds:
       - task: backend:test:coverage
 
+  test:keploy:
+    desc: "Run Keploy replay tests (recorded traffic)"
+    cmds:
+      - task: keploy:test
+
   test:property:
     desc: "Run property-based tests"
     cmds:
@@ -423,6 +428,59 @@ tasks:
     desc: "Show Docker service logs (alias for docker:logs)"
     cmds:
       - task: docker:logs
+
+  keploy:install:
+    desc: "Install Keploy CLI (Linux/macOS/WSL)"
+    cmds:
+      - curl --silent -O -L https://keploy.io/install.sh && source install.sh
+
+  keploy:login:
+    desc: "Authenticate Keploy CLI"
+    cmds:
+      - keploy login
+
+  keploy:config:init:
+    desc: "Regenerate Keploy config from CLI defaults (overwrites keploy.yml)"
+    cmds:
+      - rm -f keploy.yml
+      - keploy config --generate -p .
+
+  keploy:config:show:
+    desc: "Print current Keploy project config"
+    cmds:
+      - cat keploy.yml
+
+  keploy:record:
+    desc: "Record API traffic as Keploy tests (pass app command via CLI args)"
+    cmds:
+      - |
+        if [ -z "{% raw %}{{.CLI_ARGS}}{% endraw %}" ]; then
+          echo "Usage: task keploy:record -- '<app start command>'"
+          echo "Example: task keploy:record -- 'cd backend && uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --port 8000'"
+          exit 1
+        fi
+      - keploy record -c "{% raw %}{{.CLI_ARGS}}{% endraw %}"
+
+  keploy:test:
+    desc: "Replay recorded Keploy tests locally (pass app command via CLI args)"
+    cmds:
+      - |
+        if [ -z "{% raw %}{{.CLI_ARGS}}{% endraw %}" ]; then
+          echo "Usage: task keploy:test -- '<app start command>'"
+          echo "Example: task keploy:test -- 'cd backend && uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --port 8000'"
+          exit 1
+        fi
+      - keploy test -c "{% raw %}{{.CLI_ARGS}}{% endraw %}" --delay ${KEPLOY_DELAY:-10}
+
+  keploy:test-suite:
+    desc: "Run Keploy cloud test-suite (requires KEPLOY_API_KEY, KEPLOY_APP_ID, KEPLOY_BASE_PATH)"
+    cmds:
+      - |
+        if [ -z "${KEPLOY_API_KEY}" ] || [ -z "${KEPLOY_APP_ID}" ] || [ -z "${KEPLOY_BASE_PATH}" ]; then
+          echo "Missing required env vars: KEPLOY_API_KEY, KEPLOY_APP_ID, KEPLOY_BASE_PATH"
+          exit 1
+        fi
+      - KEPLOY_API_KEY=${KEPLOY_API_KEY} keploy test-suite --app=${KEPLOY_APP_ID} --base-path=${KEPLOY_BASE_PATH} --cloud
 {% if use_celery %}
   worker:
     desc: "Start Celery worker (alias for backend:worker)"

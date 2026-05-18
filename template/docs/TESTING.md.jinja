@@ -160,6 +160,48 @@ task frontend:test:e2e:ui  # Run with Playwright UI
 E2E tests are in `frontend/tests/e2e/` and run via Playwright.
 {% endif %}
 
+## Keploy Record/Replay Testing
+
+Keploy provides traffic-based API regression testing by recording real requests
+and dependency interactions, then replaying them deterministically.
+
+### Prerequisites
+
+- Linux/WSL/macOS environment with Keploy CLI installed
+- A runnable backend start command
+
+Install and initialize:
+
+```bash
+task keploy:install
+task keploy:config:init
+```
+
+### Record tests from real API traffic
+
+```bash
+task keploy:record -- "cd backend && uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --port 8000"
+```
+
+While recording is active, exercise APIs via frontend, curl, Postman, or scripts.
+
+### Replay recorded tests locally
+
+```bash
+task keploy:test -- "cd backend && uv run uvicorn {{ project_slug }}.presentation.api.app:create_api_app --factory --port 8000"
+```
+
+The replay delay is controlled by `KEPLOY_DELAY` in `.env`.
+
+### Run Keploy cloud test-suites (optional)
+
+```bash
+task keploy:test-suite
+```
+
+This requires `KEPLOY_API_KEY`, `KEPLOY_APP_ID`, and `KEPLOY_BASE_PATH`.
+Use CI secret management for `KEPLOY_API_KEY`.
+
 
 The registry code generator has its own co-located test suite in `registry/tests/`:
 

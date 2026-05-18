@@ -215,6 +215,21 @@ All configuration is loaded from environment variables with the
 
 ---
 
+## Keploy (Traffic-Based API Testing)
+
+This template ships a starter `keploy.yml` at project root for Keploy CLI
+project configuration. The variables below are consumed by Task commands
+(`task keploy:*`) and CI jobs, not by `BaseSettings`.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `KEPLOY_DELAY` | `int` | `10` | Delay (seconds) before replay starts in `keploy test` |
+| `KEPLOY_API_KEY` | `str` | `""` | API key for Keploy cloud test-suite execution |
+| `KEPLOY_APP_ID` | `str` | `""` | Keploy application identifier used by `keploy test-suite` |
+| `KEPLOY_BASE_PATH` | `str` | `""` | Base URL/path to run Keploy cloud suite against |
+
+---
+
 ## Local .env File
 
 Copy `.env.example` to `.env` and fill in secret values:
