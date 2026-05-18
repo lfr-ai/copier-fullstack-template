@@ -127,7 +127,19 @@ tasks:
       - task: backend:test:performance
 {% if use_playwright %}
   test:e2e:
-    desc: "Run Playwright E2E tests"
+    desc: "Run all E2E tests (backend + Playwright)"
+    cmds:
+      - task: backend:test:e2e
+      - task: frontend:test:e2e
+{% endif %}
+  test:e2e:backend:
+    desc: "Run backend E2E tests"
+    cmds:
+      - task: backend:test:e2e
+
+{% if use_playwright %}
+  test:e2e:frontend:
+    desc: "Run frontend Playwright E2E tests"
     cmds:
       - task: frontend:test:e2e
 {% endif %}

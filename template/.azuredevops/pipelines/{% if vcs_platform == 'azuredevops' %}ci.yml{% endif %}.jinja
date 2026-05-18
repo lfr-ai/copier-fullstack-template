@@ -93,6 +93,8 @@ jobs:
       - script: uv run pytest tests/unit tests/property -v --tb=short --cov --cov-report=xml
         displayName: 'Unit & property tests'
         workingDirectory: backend
+        env:
+          HYPOTHESIS_PROFILE: ci
 
       - task: PublishCodeCoverageResults@2
         displayName: 'Publish coverage results'
@@ -136,6 +138,8 @@ jobs:
 {%- endif %}
 {% raw %}    variables:
       {% endraw %}{{ project_slug | upper }}{% raw %}_ENVIRONMENT: test
+  USE_TESTCONTAINERS: "false"
+  HYPOTHESIS_PROFILE: ci
 {% endraw %}
 {%- if database_backend == "postgresql" %}
 {% raw %}      {% endraw %}{{ project_slug | upper }}{% raw %}_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/{% endraw %}{{ project_slug }}_test{% raw %}
@@ -166,6 +170,10 @@ jobs:
 {% raw %}
       - script: uv run pytest tests/integration -v --tb=short
         displayName: 'Integration tests'
+        workingDirectory: backend
+
+      - script: uv run pytest tests/e2e -v --tb=short
+        displayName: 'Backend e2e tests'
         workingDirectory: backend
 {% endraw %}
 {% endif %}

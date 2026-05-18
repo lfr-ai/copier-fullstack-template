@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,10 +11,6 @@ from {{ project_slug }}.core.entities.user import User
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.integration,
-    pytest.mark.skipif(
-        sys.platform == "win32",
-        reason="Async integration tests are skipped on Windows due event loop conflicts",
-    ),
 ]
 
 

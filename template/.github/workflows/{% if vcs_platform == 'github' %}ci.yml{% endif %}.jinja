@@ -89,6 +89,8 @@ jobs:
       - run: uv sync --frozen
       - name: Unit & property tests
         run: uv run pytest tests/unit tests/property -v --tb=short --cov --cov-report=xml
+        env:
+          HYPOTHESIS_PROFILE: ci
       - name: Upload coverage
         if: matrix.python-version == '{% endraw %}{{ python_version }}{% raw %}' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: codecov/codecov-action@v5
@@ -142,6 +144,8 @@ jobs:
 {% raw %}
     env:
       {% endraw %}{{ project_slug | upper }}{% raw %}_ENVIRONMENT: test
+      USE_TESTCONTAINERS: "false"
+      HYPOTHESIS_PROFILE: ci
 {% endraw %}
 {%- if database_backend == "postgresql" %}
 {% raw %}
@@ -175,6 +179,9 @@ jobs:
 {% raw %}
       - name: Integration tests
         run: uv run pytest tests/integration -v --tb=short
+
+      - name: Backend e2e tests
+        run: uv run pytest tests/e2e -v --tb=short
 {% endraw %}
 {% endif %}
 {% raw %}

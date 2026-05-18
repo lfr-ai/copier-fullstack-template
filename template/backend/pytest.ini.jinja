@@ -3,10 +3,12 @@ minversion = 8.0
 testpaths = tests
 pythonpath = src
 asyncio_mode = auto
+asyncio_default_fixture_loop_scope = session
 addopts = -ra --strict-markers --strict-config --tb=short
 markers =
     unit: Unit tests
     integration: Integration tests
+    e2e: End-to-end backend workflow tests
     slow: Slow-running tests
     property: Property-based tests
     performance: Benchmarks and performance regression tests

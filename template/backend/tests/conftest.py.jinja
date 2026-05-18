@@ -11,9 +11,9 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-
-from {{ project_slug }}.infrastructure.persistence.orm.base import ORMBase
-from {{ project_slug }}.presentation.api.app import create_api_app
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+from testcontainers.postgres import PostgresContainer
+{%- endif %}
 
 pytest_plugins = [
     "tests.fixtures.cache",
@@ -31,12 +31,52 @@ _DEFAULT_TEST_DB_URL = "sqlite+aiosqlite:///data/{{ project_slug }}_test.db"
 _DEFAULT_TEST_DB_URL = ""
 {%- endif %}
 
-TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", _DEFAULT_TEST_DB_URL)
+_ENV_VAR_NAME = "{{ project_slug | upper }}_ENVIRONMENT"
+_APP_DB_URL_VAR_NAME = "{{ project_slug | upper }}_DATABASE_URL"
+_TEST_DB_URL_ENV_VAR_NAME = "TEST_DATABASE_URL"
+
+
+def _as_bool(value: str | None, *, default: bool) -> bool:
+    """Convert common string env values to bool.
+
+    Args:
+        value (str | None): Environment variable value.
+        default (bool): Fallback when value is missing.
+
+    Returns:
+        bool: Parsed boolean.
+    """
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _resolve_test_db_url() -> str:
+    """Resolve the effective test DB URL.
+
+    Returns:
+        str: Explicit TEST_DATABASE_URL if provided, otherwise default URL.
+    """
+    return os.environ.get(_TEST_DB_URL_ENV_VAR_NAME, _DEFAULT_TEST_DB_URL)
+
+
+def _reset_runtime_singletons() -> None:
+    """Clear cached runtime singletons after env mutation.
+
+    Ensures newly set test environment variables are picked up by:
+    - settings singleton ('get_settings')
+    - container singleton ('get_container')
+    """
+    from {{ project_slug }}.composition.container import get_container
+    from {{ project_slug }}.config.settings import get_settings
+
+    get_settings.cache_clear()
+    get_container.cache_clear()
 
 
 # Set TEST environment for all test runs.
 # This must happen before any settings are loaded or engines are created.
-os.environ["{{ project_slug | upper }}_ENVIRONMENT"] = "test"
+os.environ[_ENV_VAR_NAME] = "test"
 
 
 @pytest.fixture(scope="session")
@@ -51,8 +91,99 @@ def event_loop_policy() -> asyncio.AbstractEventLoopPolicy:
     return asyncio.get_event_loop_policy()
 
 
-@pytest_asyncio.fixture(scope="session")
-async def engine() -> AsyncIterator[AsyncEngine]:
+@pytest.fixture(scope="session")
+def use_testcontainers() -> bool:
+    """Indicate whether Testcontainers should be used.
+
+    Returns:
+        bool: True when containerized integration DB should be used.
+    """
+    return _as_bool(os.environ.get("USE_TESTCONTAINERS"), default=True)
+
+
+{%- if database_backend in ('postgresql', 'azure_postgresql') %}
+@pytest.fixture(scope="session")
+def postgres_container_url(use_testcontainers: bool) -> str | None:
+    """Start a PostgreSQL container and return a SQLAlchemy async URL.
+
+    Preference order:
+    1. Explicit TEST_DATABASE_URL (external managed DB)
+    2. Testcontainers PostgreSQL URL
+    3. Static default URL fallback
+
+    Args:
+        use_testcontainers (bool): Whether to use Testcontainers.
+
+    Yields:
+        str | None: Async SQLAlchemy DB URL or None if not containerized.
+    """
+    explicit_url = os.environ.get(_TEST_DB_URL_ENV_VAR_NAME)
+    if explicit_url:
+        yield None
+        return
+
+    if not use_testcontainers:
+        yield None
+        return
+
+    with PostgresContainer(
+        image="postgres:16-alpine",
+        username="postgres",
+        password="postgres",
+        dbname="{{ project_slug }}_test",
+    ) as postgres:
+        sync_url = postgres.get_connection_url(driver=None)
+        async_url = sync_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        yield async_url
+
+
+@pytest.fixture(scope="session")
+def test_database_url(postgres_container_url: str | None) -> str:
+    """Resolve and apply the test database URL for this session.
+
+    Args:
+        postgres_container_url (str | None): URL from a running Postgres container.
+
+    Returns:
+        str: Effective DB URL used by app + tests.
+    """
+    resolved = (
+        os.environ.get(_TEST_DB_URL_ENV_VAR_NAME)
+        or postgres_container_url
+        or _resolve_test_db_url()
+    )
+    if not resolved:
+        pytest.skip("No database URL configured for this template variant")
+
+    os.environ[_TEST_DB_URL_ENV_VAR_NAME] = resolved
+    os.environ[_APP_DB_URL_VAR_NAME] = resolved
+    os.environ[_ENV_VAR_NAME] = "test"
+    _reset_runtime_singletons()
+    return resolved
+{%- else %}
+
+
+@pytest.fixture(scope="session")
+def test_database_url() -> str:
+    """Resolve and apply the test database URL for this session.
+
+    Returns:
+        str: Effective DB URL used by app + tests.
+    """
+    resolved = _resolve_test_db_url()
+    if not resolved:
+        pytest.skip("No database URL configured for this template variant")
+
+    os.environ[_TEST_DB_URL_ENV_VAR_NAME] = resolved
+    os.environ[_APP_DB_URL_VAR_NAME] = resolved
+    os.environ[_ENV_VAR_NAME] = "test"
+    _reset_runtime_singletons()
+    return resolved
+{%- endif %}
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def engine(test_database_url: str) -> AsyncIterator[AsyncEngine]:
     """Create async test database engine.
 
     Each environment uses its own database. Tests always run against
@@ -65,10 +196,13 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     Raises:
         pytest.skip: When no database URL is configured for this template variant.
     """
-    if not TEST_DATABASE_URL:
+    from {{ project_slug }}.infrastructure.persistence.orm.base import ORMBase
+
+    resolved_url = test_database_url
+    if not resolved_url:
         pytest.skip("No database URL configured for this template variant")
 
-    eng = create_async_engine(TEST_DATABASE_URL, echo=False)
+    eng = create_async_engine(resolved_url, echo=False)
 
     # Create all tables in the test database
     async with eng.begin() as conn:
@@ -116,6 +250,8 @@ async def client() -> AsyncIterator[AsyncClient]:
     Yields:
         AsyncIterator[AsyncClient]: Configured async HTTP client for API testing.
     """
+    from {{ project_slug }}.presentation.api.app import create_api_app
+
     app = create_api_app(debug=True)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
