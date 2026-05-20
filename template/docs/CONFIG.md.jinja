@@ -218,8 +218,9 @@ All configuration is loaded from environment variables with the
 ## Keploy (Traffic-Based API Testing)
 
 This template ships a starter `keploy.yml` at project root for Keploy CLI
-project configuration. The variables below are consumed by Task commands
-(`task keploy:*`) and CI jobs, not by `BaseSettings`.
+project configuration. Depending on Keploy CLI version, generated configs may
+use `keploy.yaml`; template tasks support both names. The variables below are
+consumed by Task commands (`task keploy:*`) and CI jobs, not by `BaseSettings`.
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|

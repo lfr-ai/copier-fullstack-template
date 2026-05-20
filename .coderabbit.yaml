@@ -1,5 +1,6 @@
 # CodeRabbit configuration for copier-fullstack-template
 # https://docs.coderabbit.ai/guides/configure-coderabbit/
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 
 language: "en-US"
 early_access: true
@@ -10,6 +11,21 @@ reviews:
   high_level_summary: true
   poem: false
   collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "[skip review]"
+      - "DO NOT MERGE"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "renovate[bot]"
+      - "github-actions[bot]"
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/*.lock"
 
   path_instructions:
     - path: "copier.yml"
@@ -60,12 +76,8 @@ chat:
   auto_reply: true
 
 knowledge_base:
-  learnings: true
+  learnings: {}
 
 tone_instructions: |
-  Concise, constructive reviews. Prioritize:
-  - Template correctness (Jinja2 syntax, valid Copier variables)
-  - Schema validity (Claude Code settings.json, GitHub agent frontmatter)
-  - Documentation alignment (root .github/ vs template .github/)
-  - Broken conditional logic in template files
-  Skip style issues handled by pre-commit hooks.
+  Concise and constructive. Prioritize template correctness, schema validity,
+  and docs alignment. Ignore style issues covered by hooks.

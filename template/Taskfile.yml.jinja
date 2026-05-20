@@ -440,15 +440,23 @@ tasks:
       - keploy login
 
   keploy:config:init:
-    desc: "Regenerate Keploy config from CLI defaults (overwrites keploy.yml)"
+    desc: "Regenerate Keploy config from CLI defaults (overwrites keploy.yml/keploy.yaml)"
     cmds:
-      - rm -f keploy.yml
+      - rm -f keploy.yml keploy.yaml
       - keploy config --generate -p .
 
   keploy:config:show:
     desc: "Print current Keploy project config"
     cmds:
-      - cat keploy.yml
+      - |
+        if [ -f keploy.yml ]; then
+          cat keploy.yml
+        elif [ -f keploy.yaml ]; then
+          cat keploy.yaml
+        else
+          echo "No keploy config found (expected keploy.yml or keploy.yaml)"
+          exit 1
+        fi
 
   keploy:record:
     desc: "Record API traffic as Keploy tests (pass app command via CLI args)"

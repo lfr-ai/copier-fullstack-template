@@ -18,7 +18,8 @@ If you want to replace it with the latest CLI-generated defaults, run:
 task keploy:config:init
 ```
 
-This resets `keploy.yml` and then runs `keploy config --generate -p .`.
+This resets any existing `keploy.yml`/`keploy.yaml` and then runs
+`keploy config --generate -p .`.
 
 ## Why Keploy in this template
 
@@ -31,6 +32,12 @@ This resets `keploy.yml` and then runs `keploy config --generate -p .`.
 - Linux kernel `5.10+` (or WSL2 on Windows)
 - Keploy CLI installed (`task keploy:install`)
 - A backend app start command that Keploy can wrap
+
+Official references:
+
+- Install: https://keploy.io/docs/server/installation/
+- Config: https://keploy.io/docs/running-keploy/configuration-file/
+- CLI flags: https://keploy.io/docs/running-keploy/cli-commands/
 
 ## Local setup
 
