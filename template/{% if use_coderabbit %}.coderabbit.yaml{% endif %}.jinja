@@ -1,5 +1,6 @@
 # CodeRabbit configuration for {{ project_name }}
 # https://docs.coderabbit.ai/guides/configure-coderabbit/
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 
 language: "en-US"
 early_access: true
@@ -10,6 +11,21 @@ reviews:
   high_level_summary: true
   poem: false
   collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "[skip review]"
+      - "DO NOT MERGE"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "renovate[bot]"
+      - "github-actions[bot]"
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/*.lock"
 
   path_instructions:
     - path: "backend/src/{{ project_slug }}/core/**"
@@ -70,13 +86,8 @@ chat:
   auto_reply: true
 
 knowledge_base:
-  learnings: true
+  learnings: {}
 
 tone_instructions: |
-  Concise, constructive reviews. Prioritize:
-  - Architecture violations (Clean Architecture) — CRITICAL
-  - Security issues (OWASP Top 10) — CRITICAL
-  - Performance regressions (N+1 queries, unnecessary re-renders)
-  - Type safety (missing annotations, use of Any)
-  - Missing tests for new behaviour
-  Include file path, line, and a concrete fix. Skip style issues handled by ruff or Biome.
+  Concise and constructive. Prioritize architecture, security, and missing tests.
+  Skip style issues already covered by automated formatters/linters.
