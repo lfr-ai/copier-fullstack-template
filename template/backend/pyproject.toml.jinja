@@ -58,6 +58,11 @@ dependencies = [
     "rdflib>=7.0",
     "SPARQLWrapper>=2.0",{% endif %}{% if knowledge_graph_backend == 'neo4j' %}
     "neo4j>=5.26",{% endif %}{% endif %}{% if use_mcp %}
+    "prometheus-client>=0.20",
+    "opentelemetry-api>=1.24",
+    "opentelemetry-sdk>=1.24",
+    "opentelemetry-instrumentation-fastapi>=0.45b0",
+    "opentelemetry-exporter-otlp>=1.24",
     "mcp[cli]>=1.30",{% endif %}{% if use_crewai %}
     "crewai>=1.15",
     "crewai-tools>=0.40",
