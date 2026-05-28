@@ -1,7 +1,7 @@
 # Agent Configuration
 
 This file provides instructions for AI coding agents (GitHub Copilot, Cursor, Cline,
-OpenCode, etc.) working within this **template repository**.
+etc.) working within this **template repository**.
 
 ## Important Context
 

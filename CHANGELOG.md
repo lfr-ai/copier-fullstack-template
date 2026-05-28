@@ -45,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stabilized generated adaptive-pipeline unit tests for slotted class patching,
   lazy initialization checks, and LightRAG-unavailable fallback expectations
 
+### Removed
+
+- Removed Warp terminal optional scaffolding from the template questionnaire and
+  generated assets (`with_warp`, `.warp/`, and `install-warp` installers)
+- Removed OpenCode optional scaffolding from the template questionnaire and
+  generated assets (`with_opencode` and `.opencode/` context files)
+- Removed OpenCode mentions from root/template `AGENTS.md` documentation
+
 ## [0.1.0] - 2026-04-10
 
 ### Added
