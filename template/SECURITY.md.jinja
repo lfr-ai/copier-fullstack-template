@@ -49,7 +49,7 @@ Out of scope:
 
 ## Security Measures
 
-- Dependencies updated regularly via Renovate.
+- Dependencies updated regularly via {% if vcs_platform == 'github' %}Dependabot{% else %}Renovate{% endif %}.
 - Security scanning in CI pipeline (CodeQL, pip-audit).
 - Pre-commit hooks to prevent credential leaks.
 - SAST analysis on pull requests.
