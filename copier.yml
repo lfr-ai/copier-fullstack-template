@@ -159,11 +159,6 @@ use_devcontainer:
   help: "Include devcontainer configuration"
   default: true
 
-with_warp:
-  type: bool
-  help: "Include Warp terminal configuration (.warp/ directory with shared workflows)"
-  default: false
-
 with_gitnexus:
   type: bool
   help: "Include GitNexus graph-powered code intelligence (MCP integration for AI agents)"
@@ -172,11 +167,6 @@ with_gitnexus:
 with_gsd:
   type: bool
   help: "Include GSD-2 configuration (.gsd/ directory with preferences and MCP config)"
-  default: false
-
-with_opencode:
-  type: bool
-  help: "Include OpenCode configuration (.opencode/ directory with project context)"
   default: false
 
 container_runtime:

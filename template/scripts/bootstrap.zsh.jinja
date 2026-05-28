@@ -151,9 +151,6 @@ print "Caddy: $(caddy version 2>/dev/null || print 'NOT FOUND')"
 {% if cloud_provider == "azure" %}
 print "Azure CLI: $(az version --output tsv 2>/dev/null | head -1 || print 'NOT FOUND')"
 {% endif %}
-{% if with_warp %}
-print "Warp: $(command -v warp-terminal &>/dev/null && print 'installed' || (test -d '/Applications/Warp.app' && print 'installed') || print 'NOT FOUND')"
-{% endif %}
 {% if with_gitnexus %}
 print "GitNexus: $(gitnexus --version 2>/dev/null || print 'NOT FOUND (available via npx)')"
 {% endif %}
