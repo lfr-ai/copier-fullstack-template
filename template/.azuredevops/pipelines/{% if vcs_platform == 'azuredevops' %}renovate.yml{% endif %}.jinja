@@ -48,7 +48,9 @@ jobs:
           # Required: Azure DevOps authentication
           RENOVATE_TOKEN: $(System.AccessToken)
           # Required: Azure DevOps organization endpoint
-          RENOVATE_ENDPOINT: https://dev.azure.com/{{ organization_name }}/
+          RENOVATE_ENDPOINT: $(System.CollectionUri)
+          # Required: Target the current repository (Project/Repo)
+          RENOVATE_REPOSITORIES: $(System.TeamProject)/$(Build.Repository.Name)
           # Optional: Configure Renovate behavior
           RENOVATE_AUTODISCOVER: false
           RENOVATE_BASE_BRANCHES: {% if default_branch %}{{ default_branch }}{% else %}main{% endif %}
@@ -58,7 +60,7 @@ jobs:
           RENOVATE_PR_FOOTER: |
             🤖 This PR was created by Renovate Bot
             📅 Schedule: Weekly on Monday at 3:00 AM UTC
-            🔄 Automerge: Enabled for security patches
+            🔄 Automerge: Enabled for patch updates
 
             ---
             Questions? Check the [Renovate docs](https://docs.renovatebot.com/)
