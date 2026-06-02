@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Aligned MCP configuration with golden-standard dual config files
+  (`.vscode/mcp.json` + `.claude/mcp.json`) and added GitNexus server wiring
+- Updated template MCP scaffolding to use HTTP Context7 and stdio GitNexus
+  (`gitnexus mcp`) with workspace-root cwd
+- Hardened OpenAPI/OpenSpec automation by replacing unsafe CI installer piping
+  with official `oasdiff` GitHub Actions and enforced breaking-change gates
+- Improved generated OpenAPI task commands to use reproducible `npx -y ...@latest`
+  invocation and documented safer oasdiff usage paths
 - Standardized width settings to 88 for markdownlint/yamllint in root and template
 - Updated and simplified root/template pre-commit baselines for iterative onboarding
 - Strengthened coding instructions around internal naming, `Final[...]` avoidance,
