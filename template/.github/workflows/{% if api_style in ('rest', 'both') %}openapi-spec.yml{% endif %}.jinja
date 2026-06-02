@@ -162,20 +162,31 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install oasdiff
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/Tufin/oasdiff/main/install.sh | sh -s -- -b /usr/local/bin
-
       - name: Check out base branch spec
         run: |
           git show origin/${{ github.base_ref }}:docs/api/openapi.yaml > /tmp/base-spec.yaml 2>/dev/null || echo "{}" > /tmp/base-spec.yaml
 
       - name: Diff OpenAPI specs
-        id: diff
-        run: |
-          oasdiff diff /tmp/base-spec.yaml docs/api/openapi.generated.json \
-            --format=text > /tmp/oasdiff.txt || true
+        uses: oasdiff/oasdiff-action/diff@v0.0.48
+        with:
+          base: "/tmp/base-spec.yaml"
+          revision: "docs/api/openapi.generated.json"
+          format: text
+          output-to-file: "/tmp/oasdiff.txt"
 
+      - name: Check for breaking changes
+        id: breaking_check
+        continue-on-error: true
+        uses: oasdiff/oasdiff-action/breaking@v0.0.48
+        with:
+          base: "/tmp/base-spec.yaml"
+          revision: "docs/api/openapi.generated.json"
+          fail-on: WARN
+          output-to-file: "/tmp/breaking.txt"
+
+      - name: Build PR summary
+        id: summary
+        run: |
           if [ -s /tmp/oasdiff.txt ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
             echo "## OpenAPI Specification Changes" >> /tmp/pr-comment.md
@@ -187,12 +198,6 @@ jobs:
             echo "changes=false" >> "$GITHUB_OUTPUT"
             echo "No OpenAPI specification changes detected." >> /tmp/pr-comment.md
           fi
-
-      - name: Check for breaking changes
-        id: breaking
-        run: |
-          oasdiff breaking /tmp/base-spec.yaml docs/api/openapi.generated.json \
-            --format=text > /tmp/breaking.txt || true
 
           if [ -s /tmp/breaking.txt ]; then
             echo "breaking=true" >> "$GITHUB_OUTPUT"
@@ -207,11 +212,17 @@ jobs:
           fi
 
       - name: Comment on PR
-        if: steps.diff.outputs.changes == 'true' || steps.breaking.outputs.breaking == 'true'
+        if: steps.summary.outputs.changes == 'true' || steps.summary.outputs.breaking == 'true'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: openapi-diff
           path: /tmp/pr-comment.md
+
+      - name: Fail PR on breaking changes
+        if: steps.summary.outputs.breaking == 'true'
+        run: |
+          echo "Breaking OpenAPI changes detected"
+          exit 1
 
   generate-docs:
     name: Generate API Documentation

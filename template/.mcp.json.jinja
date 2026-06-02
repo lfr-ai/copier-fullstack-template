@@ -6,12 +6,15 @@
       "url": "https://mcp.context7.com/mcp"
     },
     "shadcn": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "shadcn@latest", "mcp"]
     }{% if with_gitnexus %},
     "gitnexus": {
-      "command": "npx",
-      "args": ["-y", "gitnexus@latest", "mcp"]
+      "type": "stdio",
+      "command": "gitnexus",
+      "args": ["mcp"],
+      "cwd": "${workspaceFolder}"
     }{% endif %}
   }
 }

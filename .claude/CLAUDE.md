@@ -80,7 +80,7 @@ Reusable domain knowledge:
   - **PreToolUse**: Guard against destructive commands
   - **PostToolUse**: Auto-lint Python files with ruff
   - **Stop**: Remind about uncommitted changes
-- **MCP Servers**: context7, shadcn (via `.mcp.json`)
+- **MCP Servers**: context7, shadcn, gitnexus (via `.claude/mcp.json` and `.vscode/mcp.json`)
 - **Plugins**: 15 essential plugins enabled
 - **Attribution**: `chore(claude):` commits, `🤖 Claude Code:` PRs
 
@@ -111,10 +111,11 @@ All hooks have both `.sh` (Unix/Linux/macOS) and `.ps1` (Windows) versions:
 
 ## MCP Servers
 
-Configured in `.mcp.json` (project root):
+Configured in `.claude/mcp.json` (Claude Code) and `.vscode/mcp.json` (VS Code/Copilot):
 
 - **context7** — Documentation lookup (https://context7.com)
 - **shadcn** — shadcn/ui component management
+- **gitnexus** — Graph-powered code intelligence
 
 ## Usage
 
@@ -266,7 +267,7 @@ paths:
 
 ### MCP Server Issues
 
-- Verify `.mcp.json` syntax (project root)
+- Verify `.claude/mcp.json` and `.vscode/mcp.json` syntax
 - Check server is running: `npx shadcn@latest mcp --version`
 - Review `enableAllProjectMcpServers: true` in settings.json
 

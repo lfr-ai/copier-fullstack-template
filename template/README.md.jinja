@@ -99,6 +99,12 @@ section at the bottom of `.env.example`.
 | `task security:audit` | Audit dependencies for vulnerabilities |
 | `task health` | Check health of all running services |
 | `task clean` | Remove all build artifacts and caches |
+{% if use_openspec -%}
+| `task api:spec:check` | Run OpenAPI lint + validation checks |
+| `task api:spec:breaking` | Detect breaking API changes |
+| `task api:docs` | Generate static HTML API docs |
+| `task api:client:typescript` | Generate TypeScript API client |
+{% endif -%}
 
 ## Endpoints
 

@@ -2,8 +2,8 @@
   "servers": {
     // ── Documentation ─────────────────────────────────────────
     "context7": {
-      "command": "bunx",
-      "args": ["--bun", "@upstash/context7-mcp@latest"]
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
     },
 
     // ── GitHub ────────────────────────────────────────────────
@@ -42,8 +42,10 @@
 
     // ── GitNexus (code intelligence graph) ───────────────────
     "gitnexus": {
-      "command": "npx",
-      "args": ["-y", "gitnexus@latest", "mcp"]
+      "type": "stdio",
+      "command": "gitnexus",
+      "args": ["mcp"],
+      "cwd": "${workspaceFolder}"
     }{% endif %}
   }
 }

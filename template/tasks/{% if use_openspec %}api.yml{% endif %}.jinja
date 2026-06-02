@@ -32,7 +32,7 @@ tasks:
     desc: "Lint OpenAPI specification with Spectral"
     deps: [spec]
     cmds:
-      - npx @stoplight/spectral-cli lint {% raw %}{{.GENERATED_SPEC}}{% endraw %} --ruleset .spectral.yaml --format stylish
+      - npx -y @stoplight/spectral-cli@latest lint {% raw %}{{.GENERATED_SPEC}}{% endraw %} --ruleset .spectral.yaml --format stylish
     preconditions:
       - sh: test -f {% raw %}{{.GENERATED_SPEC}}{% endraw %}
         msg: "OpenAPI spec not found. Run 'task api:spec' first."
@@ -41,7 +41,7 @@ tasks:
     desc: "Validate OpenAPI specification with Redocly"
     deps: [spec]
     cmds:
-      - npx @redocly/cli lint {% raw %}{{.GENERATED_SPEC}}{% endraw %} --skip-rule=no-path-trailing-slash
+      - npx -y @redocly/cli@latest lint {% raw %}{{.GENERATED_SPEC}}{% endraw %} --skip-rule=no-path-trailing-slash
     preconditions:
       - sh: test -f {% raw %}{{.GENERATED_SPEC}}{% endraw %}
         msg: "OpenAPI spec not found. Run 'task api:spec' first."
@@ -59,8 +59,14 @@ tasks:
       - |
         if command -v oasdiff &> /dev/null; then
           oasdiff diff {% raw %}{{.API_SPEC_FILE}}{% endraw %} {% raw %}{{.GENERATED_SPEC}}{% endraw %} --format=text
+        elif command -v docker &> /dev/null; then
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            ghcr.io/oasdiff/oasdiff:latest \
+            diff {% raw %}{{.API_SPEC_FILE}}{% endraw %} {% raw %}{{.GENERATED_SPEC}}{% endraw %} --format=text
         else
-          echo "oasdiff not installed. Install with: curl -sSfL https://raw.githubusercontent.com/Tufin/oasdiff/main/install.sh | sh"
+          echo "oasdiff not installed. Install oasdiff CLI or use Docker to run ghcr.io/oasdiff/oasdiff:latest"
           exit 1
         fi
 
@@ -71,8 +77,14 @@ tasks:
       - |
         if command -v oasdiff &> /dev/null; then
           oasdiff breaking {% raw %}{{.API_SPEC_FILE}}{% endraw %} {% raw %}{{.GENERATED_SPEC}}{% endraw %} --format=text
+        elif command -v docker &> /dev/null; then
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            ghcr.io/oasdiff/oasdiff:latest \
+            breaking {% raw %}{{.API_SPEC_FILE}}{% endraw %} {% raw %}{{.GENERATED_SPEC}}{% endraw %} --format=text
         else
-          echo "oasdiff not installed. Install with: curl -sSfL https://raw.githubusercontent.com/Tufin/oasdiff/main/install.sh | sh"
+          echo "oasdiff not installed. Install oasdiff CLI or use Docker to run ghcr.io/oasdiff/oasdiff:latest"
           exit 1
         fi
 
@@ -88,7 +100,7 @@ tasks:
     deps: [spec]
     cmds:
       - |
-        npx @redocly/cli build-docs {% raw %}{{.GENERATED_SPEC}}{% endraw %} \
+        npx -y @redocly/cli@latest build-docs {% raw %}{{.GENERATED_SPEC}}{% endraw %} \
           --output {% raw %}{{.API_SPEC_DIR}}{% endraw %}/index.html \
           --title "{{ project_name }} API Documentation"
     generates:
@@ -98,7 +110,7 @@ tasks:
     desc: "Serve generated API documentation locally"
     deps: [docs]
     cmds:
-      - npx serve {% raw %}{{.API_SPEC_DIR}}{% endraw %} -p 8080
+      - npx -y serve@latest {% raw %}{{.API_SPEC_DIR}}{% endraw %} -p 8080
     interactive: true
 
   client:typescript:
@@ -109,7 +121,7 @@ tasks:
     cmds:
       - mkdir -p {% raw %}{{.OUTPUT_DIR}}{% endraw %}
       - |
-        npx @openapitools/openapi-generator-cli generate \
+        npx -y @openapitools/openapi-generator-cli@latest generate \
           -i {% raw %}{{.GENERATED_SPEC}}{% endraw %} \
           -g typescript-axios \
           -o {% raw %}{{.OUTPUT_DIR}}{% endraw %} \
@@ -126,7 +138,7 @@ tasks:
     cmds:
       - mkdir -p {% raw %}{{.OUTPUT_DIR}}{% endraw %}
       - |
-        npx @openapitools/openapi-generator-cli generate \
+        npx -y @openapitools/openapi-generator-cli@latest generate \
           -i {% raw %}{{.GENERATED_SPEC}}{% endraw %} \
           -g python \
           -o {% raw %}{{.OUTPUT_DIR}}{% endraw %} \
@@ -136,8 +148,8 @@ tasks:
       - "{% raw %}{{.OUTPUT_DIR}}{% endraw %}/**/*.py"
 
   install:tools:
-    desc: "Install OpenAPI tooling globally"
+    desc: "Install OpenAPI tooling globally (except oasdiff, install separately)"
     cmds:
       - npm install -g @stoplight/spectral-cli @redocly/cli @openapitools/openapi-generator-cli
-      - curl -sSfL https://raw.githubusercontent.com/Tufin/oasdiff/main/install.sh | sh -s -- -b /usr/local/bin
+      - echo "Install oasdiff from https://www.oasdiff.com/docs/getting-started (brew/choco/scoop/manual)."
       - echo "OpenAPI tools installed successfully"

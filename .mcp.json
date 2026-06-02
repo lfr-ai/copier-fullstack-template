@@ -1,6 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/mcp.json",
   "mcpServers": {
+    "gitnexus": {
+      "type": "stdio",
+      "command": "gitnexus",
+      "args": ["mcp"],
+      "cwd": "${workspaceFolder}"
+    },
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp"
