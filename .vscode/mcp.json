@@ -1,5 +1,11 @@
 {
   "servers": {
+    "gitnexus": {
+      "type": "stdio",
+      "command": "gitnexus",
+      "args": ["mcp"],
+      "cwd": "${workspaceFolder}"
+    },
     "shadcn": {
       "command": "npx",
       "args": ["-y", "shadcn@latest", "mcp"]

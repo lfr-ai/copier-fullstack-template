@@ -44,7 +44,8 @@ copier-fullstack-template/
 │   ├── instructions/          # Scoped instructions
 │   ├── skills/                # Domain knowledge playbooks
 │   └── workflows/             # CI/CD for template development
-├── .mcp.json                  # MCP servers (context7, shadcn)
+├── .vscode/mcp.json           # MCP servers for VS Code/Copilot
+├── .claude/mcp.json           # MCP servers for Claude Code
 ├── scripts/                   # Template verification scripts
 ├── .pre-commit-config.yaml    # Pre-commit hooks
 ├── .cz.toml                   # Commitizen configuration

@@ -11,7 +11,7 @@
 - **Skills**: 5 reusable skills
 - **Hooks**: 4 hooks (8 script files across .sh + .ps1)
 - **Plugins**: 15 enabled
-- **MCP Servers**: 2 (context7, shadcn)
+- **MCP Servers**: 3 (context7, shadcn, gitnexus)
 
 ## Directory Structure
 
@@ -147,6 +147,7 @@ cat .claude/settings.json | jq .
 
 - **context7**: Documentation lookup (https://context7.com)
 - **shadcn**: shadcn/ui component management
+- **gitnexus**: Graph-powered code intelligence
 
 ## Common Workflows
 
@@ -187,7 +188,7 @@ cat .claude/settings.json | jq .
 | Agent not loading | Check frontmatter syntax, verify name |
 | Rule not applying | Verify path pattern, check YAML |
 | Hook not executing | Check executable bit, verify path |
-| MCP server offline | Check `.mcp.json` and `.vscode/mcp.json`, verify server running |
+| MCP server offline | Check `.claude/mcp.json` and `.vscode/mcp.json`, verify server running |
 
 ## Quick Fixes
 
