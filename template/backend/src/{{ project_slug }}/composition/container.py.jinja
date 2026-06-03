@@ -591,8 +591,16 @@ class Container:
     def prompt_template(self) -> PromptTemplateGateway:
         """Create a Jinja2-based prompt template manager."""
         from {{ project_slug }}.ai.prompts.jinja2_templates import Jinja2PromptTemplate
+        from {{ project_slug }}.ai.prompts.registry import parse_version_overrides
 
-        return Jinja2PromptTemplate()
+        return Jinja2PromptTemplate(
+            registry_path=getattr(self._settings, "prompt_registry_path", "prompts/registry.json"),
+            versions_dir=getattr(self._settings, "prompt_versions_dir", "prompts/versions"),
+            profile=getattr(self._settings, "prompt_version_profile", "default"),
+            version_overrides=parse_version_overrides(
+                getattr(self._settings, "prompt_version_overrides", "")
+            ),
+        )
 {% if use_knowledge_graph %}
     def graph_retriever(self) -> RetrieverGateway:
         """Create a knowledge graph retriever."""

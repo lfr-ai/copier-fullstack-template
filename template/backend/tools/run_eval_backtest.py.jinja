@@ -1,0 +1,79 @@
+"""Run-name utility for evaluator backtests with prompt-version traceability."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+
+from {{ project_slug }}.ai.prompts.manager import PromptManager
+from {{ project_slug }}.ai.prompts.registry import build_prompt_version_run_name, parse_version_overrides
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Compute and persist a backtest run name that includes prompt versions. "
+            "This script is intentionally model-agnostic and can be used by any evaluator pipeline."
+        ),
+    )
+    parser.add_argument(
+        "--profile",
+        default="default",
+        help="Prompt version profile (default: default)",
+    )
+    parser.add_argument(
+        "--registry",
+        default="prompts/registry.json",
+        help="Prompt registry manifest path (default: prompts/registry.json)",
+    )
+    parser.add_argument(
+        "--versions-dir",
+        default="prompts/versions",
+        help="Prompt versions directory (default: prompts/versions)",
+    )
+    parser.add_argument(
+        "--overrides",
+        default="",
+        help='JSON map of prompt overrides, e.g. {"rag_query":"v2"}',
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/eval/backtest_run.json",
+        help="Output JSON path for run metadata.",
+    )
+    return parser
+
+
+def main() -> int:
+    args = _build_parser().parse_args()
+
+    manager = PromptManager(
+        registry_path=args.registry,
+        versions_dir=args.versions_dir,
+        profile=args.profile,
+        version_overrides=parse_version_overrides(args.overrides),
+    )
+    versions = manager.list_prompt_versions()
+
+    prefix = f"backtest-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+    run_name = build_prompt_version_run_name(prefix=prefix, prompt_versions=versions)
+
+    payload = {
+        "run_name": run_name,
+        "prompt_profile": args.profile,
+        "prompt_versions": versions,
+        "generated_at": datetime.now(UTC).isoformat(),
+    }
+
+    out = Path(args.output)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

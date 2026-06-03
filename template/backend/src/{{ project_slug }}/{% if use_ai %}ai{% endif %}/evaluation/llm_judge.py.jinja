@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import final
 
 import json
 import structlog
 
+from {{ project_slug }}.ai.prompts.registry import build_prompt_version_run_name
 from {{ project_slug }}.core.interfaces.evaluator import EvalResult, EvalSuite
 from {{ project_slug }}.core.interfaces.llm import LLMGateway
 
@@ -91,6 +93,8 @@ class LLMJudgeEvaluator:
         self,
         *,
         samples: list[dict[str, str]],
+        prompt_versions: dict[str, str] | None = None,
+        run_name: str = "",
     ) -> EvalSuite:
         """Run evaluation across multiple samples."""
         results: list[EvalResult] = []
@@ -105,8 +109,20 @@ class LLMJudgeEvaluator:
 
         scores = [r.score for r in results]
         overall = sum(scores) / len(scores) if scores else _ZERO_SCORE
+
+        effective_versions = prompt_versions or {}
+        effective_run_name = run_name or build_prompt_version_run_name(
+            prefix=(
+                f"backtest-{self._metric}-"
+                f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+            ),
+            prompt_versions=effective_versions,
+        )
+
         return EvalSuite(
             results=results,
             overall_score=overall,
             passed=all(r.passed for r in results),
+            run_name=effective_run_name,
+            metadata={"prompt_versions": effective_versions},
         )

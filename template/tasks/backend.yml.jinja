@@ -172,6 +172,18 @@ tasks:
     cmds:
       - zsh scripts/setup-ai.zsh
 
+  ai:prompts:provision:
+    desc: "Provision a new immutable prompt version file and update prompt registry"
+    dir: backend
+    cmds:
+      - uv run python tools/provision_prompt_version.py {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  ai:eval:backtest:name:
+    desc: "Generate backtest run metadata with prompt-version-aware run name"
+    dir: backend
+    cmds:
+      - uv run python tools/run_eval_backtest.py {% raw %}{{.CLI_ARGS}}{% endraw %}
+
   ai:validate:
     desc: "Validate AI dependencies and wiring"
     dir: backend

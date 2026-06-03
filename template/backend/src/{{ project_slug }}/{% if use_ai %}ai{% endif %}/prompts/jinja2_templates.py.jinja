@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import override, final
 
 from {{ project_slug }}.core.interfaces.prompt_template import PromptTemplateGateway
+from {{ project_slug }}.ai.prompts.registry import PromptVersionResolver
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 {% raw %}
@@ -57,11 +58,34 @@ class Jinja2PromptTemplate(PromptTemplateGateway):
     loading templates from a directory ('*.txt' and '*.j2' files).
     """
 
-    __slots__ = ("_descriptions", "_templates")
+    __slots__ = ("_descriptions", "_prompt_versions", "_templates")
 
-    def __init__(self, *, template_dir: str | None = None) -> None:
-        self._templates: dict[str, str] = dict(_BUILTIN_TEMPLATES)
+    def __init__(
+        self,
+        *,
+        template_dir: str | None = None,
+        registry_path: str = "prompts/registry.json",
+        versions_dir: str = "prompts/versions",
+        profile: str = "default",
+        version_overrides: dict[str, str] | None = None,
+    ) -> None:
+        self._templates: dict[str, str] = {}
         self._descriptions: dict[str, str] = {}
+        self._prompt_versions: dict[str, str] = {}
+
+        resolver = PromptVersionResolver(
+            registry_path=registry_path,
+            versions_dir=versions_dir,
+            profile=profile,
+            overrides=version_overrides,
+        )
+
+        for name, fallback in _BUILTIN_TEMPLATES.items():
+            template_text, version = resolver.resolve(name=name, fallback_template=fallback)
+            self._templates[name] = template_text
+            self._templates[f"{name}@{version}"] = template_text
+            self._prompt_versions[name] = version
+
         if template_dir:
             self.load_directory(template_dir)
 
@@ -108,10 +132,26 @@ class Jinja2PromptTemplate(PromptTemplateGateway):
         description: str = "",
     ) -> None:
         """Register or override a prompt template."""
+        current_version = self._prompt_versions.get(name, "v1")
+        if current_version.startswith("v") and current_version[1:].isdigit():
+            next_version = f"v{int(current_version[1:]) + 1}"
+        else:
+            next_version = "v1"
+
         self._templates[name] = template
+        self._templates[f"{name}@{next_version}"] = template
+        self._prompt_versions[name] = next_version
         if description:
             self._descriptions[name] = description
         logger.info("Registered prompt template: %s", name)
+
+    def get_prompt_version(self, *, name: str) -> str:
+        """Return active version label for a prompt template name."""
+        return self._prompt_versions.get(name, "v1")
+
+    def get_prompt_versions(self) -> dict[str, str]:
+        """Return active prompt versions by template name."""
+        return dict(self._prompt_versions)
 
     def load_directory(self, directory: str) -> None:
         """Load all '*.txt' and '*.j2' template files from *directory*."""

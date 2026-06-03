@@ -80,7 +80,7 @@ Reusable domain knowledge:
   - **PreToolUse**: Guard against destructive commands
   - **PostToolUse**: Auto-lint Python files with ruff
   - **Stop**: Remind about uncommitted changes
-- **MCP Servers**: context7, shadcn, gitnexus (via `.claude/mcp.json` and `.vscode/mcp.json`)
+- **MCP Servers**: context7, shadcn, gitnexus, playwright (via `.claude/mcp.json` and `.vscode/mcp.json`)
 - **Plugins**: 15 essential plugins enabled
 - **Attribution**: `chore(claude):` commits, `🤖 Claude Code:` PRs
 
@@ -113,9 +113,10 @@ All hooks have both `.sh` (Unix/Linux/macOS) and `.ps1` (Windows) versions:
 
 Configured in `.claude/mcp.json` (Claude Code) and `.vscode/mcp.json` (VS Code/Copilot):
 
-- **context7** — Documentation lookup (https://context7.com)
+- **context7** — Documentation lookup ([context7.com](https://context7.com))
 - **shadcn** — shadcn/ui component management
 - **gitnexus** — Graph-powered code intelligence
+- **playwright** — Browser automation via Playwright MCP
 
 ## Usage
 

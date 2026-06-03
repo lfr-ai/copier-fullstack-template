@@ -99,6 +99,10 @@ section at the bottom of `.env.example`.
 | `task security:audit` | Audit dependencies for vulnerabilities |
 | `task health` | Check health of all running services |
 | `task clean` | Remove all build artifacts and caches |
+{% if use_ai -%}
+| `task backend:ai:prompts:provision -- --name <prompt> --source <file>` | Create immutable prompt version file and update profile pointer |
+| `task backend:ai:eval:backtest:name` | Generate prompt-version-aware backtest run metadata |
+{% endif -%}
 {% if use_openspec -%}
 | `task api:spec:check` | Run OpenAPI lint + validation checks |
 | `task api:spec:breaking` | Detect breaking API changes |

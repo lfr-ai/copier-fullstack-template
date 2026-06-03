@@ -1,6 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/mcp.json",
   "mcpServers": {
+{% if use_playwright %}
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--isolated", "--headless"]
+    },
+{% endif %}
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp"

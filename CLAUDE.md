@@ -34,7 +34,7 @@ Multiple `CLAUDE.md` files are intentional and scoped:
 | ---- | ------------- | ---- |
 | **Claude Code** | `.claude/` directory | `.claude/CLAUDE.md` |
 | **GitHub Copilot** | `.github/copilot-instructions.md` | `.github/instructions/` |
-| **MCP Servers** | `.vscode/mcp.json`, `.claude/mcp.json` | context7, shadcn, gitnexus |
+| **MCP Servers** | `.vscode/mcp.json`, `.claude/mcp.json` | context7, shadcn, gitnexus, playwright |
 
 ## Development Commands
 
