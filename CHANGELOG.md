@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Aligned MCP configuration with golden-standard dual config files
   (`.vscode/mcp.json` + `.claude/mcp.json`) and added GitNexus server wiring
+- Added Playwright MCP server wiring in root and template MCP configs using the
+  official `@playwright/mcp` package with isolated/headless defaults
+- Added file-backed AI prompt registry with immutable version files
+  (`backend/prompts/versions/*`) and profile-based selection (`backend/prompts/registry.json`)
+- Added prompt provisioning and backtest run metadata utilities so evaluator
+  runs can include prompt-version-aware run names
 - Updated template MCP scaffolding to use HTTP Context7 and stdio GitNexus
   (`gitnexus mcp`) with workspace-root cwd
 - Hardened OpenAPI/OpenSpec automation by replacing unsafe CI installer piping

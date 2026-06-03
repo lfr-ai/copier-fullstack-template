@@ -1,6 +1,12 @@
 {
   "$schema": "https://schemas.anthropic.com/mcp/servers.json",
   "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--isolated", "--headless"],
+      "description": "Playwright MCP server for structured browser automation"
+    },
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp",

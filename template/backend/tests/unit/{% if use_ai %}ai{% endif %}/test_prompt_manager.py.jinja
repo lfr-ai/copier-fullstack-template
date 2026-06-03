@@ -54,4 +54,18 @@ class TestPromptManager:
         pm = PromptManager()
         names = pm.list_templates()
         assert names == sorted(names)
+
+    def test_prompt_versions_exposed(self) -> None:
+        """PromptManager should expose active prompt versions."""
+        pm = PromptManager()
+        versions = pm.list_prompt_versions()
+        assert "rag_query" in versions
+        assert versions["rag_query"].startswith("v")
+
+    def test_versioned_alias_available_after_register(self) -> None:
+        """Registering a new template revision should create a versioned alias."""
+        pm = PromptManager()
+        pm.register("rag_query", "Custom {{ question }}")
+        version = pm.prompt_version("rag_query")
+        assert pm.get(f"rag_query@{version}") == "Custom {{ question }}"
 {% endraw %}

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "default": {
+      "rag_query": "v1",
+      "summarize": "v1",
+      "entity_extraction": "v1",
+      "classify": "v1",
+      "agent_system": "v1",
+      "conversational_rag": "v1"
+    }
+  },
+  "prompts": {
+    "rag_query": {
+      "versions": {
+        "v1": "rag_query.v1.j2"
+      }
+    },
+    "summarize": {
+      "versions": {
+        "v1": "summarize.v1.j2"
+      }
+    },
+    "entity_extraction": {
+      "versions": {
+        "v1": "entity_extraction.v1.j2"
+      }
+    },
+    "classify": {
+      "versions": {
+        "v1": "classify.v1.j2"
+      }
+    },
+    "agent_system": {
+      "versions": {
+        "v1": "agent_system.v1.j2"
+      }
+    },
+    "conversational_rag": {
+      "versions": {
+        "v1": "conversational_rag.v1.j2"
+      }
+    }
+  }
+}

@@ -80,6 +80,10 @@ class BaseAppSettings(BaseSettings):
     openai_model: str = "gpt-4o"
     embedding_model: str = "text-embedding-3-small"
     embedding_dimension: int = 1536
+    prompt_registry_path: str = "prompts/registry.json"
+    prompt_versions_dir: str = "prompts/versions"
+    prompt_version_profile: str = "default"
+    prompt_version_overrides: str = ""
 {%- endif %}
 {%- if use_lightrag %}
 

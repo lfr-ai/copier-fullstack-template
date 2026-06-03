@@ -75,6 +75,12 @@ class TestJinja2PromptTemplateList:
         assert "summarize" in names
         assert "entity_extraction" in names
 
+    def test_get_prompt_versions_contains_builtins(self) -> None:
+        mgr = Jinja2PromptTemplate()
+        versions = mgr.get_prompt_versions()
+        assert "rag_query" in versions
+        assert versions["rag_query"].startswith("v")
+
 
 class TestJinja2PromptTemplateRegister:
     """Tests for register_template()."""
@@ -89,6 +95,13 @@ class TestJinja2PromptTemplateRegister:
         template_manager.register_template(name="greeting", template="Hey {{ name }}!")
         result = template_manager.render(template_name="greeting", variables={"name": "Eve"})
         assert result == "Hey Eve!"
+
+    def test_register_assigns_versioned_alias(self) -> None:
+        mgr = Jinja2PromptTemplate()
+        mgr.register_template(name="rag_query", template="Q: {{ question }}")
+        version = mgr.get_prompt_version(name="rag_query")
+        rendered = mgr.render(template_name=f"rag_query@{version}", variables={"question": "Test?"})
+        assert rendered == "Q: Test?"
 {%- endraw %}
 {%- else %}
 # Prompt template tests are only generated when use_ai is enabled.
