@@ -21,8 +21,9 @@
 
     // ── Playwright ────────────────────────────────────────────
     "playwright": {
-      "command": "bunx",
-      "args": ["--bun", "@microsoft/mcp-server-playwright"]
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--isolated", "--headless"]
     },
 {% endif %}
 {% if cloud_provider == 'azure' %}

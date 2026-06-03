@@ -63,6 +63,7 @@ ai/
 ├── prompts/              # Prompt template manager
 │   ├── manager.py              # Jinja2-based prompt registry
 │   ├── jinja2_templates.py     # Jinja2 prompt templates
+│   ├── registry.py             # Prompt version resolution and run-name helpers
 │   └── rag_prompts.py          # RAG-specific prompt templates
 ├── rag/                  # RAG pipeline
 │   ├── ingestion.py            # Load → split → embed → store
@@ -98,6 +99,9 @@ ai/
 │   └── langgraph_engine.py     # LangGraph workflow engine
 └── __init__.py
 ```
+
+Prompt templates are provisioned as immutable files under `backend/prompts/versions/`
+and selected through `backend/prompts/registry.json` profiles.
 
 ## Domain Interfaces (core/interfaces/)
 
@@ -155,6 +159,16 @@ AI dependencies are included automatically when the template is generated with
 
 ```bash
 uv sync --all-groups
+```
+
+### Prompt Versioning & Backtest Metadata
+
+```bash
+# Provision a new prompt version file from source content
+task backend:ai:prompts:provision -- --name rag_query --source prompts/new_rag_query.j2
+
+# Generate backtest run metadata with embedded prompt versions
+task backend:ai:eval:backtest:name
 ```
 
 ### RAG Pipeline

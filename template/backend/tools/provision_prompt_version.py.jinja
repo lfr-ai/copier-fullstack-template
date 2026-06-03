@@ -1,0 +1,61 @@
+"""Provision immutable prompt versions and update prompt registry profile pointers."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from {{ project_slug }}.ai.prompts.registry import PromptRegistryEditor
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Create a new prompt version file and update prompt registry profile mapping.",
+    )
+    parser.add_argument("--name", required=True, help="Prompt name, e.g. rag_query")
+    parser.add_argument(
+        "--source",
+        required=True,
+        help="Path to a text/Jinja template file whose content becomes the next version.",
+    )
+    parser.add_argument(
+        "--registry",
+        default="prompts/registry.json",
+        help="Registry manifest path (default: prompts/registry.json)",
+    )
+    parser.add_argument(
+        "--versions-dir",
+        default="prompts/versions",
+        help="Directory for version files (default: prompts/versions)",
+    )
+    parser.add_argument(
+        "--profile",
+        default="default",
+        help="Prompt profile to update (default: default)",
+    )
+    return parser
+
+
+def main() -> int:
+    args = _build_parser().parse_args()
+
+    source = Path(args.source)
+    if not source.exists() or not source.is_file():
+        raise FileNotFoundError(f"Source prompt file not found: {source}")
+
+    template_text = source.read_text(encoding="utf-8")
+    editor = PromptRegistryEditor(registry_path=args.registry)
+    version, path = editor.provision_version(
+        name=args.name,
+        template_text=template_text,
+        versions_dir=args.versions_dir,
+        profile=args.profile,
+    )
+
+    print(f"Provisioned {args.name}@{version} -> {path}")
+    print(f"Updated profile '{args.profile}' in {args.registry}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

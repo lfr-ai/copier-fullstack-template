@@ -26,3 +26,11 @@ class PromptManager(Jinja2PromptTemplate):
     def render(self, name: str = "", **variables: object) -> str:  # type: ignore[override]
         """Render using the legacy positional name + kwargs API."""
         return super().render(template_name=name, variables=variables)
+
+    def list_prompt_versions(self) -> dict[str, str]:
+        """Return active prompt versions by template name."""
+        return super().get_prompt_versions()
+
+    def prompt_version(self, name: str) -> str:
+        """Return active version for a template name."""
+        return super().get_prompt_version(name=name)

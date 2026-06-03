@@ -32,6 +32,8 @@ class EvalSuite:
     results: list[EvalResult] = field(default_factory=list)
     overall_score: float = 0.0
     passed: bool = True
+    run_name: str = ""
+    metadata: dict[str, object] = field(default_factory=dict)
 
     @property
     def failed_metrics(self) -> list[str]:
@@ -73,11 +75,15 @@ class EvaluatorGateway(Protocol):
         self,
         *,
         samples: list[dict[str, str]],
+        prompt_versions: dict[str, str] | None = None,
+        run_name: str = "",
     ) -> EvalSuite:
         """Run evaluation across multiple samples.
 
         Args:
             samples (list[dict[str, str]]): List of dicts with keys matching evaluate() params.
+            prompt_versions (dict[str, str] | None): Prompt versions used during run.
+            run_name (str): Optional explicit run name.
 
         Returns:
             EvalSuite: Aggregated evaluation suite results.
