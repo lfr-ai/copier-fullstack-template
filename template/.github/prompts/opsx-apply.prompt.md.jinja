@@ -1,0 +1,16 @@
+---
+description: Implement tasks for an active OpenSpec change
+name: opsx-apply
+argument-hint: 'Optional: change name to apply'
+agent: auto
+model: 'Claude Sonnet 4'
+tools:
+  - execute/runInTerminal
+---
+
+# opsx-apply
+
+Implement pending tasks for the active OpenSpec change.
+
+Run OpenSpec apply for the specified change (or infer active change if omitted).
+Before finishing, run validation and tests relevant to modified code.

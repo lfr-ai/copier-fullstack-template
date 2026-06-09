@@ -1,0 +1,48 @@
+name: clean-arch-spec-driven
+version: 1
+description: Clean-architecture-first OpenSpec workflow with explicit quality gates.
+
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: Business intent, scope, and risk framing.
+    template: proposal.md
+    instruction: |
+      Create a proposal that clearly explains intent, scope, and rollback strategy.
+      Keep behavior-focused language and call out affected architecture layers.
+    requires: []
+
+  - id: specs
+    generates: specs/**/*.md
+    description: Delta requirements and scenarios (behavior contract).
+    template: specs.md
+    instruction: |
+      Write behavior-first delta requirements with GIVEN/WHEN/THEN scenarios.
+      Include normal, error, and compatibility scenarios.
+    requires:
+      - proposal
+
+  - id: design
+    generates: design.md
+    description: Technical design with architecture and dependency mapping.
+    template: design.md
+    instruction: |
+      Create a technical design covering protocol boundaries, adapters, data flow,
+      security, observability, and migration implications.
+    requires:
+      - proposal
+
+  - id: tasks
+    generates: tasks.md
+    description: Implementation and validation checklist.
+    template: tasks.md
+    instruction: |
+      Produce a concrete task plan with explicit unit/integration/property test tasks
+      and quality-gate commands.
+    requires:
+      - specs
+      - design
+
+apply:
+  requires: [tasks]
+  tracks: tasks.md

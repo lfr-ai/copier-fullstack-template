@@ -1,0 +1,16 @@
+---
+description: Archive a completed OpenSpec change and preserve audit trail
+name: opsx-archive
+argument-hint: 'Optional: change name to archive'
+agent: auto
+model: 'Claude Sonnet 4'
+tools:
+  - execute/runInTerminal
+---
+
+# opsx-archive
+
+Archive a completed OpenSpec change.
+
+Run OpenSpec archive for the selected change, include sync if prompted, and
+summarize archive location plus updated spec files.

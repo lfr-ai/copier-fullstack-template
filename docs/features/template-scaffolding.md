@@ -35,6 +35,8 @@ to produce fullstack projects.
 
 - Copier runtime (`uvx copier copy/update`).
 - Git initialization and initial commit in post tasks.
+- OpenSpec spec-driven scaffolding in generated projects (`openspec/config.yaml`,
+  `openspec/specs/`, and custom schema templates).
 
 ## API endpoints or UI components
 

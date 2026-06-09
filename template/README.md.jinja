@@ -95,6 +95,11 @@ section at the bottom of `.env.example`.
 | `task docker:down` | Stop all containers |
 | `task db:migrate` | Run database migrations |
 | `task registry:generate` | Generate code from naming registry |
+| `task openspec:init` | Initialize OpenSpec for Copilot + Claude |
+| `task openspec:update` | Refresh OpenSpec generated skills/prompts |
+| `task openspec:validate` | Validate all OpenSpec changes/specs |
+| `task openspec:schema:validate` | Validate project OpenSpec schemas |
+| `task test:sdd:verify` | Run OpenSpec + unit/integration/property checks |
 | `task pre-commit` | Run pre-commit on all files |
 | `task security:audit` | Audit dependencies for vulnerabilities |
 | `task health` | Check health of all running services |

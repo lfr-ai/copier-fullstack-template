@@ -42,6 +42,10 @@ implementation constraints for template development and generated projects.
 
 - Copilot agents and hooks.
 - Template-generated AGENTS guidance for downstream repositories.
+- OpenSpec workflow skills for both Copilot and Claude
+  (`.github/skills/openspec-workflow/`, `.claude/skills/openspec-workflow/`).
+- Copilot OPSX prompt aliases (`.github/prompts/opsx-*.prompt.md`) for
+  OpenSpec command compatibility.
 
 ## API endpoints or UI components
 

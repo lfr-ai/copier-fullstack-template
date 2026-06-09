@@ -6,6 +6,7 @@ includes:
   backend: ./tasks/backend.yml
   frontend: ./tasks/frontend.yml
   docker: ./tasks/docker.yml
+  openspec: ./tasks/openspec.yml
 {%- if use_openspec %}
   api: ./tasks/api.yml
 {%- endif %}
@@ -99,6 +100,15 @@ tasks:
       - task: registry:check
       - task: registry:test
       - task: backend:test
+      - task: frontend:test:unit
+
+  test:sdd:verify:
+    desc: "Run OpenSpec validation plus unit/integration/property checks"
+    cmds:
+      - task: openspec:validate
+      - task: backend:test:unit
+      - task: backend:test:integration
+      - task: backend:test:property
       - task: frontend:test:unit
 
   test:unit:
