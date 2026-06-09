@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FastAPI status-code convention checker (`scripts/check-fastapi-status-codes.py`)
 - Task wiring for FastAPI status-code enforcement (`conventions:fastapi-status-codes`)
 - Root-level architecture and feature analysis docs under `docs/`
+- OpenSpec SDD scaffolding in generated projects (`openspec/config.yaml`, baseline
+  specs, and a custom `clean-arch-spec-driven` schema)
+- OpenSpec task include (`tasks/openspec.yml`) with init/update/validate/schema
+  commands and SDD verification alias (`test:sdd:verify`)
+- OpenSpec workflow skills for both Copilot and Claude
+  (`openspec-workflow/SKILL.md`)
+- Copilot OPSX prompt aliases (`opsx-propose`, `opsx-apply`, `opsx-sync`,
+  `opsx-archive`, `opsx-explore`)
+- ADR-0009 documenting adoption of OpenSpec for spec-driven development
 
 ### Changed
 

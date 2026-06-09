@@ -661,6 +661,11 @@ task registry:diff         # Dry-run diff of what generation would change
 task lint             # All linters
 task format           # Format all code
 task typecheck        # Type checking
+task openspec:init    # Initialize OpenSpec for Copilot + Claude
+task openspec:update  # Refresh OpenSpec generated skills/prompts
+task openspec:validate # Validate all OpenSpec changes/specs
+task openspec:schema:validate # Validate OpenSpec schema structure
+task test:sdd:verify  # OpenSpec + unit/integration/property verification
 
 task db:migrate       # Run Alembic migrations
 ```
@@ -915,6 +920,7 @@ Skills are stored in two locations for cross-agent compatibility:
 | **Testing Conventions** | `testing-conventions/` | Pytest structure, coverage | Markers, factories, fixtures, >= 80% coverage |
 | **Naming Registry** | `naming-registry/` | Registry-first constants | Edit JSON → validate → generate → check → test |
 | **Frontend React Stack** | `frontend-react-stack/` | Frontend UI and design-system work | React 19, shadcn/ui primitives, Tailwind v4, Vite, Biome |
+| **OpenSpec Workflow** | `openspec-workflow/` | Spec-driven execution model | OPSX flow, artifact lifecycle, Copilot/Claude syntax |
 
 The `clean-architecture` skill is **MANDATORY** for all backend Python work — agents
 MUST apply it regardless of task scope.
@@ -1031,7 +1037,7 @@ GSD and Copilot agents share the same conventions:
 
 - **Skills** — `.github/skills/` (Copilot) and `~/.agents/skills/` (GSD) both contain
   clean-architecture, python-conventions, testing-conventions, naming-registry,
-  frontend-react-stack
+  frontend-react-stack, openspec-workflow
 - **Instructions** — `.github/instructions/` (architecture, coding, frontend,
   prompt, shell, testing, update-docs-on-code-change)
 - **Custom instructions** — GSD's `custom_instructions` in PREFERENCES.md mirror

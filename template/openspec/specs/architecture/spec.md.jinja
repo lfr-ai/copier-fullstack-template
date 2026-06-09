@@ -1,0 +1,35 @@
+# Architecture Specification
+
+## Purpose
+Defines non-negotiable architecture, quality, and delivery constraints for {{ project_name }}.
+
+## Requirements
+
+### Requirement: Clean Architecture Boundaries
+The system SHALL preserve inward dependency direction across backend layers.
+
+#### Scenario: Dependency direction enforcement
+- GIVEN a backend module import graph
+- WHEN architecture checks run in CI
+- THEN imports from inner layers to outer layers SHALL be rejected
+- AND the check output SHALL identify violating modules
+
+### Requirement: Comprehensive Testing Strategy
+The system SHALL require unit, integration, and property testing for production changes.
+
+#### Scenario: Feature implementation quality gates
+- GIVEN a feature change touching application behavior
+- WHEN quality gates execute
+- THEN unit tests SHALL validate pure logic
+- AND integration tests SHALL validate cross-component behavior
+- AND property tests SHALL validate invariants where applicable
+
+### Requirement: Specification-to-Implementation Traceability
+The system SHALL track implementation progress from spec artifacts.
+
+#### Scenario: OpenSpec artifact lifecycle
+- GIVEN an active OpenSpec change
+- WHEN implementation starts
+- THEN tasks SHALL map to spec/design intent
+- AND completed tasks SHALL be reflected in `tasks.md`
+- AND archive SHALL preserve change history with merged delta specs

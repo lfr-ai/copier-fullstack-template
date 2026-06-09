@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 import subprocess  # nosec B404
 import sys
+import tempfile
 
 
 def configure_git_author() -> None:
@@ -59,6 +61,29 @@ def render_template(vcs_choice: str, output_dir: str) -> bool:
         print(f"STDERR: {result.stderr}")
         return False
 
+    output_path = Path(output_dir)
+    openspec_required_files = [
+        output_path / "openspec" / "config.yaml",
+        output_path / "openspec" / "specs" / "architecture" / "spec.md",
+        output_path
+        / "openspec"
+        / "schemas"
+        / "clean-arch-spec-driven"
+        / "schema.yaml",
+        output_path / "tasks" / "openspec.yml",
+        output_path / "docs" / "OPENSPEC.md",
+        output_path / ".github" / "skills" / "openspec-workflow" / "SKILL.md",
+        output_path / ".claude" / "skills" / "openspec-workflow" / "SKILL.md",
+        output_path / ".github" / "prompts" / "opsx-propose.prompt.md",
+    ]
+
+    missing = [str(path) for path in openspec_required_files if not path.exists()]
+    if missing:
+        print(f"[FAIL] Missing rendered OpenSpec files for vcs_platform={vcs_choice}")
+        for path in missing:
+            print(f"  - {path}")
+        return False
+
     print(f"[OK] Template rendered successfully with vcs_platform={vcs_choice}")
     return True
 
@@ -70,11 +95,16 @@ def main() -> int:
 
     print("\nValidating template renders...")
 
-    # Test GitHub VCS choice
-    github_success = render_template("github", "/tmp/validate-github")  # nosec B108
+    with tempfile.TemporaryDirectory(prefix="validate-template-") as temp_dir:
+        temp_path = Path(temp_dir)
 
-    # Test Azure DevOps VCS choice
-    azuredevops_success = render_template("azuredevops", "/tmp/validate-azuredevops")  # nosec B108
+        # Test GitHub VCS choice
+        github_success = render_template("github", str(temp_path / "github"))
+
+        # Test Azure DevOps VCS choice
+        azuredevops_success = render_template(
+            "azuredevops", str(temp_path / "azuredevops")
+        )
 
     # Report final status
     if github_success and azuredevops_success:

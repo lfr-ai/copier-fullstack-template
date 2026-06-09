@@ -78,6 +78,11 @@ task format           # Format all code
 task typecheck        # Type-check all code
 task build            # Production build
 task registry:generate  # Regenerate constants from naming_registry.json
+task openspec:init    # Initialize OpenSpec for Copilot + Claude
+task openspec:update  # Refresh OpenSpec generated skills/prompts
+task openspec:validate # Validate all OpenSpec changes/specs
+task openspec:schema:validate # Validate OpenSpec schema structure
+task test:sdd:verify  # OpenSpec + unit/integration/property verification
 ```
 
 ## Conventions Summary
@@ -99,6 +104,7 @@ This project has a multi-agent system with shared conventions:
 | `.github/agents/` | GitHub Copilot YAML frontmatter | VS Code Copilot |
 | `.github/instructions/` | Scoped instructions (`applyTo` glob) | VS Code Copilot |
 | `.github/skills/` | SKILL.md directories | VS Code Copilot, Claude |
+| `openspec/` | Specs, changes, schema config | OpenSpec SDD workflow |
 | `.claude/rules/` | Claude rules (`paths` array) | Claude Code, Copilot |
 | `.claude/agents/` | Claude agent format | Claude Code |
 | `.claude/settings.json` | Hooks, permissions | Claude Code |

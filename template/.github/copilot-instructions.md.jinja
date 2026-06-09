@@ -88,6 +88,7 @@ Task-specific playbooks — each is a directory containing a `SKILL.md` file:
 | `testing-conventions/` | Testing | Test strategy, markers, coverage gates |
 | `naming-registry/` | Registry | Registry-first constant/code generation |
 | `frontend-react-stack/` | Frontend | React + TypeScript + shadcn/ui |
+| `openspec-workflow/` | SDD | OpenSpec OPSX workflow and artifact lifecycle |
 
 ## Scoped Instructions (`.github/instructions/`)
 
@@ -142,3 +143,7 @@ Claude Code reads from both `.github/` and `.claude/`:
 | `/refactor` | Safe, behavior-preserving refactoring |
 | `/review` | Comprehensive code review checklist |
 | `/test` | Test writing with pytest + factory-boy |
+| `/opsx-propose` | Create OpenSpec change and planning artifacts |
+| `/opsx-apply` | Implement tasks from active OpenSpec change |
+| `/opsx-sync` | Merge OpenSpec delta specs into main specs |
+| `/opsx-archive` | Archive completed OpenSpec change |

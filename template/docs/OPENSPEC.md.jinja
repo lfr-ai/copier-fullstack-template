@@ -1,0 +1,64 @@
+# OpenSpec (Spec-Driven Development)
+
+This project ships with OpenSpec scaffolding for production-grade
+specification-driven delivery.
+
+## What is included
+
+- `openspec/config.yaml` with project-specific context and rules
+- Baseline specs under `openspec/specs/`
+- Custom schema: `openspec/schemas/clean-arch-spec-driven/`
+- Task automation in `tasks/openspec.yml`
+- Agent skill compatibility for both `.github/skills/` and `.claude/skills/`
+
+## Prerequisites
+
+- Node.js `20.19.0+`
+
+## Setup
+
+```bash
+task openspec:init
+```
+
+This configures OpenSpec for GitHub Copilot and Claude Code with the core OPSX
+workflow profile.
+
+## Keeping OpenSpec updated
+
+```bash
+task openspec:update
+```
+
+Use this after OpenSpec upgrades to refresh generated skills/prompts.
+
+## Core workflow
+
+1. Explore unclear requirements
+2. Propose a change and create artifacts
+3. Apply tasks and implement
+4. Sync delta specs (if needed)
+5. Archive the change
+
+## Command syntax by tool
+
+- Claude Code: `/opsx:propose`, `/opsx:apply`, `/opsx:archive`
+- GitHub Copilot (IDE): `/opsx-propose`, `/opsx-apply`, `/opsx-archive`
+
+## Validation commands
+
+```bash
+task openspec:validate
+task openspec:schema:validate
+task test:sdd:verify
+```
+
+## Expanded workflow (optional)
+
+To enable `/opsx:new`, `/opsx:continue`, `/opsx:ff`, `/opsx:verify`,
+`/opsx:bulk-archive`, `/opsx:onboard`:
+
+```bash
+task openspec:profile:expanded
+task openspec:update
+```
