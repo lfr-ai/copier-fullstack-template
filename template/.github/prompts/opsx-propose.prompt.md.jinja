@@ -1,0 +1,16 @@
+---
+description: Create a new OpenSpec change with planning artifacts
+name: opsx-propose
+argument-hint: 'Optional: change name or short description'
+agent: auto
+model: 'Claude Sonnet 4'
+tools:
+  - execute/runInTerminal
+---
+
+# opsx-propose
+
+Create a change and generate planning artifacts using OpenSpec.
+
+Run OpenSpec propose with the provided argument (or prompt for one if missing).
+If OpenSpec is not initialized, run `task openspec:init` first.

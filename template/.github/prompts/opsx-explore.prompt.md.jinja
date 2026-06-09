@@ -1,0 +1,18 @@
+---
+description: Explore requirements and options before starting an OpenSpec change
+name: opsx-explore
+argument-hint: 'Optional: topic to explore'
+agent: auto
+model: 'Claude Sonnet 4'
+tools:
+  - read/readFile
+  - search/codebase
+  - search/textSearch
+---
+
+# opsx-explore
+
+Investigate and clarify requirements before proposing implementation.
+
+Analyze existing code, constraints, and alternatives for the supplied topic.
+Summarize options and recommend next step (`/opsx-propose` when ready).

@@ -1,0 +1,15 @@
+---
+description: Sync delta specs from an active change into main specs
+name: opsx-sync
+argument-hint: 'Optional: change name to sync'
+agent: auto
+model: 'Claude Sonnet 4'
+tools:
+  - execute/runInTerminal
+---
+
+# opsx-sync
+
+Merge OpenSpec delta specs into main specs for the selected change.
+
+Run OpenSpec sync and summarize modified spec files after sync completes.

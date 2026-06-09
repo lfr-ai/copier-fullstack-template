@@ -1,0 +1,25 @@
+schema: clean-arch-spec-driven
+
+context: |
+  Project: {{ project_name }}
+  Stack: Python {{ python_version }} (FastAPI) + React 19/TypeScript + Taskfile
+  Architecture: Clean Architecture with strict dependency direction and DI via composition container.
+  Runtime policy:
+    - All new behavior MUST include unit tests.
+    - Cross-layer and I/O behavior MUST include integration tests.
+    - Critical invariants and parser/normalizer logic MUST include property tests.
+    - Docs, ADRs, and environment docs must be updated with behavior/setup changes.
+
+rules:
+  proposal:
+    - Include impact radius by layer (core/application/infrastructure/presentation).
+    - Include rollback strategy and feature-flag strategy for risky changes.
+  specs:
+    - Use GIVEN/WHEN/THEN scenarios for every requirement.
+    - Capture error scenarios and backward-compatibility constraints.
+  design:
+    - Explicitly map protocols vs adapters and dependency direction.
+    - Include observability, security, and migration considerations.
+  tasks:
+    - Include explicit tasks for unit, integration, and property tests.
+    - Include quality-gate tasks: lint, typecheck, and full test run.

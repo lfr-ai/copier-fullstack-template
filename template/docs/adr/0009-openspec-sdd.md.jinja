@@ -1,0 +1,57 @@
+# ADR-0009 — OpenSpec Spec-Driven Development Workflow
+
+## Status
+
+Accepted
+
+## Context
+
+The project already includes strong coding conventions, Clean Architecture
+boundaries, and quality gates. However, implementation planning has historically
+been chat/session driven, which can lead to:
+
+- Requirement drift between discussion and code
+- Weak traceability from intent to implementation
+- Inconsistent validation of unit/integration/property test expectations
+
+The team needs a lightweight, tool-agnostic spec workflow that works in both
+GitHub Copilot and Claude Code.
+
+## Decision
+
+Adopt **OpenSpec (OPSX workflow)** as the specification-driven planning layer.
+
+### Included in generated projects
+
+- `openspec/config.yaml` with project context and artifact rules
+- Baseline behavior specs in `openspec/specs/`
+- Custom schema `clean-arch-spec-driven`
+- Task commands for init/update/validate/schema checks
+- OpenSpec workflow skills in both:
+  - `.github/skills/openspec-workflow/SKILL.md`
+  - `.claude/skills/openspec-workflow/SKILL.md`
+
+### Tool compatibility
+
+- Claude Code uses `opsx:` syntax (`/opsx:propose`, `/opsx:apply`, ...)
+- GitHub Copilot (IDE prompts) uses `opsx-` syntax (`/opsx-propose`, `/opsx-apply`, ...)
+
+## Consequences
+
+### Positive
+
+- Stronger traceability: proposal → specs → design → tasks → implementation
+- Better governance for risky changes (rollback + migration planning)
+- Explicit testing expectations (unit/integration/property)
+- Consistent workflow across Copilot and Claude
+
+### Trade-offs
+
+- Adds workflow overhead for trivial one-line fixes
+- Requires maintaining OpenSpec config/schema templates in the template
+
+### Mitigations
+
+- Keep schema and context lightweight and iteration-friendly
+- Allow default core OPSX path for rapid delivery
+- Keep expanded workflow optional for high-risk/complex changes

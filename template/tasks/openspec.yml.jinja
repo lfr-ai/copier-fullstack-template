@@ -1,0 +1,51 @@
+# OpenSpec (Spec-Driven Development) Tasks
+---
+version: "3"
+
+tasks:
+  init:
+    desc: "Initialize OpenSpec for GitHub Copilot + Claude Code (core profile)"
+    cmds:
+      - npx -y @fission-ai/openspec@latest init --tools github-copilot,claude --profile core
+
+  update:
+    desc: "Update OpenSpec generated skills/prompts to latest version"
+    cmds:
+      - npx -y @fission-ai/openspec@latest update
+
+  profile:core:
+    desc: "Set OpenSpec profile to core workflows"
+    cmds:
+      - npx -y @fission-ai/openspec@latest config profile core
+
+  profile:expanded:
+    desc: "Interactive OpenSpec profile setup (enable expanded workflows)"
+    cmds:
+      - npx -y @fission-ai/openspec@latest config profile
+
+  status:
+    desc: "Show OpenSpec artifact status"
+    cmds:
+      - npx -y @fission-ai/openspec@latest status {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  list:
+    desc: "List active OpenSpec changes"
+    cmds:
+      - npx -y @fission-ai/openspec@latest list {% raw %}{{.CLI_ARGS}}{% endraw %}
+
+  validate:
+    desc: "Validate all OpenSpec changes/specs (strict mode)"
+    cmds:
+      - npx -y @fission-ai/openspec@latest validate --all --strict
+
+  schema:validate:
+    desc: "Validate project OpenSpec schemas"
+    cmds:
+      - npx -y @fission-ai/openspec@latest schema validate
+
+  doctor:
+    desc: "Validate OpenSpec setup and print current config"
+    cmds:
+      - npx -y @fission-ai/openspec@latest --version
+      - npx -y @fission-ai/openspec@latest schemas
+      - npx -y @fission-ai/openspec@latest config list
