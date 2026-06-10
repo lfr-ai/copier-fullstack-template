@@ -32,7 +32,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0",
     "alembic>=1.14",{% endif %}{% if database_backend in ('postgresql', 'azure_postgresql') %}
     "psycopg[binary]>=3.2",
-    "asyncpg>=0.30",{% endif %}{% if database_backend == 'sqlite' %}
+    "asyncpg>=0.30",{% endif %}{% if database_backend in ('postgresql', 'azure_postgresql', 'sqlite') %}
     "aiosqlite>=0.20",{% endif %}{% if use_celery %}
     "celery[redis]>=5.4",{% endif %}{% if use_redis %}
     "redis>=5.2",{% endif %}{% if use_auth %}

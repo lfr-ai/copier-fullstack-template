@@ -67,6 +67,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   enabling postponed annotation evaluation in `core/interfaces/vector_store.py`
 - Stabilized generated adaptive-pipeline unit tests for slotted class patching,
   lazy initialization checks, and LightRAG-unavailable fallback expectations
+- Switched PostgreSQL/Azure PostgreSQL template variants to local SQLite defaults,
+  profile-gated server PostgreSQL containers, runtime dialect-aware migration/engine
+  behavior, and added a local PostgreSQL → SQLite data migration utility task
 
 ### Removed
 

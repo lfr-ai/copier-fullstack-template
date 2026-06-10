@@ -42,7 +42,7 @@ tasks:
       - task: frontend:dev
 
   dev:db:
-    desc: "Start database service only"
+    desc: "Start PostgreSQL service only (server profile)"
     cmds:
       - task: docker:db
 
@@ -326,6 +326,11 @@ tasks:
     desc: "Seed the database with development data"
     cmds:
       - zsh scripts/seed-database.zsh
+
+  db:migrate:local-pg-to-sqlite:
+    desc: "Migrate local PostgreSQL data into local SQLite"
+    cmds:
+      - cd backend && uv run python tools/migrate_local_postgres_to_sqlite.py {% raw %}{{.CLI_ARGS}}{% endraw %}
 
   db:reset:
     desc: "Drop, recreate, migrate, and seed the database"

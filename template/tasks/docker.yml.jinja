@@ -42,9 +42,9 @@ tasks:
       - {{ container_runtime }} compose down --remove-orphans
 
   db:
-    desc: "Start database service only"
+    desc: "Start PostgreSQL service only (server profile)"
     cmds:
-      - {{ container_runtime }} compose up -d db
+      - {{ container_runtime }} compose --profile postgres up -d db
 
   clean:volumes:
     desc: "Stop and remove containers + volumes"
@@ -54,22 +54,38 @@ tasks:
   prod:
     desc: "Start services with production overrides"
     cmds:
+{%- if database_backend == "postgresql" %}
+      - {{ container_runtime }} compose --profile postgres --env-file .env --env-file .env.prod -f compose.yml -f compose.prod.yml up -d --build
+{%- else %}
       - {{ container_runtime }} compose --env-file .env --env-file .env.prod -f compose.yml -f compose.prod.yml up -d --build
+{%- endif %}
 
   staging:
     desc: "Start services with staging overrides"
     cmds:
+{%- if database_backend == "postgresql" %}
+      - {{ container_runtime }} compose --profile postgres --env-file .env --env-file .env.staging -f compose.yml -f compose.staging.yml up -d --build
+{%- else %}
       - {{ container_runtime }} compose --env-file .env --env-file .env.staging -f compose.yml -f compose.staging.yml up -d --build
+{%- endif %}
 
   test:
     desc: "Start services with test overrides"
     cmds:
+{%- if database_backend == "postgresql" %}
+      - {{ container_runtime }} compose --profile postgres --env-file .env --env-file .env.test -f compose.yml -f compose.test.yml up -d --build
+{%- else %}
       - {{ container_runtime }} compose --env-file .env --env-file .env.test -f compose.yml -f compose.test.yml up -d --build
+{%- endif %}
 
   dev:
     desc: "Start services with dev overrides (shared development server)"
     cmds:
+{%- if database_backend == "postgresql" %}
+      - {{ container_runtime }} compose --profile postgres --env-file .env --env-file .env.dev -f compose.yml -f compose.dev.yml up -d --build
+{%- else %}
       - {{ container_runtime }} compose --env-file .env --env-file .env.dev -f compose.yml -f compose.dev.yml up -d --build
+{%- endif %}
 
   shell:
     desc: "Open a shell inside the running app container"

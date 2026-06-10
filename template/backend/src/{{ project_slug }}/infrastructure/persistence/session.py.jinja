@@ -3,17 +3,28 @@
 from __future__ import annotations
 
 import structlog
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine as _create_async_engine,
 )
-{%- if database_backend == "sqlite" %}
 from sqlalchemy.pool import StaticPool
-{%- endif %}
 
 _logger = structlog.get_logger(__name__)
+
+
+def _is_sqlite_url(*, database_url: str) -> bool:
+    """Return True when *database_url* uses the SQLite backend.
+
+    Args:
+        database_url (str): Candidate SQLAlchemy database URL.
+
+    Returns:
+        bool: True for SQLite URLs.
+    """
+    return make_url(database_url).get_backend_name() == "sqlite"
 
 
 def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
@@ -29,18 +40,18 @@ def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
     Returns:
         AsyncEngine: Configured async engine instance.
     """
-{%- if database_backend == "sqlite" %}
-    # SQLite does not support connection pooling in the traditional sense.
-    # StaticPool keeps a single connection open for the lifetime of the engine,
-    # which is the recommended approach for async SQLite with aiosqlite.
-    engine = _create_async_engine(
-        database_url,
-        echo=echo,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    return engine
-{%- else %}
+    if _is_sqlite_url(database_url=database_url):
+        # SQLite does not support connection pooling in the traditional sense.
+        # StaticPool keeps a single connection open for the lifetime of the
+        # engine, which is the recommended approach for async SQLite with
+        # aiosqlite.
+        return _create_async_engine(
+            database_url,
+            echo=echo,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+
     engine = _create_async_engine(
         database_url,
         echo=echo,
@@ -53,7 +64,6 @@ def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
     )
 
     return engine
-{%- endif %}
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:

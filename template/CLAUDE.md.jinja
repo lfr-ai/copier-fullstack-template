@@ -10,7 +10,11 @@ GitHub Copilot). It is always loaded and acts as the primary knowledge anchor.
 - **Frontend**: React 19, TypeScript, Vite, SWC, Bun, shadcn/ui, Tailwind CSS v4
 - **Container**: {{ container_runtime | capitalize }}{% if use_caddy %}, Caddy (reverse proxy){% endif %}
 
-{% if database_backend != 'none' -%}
+{% if database_backend == 'postgresql' -%}
+- **Database**: SQLite (local) + PostgreSQL (dev/prod server)
+{%- elif database_backend == 'azure_postgresql' -%}
+- **Database**: SQLite (local) + Azure Database for PostgreSQL (dev/prod server)
+{%- elif database_backend != 'none' -%}
 - **Database**: {{ database_backend | replace('_', ' ') | title }}
 {%- endif %}
 {% if use_redis -%}
@@ -83,6 +87,7 @@ task openspec:update  # Refresh OpenSpec generated skills/prompts
 task openspec:validate # Validate all OpenSpec changes/specs
 task openspec:schema:validate # Validate OpenSpec schema structure
 task test:sdd:verify  # OpenSpec + unit/integration/property verification
+task db:migrate:local-pg-to-sqlite -- --overwrite  # Local PG → SQLite migration
 ```
 
 ## Conventions Summary

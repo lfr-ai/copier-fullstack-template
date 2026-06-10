@@ -28,6 +28,10 @@ cp .env.example .env.prod      # production deployment baseline
 
 Keep these files aligned and prefer one canonical active env file per run target.
 
+For PostgreSQL-based templates, local development defaults to SQLite via
+`{{ project_slug | upper }}_DATABASE_URL` in `.env`, while shared dev/staging/prod
+environments should override to PostgreSQL in `.env.dev`, `.env.staging`, and `.env.prod`.
+
 Local best practices:
 
 - Keep shared local defaults in `.env`
@@ -105,6 +109,7 @@ TAG=v1.0.0 REGISTRY=ghcr.io/{{ github_username }} docker buildx bake prod
 task db:migrate             # Run migrations
 task db:revision            # Create new migration
 task db:seed                # Seed initial data
+task db:migrate:local-pg-to-sqlite -- --overwrite  # One-time local data migration
 ```
 {%- if use_knowledge_graph %}
 
