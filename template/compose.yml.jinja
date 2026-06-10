@@ -47,12 +47,11 @@
 x-common-env: &common-env
   {{ project_slug | upper }}_ENVIRONMENT: local
 {%- if database_backend == "postgresql" %}
-  {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/{{ project_slug }}
+  {{ project_slug | upper }}_DATABASE_URL: ${{ '{' }}{{ project_slug | upper }}_DATABASE_URL:-sqlite+aiosqlite:///./data/{{ project_slug }}.db{{ '}' }}
 {%- elif database_backend == "azure_postgresql" %}
-  # When using Azure PostgreSQL, set the connection string via .env or environment variable.
-  # {{ project_slug | upper }}_DATABASE_URL: postgresql+psycopg://user:pass@your-server.postgres.database.azure.com:5432/{{ project_slug }}?sslmode=require
+  {{ project_slug | upper }}_DATABASE_URL: ${{ '{' }}{{ project_slug | upper }}_DATABASE_URL:-sqlite+aiosqlite:///./data/{{ project_slug }}.db{{ '}' }}
 {%- elif database_backend == "sqlite" %}
-  {{ project_slug | upper }}_DATABASE_URL: sqlite+aiosqlite:///data/{{ project_slug }}.db
+  {{ project_slug | upper }}_DATABASE_URL: sqlite+aiosqlite:///./data/{{ project_slug }}.db
 {%- endif %}
   {{ project_slug | upper }}_SECRET_KEY: ${{ '{' }}{{ project_slug | upper }}_SECRET_KEY:-change-me-in-production{{ '}' }}
 {%- if use_redis %}
@@ -104,7 +103,7 @@ services:
       <<: *common-env
     volumes:
       - ./logs:/app/logs
-{%- if database_backend == "sqlite" %}
+{%- if database_backend in ("postgresql", "azure_postgresql", "sqlite") %}
       - sqlite-data:/app/data
 {%- endif %}
 {%- if use_faiss %}
@@ -113,7 +112,7 @@ services:
 {%- if use_lightrag %}
       - lightrag-data:/app/data/lightrag
 {%- endif %}
-{%- if use_redis or database_backend == "postgresql" %}
+{%- if use_redis %}
     depends_on:
 {%- endif %}
 {# --- Prometheus monitoring --- #}
@@ -140,10 +139,6 @@ services:
 
 {%- if use_redis %}
       redis:
-        condition: service_healthy
-{%- endif %}
-{%- if database_backend == "postgresql" %}
-      db:
         condition: service_healthy
 {%- endif %}
     healthcheck:
@@ -243,6 +238,8 @@ services:
       start_period: 10s
     networks:
       - backend
+    profiles:
+      - postgres
 {%- endif %}
 {%- if use_celery %}
 
@@ -260,18 +257,14 @@ services:
     environment:
       <<: *common-env
     command: ["celery", "-A", "{{ project_slug }}.config.celery:celery_app", "worker", "--loglevel=info"]
-{%- if database_backend == "sqlite" %}
+{%- if database_backend in ("postgresql", "azure_postgresql", "sqlite") %}
     volumes:
       - sqlite-data:/app/data
 {%- endif %}
-{%- if use_redis or database_backend == "postgresql" %}
+{%- if use_redis %}
     depends_on:
 {%- if use_redis %}
       redis:
-        condition: service_healthy
-{%- endif %}
-{%- if database_backend == "postgresql" %}
-      db:
         condition: service_healthy
 {%- endif %}
 {%- endif %}
@@ -298,14 +291,10 @@ services:
     environment:
       <<: *common-env
     command: ["celery", "-A", "{{ project_slug }}.config.celery:celery_app", "beat", "--loglevel=info", "--pidfile=/tmp/celerybeat.pid"]
-{%- if use_redis or database_backend == "postgresql" %}
+{%- if use_redis %}
     depends_on:
 {%- if use_redis %}
       redis:
-        condition: service_healthy
-{%- endif %}
-{%- if database_backend == "postgresql" %}
-      db:
         condition: service_healthy
 {%- endif %}
 {%- endif %}
@@ -353,18 +342,14 @@ services:
       <<: *common-env
       {{ project_slug | upper }}_MCP_ENABLED: "true"
     command: ["python", "-m", "{{ project_slug }}.ai.mcp.server"]
-{%- if database_backend == "sqlite" %}
+{%- if database_backend in ("postgresql", "azure_postgresql", "sqlite") %}
     volumes:
       - sqlite-data:/app/data
 {%- endif %}
-{%- if use_redis or database_backend == "postgresql" %}
+{%- if use_redis %}
     depends_on:
 {%- if use_redis %}
       redis:
-        condition: service_healthy
-{%- endif %}
-{%- if database_backend == "postgresql" %}
-      db:
         condition: service_healthy
 {%- endif %}
 {%- endif %}
@@ -386,7 +371,8 @@ volumes:
 {%- endif %}
 {%- if database_backend == "postgresql" %}
   postgres-data:
-{%- elif database_backend == "sqlite" %}
+  sqlite-data:
+{%- elif database_backend in ("azure_postgresql", "sqlite") %}
   sqlite-data:
 {%- endif %}
 {%- if use_caddy %}

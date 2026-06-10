@@ -94,6 +94,7 @@ section at the bottom of `.env.example`.
 | `task docker:up` | Start all containers |
 | `task docker:down` | Stop all containers |
 | `task db:migrate` | Run database migrations |
+| `task db:migrate:local-pg-to-sqlite` | Migrate local PostgreSQL data into local SQLite |
 | `task registry:generate` | Generate code from naming registry |
 | `task openspec:init` | Initialize OpenSpec for Copilot + Claude |
 | `task openspec:update` | Refresh OpenSpec generated skills/prompts |
@@ -135,7 +136,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed overview.
 | Layer | Backend | Use case |
 |-------|---------|----------|
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
-| Application DB | PostgreSQL | Primary relational storage |
+| Application DB (local) | SQLite | Zero-infrastructure local development |
+| Application DB (dev/prod server) | PostgreSQL | Primary relational storage |
 {%- elif database_backend == 'sqlite' %}
 | Application DB | SQLite | File-based relational storage (via `aiosqlite`) |
 {%- endif %}

@@ -1,0 +1,228 @@
+"""Migrate local PostgreSQL data into a local SQLite database file.
+
+This utility is intended for local developer workflows when transitioning from a
+local PostgreSQL setup to a local SQLite setup while keeping shared dev/prod
+server environments on PostgreSQL.
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+import structlog
+from sqlalchemy import MetaData, create_engine, select, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import URL, make_url
+
+_LOGGER = structlog.get_logger(__name__)
+_DEFAULT_SOURCE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}"
+_DEFAULT_TARGET_PATH = Path("data/{{ project_slug }}.db")
+_DEFAULT_CHUNK_SIZE = 1000
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the CLI parser.
+
+    Returns:
+        argparse.ArgumentParser: Configured CLI parser.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "Copy all rows from a local PostgreSQL database into a local "
+            "SQLite database file."
+        ),
+    )
+    parser.add_argument(
+        "--source-url",
+        default=_DEFAULT_SOURCE_URL,
+        help=(
+            "Source PostgreSQL URL (default: "
+            f"{_DEFAULT_SOURCE_URL})"
+        ),
+    )
+    parser.add_argument(
+        "--target-path",
+        default=str(_DEFAULT_TARGET_PATH),
+        help=(
+            "Target SQLite file path (default: "
+            f"{_DEFAULT_TARGET_PATH.as_posix()})"
+        ),
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing target SQLite file if it exists.",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=_DEFAULT_CHUNK_SIZE,
+        help=f"Rows per chunk during copy (default: {_DEFAULT_CHUNK_SIZE}).",
+    )
+    return parser
+
+
+def _validate_source_url(*, source_url: str) -> None:
+    """Validate source URL backend.
+
+    Args:
+        source_url (str): Source database URL.
+
+    Raises:
+        ValueError: If the source URL is not PostgreSQL.
+    """
+    backend_name = make_url(source_url).get_backend_name()
+    if backend_name != "postgresql":
+        msg = (
+            "Source URL must be PostgreSQL for this migration utility. "
+            f"Got backend '{backend_name}'."
+        )
+        raise ValueError(msg)
+
+
+def _build_sqlite_url(*, sqlite_path: Path) -> URL:
+    """Create a SQLite URL from a filesystem path.
+
+    Args:
+        sqlite_path (Path): Target SQLite database file path.
+
+    Returns:
+        URL: SQLAlchemy URL object for SQLite.
+    """
+    return URL.create("sqlite", database=str(sqlite_path))
+
+
+def _copy_table_rows(*, source_engine: Engine, target_engine: Engine, table_name: str, chunk_size: int) -> int:
+    """Copy all rows for one reflected table.
+
+    Args:
+        source_engine (Engine): Source PostgreSQL engine.
+        target_engine (Engine): Target SQLite engine.
+        table_name (str): Table name to copy.
+        chunk_size (int): Maximum rows per write chunk.
+
+    Returns:
+        int: Number of copied rows.
+    """
+    source_metadata = MetaData()
+    source_metadata.reflect(bind=source_engine, only=[table_name])
+    table = source_metadata.tables[table_name]
+
+    copied_rows = 0
+    with source_engine.connect() as source_conn, target_engine.begin() as target_conn:
+        query = select(table)
+        stream = source_conn.execution_options(stream_results=True).execute(query)
+
+        while True:
+            rows = stream.mappings().fetchmany(chunk_size)
+            if not rows:
+                break
+
+            payload = [dict(row) for row in rows]
+            target_conn.execute(table.insert(), payload)
+            copied_rows += len(payload)
+
+    return copied_rows
+
+
+def _copy_all_tables(*, source_engine: Engine, target_engine: Engine, chunk_size: int) -> dict[str, int]:
+    """Copy all tables from source to target.
+
+    Args:
+        source_engine (Engine): Source PostgreSQL engine.
+        target_engine (Engine): Target SQLite engine.
+        chunk_size (int): Maximum rows per write chunk.
+
+    Returns:
+        dict[str, int]: Copied row count per table name.
+    """
+    source_metadata = MetaData()
+    source_metadata.reflect(bind=source_engine)
+
+    source_metadata.create_all(bind=target_engine)
+
+    copied: dict[str, int] = {}
+
+    with target_engine.begin() as conn:
+        conn.execute(text("PRAGMA foreign_keys=OFF"))
+
+    for table in source_metadata.sorted_tables:
+        copied[table.name] = _copy_table_rows(
+            source_engine=source_engine,
+            target_engine=target_engine,
+            table_name=table.name,
+            chunk_size=chunk_size,
+        )
+
+    with target_engine.begin() as conn:
+        conn.execute(text("PRAGMA foreign_keys=ON"))
+
+    return copied
+
+
+def main() -> int:
+    """Run migration CLI.
+
+    Returns:
+        int: Exit status code.
+    """
+    args = _build_parser().parse_args()
+
+    source_url: str = args.source_url
+    target_path = Path(args.target_path).expanduser().resolve()
+    overwrite: bool = args.overwrite
+    chunk_size: int = args.chunk_size
+
+    _validate_source_url(source_url=source_url)
+
+    if chunk_size < 1:
+        msg = "--chunk-size must be >= 1"
+        raise ValueError(msg)
+
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    if target_path.exists() and not overwrite:
+        msg = (
+            f"Target SQLite file already exists at '{target_path}'. "
+            "Use --overwrite to replace it."
+        )
+        raise FileExistsError(msg)
+
+    if target_path.exists() and overwrite:
+        target_path.unlink()
+
+    target_url = _build_sqlite_url(sqlite_path=target_path)
+
+    _LOGGER.info(
+        "database_migration_started",
+        source_backend=make_url(source_url).get_backend_name(),
+        target_backend=target_url.get_backend_name(),
+        target_path=str(target_path),
+        chunk_size=chunk_size,
+    )
+
+    source_engine = create_engine(source_url)
+    target_engine = create_engine(target_url)
+
+    try:
+        copied = _copy_all_tables(
+            source_engine=source_engine,
+            target_engine=target_engine,
+            chunk_size=chunk_size,
+        )
+    finally:
+        source_engine.dispose()
+        target_engine.dispose()
+
+    total_rows = sum(copied.values())
+    _LOGGER.info(
+        "database_migration_completed",
+        tables=len(copied),
+        total_rows=total_rows,
+        target_path=str(target_path),
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

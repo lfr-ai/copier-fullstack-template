@@ -37,7 +37,7 @@ class BaseAppSettings(BaseSettings):
     log_level: str = "INFO"
     secret_key: str = "change-me-in-production"
 
-    database_url: str = {% if database_backend == "postgresql" %}"postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}"{% elif database_backend == "azure_postgresql" %}""{% elif database_backend == "sqlite" %}"sqlite+aiosqlite:///data/{{ project_slug }}.db"{% else %}""{% endif %}
+    database_url: str = {% if database_backend in ("postgresql", "azure_postgresql", "sqlite") %}"sqlite+aiosqlite:///./data/{{ project_slug }}.db"{% else %}""{% endif %}
 
     database_echo: bool = False
 

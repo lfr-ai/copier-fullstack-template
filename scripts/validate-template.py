@@ -3,10 +3,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess  # nosec B404
 import sys
 import tempfile
+from pathlib import Path
 
 
 def configure_git_author() -> None:
@@ -65,11 +65,7 @@ def render_template(vcs_choice: str, output_dir: str) -> bool:
     openspec_required_files = [
         output_path / "openspec" / "config.yaml",
         output_path / "openspec" / "specs" / "architecture" / "spec.md",
-        output_path
-        / "openspec"
-        / "schemas"
-        / "clean-arch-spec-driven"
-        / "schema.yaml",
+        output_path / "openspec" / "schemas" / "clean-arch-spec-driven" / "schema.yaml",
         output_path / "tasks" / "openspec.yml",
         output_path / "docs" / "OPENSPEC.md",
         output_path / ".github" / "skills" / "openspec-workflow" / "SKILL.md",

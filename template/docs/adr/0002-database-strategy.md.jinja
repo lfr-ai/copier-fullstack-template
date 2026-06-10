@@ -14,11 +14,12 @@ We need a database strategy that supports both production workloads and local/te
 ## Decision
 
 {%- if database_backend in ('postgresql', 'azure_postgresql') %}
-- **Production**: PostgreSQL (via `psycopg` / `asyncpg`)
+- **Local Development**: SQLite (file-based, via `aiosqlite` async driver)
+- **Dev/Prod Servers**: PostgreSQL (via `psycopg` / `asyncpg`)
 {%- if database_backend == 'azure_postgresql' %}
 - **Cloud**: Azure Database for PostgreSQL Flexible Server (managed)
 {%- endif %}
-- **Development/Testing**: PostgreSQL via Docker Compose or Azure-hosted instance
+- **Migration path**: one-time local PostgreSQL to SQLite copy script
 {%- elif database_backend == 'sqlite' %}
 - **Database**: SQLite (file-based, via `aiosqlite` async driver)
 - **Development/Testing**: Local file (`data/{{ project_slug }}.db`)
@@ -36,13 +37,15 @@ The database backend is selected via a `copier.yml` template variable and enviro
 
 ### Positive
 
-- PostgreSQL with full ACID, JSON, and extension support (pgvector, pgcrypto).
-- Same engine in dev and production eliminates environment drift.
+- Local setup is zero-infrastructure while server environments stay PostgreSQL-native.
+- PostgreSQL retains full ACID, JSON, and extension support (pgvector, pgcrypto)
+	where it matters most (shared dev/prod workloads).
+- Existing local PostgreSQL users can migrate data to SQLite with a dedicated script.
 
 ### Negative
 
-- Requires a running PostgreSQL instance for development (Docker Compose provides this).
-- Some integration tests need a real PostgreSQL container.
+- Cross-dialect compatibility must be considered for migrations and SQL features.
+- Team members must keep env files aligned with the intended environment matrix.
 {%- elif database_backend == 'sqlite' %}
 
 ### Positive
