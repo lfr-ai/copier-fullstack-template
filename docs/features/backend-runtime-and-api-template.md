@@ -22,6 +22,9 @@ application factory wiring, middleware, and API route conventions.
   (`config/settings/base.py.jinja:21`, `:28`).
 - Environment-class dispatch is centralized in `_SETTINGS_MAP` + `get_settings()`
   (`config/settings/__init__.py.jinja:18`, `:28`).
+- PostgreSQL/Azure PostgreSQL template variants now default local runtime to
+  SQLite while keeping shared dev/prod server workflows on PostgreSQL via env
+  overrides.
 - API app factory controls route/middleware registration and lifecycle
   (`presentation/api/app.py.jinja:36`).
 - Health probe endpoint is always available (`presentation/api/app.py.jinja:103`).

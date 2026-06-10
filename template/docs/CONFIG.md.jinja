@@ -25,10 +25,15 @@ All configuration is loaded from environment variables with the
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `{{ project_slug | upper }}_DATABASE_URL` | `str` | {% if database_backend == 'azure_postgresql' %}`""` (empty — configure for your Azure Flexible Server){% elif database_backend == 'sqlite' %}`sqlite+aiosqlite:///data/{{ project_slug }}.db`{% else %}`postgresql+psycopg://postgres:postgres@localhost:5432/{{ project_slug }}`{% endif %} | Full database connection URL |
+| `{{ project_slug | upper }}_DATABASE_URL` | `str` | {% if database_backend in ('postgresql', 'azure_postgresql', 'sqlite') %}`sqlite+aiosqlite:///./data/{{ project_slug }}.db`{% else %}`""`{% endif %} | Full database connection URL |
 | `{{ project_slug | upper }}_DATABASE_ECHO` | `bool` | `false` | Log all SQL statements (useful for debugging) |
 | `{{ project_slug | upper }}_HOST` | `str` | `0.0.0.0` | Application bind host |
 | `{{ project_slug | upper }}_PORT` | `int` | `8000` | Application bind port |
+
+For PostgreSQL/Azure PostgreSQL templates, the local default intentionally uses
+SQLite for zero-infrastructure local development. Shared `dev`, `staging`, and
+`prod` environment files should override `{{ project_slug | upper }}_DATABASE_URL`
+to PostgreSQL endpoints.
 {% endif %}
 {% if use_redis %}
 
