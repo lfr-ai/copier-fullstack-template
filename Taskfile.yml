@@ -11,7 +11,7 @@ tasks:
   # ── Architecture checks ──
 
   architecture:boundaries:
-    desc: Verify core layer has zero outward imports (Clean Architecture)
+    desc: Verify backend layer import boundaries (Clean Architecture)
     cmds:
       - python scripts/check-architecture-boundaries.py {{.BACKEND_SRC}}
 
@@ -36,6 +36,11 @@ tasks:
     desc: Enforce core template/.github alignment conventions
     cmds:
       - bash scripts/check-github-alignment.sh
+
+  audit:reference-alignment:
+    desc: Audit parity against reference_automation (root vs template semantics)
+    cmds:
+      - python scripts/audit_reference_alignment.py
 
   # ── Render smoke test ──
 
