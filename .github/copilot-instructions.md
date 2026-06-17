@@ -39,11 +39,19 @@ This is NOT a generated project — this is the template source repository.
 
 File-scoped instructions auto-load for matching globs:
 
+- `architecture.instructions.md` — Clean Architecture boundaries for backend/template Python
+- `coding-conventions.instructions.md` — cross-language coding standards
+- `cognitive-load.instructions.md` — readability and maintainability guidance
 - `commit.instructions.md` — Conventional commit format for `**`
+- `ddd.instructions.md` — domain-driven design guidance for backend domain/application
 - `no-heredoc.instructions.md` — Prevents heredoc file corruption for `**`
 - `prompt.instructions.md` — Guidelines for creating prompt files for `**/*.prompt.md`
 - `python.instructions.md` — Python conventions for `scripts/**/*.py`
+- `registry.instructions.md` — registry-first naming and generated-constant workflow
+- `sdd.instructions.md` — specification-driven development workflow
 - `shell.instructions.md` — Shell/PowerShell conventions for `**/*.{sh,ps1}`
+- `tdd.instructions.md` — test-driven development workflow guidance
+- `testing.instructions.md` — test strategy and test-quality standards
 - `update-docs-on-code-change.instructions.md` — Auto-update docs when code changes
 
 ## Agent Skills (`.github/skills/`)
@@ -51,7 +59,12 @@ File-scoped instructions auto-load for matching globs:
 | Skill | Domain |
 |-------|--------|
 | `clean-architecture/` | Architecture boundaries and Dependency Rule |
+| `ddd/` | Domain-Driven Design modeling and boundaries |
 | `python-conventions/` | Python code quality and typing standards |
+| `quality-gate/` | Validation gates before completion |
+| `sdd/` | Specification-driven implementation workflow |
+| `tdd/` | Test-driven development workflow |
+| `testing-conventions/` | Cross-layer testing standards |
 
 ## Copilot Hooks (`.github/hooks/`)
 
