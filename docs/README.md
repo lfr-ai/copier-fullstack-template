@@ -23,6 +23,7 @@ repository and generated-project scaffolding.
 - `features/backend-runtime-and-api-template.md`
 - `features/frontend-template-toolchain.md`
 - `features/agent-governance-and-instructions.md`
+- `features/koda-alignment-and-production-readiness.md`
 - `features/tooling-config-governance-benchmark.md`
 - `features/settings-config-architecture-benchmark.md`
 

@@ -84,6 +84,18 @@ If you prefer to use a remote URL (e.g., after publishing your fork):
 uvx copier copy --trust gh:<your-username>/copier-fullstack-template my-project
 ```
 
+### Repository Parity Audit (Template vs Reference Project)
+
+To validate this template repository remains aligned with
+`koda_automation` conventions (while preserving root-vs-template semantics):
+
+```bash
+task audit:koda-alignment
+```
+
+This runs `scripts/audit_koda_alignment.py` and reports mandatory parity gaps
+for structure, agentic setup, and governance artifacts.
+
 ### Update an Existing Project
 
 ```bash
