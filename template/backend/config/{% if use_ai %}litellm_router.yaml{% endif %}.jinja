@@ -1,0 +1,72 @@
+# LiteLLM Router Configuration
+# Defines model deployments, fallback chains, and routing strategy.
+#
+# Environment variables are resolved using ${VAR_NAME} syntax.
+# Model groups with the same 'model_name' enable automatic load balancing.
+
+model_list:
+  # ── Primary: OpenAI GPT-4o ──────────────────────────────────────
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: ${OPENAI_API_KEY}
+    rpm: 500
+    tpm: 80000
+
+  # ── Fallback: Azure OpenAI GPT-4o ──────────────────────────────
+{% if use_azure_openai %}
+  - model_name: gpt-4o
+    litellm_params:
+      model: azure/{{ project_slug }}-gpt4o
+      api_key: ${AZURE_OPENAI_API_KEY}
+      api_base: ${AZURE_OPENAI_ENDPOINT}
+      api_version: "2024-08-01-preview"
+    rpm: 800
+    tpm: 120000
+{% endif %}
+
+  # ── Anthropic Claude ───────────────────────────────────────────
+{% if use_anthropic %}
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: ${ANTHROPIC_API_KEY}
+    rpm: 400
+    tpm: 80000
+{% endif %}
+
+  # ── Embedding Model ────────────────────────────────────────────
+  - model_name: text-embedding-3-small
+    litellm_params:
+      model: openai/text-embedding-3-small
+      api_key: ${OPENAI_API_KEY}
+    rpm: 3000
+    tpm: 1000000
+
+# ── LiteLLM Global Settings ─────────────────────────────────────────
+
+litellm_settings:
+  num_retries: 3
+  request_timeout: 60
+  fallbacks:
+    - gpt-4o:
+{% if use_anthropic %}
+        - claude-sonnet
+{% endif %}
+{% if use_azure_openai %}
+        - azure/{{ project_slug }}-gpt4o
+{% endif %}
+  context_window_fallbacks:
+    - gpt-4o:
+        - gpt-4o  # Same model, different deployment handles overflow
+  allowed_fails: 3
+
+# ── Router Settings ──────────────────────────────────────────────────
+
+router_settings:
+  routing_strategy: "usage-based-routing"  # Options: simple-shuffle, least-busy, usage-based-routing, latency-based-routing
+  cooldown_time: 60  # seconds to cooldown a failing deployment
+  retry_after: 5  # seconds between retries
+  default_max_parallel_requests: 30
+  enable_pre_call_checks: true  # context-window/region pre-routing checks
+  enable_weighted_failover: true  # retry healthy peer deployments before cross-group fallback

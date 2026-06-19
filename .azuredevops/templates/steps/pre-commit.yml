@@ -1,0 +1,5 @@
+steps:
+  - bash: |
+      set -euo pipefail
+      uv run pre-commit run --all-files
+    displayName: Run pre-commit hooks

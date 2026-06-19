@@ -1,0 +1,13 @@
+# Paths excluded from GitNexus code indexing.
+# These contain template source (Jinja2) that isn't real Python.
+
+template/
+.venv/
+.tox/
+.pre-commit-cache/
+node_modules/
+logs/
+*.egg-info/
+dist/
+build/
+__pycache__/

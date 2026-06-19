@@ -1,0 +1,133 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "title": "LLM Request Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_requests_total[5m])) by (model, status)",
+          "legendFormat": "{{model}} - {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" }
+      }
+    },
+    {
+      "title": "LLM Latency (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(llm_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(llm_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(llm_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "title": "Token Usage by Model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_tokens_total[5m])) by (model, direction)",
+          "legendFormat": "{{model}} {{direction}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "title": "LLM Error Rate",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_errors_total[5m])) / sum(rate(llm_requests_total[5m]))",
+          "legendFormat": "Error Rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "thresholds": { "steps": [{"value": 0, "color": "green"}, {"value": 0.05, "color": "yellow"}, {"value": 0.1, "color": "red"}] } }
+      }
+    },
+    {
+      "title": "CrewAI Execution Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(crewai_execution_total[5m])) by (crew_type, status)",
+          "legendFormat": "{{crew_type}} - {{status}}"
+        }
+      ]
+    },
+    {
+      "title": "CrewAI Execution Duration",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(crewai_execution_duration_seconds_bucket[5m]))",
+          "legendFormat": "p95 {{crew_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "title": "Orchestrator Approval Rate",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "orchestrator_approval_rate",
+          "legendFormat": "Approval Rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "steps": [{"value": 0, "color": "red"}, {"value": 0.5, "color": "yellow"}, {"value": 0.8, "color": "green"}] } }
+      }
+    },
+    {
+      "title": "RAG Retrieval Relevance",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(rag_retrieval_relevance_score_bucket[5m]))",
+          "legendFormat": "p50 {{pipeline}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(rag_retrieval_relevance_score_bucket[5m]))",
+          "legendFormat": "p95 {{pipeline}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["ai", "llm", "crewai", "orchestrator"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "AI Orchestrator Overview",
+  "uid": "ai-orchestrator-overview"
+}

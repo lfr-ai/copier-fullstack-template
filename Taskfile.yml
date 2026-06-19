@@ -35,12 +35,17 @@ tasks:
   github:alignment:
     desc: Enforce core template/.github alignment conventions
     cmds:
-      - bash scripts/check-github-alignment.sh
+      - python scripts/check-github-alignment.py
 
   audit:reference-alignment:
     desc: Audit parity against reference_automation (root vs template semantics)
     cmds:
       - python scripts/audit_reference_alignment.py
+
+  audit:golden-alignment:
+    desc: Audit parity against reference_automation and frontend_frontend
+    cmds:
+      - python scripts/audit_golden_alignment.py
 
   # ── Render smoke test ──
 

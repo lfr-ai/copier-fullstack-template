@@ -1,0 +1,4 @@
+# Shared Renovate variables
+variables:
+  NODE_VERSION: "24"
+  RENOVATE_NPM_PACKAGE: "renovate@latest"

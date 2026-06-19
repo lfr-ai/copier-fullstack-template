@@ -46,6 +46,16 @@ Or manually:
 ```bash
 {{ container_runtime }} compose -f compose.yml -f compose.prod.yml --env-file .env.prod up -d
 ```
+{%- if use_matomo %}
+
+Matomo analytics profile (optional):
+
+```bash
+{{ container_runtime }} compose --profile analytics -f compose.yml -f compose.prod.yml up -d matomo-db matomo
+```
+
+See `docs/MATOMO.md` for security and backup guidance.
+{%- endif %}
 {% if use_caddy %}
 
 ```bash

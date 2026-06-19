@@ -1,0 +1,36 @@
+#!/usr/bin/env zsh
+# Post-start hook for the dev container.
+# Runs every time the container starts (not just on creation).
+
+set -euo pipefail
+
+echo "🔧 Running post-start setup..."
+
+# Ensure backend dependencies are synced
+if [[ -f backend/pyproject.toml ]]; then
+  echo "  → Syncing backend dependencies..."
+  (cd backend && uv sync --frozen 2>/dev/null || uv sync)
+fi
+
+# Ensure frontend dependencies are synced
+if [[ -f frontend/package.json ]]; then
+  echo "  → Syncing frontend dependencies..."
+  (cd frontend && bun install --frozen-lockfile 2>/dev/null || bun install)
+fi
+
+# Install pre-commit hooks if not already installed
+if [[ -f .pre-commit-config.yaml ]]; then
+  echo "  → Installing pre-commit hooks..."
+  uvx pre-commit install --install-hooks 2>/dev/null || true
+  uvx pre-commit install --hook-type commit-msg 2>/dev/null || true
+fi
+{%- if use_playwright %}
+
+# Install Playwright browsers if not cached
+if command -v bunx &>/dev/null && [[ -f frontend/playwright.config.ts ]]; then
+  echo "  → Installing Playwright browsers..."
+  (cd frontend && bunx playwright install chromium 2>/dev/null || true)
+fi
+{%- endif %}
+
+echo "✅ Post-start setup complete."

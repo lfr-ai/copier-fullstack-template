@@ -1,0 +1,55 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 512
+    spike_limit_mib: 128
+  filter/health:
+    traces:
+      span:
+        - 'attributes["http.target"] == "/health"'
+        - 'attributes["http.target"] == "/metrics"'
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: "otelcol"
+    resource_to_telemetry_conversion:
+      enabled: true
+  otlphttp/tempo:
+    endpoint: "http://tempo:4318"
+  logging:
+    verbosity: normal
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus, logging]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/health, batch]
+      exporters: [otlphttp/tempo, logging]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging]

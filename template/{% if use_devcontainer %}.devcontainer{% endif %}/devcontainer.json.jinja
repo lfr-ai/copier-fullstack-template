@@ -15,7 +15,7 @@
     "UV_LINK_MODE": "copy",
     "UV_CACHE_DIR": "/home/vscode/.cache/uv"
   },
-  "forwardPorts": [8000, 3000{% if use_redis %}, 6379{% endif %}{% if database_backend in ("postgresql", "azure_postgresql") %}, 5432{% endif %}{% if use_storybook %}, 6006{% endif %}],
+  "forwardPorts": [8000, 3000{% if use_redis %}, 6379{% endif %}{% if database_backend in ("postgresql", "azure_postgresql") %}, 5432{% endif %}{% if use_storybook %}, 6006{% endif %}{% if use_observability %}, 4317, 4318, 9090, 3001, 3200{% endif %}],
   "portsAttributes": {
     "8000": {
       "label": "FastAPI Backend",
@@ -29,6 +29,21 @@
     }{% endif %}{% if use_redis %},
     "6379": {
       "label": "Redis"
+    }{% endif %}{% if use_observability %},
+    "4317": {
+      "label": "OTLP gRPC"
+    },
+    "4318": {
+      "label": "OTLP HTTP"
+    },
+    "9090": {
+      "label": "Prometheus"
+    },
+    "3001": {
+      "label": "Grafana"
+    },
+    "3200": {
+      "label": "Tempo"
     }{% endif %}
   },
   "customizations": {
@@ -151,6 +166,7 @@
     }
   },
   "postCreateCommand": "zsh scripts/bootstrap.zsh",
+  "postStartCommand": "zsh .devcontainer/post-start.zsh",
   "updateRemoteUserUID": true,
   "remoteUser": "vscode",
   "shutdownAction": "stopCompose"

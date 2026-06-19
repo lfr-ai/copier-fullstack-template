@@ -1,0 +1,243 @@
+"""RAG pipeline registry -- plug-n-play pipeline selection and comparison.
+
+Provides a registry pattern for RAG pipeline implementations,
+enabling runtime pipeline selection, A/B comparison, and
+configuration-driven instantiation.
+
+All pipelines enforce document access control: only documents
+matching 'allowed_sources' metadata filter are retrievable.
+"""
+
+from __future__ import annotations
+
+import structlog
+from dataclasses import dataclass, field
+from typing import Any, Protocol, final, runtime_checkable
+
+from {{ project_slug }}.ai.rag.retrieval import RetrievalResult
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+# Access control: only sagsbehandler sager are searchable
+_DEFAULT_ALLOWED_SOURCES = ["sagsbehandler_sag"]
+
+
+@runtime_checkable
+class RAGPipelineGateway(Protocol):
+    """Protocol for all RAG pipeline implementations.
+
+    Each pipeline MUST enforce access control via 'allowed_sources'
+    metadata filtering. Documents not matching the filter are excluded.
+    """
+
+    async def query(
+        self,
+        question: str,
+        *,
+        top_k: int = 5,
+        system_prompt: str | None = None,
+        filters: dict[str, object] | None = None,
+    ) -> RetrievalResult:
+        """Execute a RAG query with access-controlled retrieval."""
+        ...
+
+    async def ingest(
+        self,
+        documents: list[dict[str, object]],
+        *,
+        source_type: str = "sagsbehandler_sag",
+    ) -> int:
+        """Ingest documents into the pipeline's store.
+
+        Args:
+            documents: List of document dicts with 'content' and 'metadata'.
+            source_type: Source classification (enforced in metadata).
+
+        Returns:
+            int: Number of documents successfully ingested.
+        """
+        ...
+
+    @property
+    def name(self) -> str:
+        """Pipeline identifier for metrics and logging."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+@final
+class PipelineComparisonResult:
+    """Result from running the same query against multiple pipelines."""
+
+    question: str
+    results: dict[str, RetrievalResult] = field(default_factory=dict)
+    metrics: dict[str, dict[str, float]] = field(default_factory=dict)
+
+
+@final
+class RAGPipelineRegistry:
+    """Registry for named RAG pipeline implementations.
+
+    Enables runtime pipeline selection and comparison without
+    coupling the application layer to specific implementations.
+
+    Access control is enforced at the registry level: all queries
+    automatically include the 'source_type' metadata filter.
+
+    Usage::
+
+        registry = RAGPipelineRegistry()
+        registry.register("self_crag", self_crag_pipeline)
+        registry.register("deep_rag", deep_rag_pipeline)
+
+        # Use specific pipeline
+        result = await registry.query("self_crag", question="...")
+
+        # Compare pipelines
+        comparison = await registry.compare(
+            question="...",
+            pipelines=["self_crag", "deep_rag"],
+        )
+    """
+
+    def __init__(
+        self,
+        *,
+        allowed_sources: list[str] | None = None,
+        default_pipeline: str | None = None,
+    ) -> None:
+        self._pipelines: dict[str, RAGPipelineGateway] = {}
+        self._allowed_sources = allowed_sources or _DEFAULT_ALLOWED_SOURCES
+        self._default_pipeline = default_pipeline
+
+    def register(self, name: str, pipeline: RAGPipelineGateway) -> None:
+        """Register a pipeline implementation.
+
+        Args:
+            name (str): Unique pipeline identifier.
+            pipeline (RAGPipelineGateway): Pipeline instance.
+        """
+        self._pipelines[name] = pipeline
+        if self._default_pipeline is None:
+            self._default_pipeline = name
+        logger.info("rag_pipeline_registered", name=name)
+
+    def get(self, name: str) -> RAGPipelineGateway | None:
+        """Retrieve a pipeline by name."""
+        return self._pipelines.get(name)
+
+    def list_pipelines(self) -> list[str]:
+        """Return all registered pipeline names."""
+        return sorted(self._pipelines)
+
+    def _enforce_access_control(
+        self, filters: dict[str, object] | None
+    ) -> dict[str, object]:
+        """Inject access control filter into query filters.
+
+        CRITICAL: Ensures only 'sagsbehandler_sag' documents are retrievable.
+        This cannot be bypassed by caller-provided filters.
+        """
+        enforced: dict[str, object] = filters.copy() if filters else {}
+        enforced["source_type"] = {"$in": self._allowed_sources}
+        return enforced
+
+    async def query(
+        self,
+        pipeline_name: str | None = None,
+        *,
+        question: str,
+        top_k: int = 5,
+        system_prompt: str | None = None,
+        filters: dict[str, object] | None = None,
+    ) -> RetrievalResult:
+        """Execute a query through a specific pipeline with access control.
+
+        Args:
+            pipeline_name: Pipeline to use (defaults to first registered).
+            question: User query.
+            top_k: Number of results.
+            system_prompt: Optional system instruction.
+            filters: Additional metadata filters (access control auto-injected).
+
+        Returns:
+            RetrievalResult: Pipeline result with answer and sources.
+
+        Raises:
+            ValueError: If pipeline_name is not registered.
+        """
+        name = pipeline_name or self._default_pipeline
+        if name is None or name not in self._pipelines:
+            msg = f"Pipeline '{name}' not registered. Available: {self.list_pipelines()}"
+            raise ValueError(msg)
+
+        pipeline = self._pipelines[name]
+        enforced_filters = self._enforce_access_control(filters)
+
+        logger.info(
+            "rag_pipeline_query",
+            pipeline=name,
+            question_len=len(question),
+            top_k=top_k,
+        )
+
+        return await pipeline.query(
+            question,
+            top_k=top_k,
+            system_prompt=system_prompt,
+            filters=enforced_filters,
+        )
+
+    async def compare(
+        self,
+        *,
+        question: str,
+        pipelines: list[str] | None = None,
+        top_k: int = 5,
+        system_prompt: str | None = None,
+    ) -> PipelineComparisonResult:
+        """Run the same query against multiple pipelines for comparison.
+
+        Args:
+            question: User query.
+            pipelines: Pipeline names to compare (all if None).
+            top_k: Number of results per pipeline.
+            system_prompt: Optional system instruction.
+
+        Returns:
+            PipelineComparisonResult: Results from each pipeline.
+        """
+        names = pipelines or self.list_pipelines()
+        results: dict[str, RetrievalResult] = {}
+        metrics: dict[str, dict[str, float]] = {}
+
+        import time
+
+        for name in names:
+            if name not in self._pipelines:
+                continue
+            start = time.perf_counter()
+            result = await self.query(
+                name,
+                question=question,
+                top_k=top_k,
+                system_prompt=system_prompt,
+            )
+            elapsed = time.perf_counter() - start
+            results[name] = result
+            metrics[name] = {
+                "duration_seconds": elapsed,
+                "source_count": len(result.sources) if hasattr(result, "sources") else 0,
+            }
+
+        logger.info(
+            "rag_pipeline_comparison_complete",
+            pipelines=names,
+            question_len=len(question),
+        )
+
+        return PipelineComparisonResult(
+            question=question,
+            results=results,
+            metrics=metrics,
+        )

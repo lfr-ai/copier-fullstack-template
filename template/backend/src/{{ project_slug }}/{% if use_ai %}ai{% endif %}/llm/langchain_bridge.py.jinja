@@ -1,0 +1,127 @@
+"""LangChain bridge -- adapt 'LLMGateway' to LangChain 'BaseChatModel'.
+
+Enables using the application's LiteLLM-backed LLM adapters within
+LangChain LCEL pipelines, chains, and agent frameworks while
+maintaining Clean Architecture boundaries.
+
+Usage::
+
+    from {{ project_slug }}.ai.llm.langchain_bridge import LangChainLLMBridge
+
+    llm_gateway = container.llm()  # LiteLLMAdapter or LiteLLMRouterAdapter
+    langchain_model = LangChainLLMBridge(gateway=llm_gateway)
+
+    # Use in LCEL pipeline
+    chain = prompt | langchain_model | output_parser
+    result = await chain.ainvoke({"question": "..."})
+"""
+
+from __future__ import annotations
+
+import structlog
+from collections.abc import AsyncIterator
+from typing import Any, final
+
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+@final
+class LangChainLLMBridge:
+    """Bridge 'LLMGateway' to LangChain-compatible interface.
+
+    Implements the subset of LangChain's 'BaseChatModel' protocol
+    needed for LCEL chain composition without inheriting from
+    LangChain base classes (avoiding tight coupling).
+
+    This approach keeps the application layer independent of LangChain
+    while enabling interop when LCEL or LangGraph is needed.
+
+    Args:
+        gateway (LLMGateway): Application LLM gateway (LiteLLM adapter).
+        model_name (str | None): Override model name for LangChain metadata.
+    """
+
+    __slots__ = ("_gateway", "_model_name")
+
+    def __init__(self, *, gateway: LLMGateway, model_name: str | None = None) -> None:
+        self._gateway = gateway
+        self._model_name = model_name
+
+    @property
+    def model_name(self) -> str:
+        """Return the model identifier for LangChain tooling."""
+        if self._model_name:
+            return self._model_name
+        return getattr(self._gateway, "model", "unknown")
+
+    async def ainvoke(
+        self,
+        messages: list[dict[str, str]],
+        **kwargs: Any,
+    ) -> str:
+        """Async invoke matching LangChain 'BaseChatModel.ainvoke' contract.
+
+        Args:
+            messages (list[dict[str, str]]): Chat messages.
+            **kwargs: Additional parameters forwarded to the gateway.
+
+        Returns:
+            str: Generated completion text.
+        """
+        return await self._gateway.complete(messages=messages, **kwargs)
+
+    async def astream(
+        self,
+        messages: list[dict[str, str]],
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """Async stream matching LangChain streaming contract.
+
+        Args:
+            messages (list[dict[str, str]]): Chat messages.
+            **kwargs: Additional parameters forwarded to the gateway.
+
+        Yields:
+            str: Completion token chunks.
+        """
+        async for chunk in self._gateway.stream(messages=messages, **kwargs):
+            yield chunk
+
+    def to_langchain_chat_model(self) -> Any:
+        """Create a proper LangChain 'ChatLiteLLM' instance using the gateway's config.
+
+        Returns a LangChain-native model backed by the same provider/model
+        configuration. Use this when full LangChain compatibility is required
+        (e.g., for tools, structured output, function calling).
+
+        Returns:
+            A LangChain 'ChatLiteLLM' or 'ChatOpenAI' instance.
+        """
+        try:
+            from langchain_community.chat_models import ChatLiteLLM
+        except ImportError as exc:
+            msg = "langchain-community required -- pip install langchain-community"
+            raise ImportError(msg) from exc
+
+        model = getattr(self._gateway, "model", "gpt-4o")
+
+        return ChatLiteLLM(model=model)
+
+    def to_langchain_embeddings(self, *, model: str = "text-embedding-3-small") -> Any:
+        """Create a LangChain embeddings instance via LiteLLM.
+
+        Args:
+            model (str): Embedding model identifier.
+
+        Returns:
+            A LangChain embeddings instance.
+        """
+        try:
+            from langchain_openai import OpenAIEmbeddings
+        except ImportError as exc:
+            msg = "langchain-openai required -- pip install langchain-openai"
+            raise ImportError(msg) from exc
+
+        return OpenAIEmbeddings(model=model)

@@ -1,0 +1,203 @@
+"""LiteLLM observability callbacks -- OTel spans + Prometheus metrics per LLM call.
+
+Integrates with LiteLLM's callback system to provide:
+- OpenTelemetry spans for every LLM request (trace correlation)
+- Prometheus metrics for token usage, latency, and error rates
+- Structured logging with request metadata
+
+Register globally via 'litellm.callbacks' or per-request.
+"""
+
+from __future__ import annotations
+
+import time
+import structlog
+from typing import Any
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+# ── Prometheus metrics ──────────────────────────────────────────────
+
+_METRICS_INITIALIZED = False
+_LLM_REQUEST_DURATION: Any = None
+_LLM_TOKENS_TOTAL: Any = None
+_LLM_REQUESTS_TOTAL: Any = None
+_LLM_ERRORS_TOTAL: Any = None
+
+
+def _ensure_metrics() -> None:
+    """Lazily initialize Prometheus metrics (avoids import-time side effects)."""
+    global _METRICS_INITIALIZED, _LLM_REQUEST_DURATION, _LLM_TOKENS_TOTAL  # noqa: PLW0603
+    global _LLM_REQUESTS_TOTAL, _LLM_ERRORS_TOTAL  # noqa: PLW0603
+
+    if _METRICS_INITIALIZED:
+        return
+
+    from prometheus_client import Counter, Histogram
+
+    _LLM_REQUEST_DURATION = Histogram(
+        "llm_request_duration_seconds",
+        "LLM request latency in seconds",
+        ["model", "provider", "operation"],
+        buckets=(0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0),
+    )
+    _LLM_TOKENS_TOTAL = Counter(
+        "llm_tokens_total",
+        "Total tokens consumed by LLM calls",
+        ["model", "provider", "direction"],
+    )
+    _LLM_REQUESTS_TOTAL = Counter(
+        "llm_requests_total",
+        "Total LLM requests by status",
+        ["model", "provider", "status"],
+    )
+    _LLM_ERRORS_TOTAL = Counter(
+        "llm_errors_total",
+        "Total LLM request errors by type",
+        ["model", "provider", "error_type"],
+    )
+    _METRICS_INITIALIZED = True
+
+
+def _extract_provider(model: str) -> str:
+    """Extract provider name from LiteLLM model string."""
+    if "/" in model:
+        return model.split("/", 1)[0]
+    return "openai"
+
+
+# ── OTel tracing ────────────────────────────────────────────────────
+
+
+def _get_tracer() -> Any:
+    """Get the OTel tracer for LLM operations."""
+    from opentelemetry import trace
+
+    return trace.get_tracer("litellm.callbacks")
+
+
+# ── LiteLLM Custom Callback Handler ─────────────────────────────────
+
+
+class OTelPrometheusCallback:
+    """LiteLLM callback that emits OTel spans and Prometheus metrics.
+
+    Register globally::
+
+        import litellm
+        from {{ project_slug }}.ai.llm.litellm_callbacks import OTelPrometheusCallback
+
+        litellm.callbacks = [OTelPrometheusCallback()]
+
+    Or per-router::
+
+        router = Router(model_list=[...], callbacks=[OTelPrometheusCallback()])
+    """
+
+    def __init__(self) -> None:
+        _ensure_metrics()
+        self._start_times: dict[str, float] = {}
+
+    async def async_log_success_event(
+        self,
+        kwargs: dict[str, Any],
+        response_obj: Any,
+        start_time: Any,
+        end_time: Any,
+    ) -> None:
+        """Called on successful LLM completion."""
+        model = kwargs.get("model", "unknown")
+        provider = _extract_provider(model)
+        duration = (end_time - start_time).total_seconds() if end_time and start_time else 0.0
+
+        # Prometheus metrics
+        _LLM_REQUEST_DURATION.labels(model=model, provider=provider, operation="completion").observe(duration)
+        _LLM_REQUESTS_TOTAL.labels(model=model, provider=provider, status="success").inc()
+
+        # Token usage
+        usage = getattr(response_obj, "usage", None)
+        if usage:
+            prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+            completion_tokens = getattr(usage, "completion_tokens", 0) or 0
+            _LLM_TOKENS_TOTAL.labels(model=model, provider=provider, direction="input").inc(prompt_tokens)
+            _LLM_TOKENS_TOTAL.labels(model=model, provider=provider, direction="output").inc(completion_tokens)
+
+        # OTel span
+        tracer = _get_tracer()
+        with tracer.start_as_current_span("llm.completion") as span:
+            span.set_attribute("llm.model", model)
+            span.set_attribute("llm.provider", provider)
+            span.set_attribute("llm.duration_seconds", duration)
+            if usage:
+                span.set_attribute("llm.tokens.input", prompt_tokens)
+                span.set_attribute("llm.tokens.output", completion_tokens)
+                span.set_attribute("llm.tokens.total", prompt_tokens + completion_tokens)
+
+        logger.debug(
+            "llm_request_success",
+            model=model,
+            provider=provider,
+            duration=round(duration, 3),
+            tokens_in=getattr(usage, "prompt_tokens", 0) if usage else 0,
+            tokens_out=getattr(usage, "completion_tokens", 0) if usage else 0,
+        )
+
+    async def async_log_failure_event(
+        self,
+        kwargs: dict[str, Any],
+        response_obj: Any,
+        start_time: Any,
+        end_time: Any,
+    ) -> None:
+        """Called on failed LLM completion."""
+        model = kwargs.get("model", "unknown")
+        provider = _extract_provider(model)
+        duration = (end_time - start_time).total_seconds() if end_time and start_time else 0.0
+        exception = kwargs.get("exception", None)
+        error_type = type(exception).__name__ if exception else "unknown"
+
+        _LLM_REQUEST_DURATION.labels(model=model, provider=provider, operation="completion").observe(duration)
+        _LLM_REQUESTS_TOTAL.labels(model=model, provider=provider, status="failure").inc()
+        _LLM_ERRORS_TOTAL.labels(model=model, provider=provider, error_type=error_type).inc()
+
+        # OTel span with error
+        tracer = _get_tracer()
+        with tracer.start_as_current_span("llm.completion") as span:
+            span.set_attribute("llm.model", model)
+            span.set_attribute("llm.provider", provider)
+            span.set_attribute("llm.error", True)
+            span.set_attribute("llm.error_type", error_type)
+            if exception:
+                span.record_exception(exception)
+
+        logger.warning(
+            "llm_request_failed",
+            model=model,
+            provider=provider,
+            error_type=error_type,
+            duration=round(duration, 3),
+        )
+
+    async def async_log_stream_event(
+        self,
+        kwargs: dict[str, Any],
+        response_obj: Any,
+        start_time: Any,
+        end_time: Any,
+    ) -> None:
+        """Called on streaming completion events."""
+        # Delegate to success handler for final metrics
+        await self.async_log_success_event(kwargs, response_obj, start_time, end_time)
+
+
+def register_litellm_callbacks() -> None:
+    """Register the OTel+Prometheus callback globally with LiteLLM.
+
+    Call this during application startup (e.g., in 'create_app()').
+    """
+    import litellm
+
+    callback = OTelPrometheusCallback()
+    if not any(isinstance(cb, OTelPrometheusCallback) for cb in litellm.callbacks):
+        litellm.callbacks.append(callback)
+        logger.info("litellm_otel_prometheus_callback_registered")
