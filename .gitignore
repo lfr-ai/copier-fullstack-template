@@ -14,7 +14,6 @@ Desktop.ini
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/mcp.json
-.idea/
 *.swp
 *.swo
 *~
@@ -92,6 +91,7 @@ logs/
 .env.*.local
 !.env.example
 !.env.*.example
+!.secrets.baseline
 
 *.pem
 *.key
@@ -140,11 +140,15 @@ jscpd-report/
 # ──────────────────────────────────────────────
 *.code-workspace
 
-# ── GSD baseline (auto-generated) ──
-.vscode/
-.env.*
-*.pyc
-target/
-vendor/
-.cache/
+# ──────────────────────────────────────────────
+# Claude Code local settings
+# ──────────────────────────────────────────────
 .claude/settings.local.json
+
+# ──────────────────────────────────────────────
+# GitNexus local artifacts
+# ──────────────────────────────────────────────
+.gitnexus/db/
+.gitnexus/cache/
+.gitnexus/embeddings/
+.gitnexus/parse-cache/

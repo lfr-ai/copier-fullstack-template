@@ -14,9 +14,18 @@
 
     // ── shadcn/ui ─────────────────────────────────────────────
     "shadcn": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "shadcn@latest", "mcp"]
     },
+{% if use_storybook %}
+
+    // ── Storybook ─────────────────────────────────────────────
+    "storybook": {
+      "type": "http",
+      "url": "http://localhost:6006/mcp"
+    },
+{% endif %}
 {% if use_playwright %}
 
     // ── Playwright ────────────────────────────────────────────

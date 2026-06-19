@@ -1,0 +1,13 @@
+---
+description: Run GitNexus impact analysis before making behavior or dependency changes.
+---
+
+Use GitNexus for **impact** analysis prior to implementation.
+
+Required behavior:
+
+1. Query candidate processes/symbols with `mcp_gitnexus_query`.
+2. Inspect symbol context with `mcp_gitnexus_context`.
+3. Run `mcp_gitnexus_impact` at depth 2-3.
+4. Return direct and transitive impacts, prioritized by risk.
+5. Propose a safe implementation and test sequence.

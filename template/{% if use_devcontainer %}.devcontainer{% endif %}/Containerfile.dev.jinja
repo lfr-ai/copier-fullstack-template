@@ -55,6 +55,14 @@ RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     && apt-get install -y --no-install-recommends caddy \
     && rm -rf /var/lib/apt/lists/*
 {%- endif %}
+{%- if use_observability %}
+
+# ── OTel CLI (for trace debugging) ──────────────────────────────────────
+RUN curl -sSL https://github.com/equinix-labs/otel-cli/releases/latest/download/otel-cli_linux_amd64.deb \
+    -o /tmp/otel-cli.deb \
+    && dpkg -i /tmp/otel-cli.deb \
+    && rm /tmp/otel-cli.deb || true
+{%- endif %}
 
 # ── Zsh as default shell for vscode user ─────────────────────────────────
 RUN chsh -s /usr/bin/zsh vscode

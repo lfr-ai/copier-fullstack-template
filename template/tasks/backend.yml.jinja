@@ -44,6 +44,18 @@ tasks:
     cmds:
       - uv run tox -e integration
 
+  test:duckdb:smoke:
+    desc: "Run a DuckDB smoke check for local analytics tooling"
+    dir: backend
+    cmds:
+      - >-
+        uv run python -c "
+        import duckdb;
+        conn = duckdb.connect(':memory:');
+        value = conn.execute('select 1 + 1').fetchone()[0];
+        print(f'DuckDB smoke OK: {value}');
+        "
+
   test:e2e:
     desc: "Run backend e2e tests via tox"
     dir: backend

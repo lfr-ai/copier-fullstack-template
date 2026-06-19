@@ -19,6 +19,11 @@
       "command": "npx",
       "args": ["-y", "shadcn@latest", "mcp"],
       "description": "shadcn MCP server for component registry search and install"
+    }{% if use_storybook %},
+    "storybook": {
+      "type": "http",
+      "url": "http://localhost:6006/mcp",
+      "description": "Storybook MCP server for story introspection and UI debugging"
     }{% if with_gitnexus %},
     "gitnexus": {
       "type": "stdio",

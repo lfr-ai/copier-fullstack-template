@@ -58,11 +58,14 @@ File-scoped instructions auto-load for matching globs:
 
 | Skill | Domain |
 |-------|--------|
+| `accessibility/` | WCAG 2.1 AA compliance and inclusive UI patterns |
 | `clean-architecture/` | Architecture boundaries and Dependency Rule |
 | `ddd/` | Domain-Driven Design modeling and boundaries |
+| `playwright/` | End-to-end testing for user journeys and accessibility |
 | `python-conventions/` | Python code quality and typing standards |
 | `quality-gate/` | Validation gates before completion |
 | `sdd/` | Specification-driven implementation workflow |
+| `shadcn-ui/` | shadcn/ui component conventions and composition patterns |
 | `tdd/` | Test-driven development workflow |
 | `testing-conventions/` | Cross-layer testing standards |
 

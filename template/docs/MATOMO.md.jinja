@@ -1,0 +1,40 @@
+# Matomo Analytics
+
+Matomo provides self-hosted, privacy-first product analytics.
+
+This template can scaffold Matomo via Docker Compose when `use_matomo=true`.
+
+## Start Matomo locally
+
+```bash
+{{ container_runtime }} compose --profile analytics up -d matomo-db matomo
+```
+
+Matomo UI is available at:
+
+- `http://localhost:8082`
+
+## Required environment variables
+
+Set these in `.env` (or `.env.local`) for non-default credentials:
+
+- `MATOMO_DB_ROOT_PASSWORD`
+- `MATOMO_DB_NAME`
+- `MATOMO_DB_USER`
+- `MATOMO_DB_PASSWORD`
+
+## Security recommendations
+
+- Use long random passwords in all environments.
+- Expose Matomo behind TLS (Caddy/reverse proxy) in shared environments.
+- Restrict network access to analytics services.
+- Enable Matomo auto-archiving cron in persistent environments.
+
+## Backup
+
+Persisted volumes:
+
+- `matomo-data` (Matomo app/uploads/plugins state)
+- `matomo-db-data` (MariaDB data)
+
+Back up both volumes before upgrades.

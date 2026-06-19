@@ -31,6 +31,7 @@ Implements a production-ready hierarchical supervisor that:
 
 from __future__ import annotations
 
+from time import perf_counter
 import structlog
 from dataclasses import dataclass, field
 from enum import StrEnum, unique
@@ -45,6 +46,30 @@ if TYPE_CHECKING:
     from crewai import Crew
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+try:
+    from prometheus_client import Counter, Histogram
+
+    _HMAS_ORCHESTRATIONS_TOTAL = Counter(
+        "hmas_orchestrations_total",
+        "Total HMAS orchestration requests",
+        ["status"],
+    )
+    _HMAS_SUBGOALS_TOTAL = Counter(
+        "hmas_subgoals_total",
+        "Total HMAS sub-goals processed",
+        ["state"],
+    )
+    _HMAS_ORCHESTRATION_DURATION_SECONDS = Histogram(
+        "hmas_orchestration_duration_seconds",
+        "End-to-end HMAS orchestration duration in seconds",
+    )
+except Exception:  # noqa: BLE001 -- metrics are optional at runtime
+    _HMAS_ORCHESTRATIONS_TOTAL = None
+    _HMAS_SUBGOALS_TOTAL = None
+    _HMAS_ORCHESTRATION_DURATION_SECONDS = None
+
+
 @unique
 class DelegationTarget(StrEnum):
     """Type of target for sub-goal delegation."""
@@ -152,13 +177,21 @@ class CrewAIHMASSupervisor:
         """
         if depth >= self._max_depth:
             logger.warning("hmas_max_depth_reached", depth=depth)
+            self._inc_orchestration_total(status="max_depth")
             return f"Maximum hierarchy depth ({self._max_depth}) reached."
 
+        start = perf_counter()
         logger.info("hmas_orchestrate_start", goal=goal[:_LOG_TRUNCATE_LEN], depth=depth)
 
-        plan = await self._plan(goal)
-        await self._execute_plan(plan, inputs=inputs, depth=depth)
-        result = await self._aggregate(plan)
+        try:
+            plan = await self._plan(goal)
+            await self._execute_plan(plan, inputs=inputs, depth=depth)
+            result = await self._aggregate(plan)
+        except Exception:  # noqa: BLE001 -- top-level orchestration boundary
+            self._inc_orchestration_total(status="failed")
+            raise
+        finally:
+            self._observe_duration(perf_counter() - start)
 
         logger.info(
             "hmas_orchestrate_complete",
@@ -166,6 +199,7 @@ class CrewAIHMASSupervisor:
             sub_goals=len(plan.sub_goals),
             completed=sum(1 for sg in plan.sub_goals if sg.state == SubGoalState.COMPLETED),
         )
+        self._inc_orchestration_total(status="completed")
         return result
 
     # ------------------------------------------------------------------
@@ -220,8 +254,7 @@ class CrewAIHMASSupervisor:
         )
 
         try:
-            response = await self._llm.complete(prompt)
-            text = response.content if hasattr(response, "content") else str(response)
+            text = await self._llm.complete(prompt=prompt)
             data = json.loads(text)
 
             sub_goals = []
@@ -309,6 +342,7 @@ class CrewAIHMASSupervisor:
 
             sub_goal.result = result
             sub_goal.state = SubGoalState.COMPLETED
+            self._inc_subgoal_total(state=SubGoalState.COMPLETED.value)
             logger.info(
                 "hmas_sub_goal_completed",
                 id=sub_goal.id,
@@ -317,6 +351,7 @@ class CrewAIHMASSupervisor:
         except Exception as exc:  # noqa: BLE001 -- top-level error boundary
             sub_goal.state = SubGoalState.FAILED
             sub_goal.error = str(exc)
+            self._inc_subgoal_total(state=SubGoalState.FAILED.value)
             logger.warning(
                 "hmas_sub_goal_failed",
                 id=sub_goal.id,
@@ -386,8 +421,25 @@ class CrewAIHMASSupervisor:
             "Resolve any conflicts between results. Be thorough but concise."
         )
         try:
-            response = await self._llm.complete(prompt)
-            return response.content if hasattr(response, "content") else str(response)
+            return await self._llm.complete(prompt=prompt)
         except Exception:  # noqa: BLE001 -- graceful fallback to concatenation
             logger.warning("hmas_llm_aggregate_failed", exc_info=True)
             return "\n\n".join(f"## {sg.description}\n{sg.result}" for sg in sub_goals)
+
+    @staticmethod
+    def _inc_orchestration_total(*, status: str) -> None:
+        """Increment orchestration counter when metrics are available."""
+        if _HMAS_ORCHESTRATIONS_TOTAL is not None:
+            _HMAS_ORCHESTRATIONS_TOTAL.labels(status=status).inc()
+
+    @staticmethod
+    def _inc_subgoal_total(*, state: str) -> None:
+        """Increment sub-goal counter when metrics are available."""
+        if _HMAS_SUBGOALS_TOTAL is not None:
+            _HMAS_SUBGOALS_TOTAL.labels(state=state).inc()
+
+    @staticmethod
+    def _observe_duration(duration_seconds: float) -> None:
+        """Record orchestration duration when metrics are available."""
+        if _HMAS_ORCHESTRATION_DURATION_SECONDS is not None:
+            _HMAS_ORCHESTRATION_DURATION_SECONDS.observe(duration_seconds)

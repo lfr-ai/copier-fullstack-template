@@ -1,0 +1,153 @@
+"""CrewAI observability -- Prometheus metrics and OTel tracing for crew executions.
+
+Provides metrics and tracing for:
+- Crew execution count, duration, and status
+- Task execution timing
+- HMAS orchestration stats
+- Approval rate tracking
+"""
+
+from __future__ import annotations
+
+import time
+import structlog
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+from typing import Any, final
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+# ── Prometheus metrics (lazy init) ──────────────────────────────────
+
+_METRICS_INITIALIZED = False
+_CREW_EXECUTION_TOTAL: Any = None
+_CREW_EXECUTION_DURATION: Any = None
+_HMAS_ORCHESTRATION_TOTAL: Any = None
+_APPROVAL_RATE: Any = None
+_APPROVAL_TOTAL: Any = None
+_APPROVAL_APPROVED: Any = None
+
+
+def _ensure_metrics() -> None:
+    """Lazily initialize Prometheus metrics."""
+    global _METRICS_INITIALIZED  # noqa: PLW0603
+    global _CREW_EXECUTION_TOTAL, _CREW_EXECUTION_DURATION  # noqa: PLW0603
+    global _HMAS_ORCHESTRATION_TOTAL, _APPROVAL_RATE  # noqa: PLW0603
+    global _APPROVAL_TOTAL, _APPROVAL_APPROVED  # noqa: PLW0603
+
+    if _METRICS_INITIALIZED:
+        return
+
+    from prometheus_client import Counter, Gauge, Histogram
+
+    _CREW_EXECUTION_TOTAL = Counter(
+        "crewai_execution_total",
+        "Total CrewAI crew executions",
+        ["crew_type", "status"],
+    )
+    _CREW_EXECUTION_DURATION = Histogram(
+        "crewai_execution_duration_seconds",
+        "CrewAI crew execution duration",
+        ["crew_type"],
+        buckets=(1.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0),
+    )
+    _HMAS_ORCHESTRATION_TOTAL = Counter(
+        "crewai_hmas_orchestration_total",
+        "Total HMAS orchestration runs",
+        ["status"],
+    )
+    _APPROVAL_TOTAL = Counter(
+        "orchestrator_decisions_total",
+        "Total orchestrator decisions (for approval rate)",
+        ["decision"],
+    )
+    _APPROVAL_RATE = Gauge(
+        "orchestrator_approval_rate",
+        "Current approval rate (approved / total) over sliding window",
+    )
+    _METRICS_INITIALIZED = True
+
+
+def record_crew_execution(
+    *,
+    crew_type: str,
+    status: str,
+    duration_seconds: float,
+) -> None:
+    """Record a crew execution metric.
+
+    Args:
+        crew_type (str): Template name (research, analysis, etc.).
+        status (str): Execution status (success, failed, timeout).
+        duration_seconds (float): Execution wall-clock time.
+    """
+    _ensure_metrics()
+    _CREW_EXECUTION_TOTAL.labels(crew_type=crew_type, status=status).inc()
+    _CREW_EXECUTION_DURATION.labels(crew_type=crew_type).observe(duration_seconds)
+
+
+def record_hmas_orchestration(*, status: str) -> None:
+    """Record an HMAS orchestration run."""
+    _ensure_metrics()
+    _HMAS_ORCHESTRATION_TOTAL.labels(status=status).inc()
+
+
+def record_decision(*, approved: bool) -> None:
+    """Record an orchestrator decision for approval rate tracking.
+
+    Args:
+        approved (bool): Whether the decision was approved.
+    """
+    _ensure_metrics()
+    decision = "approved" if approved else "rejected"
+    _APPROVAL_TOTAL.labels(decision=decision).inc()
+
+
+def update_approval_rate(*, approved_count: int, total_count: int) -> None:
+    """Update the approval rate gauge.
+
+    Args:
+        approved_count (int): Number of approved decisions.
+        total_count (int): Total decisions made.
+    """
+    _ensure_metrics()
+    rate = approved_count / total_count if total_count > 0 else 0.0
+    _APPROVAL_RATE.set(rate)
+
+
+@asynccontextmanager
+async def traced_crew_execution(crew_type: str) -> AsyncIterator[None]:
+    """Context manager that traces a crew execution with OTel + Prometheus.
+
+    Usage::
+
+        async with traced_crew_execution("research"):
+            result = crew.kickoff(inputs={"task": task})
+    """
+    _ensure_metrics()
+    start = time.perf_counter()
+    status = "success"
+    try:
+        # OTel span
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer("crewai.execution")
+        with tracer.start_as_current_span(f"crewai.crew.{crew_type}") as span:
+            span.set_attribute("crewai.crew_type", crew_type)
+            yield
+    except Exception:
+        status = "failed"
+        raise
+    finally:
+        duration = time.perf_counter() - start
+        record_crew_execution(
+            crew_type=crew_type,
+            status=status,
+            duration_seconds=duration,
+        )
+        logger.info(
+            "crewai_execution_recorded",
+            crew_type=crew_type,
+            status=status,
+            duration=round(duration, 3),
+        )

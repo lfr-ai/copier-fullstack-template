@@ -21,9 +21,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Copilot OPSX prompt aliases (`opsx-propose`, `opsx-apply`, `opsx-sync`,
   `opsx-archive`, `opsx-explore`)
 - ADR-0009 documenting adoption of OpenSpec for spec-driven development
+- Frontend-focused Copilot skill packs in root and template for accessibility,
+  Playwright E2E, and shadcn/ui composition parity
+- Template-scaffolded GitNexus prompt pack
+  (`template/.github/prompts/gitnexus/*`)
+- Template-scaffolded OpenSpec nested prompt pack
+  (`template/.github/prompts/openspec/*`)
+- Template-scaffolded Claude command packs for GitNexus and OpenSpec/OPSX
+  (`template/.claude/commands/{gitnexus,openspec,opsx}`)
+- Template-scaffolded Claude skills for DDD, DRY/jscpd, GitNexus, quality-gate,
+  SDD, and TDD parity
+- Root planning stubs for template-repo OpenSpec and GitNexus workflows
+  (`openspec/README.md`, `.gitnexus/README.md`)
+- Root `.agents/` and `.azuredevops/` governance scaffolding with baseline
+  pipelines, reusable step templates, shared variables, and policy JSON examples
+- Root folder policy stubs for `docker/`, `azure/`, and `caddy/` to enforce
+  folder-based runtime asset layout
+- Template `.agents/` scaffolding for generated-project agent workspace parity
+- Golden multi-reference parity audit wrapper (`scripts/audit_golden_alignment.py`)
+  and task alias (`audit:golden-alignment`)
 
 ### Changed
 
+- Hardened `scripts/audit_reference_alignment.py` with explicit expected top-level
+  delta allowlists and deeper parity checks for root `.github` agents/hooks/
+  instructions, root `.claude` rules, and core skills coverage against
+  `reference_automation`
+- Updated `scripts/audit_reference_alignment.py` mandatory root targets to include
+  `.agents`, `.azuredevops`, and folderized governance roots (`docker/`,
+  `azure/`, `caddy/`)
+- Added cross-platform `scripts/check-github-alignment.py` and switched
+  `Taskfile.yml` `github:alignment` to Python execution for reliable Windows/
+  Unix verification parity
+- Pinned `jscpd` command examples in root/template `jscpd` and
+  `dry-refactoring` skill docs to `4.0.5` for compatibility with the current
+  `jscpd.json` schema (`skipBlocks`)
+- Renamed root/template jscpd configuration files from `.jscpd.json` to
+  `jscpd.json` and updated all commands/checks to match `reference_automation`
+  naming parity
+- Hardened `scripts/audit_reference_alignment.py` to ignore transient semver-like
+  top-level artifact names (for example `24.1.0`) when computing parity deltas
 - Aligned MCP configuration with golden-standard dual config files
   (`.vscode/mcp.json` + `.claude/mcp.json`) and added GitNexus server wiring
 - Added Playwright MCP server wiring in root and template MCP configs using the
