@@ -45,6 +45,10 @@ repos:
         stages: [pre-commit]
       - id: debug-statements
         exclude: ^template/
+      - id: name-tests-test
+        args: [--pytest-test-first]
+        files: ^tests/
+        exclude: README\.md$
 
   # ── YAML linting ──
   - repo: https://github.com/adrienverge/yamllint
@@ -53,6 +57,13 @@ repos:
       - id: yamllint
         args: [-c, .yamllint.yaml]
         files: ^(copier\.yml|\.pre-commit-config\.yaml|\.markdownlint-cli2\.yaml|\.yamllint\.yaml|\.github/.+\.ya?ml)$
+
+  # ── Commit message format ──
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.13.10
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
 
   # ── Python linting / formatting / typing / security / complexity ──
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -108,6 +119,14 @@ repos:
       - id: shellcheck
         args: [--severity=warning]
         exclude: ^template/
+
+  # ── Dockerfile linting ──
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint-docker
+        args: [-c, .hadolint.yaml]
+        exclude: \.dockerignore$
 
   # ── Local exhaustive checks (run on every commit) ──
   - repo: local
@@ -177,12 +196,12 @@ repos:
         name: Validate Dependabot YAML
         args: [--verbose]
 
-  # ── Link checking (requires system-installed lychee) ──
+  # ── Link checking ──
   - repo: https://github.com/lycheeverse/lychee.git
-    rev: lychee-v0.23.0
+    rev: lychee-v0.24.2
     hooks:
-      - id: lychee-system
-        args: ["--no-progress", "--config", ".lychee.toml"]
+      - id: lychee-docker
+        args: [--no-progress, -c, .lychee.toml]
         types_or: [markdown]
         files: ^[^/]+\.md$
         stages: [manual]
@@ -192,16 +211,9 @@ repos:
     hooks:
       - id: jscpd
         name: jscpd copy-paste detection
-        entry: jscpd --config .jscpd.json
+        entry: jscpd --config jscpd.json
         language: node
         additional_dependencies: [jscpd@4.0.5]
         pass_filenames: false
         always_run: true
         stages: [pre-commit, pre-push, manual]
-
-  # ── Conventional commit enforcement ──
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.13.10
-    hooks:
-      - id: commitizen
-        stages: [commit-msg]

@@ -1,0 +1,141 @@
+"""Migrate data from PostgreSQL to local SQLite database.
+
+Exports data from a running PostgreSQL instance and imports it into
+a local SQLite database file. Handles type mapping differences:
+- UUID → TEXT
+- JSONB → JSON (stored as TEXT)
+- TIMESTAMP WITH TIME ZONE → TEXT (ISO format)
+- BOOLEAN → INTEGER (0/1)
+
+Usage::
+
+    # Set source PostgreSQL URL
+    export SOURCE_DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/mydb"
+
+    # Run migration
+    python -m scripts.migrate_pg_to_sqlite
+
+    # Or specify target
+    python -m scripts.migrate_pg_to_sqlite --target ./data/{{ project_slug }}.db
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import sys
+from pathlib import Path
+
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+
+async def _migrate(*, source_url: str, target_path: Path) -> None:
+    """Execute the PostgreSQL to SQLite migration.
+
+    Args:
+        source_url (str): PostgreSQL async connection URL.
+        target_path (Path): Target SQLite database file path.
+    """
+    from sqlalchemy import MetaData, text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    # Ensure target directory exists
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_url = f"sqlite+aiosqlite:///{target_path}"
+
+    logger.info("migration_start", source=source_url.split("@")[-1], target=str(target_path))
+
+    # Connect to source PostgreSQL
+    source_engine = create_async_engine(source_url)
+    target_engine = create_async_engine(
+        target_url,
+        connect_args={"check_same_thread": False},
+    )
+
+    try:
+        # Reflect source schema
+        metadata = MetaData()
+        async with source_engine.connect() as conn:
+            await conn.run_sync(metadata.reflect)
+
+        logger.info("schema_reflected", tables=list(metadata.tables.keys()))
+
+        # Create tables in SQLite
+        async with target_engine.begin() as conn:
+            await conn.run_sync(metadata.create_all)
+
+        logger.info("target_schema_created")
+
+        # Migrate data table by table
+        total_rows = 0
+        for table_name, table in metadata.tables.items():
+            if table_name.startswith("alembic_"):
+                continue
+
+            async with source_engine.connect() as src_conn:
+                result = await src_conn.execute(table.select())
+                rows = result.fetchall()
+
+            if not rows:
+                logger.debug("table_empty", table=table_name)
+                continue
+
+            # Insert into SQLite
+            async with target_engine.begin() as tgt_conn:
+                columns = [col.name for col in table.columns]
+                for row in rows:
+                    values = dict(zip(columns, row, strict=False))
+                    # Convert non-serializable types
+                    for key, val in values.items():
+                        if hasattr(val, "isoformat"):
+                            values[key] = val.isoformat()
+                        elif isinstance(val, dict | list):
+                            import json
+
+                            values[key] = json.dumps(val)
+                    await tgt_conn.execute(table.insert().values(**values))
+
+            total_rows += len(rows)
+            logger.info("table_migrated", table=table_name, rows=len(rows))
+
+        # Enable WAL mode for better concurrent read performance
+        async with target_engine.begin() as conn:
+            await conn.execute(text("PRAGMA journal_mode=WAL"))
+            await conn.execute(text("PRAGMA foreign_keys=ON"))
+
+        logger.info("migration_complete", total_rows=total_rows)
+
+    finally:
+        await source_engine.dispose()
+        await target_engine.dispose()
+
+
+def main() -> None:
+    """CLI entry point for PostgreSQL to SQLite migration."""
+    parser = argparse.ArgumentParser(description="Migrate PostgreSQL data to local SQLite")
+    parser.add_argument(
+        "--source",
+        default=None,
+        help="Source PostgreSQL URL (or set SOURCE_DATABASE_URL env var)",
+    )
+    parser.add_argument(
+        "--target",
+        default="./data/{{ project_slug }}.db",
+        help="Target SQLite file path",
+    )
+    args = parser.parse_args()
+
+    import os
+
+    source_url = args.source or os.environ.get("SOURCE_DATABASE_URL", "")
+    if not source_url:
+        print("ERROR: Set --source or SOURCE_DATABASE_URL environment variable", file=sys.stderr)
+        sys.exit(1)
+
+    asyncio.run(_migrate(source_url=source_url, target_path=Path(args.target)))
+
+
+if __name__ == "__main__":
+    main()

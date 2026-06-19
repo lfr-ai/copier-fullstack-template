@@ -35,12 +35,17 @@ tasks:
   github:alignment:
     desc: Enforce core template/.github alignment conventions
     cmds:
-      - bash scripts/check-github-alignment.sh
+      - python scripts/check-github-alignment.py
 
   audit:koda-alignment:
     desc: Audit parity against koda_automation (root vs template semantics)
     cmds:
       - python scripts/audit_koda_alignment.py
+
+  audit:golden-alignment:
+    desc: Audit parity against koda_automation and kris_frontend
+    cmds:
+      - python scripts/audit_golden_alignment.py
 
   # ── Render smoke test ──
 

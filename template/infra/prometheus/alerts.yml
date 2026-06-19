@@ -1,0 +1,89 @@
+groups:
+  - name: fastapi_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{http_status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate ({{ $value | humanizePercentage }})"
+          description: "More than 5% of requests are returning 5xx errors over the last 5 minutes."
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency ({{ $value }}s)"
+          description: "95th percentile request latency exceeds 5 seconds."
+
+  - name: llm_alerts
+    rules:
+      - alert: LLMHighLatency
+        expr: histogram_quantile(0.95, rate(llm_request_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM p95 latency spike ({{ $value }}s)"
+          description: "LLM request latency p95 exceeds 30 seconds for model {{ $labels.model }}."
+
+      - alert: LLMHighErrorRate
+        expr: rate(llm_errors_total[5m]) / rate(llm_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM error rate > 10% for {{ $labels.model }}"
+          description: "Model {{ $labels.model }} (provider {{ $labels.provider }}) is failing at > 10%."
+
+      - alert: LLMHighTokenUsage
+        expr: increase(llm_tokens_total[1h]) > 1000000
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: "High token consumption ({{ $value }} tokens/hour)"
+          description: "Model {{ $labels.model }} consumed over 1M tokens in the last hour."
+
+  - name: crewai_alerts
+    rules:
+      - alert: LowApprovalRate
+        expr: orchestrator_approval_rate < 0.5
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low orchestrator approval rate ({{ $value | humanizePercentage }})"
+          description: "Approval rate has been below 50% for over 1 hour."
+
+      - alert: CrewAIHighFailureRate
+        expr: rate(crewai_execution_total{status="failed"}[10m]) / rate(crewai_execution_total[10m]) > 0.2
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CrewAI failure rate > 20%"
+          description: "Crew type {{ $labels.crew_type }} has > 20% failure rate."
+
+  - name: database_alerts
+    rules:
+      - alert: DatabaseConnectionPoolExhaustion
+        expr: db_pool_checked_out / db_pool_size > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool near exhaustion ({{ $value | humanizePercentage }})"
+          description: "Over 90% of database connection pool is in use."
+
+      - alert: SlowQueries
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries (p95 = {{ $value }}s)"
+          description: "Database query latency p95 exceeds 2 seconds."

@@ -1,0 +1,306 @@
+"""LiteLLM Router -- load balancing, fallbacks, and multi-deployment routing.
+
+Wraps 'litellm.Router' to provide automatic failover between model
+deployments, usage-based or latency-based routing, cooldown periods,
+and per-deployment rate limits (RPM/TPM).
+
+Configuration is loaded from YAML ('config/litellm_router.yaml') or
+programmatically via 'RouterConfig'.
+"""
+
+from __future__ import annotations
+
+import os
+import structlog
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, final
+
+from {{ project_slug }}.ai.config import DEFAULT_CHAT_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
+from {{ project_slug }}.ai.llm.base_llm_adapter import BaseLLMAdapter
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_DEFAULT_NUM_RETRIES = 3
+_DEFAULT_TIMEOUT = 60
+_DEFAULT_COOLDOWN = 60
+_DEFAULT_ALLOWED_FAILS = 3
+_ENV_VAR_PATTERN = "${%s}"
+
+
+@dataclass(frozen=True, slots=True)
+class DeploymentConfig:
+    """Configuration for a single model deployment."""
+
+    model_name: str
+    litellm_model: str
+    api_key: str | None = None
+    api_base: str | None = None
+    api_version: str | None = None
+    rpm: int | None = None
+    tpm: int | None = None
+
+
+@dataclass(slots=True)
+class RouterConfig:
+    """Configuration for the LiteLLM Router.
+
+    Attributes:
+        deployments (list[DeploymentConfig]): Model deployment definitions.
+        routing_strategy (str): Strategy for selecting deployments.
+        fallbacks (list[dict[str, list[str]]]): Fallback chains.
+        context_window_fallbacks (list[dict[str, list[str]]]): Context overflow fallbacks.
+        num_retries (int): Retries per deployment before fallback.
+        timeout (float): Request timeout in seconds.
+        allowed_fails (int): Failures before cooldown.
+        cooldown_time (int): Cooldown duration in seconds.
+    """
+
+    deployments: list[DeploymentConfig] = field(default_factory=list)
+    routing_strategy: str = "usage-based-routing"
+    fallbacks: list[dict[str, list[str]]] = field(default_factory=list)
+    context_window_fallbacks: list[dict[str, list[str]]] = field(default_factory=list)
+    num_retries: int = _DEFAULT_NUM_RETRIES
+    timeout: float = _DEFAULT_TIMEOUT
+    allowed_fails: int = _DEFAULT_ALLOWED_FAILS
+    cooldown_time: int = _DEFAULT_COOLDOWN
+    retry_after: int | None = None
+    default_max_parallel_requests: int | None = None
+    enable_pre_call_checks: bool = False
+    enable_weighted_failover: bool = False
+
+
+def _resolve_env_var(value: str | None) -> str | None:
+    """Resolve '${VAR_NAME}' patterns to environment variable values."""
+    if value is None:
+        return None
+    if value.startswith("${") and value.endswith("}"):
+        var_name = value[2:-1]
+        return os.environ.get(var_name)
+    return value
+
+
+def load_router_config(config_path: str | Path | None = None) -> RouterConfig:
+    """Load router configuration from a YAML file.
+
+    Args:
+        config_path (str | Path | None): Path to YAML config file.
+            Defaults to 'config/litellm_router.yaml' relative to backend root.
+
+    Returns:
+        RouterConfig: Parsed router configuration.
+    """
+    import yaml
+
+    if config_path is None:
+        config_path = Path("config/litellm_router.yaml")
+    else:
+        config_path = Path(config_path)
+
+    if not config_path.exists():
+        logger.warning("litellm_router_config_not_found", path=str(config_path))
+        return RouterConfig()
+
+    with config_path.open() as f:
+        raw = yaml.safe_load(f) or {}
+
+    deployments: list[DeploymentConfig] = []
+    for entry in raw.get("model_list", []):
+        params = entry.get("litellm_params", {})
+        deployments.append(
+            DeploymentConfig(
+                model_name=entry.get("model_name", ""),
+                litellm_model=params.get("model", ""),
+                api_key=_resolve_env_var(params.get("api_key")),
+                api_base=_resolve_env_var(params.get("api_base")),
+                api_version=params.get("api_version"),
+                rpm=entry.get("rpm"),
+                tpm=entry.get("tpm"),
+            )
+        )
+
+    router_settings = raw.get("router_settings", {})
+    litellm_settings = raw.get("litellm_settings", {})
+
+    return RouterConfig(
+        deployments=deployments,
+        routing_strategy=router_settings.get("routing_strategy", "usage-based-routing"),
+        fallbacks=litellm_settings.get("fallbacks", []),
+        context_window_fallbacks=litellm_settings.get("context_window_fallbacks", []),
+        num_retries=litellm_settings.get("num_retries", _DEFAULT_NUM_RETRIES),
+        timeout=litellm_settings.get("request_timeout", _DEFAULT_TIMEOUT),
+        allowed_fails=litellm_settings.get("allowed_fails", _DEFAULT_ALLOWED_FAILS),
+        cooldown_time=router_settings.get("cooldown_time", _DEFAULT_COOLDOWN),
+        retry_after=router_settings.get("retry_after"),
+        default_max_parallel_requests=router_settings.get("default_max_parallel_requests"),
+        enable_pre_call_checks=bool(router_settings.get("enable_pre_call_checks", False)),
+        enable_weighted_failover=bool(router_settings.get("enable_weighted_failover", False)),
+    )
+
+
+@final
+class LiteLLMRouterAdapter(BaseLLMAdapter):
+    """LLM adapter with multi-deployment load balancing and fallback.
+
+    Uses 'litellm.Router' for intelligent request routing across
+    multiple model deployments. Supports:
+    - Usage-based routing (distribute by TPM/RPM)
+    - Latency-based routing (prefer fastest deployment)
+    - Automatic fallback to alternative models on failure
+    - Cooldown periods for failing deployments
+    - Context window overflow fallback to larger models
+
+    Args:
+        config (RouterConfig): Router configuration.
+        default_model (str): Default model name for requests.
+    """
+
+    __slots__ = ("_config", "_default_model", "_router")
+
+    def __init__(
+        self,
+        *,
+        config: RouterConfig | None = None,
+        default_model: str = DEFAULT_CHAT_MODEL,
+    ) -> None:
+        if config is None:
+            config = load_router_config()
+        self._config = config
+        self._default_model = default_model
+        self._router = self._build_router()
+
+    def _build_router(self) -> Any:
+        """Build the litellm.Router instance from config."""
+        from litellm import Router
+
+        model_list = []
+        for dep in self._config.deployments:
+            entry: dict[str, Any] = {
+                "model_name": dep.model_name,
+                "litellm_params": {
+                    "model": dep.litellm_model,
+                },
+            }
+            if dep.api_key:
+                entry["litellm_params"]["api_key"] = dep.api_key
+            if dep.api_base:
+                entry["litellm_params"]["api_base"] = dep.api_base
+            if dep.api_version:
+                entry["litellm_params"]["api_version"] = dep.api_version
+            if dep.rpm:
+                entry["rpm"] = dep.rpm
+            if dep.tpm:
+                entry["tpm"] = dep.tpm
+            model_list.append(entry)
+
+        router_kwargs: dict[str, Any] = {
+            "model_list": model_list,
+            "fallbacks": self._config.fallbacks or None,
+            "context_window_fallbacks": self._config.context_window_fallbacks or None,
+            "num_retries": self._config.num_retries,
+            "timeout": self._config.timeout,
+            "allowed_fails": self._config.allowed_fails,
+            "cooldown_time": self._config.cooldown_time,
+            "routing_strategy": self._config.routing_strategy,
+        }
+        if self._config.retry_after is not None:
+            router_kwargs["retry_after"] = self._config.retry_after
+        if self._config.default_max_parallel_requests is not None:
+            router_kwargs["default_max_parallel_requests"] = (
+                self._config.default_max_parallel_requests
+            )
+        if self._config.enable_pre_call_checks:
+            router_kwargs["enable_pre_call_checks"] = True
+        if self._config.enable_weighted_failover:
+            router_kwargs["enable_weighted_failover"] = True
+
+        router = Router(**router_kwargs)
+
+        logger.info(
+            "litellm_router_created",
+            deployments=len(model_list),
+            strategy=self._config.routing_strategy,
+        )
+        return router
+
+    @property
+    def model(self) -> str:
+        """Return the default model name."""
+        return self._default_model
+
+    async def complete(
+        self,
+        *,
+        prompt: str = "",
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+        messages: list[dict[str, str]] | None = None,
+        **kwargs: object,
+    ) -> str:
+        """Generate a completion via the LiteLLM Router."""
+        msgs = self._build_messages(prompt, system_prompt, messages)
+        response = await self._router.acompletion(
+            model=self._default_model,
+            messages=msgs,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            **kwargs,
+        )
+        return response.choices[0].message.content or ""
+
+    async def stream(
+        self,
+        *,
+        prompt: str = "",
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+        messages: list[dict[str, str]] | None = None,
+        **kwargs: object,
+    ) -> Any:
+        """Stream completion chunks via the LiteLLM Router."""
+        msgs = self._build_messages(prompt, system_prompt, messages)
+        response = await self._router.acompletion(
+            model=self._default_model,
+            messages=msgs,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+            **kwargs,
+        )
+        async for chunk in response:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
+
+    def _build_messages(
+        self,
+        prompt: str,
+        system_prompt: str | None,
+        messages: list[dict[str, str]] | None,
+    ) -> list[dict[str, str]]:
+        """Build the messages list for the LLM call."""
+        if messages:
+            return messages
+        msgs: list[dict[str, str]] = []
+        if system_prompt:
+            msgs.append({"role": "system", "content": system_prompt})
+        msgs.append({"role": "user", "content": prompt})
+        return msgs
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> LiteLLMRouterAdapter:
+        """Create from a configuration dictionary.
+
+        Args:
+            config (dict[str, object]): Configuration with optional keys:
+                'config_path', 'default_model'.
+
+        Returns:
+            LiteLLMRouterAdapter: Configured router adapter.
+        """
+        config_path = config.get("config_path")
+        router_config = load_router_config(config_path) if config_path else None
+        default_model = str(config.get("default_model", DEFAULT_CHAT_MODEL))
+        return cls(config=router_config, default_model=default_model)

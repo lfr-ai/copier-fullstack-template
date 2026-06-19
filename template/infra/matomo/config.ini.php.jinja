@@ -1,0 +1,21 @@
+; Matomo runtime configuration template.
+; Secrets should be injected via environment variables in compose profiles.
+
+[General]
+assume_secure_protocol = 1
+force_ssl = 1
+trusted_hosts[] = localhost
+
+[database]
+host = "matomo-db"
+username = "{{ '${MATOMO_DB_USER:-matomo}' }}"
+password = "{{ '${MATOMO_DB_PASSWORD:-change-me}' }}"
+dbname = "{{ '${MATOMO_DB_NAME:-matomo}' }}"
+tables_prefix = "matomo_"
+adapter = "MYSQLI"
+
+[log]
+log_writers[] = file
+
+[Tracker]
+enable_fingerprinting_across_websites = 0

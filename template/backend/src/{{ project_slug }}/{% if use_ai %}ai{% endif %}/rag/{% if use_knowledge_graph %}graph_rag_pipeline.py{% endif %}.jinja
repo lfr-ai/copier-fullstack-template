@@ -1,0 +1,314 @@
+"""GraphRAG pipeline -- knowledge graph-enhanced retrieval-augmented generation.
+
+Combines vector similarity search with knowledge graph traversal
+for multi-hop reasoning and entity-relationship aware retrieval.
+
+Architecture::
+
+    Query → Entity Extraction → KG Traversal → Community Detection
+                                    ↓
+    Query → Vector Search → Combine Results → Rerank → LLM Generate
+
+Key capabilities:
+- Entity extraction from queries using LLM
+- Multi-hop graph traversal via Neo4j/NetworkX
+- Community summarization for global context
+- Hybrid scoring: vector similarity + graph proximity
+- Access control enforced at retrieval level
+"""
+
+from __future__ import annotations
+
+import structlog
+from typing import Any, final
+
+from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
+from {{ project_slug }}.core.interfaces.llm import LLMGateway
+from {{ project_slug }}.core.interfaces.retriever import RetrievedContext, RetrieverGateway
+from {{ project_slug }}.ai.rag.retrieval import RetrievalResult
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+_DEFAULT_MAX_HOPS = 2
+_DEFAULT_COMMUNITY_SIZE = 5
+_GRAPH_WEIGHT = 0.4
+_VECTOR_WEIGHT = 0.6
+
+
+@final
+class GraphRAGPipeline:
+    """GraphRAG pipeline with knowledge graph-enhanced retrieval.
+
+    Orchestrates a hybrid retrieval strategy that combines:
+    1. Vector similarity search for semantic matching
+    2. Knowledge graph traversal for structural/relational context
+    3. Community detection for global topic understanding
+    4. LLM-based entity extraction from queries
+
+    The pipeline enforces access control: only documents with
+    'source_type' in allowed sources are retrievable.
+    """
+
+    __slots__ = (
+        "_graph",
+        "_kg",
+        "_llm",
+        "_max_hops",
+        "_retriever",
+    )
+
+    def __init__(
+        self,
+        *,
+        llm: LLMGateway,
+        retriever: RetrieverGateway,
+        knowledge_graph: KnowledgeGraphGateway,
+        max_hops: int = _DEFAULT_MAX_HOPS,
+    ) -> None:
+        """Initialize the GraphRAG pipeline.
+
+        Args:
+            llm: LLM gateway for entity extraction and answer generation.
+            retriever: Vector retriever for semantic search.
+            knowledge_graph: Knowledge graph gateway for graph traversal.
+            max_hops: Maximum traversal hops from extracted entities.
+        """
+        self._llm = llm
+        self._retriever = retriever
+        self._kg = knowledge_graph
+        self._max_hops = max_hops
+        self._graph: object | None = None
+
+    @property
+    def name(self) -> str:
+        """Pipeline identifier."""
+        return "graph_rag"
+
+    @classmethod
+    def from_config(cls, config: dict[str, object]) -> GraphRAGPipeline:
+        """Create a GraphRAGPipeline from a configuration dictionary.
+
+        Args:
+            config: Configuration with 'llm', 'retriever', 'knowledge_graph'.
+
+        Returns:
+            Configured pipeline instance.
+        """
+        llm = config.get("llm")
+        retriever = config.get("retriever")
+        kg = config.get("knowledge_graph")
+
+        if llm is None:
+            msg = "llm is required"
+            raise ValueError(msg)
+        if retriever is None:
+            msg = "retriever is required"
+            raise ValueError(msg)
+        if kg is None:
+            msg = "knowledge_graph is required"
+            raise ValueError(msg)
+
+        return cls(
+            llm=llm,  # type: ignore[arg-type]
+            retriever=retriever,  # type: ignore[arg-type]
+            knowledge_graph=kg,  # type: ignore[arg-type]
+            max_hops=int(config.get("max_hops", _DEFAULT_MAX_HOPS)),
+        )
+
+    async def query(
+        self,
+        question: str,
+        *,
+        top_k: int = 5,
+        system_prompt: str | None = None,
+        filters: dict[str, object] | None = None,
+    ) -> RetrievalResult:
+        """Execute a GraphRAG query combining vector and graph retrieval.
+
+        Args:
+            question: User's natural language question.
+            top_k: Number of results per retrieval strategy.
+            system_prompt: Optional custom system prompt.
+            filters: Metadata filters (access control enforced).
+
+        Returns:
+            RetrievalResult: Answer with hybrid sources.
+        """
+        log = logger.bind(workflow="graph_rag", question_len=len(question))
+        log.info("graph_rag_query_start")
+
+        # Step 1: Extract entities from query
+        entities = await self._extract_entities(question)
+        log.debug("entities_extracted", count=len(entities))
+
+        # Step 2: Vector retrieval
+        vector_results = await self._retriever.retrieve(
+            query=question, top_k=top_k, filters=filters
+        )
+
+        # Step 3: Graph traversal from extracted entities
+        graph_contexts = await self._traverse_graph(entities, max_hops=self._max_hops)
+        log.debug("graph_contexts_found", count=len(graph_contexts))
+
+        # Step 4: Combine and rerank results
+        combined = self._merge_results(vector_results, graph_contexts)
+        combined = sorted(combined, key=lambda c: c.score, reverse=True)[:top_k]
+
+        # Step 5: Generate answer
+        context_text = "\n\n".join(
+            f"[Source {i+1}] {ctx.content}" for i, ctx in enumerate(combined)
+        )
+
+        answer_prompt = (
+            f"{system_prompt or 'Du er en hjælpsom assistent for sagsbehandlere.'}\n\n"
+            f"Kontekst:\n{context_text}\n\n"
+            f"Spørgsmål: {question}\n\n"
+            f"Svar baseret på konteksten ovenfor:"
+        )
+
+        answer = await self._llm.complete(prompt=answer_prompt)
+
+        log.info("graph_rag_query_complete", sources=len(combined))
+
+        return RetrievalResult(
+            answer=answer,
+            sources=combined,
+            metadata={
+                "pipeline": "graph_rag",
+                "entities_extracted": entities,
+                "vector_results": len(vector_results),
+                "graph_results": len(graph_contexts),
+            },
+        )
+
+    async def ingest(
+        self,
+        documents: list[dict[str, object]],
+        *,
+        source_type: str = "sagsbehandler_sag",
+    ) -> int:
+        """Ingest documents and extract entities into the knowledge graph.
+
+        Args:
+            documents: List of document dicts with 'content' and 'metadata'.
+            source_type: Source classification tag.
+
+        Returns:
+            int: Number of documents processed.
+        """
+        count = 0
+        for doc in documents:
+            content = str(doc.get("content", ""))
+            metadata = dict(doc.get("metadata", {}))
+            metadata["source_type"] = source_type
+
+            # Extract entities and relations from document
+            entities_and_relations = await self._extract_entities_and_relations(content)
+
+            # Add to knowledge graph
+            for entity in entities_and_relations.get("entities", []):
+                await self._kg.add_entity(
+                    entity_id=entity["id"],
+                    entity_type=entity["type"],
+                    properties={**entity.get("properties", {}), "source_type": source_type},
+                )
+
+            for relation in entities_and_relations.get("relations", []):
+                await self._kg.add_relation(
+                    source_id=relation["source"],
+                    target_id=relation["target"],
+                    relation_type=relation["type"],
+                    properties=relation.get("properties", {}),
+                )
+
+            count += 1
+
+        logger.info("graph_rag_ingestion_complete", documents=count)
+        return count
+
+    async def _extract_entities(self, text: str) -> list[str]:
+        """Extract named entities from text using LLM."""
+        prompt = (
+            "Extract the key entities (people, organizations, case numbers, "
+            "dates, concepts) from the following text. Return them as a "
+            "comma-separated list.\n\n"
+            f"Text: {text}\n\nEntities:"
+        )
+        response = await self._llm.complete(prompt=prompt, max_tokens=200)
+        return [e.strip() for e in response.split(",") if e.strip()]
+
+    async def _extract_entities_and_relations(
+        self, content: str
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Extract entities and relations from document content."""
+        prompt = (
+            "Extract entities and their relationships from this text. "
+            "Format as JSON with 'entities' (list of {id, type, properties}) "
+            "and 'relations' (list of {source, target, type}).\n\n"
+            f"Text: {content[:2000]}\n\nJSON:"
+        )
+        response = await self._llm.complete(prompt=prompt, max_tokens=1000)
+
+        import json
+
+        try:
+            return json.loads(response)
+        except (json.JSONDecodeError, ValueError):
+            return {"entities": [], "relations": []}
+
+    async def _traverse_graph(
+        self, entities: list[str], *, max_hops: int
+    ) -> list[RetrievedContext]:
+        """Traverse the knowledge graph from extracted entities."""
+        contexts: list[RetrievedContext] = []
+
+        for entity in entities[:5]:  # Limit to top 5 entities
+            try:
+                neighbors = await self._kg.get_neighbors(
+                    entity_id=entity, max_hops=max_hops
+                )
+                for neighbor in neighbors:
+                    content = str(neighbor.get("content", neighbor.get("id", "")))
+                    contexts.append(
+                        RetrievedContext(
+                            id=str(neighbor.get("id", "")),
+                            content=content,
+                            score=_GRAPH_WEIGHT,  # Base score for graph results
+                            metadata={"source": "knowledge_graph", "entity": entity},
+                        )
+                    )
+            except Exception:  # noqa: BLE001 -- graceful degradation
+                logger.debug("graph_traversal_failed", entity=entity)
+
+        return contexts
+
+    def _merge_results(
+        self,
+        vector_results: list[RetrievedContext],
+        graph_results: list[RetrievedContext],
+    ) -> list[RetrievedContext]:
+        """Merge and score vector + graph results."""
+        merged: dict[str, RetrievedContext] = {}
+
+        for ctx in vector_results:
+            merged[ctx.id] = RetrievedContext(
+                id=ctx.id,
+                content=ctx.content,
+                score=ctx.score * _VECTOR_WEIGHT,
+                metadata={**ctx.metadata, "retrieval_type": "vector"},
+            )
+
+        for ctx in graph_results:
+            if ctx.id in merged:
+                # Boost score for items found in both
+                existing = merged[ctx.id]
+                merged[ctx.id] = RetrievedContext(
+                    id=existing.id,
+                    content=existing.content,
+                    score=existing.score + ctx.score,
+                    metadata={**existing.metadata, "retrieval_type": "hybrid"},
+                )
+            else:
+                merged[ctx.id] = ctx
+
+        return list(merged.values())

@@ -1,0 +1,19 @@
+{
+  "chat.instructionsFilesLocations": {
+    ".github/instructions": true,
+    ".claude/rules": true
+  },
+  "yaml.schemas": {
+    "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": [
+      "template/compose*.yml.jinja",
+      "template/compose*.yaml.jinja"
+    ],
+    "https://json.schemastore.org/prometheus.json": "template/infra/prometheus/prometheus.yml"
+  },
+  "files.associations": {
+    "*.yml.jinja": "jinja-yaml",
+    "*.yaml.jinja": "jinja-yaml",
+    "*.json.jinja": "jinja-json",
+    "*.toml.jinja": "jinja-toml"
+  }
+}

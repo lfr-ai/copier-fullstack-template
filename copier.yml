@@ -129,6 +129,21 @@ use_caddy:
   help: "Include Caddy reverse proxy (TLS, compression, security headers)"
   default: true
 
+use_matomo:
+  type: bool
+  help: "Include Matomo analytics stack (Matomo + MariaDB) via compose profile"
+  default: false
+
+use_observability:
+  type: bool
+  help: "Include observability stack (OpenTelemetry Collector, Prometheus, Grafana, Tempo)"
+  default: true
+
+use_renovate:
+  type: bool
+  help: "Include Renovate dependency update configuration"
+  default: true
+
 api_style:
   type: str
   help: "API transport(s) to include"

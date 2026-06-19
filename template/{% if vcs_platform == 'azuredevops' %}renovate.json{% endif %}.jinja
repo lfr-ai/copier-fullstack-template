@@ -4,8 +4,20 @@
   "endpoint": "{% raw %}{{ RENOVATE_ENDPOINT }}{% endraw %}",
   "extends": [
     "config:recommended",
-    ":semanticCommits"
+    ":semanticCommits",
+    ":rebaseStalePrs"
   ],
+  "description": [
+    "Renovate config tuned for this template's frontend-first fullstack stack."
+  ],
+  "configMigration": true,
+  "fetchChangeLogs": "off",
+  "prCreation": "not-pending",
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
   "timezone": "Europe/Copenhagen",
   "schedule": [
     "before 6am on monday"
@@ -13,41 +25,17 @@
   "labels": ["dependencies"],
   "packageRules": [
     {
-      "description": "Group Python framework updates together",
-      "groupName": "python-frameworks",
-      "matchManagers": ["pip_requirements", "pip_setup", "pipenv", "poetry"],
-      "matchPackageNames": [
-        "fastapi",
-        "pydantic",
-        "pydantic-core",
-        "pydantic-settings",
-        "sqlalchemy",
-        "alembic"
-      ],
+      "description": "Auto-merge npm minor/patch updates",
+      "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
       "semanticCommitType": "chore",
-      "semanticCommitScope": "backend"
-    },
-    {
-      "description": "Group Python minor/patch updates",
-      "groupName": "python-minor-patch",
-      "matchManagers": ["pip_requirements", "pip_setup", "pipenv", "poetry"],
-      "matchPackageNames": [
-        "*",
-        "!fastapi",
-        "!pydantic",
-        "!pydantic-core",
-        "!pydantic-settings",
-        "!sqlalchemy",
-        "!alembic"
-      ],
-      "matchUpdateTypes": ["minor", "patch"],
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "backend"
+      "semanticCommitScope": "frontend"
     },
     {
       "description": "Group React ecosystem updates together",
-      "groupName": "react-ecosystem",
+      "groupName": "react ecosystem",
       "matchManagers": ["npm"],
       "matchPackageNames": [
         "react",
@@ -55,46 +43,52 @@
         "/^@types\\/react/",
         "/^react-router/"
       ],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Group all npm dev dependencies",
+      "groupName": "dev dependencies",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
       "semanticCommitType": "chore",
-      "semanticCommitScope": "frontend"
+      "semanticCommitScope": "dev"
     },
     {
       "description": "Group UI component library updates",
-      "groupName": "ui-components",
+      "groupName": "ui stack",
       "matchManagers": ["npm"],
       "matchPackageNames": [
         "/^@radix-ui\\//",
         "tailwindcss",
+        "@tailwindcss/vite",
         "class-variance-authority",
         "clsx",
-        "tailwind-merge"
+        "tailwind-merge",
+        "tw-animate-css",
+        "lucide-react"
       ],
-      "matchUpdateTypes": ["minor", "patch"],
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "frontend"
+      "matchUpdateTypes": ["minor", "patch"]
     },
     {
-      "description": "Group dev tooling updates together",
-      "groupName": "dev-tooling",
-      "matchManagers": ["npm"],
-      "matchDepTypes": ["devDependencies"],
-      "matchPackageNames": [
-        "ruff",
-        "pytest",
-        "pytest-cov",
-        "pytest-asyncio",
-        "mypy",
-        "vitest",
-        "vite",
-        "@vitejs/plugin-react",
-        "typescript",
-        "eslint",
-        "prettier"
-      ],
+      "description": "Group Python minor/patch dependencies",
+      "groupName": "python dependencies",
+      "matchManagers": ["pip_requirements", "pip_setup", "pipenv", "poetry"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "backend"
+    },
+    {
+      "description": "Group container dependencies",
+      "groupName": "container image dependencies",
+      "matchManagers": ["dockerfile", "docker-compose"],
       "matchUpdateTypes": ["minor", "patch"],
       "semanticCommitType": "chore",
-      "semanticCommitScope": "dev"
+      "semanticCommitScope": "docker"
     },
     {
       "description": "Pin Azure Pipelines tasks to major versions only",
@@ -105,22 +99,10 @@
       "semanticCommitScope": "deps"
     },
     {
-      "description": "Auto-merge Python patch updates",
-      "matchManagers": ["pip_requirements", "pip_setup", "pipenv", "poetry"],
-      "matchUpdateTypes": ["patch"],
-      "automerge": true,
-      "automergeType": "pr",
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "security"
-    },
-    {
-      "description": "Auto-merge npm patch updates",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["patch"],
-      "automerge": true,
-      "automergeType": "pr",
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "security"
+      "description": "Manual review for major version bumps",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "breaking"]
     }{% if container_runtime == 'docker' %},
     {
       "description": "Group Docker base image updates",
@@ -136,10 +118,11 @@
     "labels": ["security"]
   },
   "prConcurrentLimit": 10,
-  "prHourlyLimit": 2,
+  "prHourlyLimit": 4,
   "enabledManagers": [
     "pip_requirements",
     "pip_setup",
+    "pep621",
     "npm",
     "dockerfile",
     "docker-compose",

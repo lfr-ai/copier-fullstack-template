@@ -8,6 +8,12 @@
       "args": ["-y", "@playwright/mcp@latest", "--isolated", "--headless"]
     },
 {% endif %}
+{% if use_storybook %}
+    "storybook": {
+      "type": "http",
+      "url": "http://localhost:6006/mcp"
+    },
+{% endif %}
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp"

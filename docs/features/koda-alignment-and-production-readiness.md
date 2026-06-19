@@ -21,6 +21,26 @@ Therefore, parity is enforced with this mapping:
 - **Cross-cutting AI/agent configuration** → usually both (`root` and
    `template/`), with root as subset where intentional
 
+### Root/template/both placement matrix (enforcement baseline)
+
+| Capability | Root (template repo) | Template (generated project) | Policy |
+| --- | --- | --- | --- |
+| Playwright | Optional local MCP wiring/docs | `template/.github/workflows/{% if use_playwright %}playwright.yml{% endif %}.jinja`, `template/frontend/{% if use_playwright %}playwright.config.ts{% endif %}` | **Template-first**, root only for template-dev validation |
+| shadcn/ui skills | Root assistant config/docs | `template/.mcp.json.jinja`, frontend scaffolding | **Both** (root for authoring, template for consumers) |
+| MCP server wiring | `.mcp.json`, `.claude/mcp.json` | `template/.mcp.json.jinja`, `template/.claude/mcp.json.jinja` | **Both** with root as subset mirror |
+| GitNexus | Root docs/tooling for template maintainers | `template/{% if with_gitnexus %}.gitnexus{% endif %}/**` | **Both**, generated artifacts live in template |
+| Pipelines (GitHub/Azure) | Root CI for template repository | `template/.github/workflows/*.jinja`, `template/.azuredevops/**/*.jinja` | **Separated by runtime** |
+| CodeRabbit | Root repo review policy | `template/{% if use_coderabbit %}.coderabbit.yaml{% endif %}.jinja` | **Both** |
+| Codecov | Optional root reporting for template CI | `template/.codecov.yml.jinja`, template CI upload step | **Template-first** |
+| Keploy | Optional maintainer docs | `template/keploy.yml.jinja`, `template/docs/KEPLOY.md.jinja` | **Template-first** |
+| Testcontainers | N/A for root (except template tests) | `template/backend/pyproject.toml.jinja`, backend tests | **Template-first** |
+| LiteLLM | N/A | `template/backend/src/**/litellm_*.py.jinja`, config yaml | **Template-only** |
+| Grafana/Prometheus/OTel | N/A | `template/infra/grafana/**`, `template/infra/prometheus/**`, `template/infra/otel/collector.yaml`, `template/compose*.yml.jinja` | **Template-only** |
+| Matomo | Optional roadmap docs | Future template optional module under `template/infra/` | **Template module when enabled** |
+
+This matrix is the source-of-truth for deciding whether to implement changes in
+`root`, `template/`, or both during parity modernization work.
+
 ## Audit Scope
 
 ### Structural and governance
@@ -96,6 +116,71 @@ Exit code:
 3. Add CI job to run `task audit:koda-alignment` in environments where
    reference path is available.
 4. Add template prompt files mirroring key OPSX prompt names from reference repo.
+
+## Phase-2 Implementation Snapshot (Current Session)
+
+### Clean-architecture enforcement for CrewAI orchestration
+
+- Added protocol ports in
+   `template/backend/src/{{ project_slug }}/core/interfaces/crewai.py`:
+   - `CrewOrchestrationSupervisor`
+   - `CrewFlowRegistry`
+- Updated
+   `template/backend/src/{{ project_slug }}/application/services/{% if use_crewai %}crewai_service.py{% endif %}.jinja`
+   to depend on these ports instead of concrete adapter imports for orchestration
+   dependencies.
+
+### CrewAI API route hardening
+
+- Rebuilt
+   `template/backend/src/{{ project_slug }}/presentation/api/routes/{% if use_crewai %}crewai.py{% endif %}.jinja`
+   with valid formatting/structure and explicit request models.
+
+### HMAS observability baseline expansion
+
+- Updated
+   `template/backend/src/{{ project_slug }}/{% if use_ai %}ai{% endif %}/{% if use_crewai %}crewai{% endif %}/hmas.py.jinja`
+   with optional Prometheus metrics:
+   - `hmas_orchestrations_total{status=...}`
+   - `hmas_subgoals_total{state=...}`
+   - `hmas_orchestration_duration_seconds`
+- Fixed LLM protocol usage in HMAS planning/aggregation to call
+   `complete(prompt=...)` with keyword arguments (protocol-compliant).
+
+### LiteLLM router hardening
+
+- Extended
+   `template/backend/src/{{ project_slug }}/{% if use_ai %}ai{% endif %}/llm/litellm_router.py.jinja`
+   to support advanced reliability settings from YAML:
+   - `retry_after`
+   - `default_max_parallel_requests`
+   - `enable_pre_call_checks`
+   - `enable_weighted_failover`
+- Updated
+   `template/backend/config/{% if use_ai %}litellm_router.yaml{% endif %}.jinja`
+   with default values for these controls to improve production routing behavior.
+
+### Local environment bootstrap for AI/provider scaffolding
+
+- Added root `.env` placeholder file to make required local variables explicit for
+   LiteLLM/provider orchestration and tracing setup.
+
+### Local integration and analytics scaffolding
+
+- Expanded template backend development dependencies in
+   `template/backend/pyproject.toml.jinja` with:
+   - `testcontainers` (generic, and postgres extra when DB backend is PostgreSQL)
+   - `duckdb`
+- Added `test:duckdb:smoke` task in `template/tasks/backend.yml.jinja` for quick
+   local validation of DuckDB-based workflows.
+
+### Azure container deployment guidance alignment
+
+- Incorporated Azure ACR/App Service and Bicep best-practice references during
+   implementation planning, including:
+   - network-close registry placement and geo-replication strategy for ACR
+   - App Service custom-container flow (build/push/deploy/restart)
+   - Bicep naming, parameter, and symbolic-reference recommendations
 
 ## Validation Commands
 

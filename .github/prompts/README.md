@@ -1,8 +1,7 @@
 # Prompt Library (Root Repo)
 
 This folder mirrors prompt-driven workflows used in generated projects and
-reference repositories (including `koda_automation`) for parity of agentic
-operating patterns.
+reference implementations for parity of agentic operating patterns.
 
 ## Scope
 

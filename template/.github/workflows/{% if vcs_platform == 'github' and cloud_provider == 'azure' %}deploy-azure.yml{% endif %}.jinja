@@ -1,0 +1,135 @@
+{%- raw %}
+name: Deploy to Azure
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+concurrency:
+  group: deploy-azure-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: {% endraw %}{{ project_slug | replace("_", "") }}{% raw %}acr
+  APP_NAME: {% endraw %}{{ project_slug | replace("_", "-") }}{% raw %}
+  RESOURCE_GROUP: {% endraw %}{{ project_slug | replace("_", "-") }}{% raw %}-${{ inputs.environment || 'dev' }}-rg
+
+jobs:
+  build-and-push:
+    name: Build & Push to ACR
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      image-tag: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Containerfile
+          target: prod
+          push: true
+          tags: |
+            ${{ env.ACR_NAME }}.azurecr.io/{% endraw %}{{ project_slug }}{% raw %}-app:${{ steps.tag.outputs.version }}
+            ${{ env.ACR_NAME }}.azurecr.io/{% endraw %}{{ project_slug }}{% raw %}-app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to App Service
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_NAME }}-${{ inputs.environment || 'dev' }}-app
+          images: ${{ env.ACR_NAME }}.azurecr.io/{% endraw %}{{ project_slug }}{% raw %}-app:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Wait for health check
+        run: |
+          APP_URL="https://${{ env.APP_NAME }}-${{ inputs.environment || 'dev' }}-app.azurewebsites.net"
+          for i in {1..30}; do
+            if curl -sf "${APP_URL}/health" > /dev/null 2>&1; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Waiting for app to be healthy... (attempt $i/30)"
+            sleep 10
+          done
+          echo "Health check failed after 30 attempts"
+          exit 1
+
+  validate-iac:
+    name: Validate IaC
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate Bicep
+        run: az bicep build --file infra/deploy.bicep
+
+      - name: What-If deployment
+        run: |
+          az deployment sub what-if \
+            --location {% endraw %}{{ azure_location }}{% raw %} \
+            --template-file infra/deploy.bicep \
+            --parameters infra/parameters/dev/deploy.dev.bicepparam \
+            --parameters projectName="${{ env.APP_NAME }}" env="dev"
+{% endraw %}

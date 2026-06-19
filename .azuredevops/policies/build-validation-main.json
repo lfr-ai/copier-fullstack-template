@@ -1,0 +1,20 @@
+{
+  "isBlocking": true,
+  "isEnabled": true,
+  "settings": {
+    "buildDefinitionId": 0,
+    "displayName": "Required: CI quality gates",
+    "queueOnSourceUpdateOnly": true,
+    "scope": [
+      {
+        "matchKind": "Exact",
+        "refName": "refs/heads/main",
+        "repositoryId": "REPLACE_WITH_REPOSITORY_ID"
+      }
+    ],
+    "validDuration": 0
+  },
+  "type": {
+    "id": "0609b952-1397-4640-95ec-e00a01b2c241"
+  }
+}

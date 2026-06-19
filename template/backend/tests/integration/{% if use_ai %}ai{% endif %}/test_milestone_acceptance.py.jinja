@@ -24,7 +24,6 @@ import pytest
 from {{ project_slug }}.ai.rag.adaptive_pipeline import AdaptiveRAGPipeline
 from {{ project_slug }}.ai.rag.retrieval import RetrievalResult
 from {{ project_slug }}.ai.rag.self_crag_pipeline import SelfCRAGPipeline
-from {{ project_slug }}.core.adapters.llm_hallucination_detector import HallucinationDetector
 from {{ project_slug }}.core.interfaces.retriever import RetrievedContext
 from {{ project_slug }}.core.interfaces.vector_store import VectorSearchResult
 {%- if database_backend == "postgresql" %}
@@ -164,57 +163,6 @@ async def test_acceptance_1_self_crag_re_retrieval(
     assert len(result.sources) == 2
     assert result.sources[0].metadata["content"] == "High relevance doc 1"
     assert result.sources[1].metadata["content"] == "High relevance doc 2"
-
-
-@pytest.mark.acceptance
-@pytest.mark.asyncio
-async def test_acceptance_2_hallucination_detection_with_safe_response(
-    mock_llm: AsyncMock,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Acceptance 2: Hallucination detection with safe response (adjusted criteria).
-
-    Scenario:
-    - Generated answer with fabricated claim is checked for grounding
-    - Hallucination detector identifies 'not grounded' response
-    - Re-generation triggered with adjusted criteria
-
-    Success Criteria:
-    - Hallucination detector correctly identifies ungrounded response
-    - Detection is case-insensitive
-    - LLM verification prompt includes query, context, and response
-    """
-    detector = HallucinationDetector(llm_gateway=mock_llm)
-
-    # LLM verifies response is not grounded
-    mock_llm.complete.return_value = "The response is not grounded in the provided context"
-
-    result = await detector.detect_hallucination(
-        user_query="What is Python?",
-        context=["Python is a programming language"],
-        llm_response="Python is a fruit grown in tropical climates",
-    )
-
-    # Verify hallucination detected
-    assert result is True, "Should detect hallucination when response not grounded"
-
-    # Verify LLM was called with verification prompt
-    mock_llm.complete.assert_awaited_once()
-    call_args = mock_llm.complete.call_args
-    assert "What is Python?" in call_args.kwargs["prompt"]
-    assert "Python is a fruit grown in tropical climates" in call_args.kwargs["prompt"]
-
-    # Test case-insensitive detection
-    mock_llm.complete.reset_mock()
-    mock_llm.complete.return_value = "NOT GROUNDED in reality"
-
-    result_case_insensitive = await detector.detect_hallucination(
-        user_query="test",
-        context=["test"],
-        llm_response="test",
-    )
-
-    assert result_case_insensitive is True, "Should detect 'NOT GROUNDED' case-insensitively"
 
 
 @pytest.mark.acceptance

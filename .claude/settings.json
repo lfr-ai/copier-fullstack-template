@@ -58,7 +58,12 @@
       "Bash(jq *)",
       "Bash(shellcheck *)",
       "Bash(actionlint *)",
+      "Bash(docker *)",
+      "Bash(docker compose *)",
+      "Bash(tree *)",
+      "Bash(diff *)",
       "mcp__context7__*",
+      "mcp__gitnexus__*",
       "mcp__shadcn__*"
     ],
     "ask": [
@@ -76,8 +81,11 @@
       "Read(**/*.key)",
       "Read(**/*.crt)",
       "Read(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Read(**/id_rsa*)",
       "Bash(rm -rf /)",
       "Bash(rm -rf ~)",
+      "Bash(rm -rf /*)",
       "Bash(rm -rf $HOME)",
       "Bash(git push --force*)",
       "Bash(git push -f *)",
@@ -94,6 +102,11 @@
       "Bash(*--no-verify*)",
       "Bash(pip install *)",
       "Bash(npm install -g *)",
+      "Bash(apt-get *)",
+      "Bash(yum *)",
+      "Bash(brew install *)",
+      "Bash(choco install *)",
+      "Bash(sudo *)",
       "Bash(chmod 777 *)",
       "WebFetch(**)"
     ]
@@ -117,9 +130,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f .claude/hooks/guard-destructive.sh ]; then bash .claude/hooks/guard-destructive.sh; fi",
+            "command": "powershell -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR\\.claude\\hooks\\scripts\\guard-destructive.ps1\"",
             "timeout": 10,
-            "statusMessage": "Checking for destructive commands..."
+            "statusMessage": "Tool Guardian: checking for dangerous operations..."
           }
         ]
       }
@@ -143,9 +156,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f .claude/hooks/stop-uncommitted-reminder.sh ]; then bash .claude/hooks/stop-uncommitted-reminder.sh; fi",
-            "timeout": 10,
-            "statusMessage": "Checking working tree..."
+            "command": "powershell -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR\\.claude\\hooks\\scripts\\check-licenses.ps1\"",
+            "timeout": 60,
+            "statusMessage": "License Checker: scanning dependency licenses..."
           }
         ]
       }
@@ -156,8 +169,14 @@
       "node_modules",
       ".venv",
       "__pycache__",
+      ".pytest_cache",
+      ".ruff_cache",
+      ".mypy_cache",
       ".cache",
-      ".pre-commit-cache"
+      ".pre-commit-cache",
+      "dist",
+      "build",
+      "*.egg-info"
     ]
   },
   "enabledPlugins": {

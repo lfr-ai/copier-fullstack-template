@@ -1,0 +1,115 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":enableVulnerabilityAlerts",
+    ":rebaseStalePrs"
+  ],
+  "description": [
+    "Renovate config tuned for this template's frontend-first fullstack stack."
+  ],
+  "configMigration": true,
+  "enabledManagers": [
+    "npm",
+    "pep621",
+    "github-actions",
+    "dockerfile",
+    "docker-compose"
+  ],
+  "fetchChangeLogs": "off",
+  "prCreation": "not-pending",
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "timezone": "Europe/Copenhagen",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 10,
+  "packageRules": [
+    {
+      "description": "Auto-merge npm minor/patch updates",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "frontend"
+    },
+    {
+      "description": "Group React ecosystem updates together",
+      "groupName": "react ecosystem",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "/^@types\\/react/",
+        "/^react-router/"
+      ],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Group all npm dev dependencies",
+      "groupName": "dev dependencies",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "dev"
+    },
+    {
+      "description": "Group UI component library updates",
+      "groupName": "ui stack",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "/^@radix-ui\\//",
+        "tailwindcss",
+        "@tailwindcss/vite",
+        "class-variance-authority",
+        "clsx",
+        "tailwind-merge",
+        "tw-animate-css",
+        "lucide-react"
+      ],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Group Python minor/patch dependencies",
+      "groupName": "python dependencies",
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "backend"
+    },
+    {
+      "description": "Group GitHub Actions updates",
+      "groupName": "github actions dependencies",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "semanticCommitType": "ci",
+      "semanticCommitScope": "ci"
+    },
+    {
+      "description": "Group container dependencies",
+      "groupName": "container image dependencies",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "infra"
+    },
+    {
+      "description": "Manual review for major version bumps",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "breaking"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": true
+  }
+}
