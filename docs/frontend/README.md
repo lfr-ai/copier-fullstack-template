@@ -41,3 +41,4 @@
 - `template/frontend/biome.json:22`
 - `template/frontend/biome.json:43`
 - `template/frontend/biome.json:48`
+- `docs/frontend/agentic-best-practices.md`

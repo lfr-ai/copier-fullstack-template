@@ -91,6 +91,8 @@ logs/
 .env.*.local
 !.env.example
 !.env.*.example
+!.secret.baseline
+!secret.baseline
 !.secrets.baseline
 
 *.pem

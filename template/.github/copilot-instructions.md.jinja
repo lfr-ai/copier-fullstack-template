@@ -1,9 +1,9 @@
 ---
-description: Repository development conventions for {{ project_name }}
+description: Repository development conventions for generated projects
 applyTo: "**"
 ---
 
-# {{ project_name }} — Development Instructions
+# Repository Development Instructions
 
 ## Architecture and Boundaries
 
@@ -34,6 +34,8 @@ applyTo: "**"
 - State: Zustand, TanStack React Query
 - Linting: Biome (not Prettier/ESLint)
 - Testing: Vitest + React Testing Library + fast-check, Playwright for E2E
+- Storybook: keep stories focused (one concept per story) with clear JSDoc summaries
+- Storybook AI manifests: tag instructional-only stories/docs with `!manifest`
 
 ## Project Layout
 
@@ -83,11 +85,22 @@ Task-specific playbooks — each is a directory containing a `SKILL.md` file:
 
 | Skill | Domain | When to Apply |
 |-------|--------|---------------|
+| `accessibility/` | Accessibility | WCAG 2.1 AA compliance and inclusive UI behavior |
 | `clean-architecture/` | Architecture | **MANDATORY** for all backend Python work |
+| `ddd/` | Domain modeling | Tactical and strategic DDD guidance |
+| `dry-refactoring/` | Refactoring | Eliminate duplication after jscpd findings |
+| `gitnexus/` | Code intelligence | Graph-powered symbol/impact analysis workflows |
+| `jscpd/` | Duplication analysis | Clone detection before DRY refactors |
+| `playwright/` | E2E testing | User journeys, accessibility, and browser validation |
 | `python-conventions/` | Python | Code quality, typing, idioms |
 | `testing-conventions/` | Testing | Test strategy, markers, coverage gates |
 | `naming-registry/` | Registry | Registry-first constant/code generation |
 | `frontend-react-stack/` | Frontend | React + TypeScript + shadcn/ui |
+| `shadcn-ui/` | UI components | shadcn/ui component composition and conventions |
+| `ui-ux-frontend/` | Frontend UX | Interaction quality, accessibility, responsive behavior |
+| `quality-gate/` | Validation | Pre-merge validation checklist and gate workflow |
+| `sdd/` | Specification | Specification-driven development workflow |
+| `tdd/` | Testing method | Red-green-refactor implementation flow |
 | `openspec-workflow/` | SDD | OpenSpec OPSX workflow and artifact lifecycle |
 
 ## Scoped Instructions (`.github/instructions/`)
@@ -100,6 +113,7 @@ File-scoped instructions auto-load for matching globs:
 | `coding-conventions` | `**/*.py` | Python conventions and style |
 | `commit` | `**` | Conventional Commits format |
 | `frontend` | `frontend/**` | TypeScript, components, Vite patterns |
+| `ui-ux-frontend` | `frontend/src/presentation/**/*.{ts,tsx,css}` | UX and accessibility interaction patterns |
 | `testing` | `tests/**/*.py` | Test structure and markers |
 | `shell` | `**/*.zsh`, `scripts/**` | zsh scripting standards |
 | `prompt` | `**/*.prompt.md` | Prompt file guidelines |
@@ -132,6 +146,9 @@ Claude Code reads from both `.github/` and `.claude/`:
 |--------|---------|
 | `context7` | Library/framework documentation lookup |
 | `shadcn` | shadcn/ui component scaffolding |
+{% if use_playwright %}| `playwright` | Browser automation for E2E and UI validation workflows |
+{% endif %}{% if use_storybook %}| `storybook` | Story introspection and component debugging workflows |
+{% endif %}
 {% if with_gitnexus %}| `gitnexus` | Graph-powered code intelligence |
 {% endif %}
 

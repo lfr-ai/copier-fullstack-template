@@ -21,6 +21,9 @@ handoffs:
   - label: 'Write component tests'
     agent: testing-specialist
     prompt: 'Write Vitest + React Testing Library tests for the component I just built'
+  - label: 'Polish UX and accessibility'
+    agent: ui-ux-frontend
+    prompt: 'Review and improve accessibility, responsive behavior, and interaction clarity'
   - label: 'Debug frontend issue'
     agent: debug
     prompt: 'Debug the frontend issue I encountered'
@@ -40,6 +43,7 @@ and Tailwind CSS v4.
 - Biome (lint + format — NOT ESLint/Prettier)
 - Vitest + React Testing Library + fast-check
 - Storybook (component development)
+- Storybook MCP + manifests (agentic component discovery and validation)
 
 ## Component Rules
 

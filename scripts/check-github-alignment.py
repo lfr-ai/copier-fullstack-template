@@ -6,6 +6,7 @@ alignment checks run consistently on Windows and Unix environments.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 _REQUIRED_FILES: tuple[str, ...] = (
@@ -33,9 +34,12 @@ _REQUIRED_FILES: tuple[str, ...] = (
     "template/.github/instructions/testing.instructions.md.jinja",
     "template/.github/instructions/update-docs-on-code-change.instructions.md",
     "template/.github/skills/clean-architecture/SKILL.md",
+    "template/.github/skills/accessibility/SKILL.md",
     "template/.github/skills/frontend-react-stack/SKILL.md",
     "template/.github/skills/naming-registry/SKILL.md",
+    "template/.github/skills/playwright/SKILL.md",
     "template/.github/skills/python-conventions/SKILL.md",
+    "template/.github/skills/shadcn-ui/SKILL.md",
     "template/.github/skills/testing-conventions/SKILL.md",
 )
 
@@ -51,6 +55,35 @@ _LEGACY_FILES: tuple[str, ...] = (
     "template/.github/hooks/scripts/scan-secrets.ps1",
     "template/.github/skills/shadcn-frontend/SKILL.md",
     "template/.github/skills/README.md",
+)
+
+_ROOT_HOOKS_CONFIG = ".github/hooks/hooks.json"
+_TEMPLATE_HOOKS_CONFIG = "template/.github/hooks/hooks.json"
+_EXPECTED_HOOK_COMMANDS: dict[str, tuple[str, str]] = {
+    "PreToolUse": (
+        ".github/hooks/scripts/guard-tool.sh",
+        "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\guard-tool.ps1",
+    ),
+    "Stop": (
+        ".github/hooks/scripts/check-licenses.sh",
+        "powershell -ExecutionPolicy Bypass -File .github\\hooks\\scripts\\check-licenses.ps1",
+    ),
+}
+
+_AGENTIC_PATHS_TO_SCAN: tuple[str, ...] = (
+    ".github/agents",
+    ".github/instructions",
+    ".github/prompts",
+    ".github/skills",
+    "template/.github/agents",
+    "template/.github/instructions",
+    "template/.github/prompts",
+    "template/.github/skills",
+)
+_PROJECT_SPECIFIC_TOKENS: tuple[str, ...] = (
+    "copier-fullstack-template",
+    "reference_automation",
+    "frontend_frontend",
 )
 
 
@@ -88,6 +121,130 @@ def _collect_legacy_present(*, repo_root: Path) -> list[str]:
     return present
 
 
+def _validate_hook_entries(
+    *,
+    hooks: dict[str, object],
+    relative_path: str,
+) -> list[str]:
+    """Validate expected hook command entries for one hooks config file.
+
+    Args:
+        hooks (dict[str, object]): Parsed 'hooks' mapping.
+        relative_path (str): Config path used for diagnostics.
+
+    Returns:
+        list[str]: Validation failures for this config.
+    """
+
+    violations: list[str] = []
+    for hook_name, (expected_command, expected_windows) in _EXPECTED_HOOK_COMMANDS.items():
+        entries = hooks.get(hook_name, [])
+        if not entries:
+            violations.append(f"Missing '{hook_name}' hook in {relative_path}")
+            continue
+
+        current_command = entries[0].get("command")
+        current_windows = entries[0].get("windows")
+        if current_command != expected_command:
+            violations.append(
+                f"{relative_path} '{hook_name}' command is '{current_command}', expected '{expected_command}'"
+            )
+        if current_windows != expected_windows:
+            violations.append(
+                f"{relative_path} '{hook_name}' windows command is '{current_windows}', expected '{expected_windows}'"
+            )
+    return violations
+
+
+def _scan_candidate_for_project_tokens(
+    *,
+    candidate: Path,
+    repo_root: Path,
+    suffixes: set[str],
+) -> list[str]:
+    """Scan a single file for project-specific tokens.
+
+    Args:
+        candidate (Path): File to inspect.
+        repo_root (Path): Repository root for relative formatting.
+        suffixes (set[str]): File extensions to include.
+
+    Returns:
+        list[str]: Token findings for this candidate file.
+    """
+
+    if not candidate.is_file() or candidate.suffix not in suffixes:
+        return []
+
+    findings: list[str] = []
+    content = candidate.read_text(encoding="utf-8")
+    for token in _PROJECT_SPECIFIC_TOKENS:
+        if token in content:
+            findings.append(
+                f"{candidate.relative_to(repo_root)} contains project-specific token '{token}'"
+            )
+    return findings
+
+
+def _collect_hook_path_violations(*, repo_root: Path) -> list[str]:
+    """Validate hook command paths in root and template hook configs.
+
+    Args:
+        repo_root (Path): Repository root path.
+
+    Returns:
+        list[str]: Human-readable hook path violations.
+    """
+
+    violations: list[str] = []
+    for relative_path in (_ROOT_HOOKS_CONFIG, _TEMPLATE_HOOKS_CONFIG):
+        config_path = repo_root / relative_path
+        if not config_path.is_file():
+            violations.append(f"Missing hooks config: {relative_path}")
+            continue
+
+        try:
+            parsed = json.loads(config_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            violations.append(f"Invalid JSON in {relative_path}: {error}")
+            continue
+
+        hooks = parsed.get("hooks", {})
+        violations.extend(_validate_hook_entries(hooks=hooks, relative_path=relative_path))
+
+    return violations
+
+
+def _collect_project_specific_agentic_refs(*, repo_root: Path) -> list[str]:
+    """Detect project-specific repository tokens in agentic assets.
+
+    Args:
+        repo_root (Path): Repository root path.
+
+    Returns:
+        list[str]: File-level findings with token matches.
+    """
+
+    findings: list[str] = []
+    suffixes = {".md", ".jinja", ".json", ".yaml", ".yml", ".toml"}
+
+    for relative_directory in _AGENTIC_PATHS_TO_SCAN:
+        directory = repo_root / relative_directory
+        if not directory.exists():
+            continue
+
+        for candidate in directory.rglob("*"):
+            findings.extend(
+                _scan_candidate_for_project_tokens(
+                    candidate=candidate,
+                    repo_root=repo_root,
+                    suffixes=suffixes,
+                )
+            )
+
+    return findings
+
+
 def main() -> int:
     """Execute '.github' alignment checks.
 
@@ -100,6 +257,8 @@ def main() -> int:
 
     missing_files = _collect_missing(repo_root=repo_root)
     legacy_files = _collect_legacy_present(repo_root=repo_root)
+    hook_path_violations = _collect_hook_path_violations(repo_root=repo_root)
+    project_specific_refs = _collect_project_specific_agentic_refs(repo_root=repo_root)
 
     if missing_files:
         for relative_path in missing_files:
@@ -109,7 +268,15 @@ def main() -> int:
         for relative_path in legacy_files:
             print(f"[FAIL] Legacy file found: {relative_path} (should be removed)")
 
-    if missing_files or legacy_files:
+    if hook_path_violations:
+        for message in hook_path_violations:
+            print(f"[FAIL] {message}")
+
+    if project_specific_refs:
+        for message in project_specific_refs:
+            print(f"[FAIL] {message}")
+
+    if missing_files or legacy_files or hook_path_violations or project_specific_refs:
         return 1
 
     print("[OK] .github core alignment checks passed")

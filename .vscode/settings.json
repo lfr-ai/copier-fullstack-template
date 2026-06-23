@@ -3,6 +3,23 @@
     ".github/instructions": true,
     ".claude/rules": true
   },
+  "chat.promptFilesLocations": {
+    ".github/prompts": true
+  },
+  "chat.agentFilesLocations": {
+    ".github/agents": true,
+    ".claude/agents": true
+  },
+  "chat.agentSkillsLocations": {
+    ".github/skills": true,
+    ".claude/skills": true
+  },
+  "chat.useAgentSkills": true,
+  "chat.useAgentsMdFile": true,
+  "chat.useClaudeMdFile": true,
+  "chat.includeApplyingInstructions": true,
+  "chat.includeReferencedInstructions": true,
+  "chat.mcp.autoStart": true,
   "yaml.schemas": {
     "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": [
       "template/compose*.yml.jinja",
