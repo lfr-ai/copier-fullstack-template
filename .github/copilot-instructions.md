@@ -61,6 +61,10 @@ File-scoped instructions auto-load for matching globs:
 | `accessibility/` | WCAG 2.1 AA compliance and inclusive UI patterns |
 | `clean-architecture/` | Architecture boundaries and Dependency Rule |
 | `ddd/` | Domain-Driven Design modeling and boundaries |
+| `dry-refactoring/` | Clone reduction and duplication cleanup workflow |
+| `frontend-react-stack/` | React 19, TypeScript, shadcn/ui, Storybook, and Playwright |
+| `gitnexus/` | Graph-powered code intelligence and impact analysis |
+| `jscpd/` | Clone-detection workflow and duplication reporting |
 | `playwright/` | End-to-end testing for user journeys and accessibility |
 | `python-conventions/` | Python code quality and typing standards |
 | `quality-gate/` | Validation gates before completion |
@@ -68,6 +72,7 @@ File-scoped instructions auto-load for matching globs:
 | `shadcn-ui/` | shadcn/ui component conventions and composition patterns |
 | `tdd/` | Test-driven development workflow |
 | `testing-conventions/` | Cross-layer testing standards |
+| `ui-ux-frontend/` | Frontend interaction quality, accessibility, and UX flow checks |
 
 ## Copilot Hooks (`.github/hooks/`)
 
@@ -75,6 +80,14 @@ Active hooks for the Copilot coding agent:
 
 - **tool-guardian** (PreToolUse) — Blocks dangerous operations (force push, `rm -rf`, etc.)
 - **check-licenses** (Stop) — Scans dependencies for license compatibility
+
+## MCP and Agentic Tooling
+
+- Prefer workspace-scoped MCP server definitions in `.vscode/mcp.json`
+- Keep `context7`, `shadcn`, `playwright`, `storybook`, and `gitnexus` aligned
+   across root and template configs
+- For Storybook-centric frontend workflows, ensure MCP manifests and interaction-test
+   workflows are reflected in skills/instructions
 
 ## File Naming Conventions
 

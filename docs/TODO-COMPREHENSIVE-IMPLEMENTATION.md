@@ -23,23 +23,23 @@ It combines:
 - Existing observability scaffolding in `template/infra` (Prometheus/Grafana/OTel)
 - Existing OpenSpec and GitNexus assets and prompt/skill coverage
 
-### Critical or high-priority deltas resolved in this cycle
+### Critical or high-priority deltas targeted in this cycle
 
-- `.gitignore` conflict fixed for `.vscode` tracking behavior
-- Copilot hook command paths normalized in:
-  - `.github/hooks/tool-guardian.json`
-  - `.github/hooks/dependency-license-checker.json`
-- Duplicate `commitizen` block removed from `.pre-commit-config.yaml`
-- Prompt docs made more project-agnostic in `.github/prompts/README.md`
-- Root policy readmes improved with direct template path pointers:
+- `.gitignore` policy verified for `.secrets.baseline` tracking behavior
+- Copilot hook command paths and file references to verify and normalize in:
+      - `.github/hooks/tool-guardian.json`
+      - `.github/hooks/dependency-license-checker.json`
+- Potential duplicate tooling blocks to verify in `.pre-commit-config.yaml`
+- Prompt docs to make more project-agnostic in `.github/prompts/README.md`
+- Root policy readmes to keep aligned with direct template path pointers:
   - `docker/README.md`
   - `azure/README.md`
   - `caddy/README.md`
-- Frontend agentic coverage expanded in root repo:
+- Frontend agentic coverage updates in root repo:
   - `.github/agents/frontend-react.agent.md`
   - `.github/instructions/frontend.instructions.md`
   - `.github/skills/frontend-react-stack/SKILL.md`
-- Copilot skills table updated with frontend-relevant skills in
+- Copilot skills tables to keep aligned with frontend-relevant skills in
   `.github/copilot-instructions.md`
 
 ## Exhaustive implementation backlog
@@ -48,13 +48,13 @@ It combines:
 
 - [ ] Ensure all root agent descriptions avoid repository-name coupling and prefer
       role-based, reusable wording.
-- [ ] Add root-level cross-reference map for agents/skills/instructions to clarify
+- [x] Add root-level cross-reference map for agents/skills/instructions to clarify
       what belongs to root template-authoring vs generated-project output.
-- [ ] Add explicit Storybook AI-manifest guidance to root instructions:
+- [x] Add explicit Storybook AI-manifest guidance to root instructions:
       - write focused stories
       - add JSDoc summaries/descriptions
       - curate manifest with `!manifest` for instructional stories
-- [ ] Add explicit Playwright selector priority guidance in root instructions and
+- [x] Add explicit Playwright selector priority guidance in root instructions and
       keep it consistent with skill docs.
 - [ ] Add frontend UX/accessibility handoff guidance among `frontend-react`,
       `testing`, and `debug` agents.
@@ -69,7 +69,7 @@ It combines:
 
 ## 3) Storybook + Playwright + shadcn production quality
 
-- [ ] Add a dedicated “frontend agentic best practices” doc under `docs/frontend/`
+- [x] Add a dedicated “frontend agentic best practices” doc under `docs/frontend/`
       covering:
       - Storybook manifests/debug routes
       - story quality rules
@@ -80,7 +80,7 @@ It combines:
 - [ ] Add Storybook AI resource links and MCP guidance into template docs.
 - [ ] Add a visual regression strategy placeholder (Chromatic or equivalent)
       documented as optional.
-- [ ] Keep favicon setup validated in frontend template:
+- [x] Keep favicon setup validated in frontend template:
       - confirm `template/frontend/public/favicon.svg`
       - confirm link in `template/frontend/index.html.jinja`
 
@@ -104,7 +104,7 @@ It combines:
       template root.
 - [ ] Re-audit `.gitignore` regularly to ensure `.secrets.baseline` remains
       tracked and not accidentally ignored.
-- [ ] Add repo script/check that validates hook command paths and existing files.
+- [x] Add repo script/check that validates hook command paths and existing files.
 
 ## 6) Frontend structure and naming enforcement
 

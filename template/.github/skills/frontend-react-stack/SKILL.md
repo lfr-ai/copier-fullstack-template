@@ -23,6 +23,7 @@ Apply this skill for all frontend changes under `frontend/`.
 | **Linting** | Biome | latest |
 | **Testing** | Vitest + RTL + Playwright | latest |
 | **Package Manager** | bun | latest |
+| **Component Workshop** | Storybook + addon-mcp | latest |
 
 ## Non-goals
 
@@ -58,3 +59,11 @@ frontend/src/
 - Add targeted tests for new behaviors
 - Use stable selectors and deterministic mocks for e2e tests
 - Keep component composition consistent with shadcn patterns
+
+## Storybook Agentic Baseline
+
+- Keep stories focused to a single intent/use case.
+- Include concise component and story descriptions for manifest quality.
+- Add interaction tests (`play`) for critical UX behavior.
+- Curate low-signal stories/docs with `!manifest` tags when needed.
+- Keep preview-level providers/mocks centralized for deterministic stories.

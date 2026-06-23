@@ -1,20 +1,38 @@
-{% if use_storybook %}import type { StorybookConfig } from '@storybook/react-vite';
+{% if use_storybook %}import { resolve } from 'node:path';
+import type { StorybookConfig } from '@storybook/react-vite';
 
 const config: StorybookConfig = {
-stories: ['../src/**/*.stories.@(ts|tsx)', '../src/**/*.mdx'],
-addons: [
-'@storybook/addon-essentials',
-'@storybook/addon-interactions',
-'@storybook/addon-a11y',
-'@storybook/addon-mcp',
-],
-framework: '@storybook/react-vite',
-core: {
-disableTelemetry: true,
-},
-viteFinal: (config) => {
-return config;
-},
+	stories: [
+		'../src/**/*.stories.@(ts|tsx)',
+		'../src/**/*.mdx',
+		'../.storybook/**/*.mdx',
+	],
+	addons: [
+		'@storybook/addon-essentials',
+		'@storybook/addon-interactions',
+		'@storybook/addon-a11y',
+		'@storybook/addon-mcp',
+	],
+	framework: {
+		name: '@storybook/react-vite',
+		options: {},
+	},
+	core: {
+		disableTelemetry: true,
+	},
+	typescript: {
+		reactDocgen: 'react-docgen-typescript',
+	},
+	viteFinal: async (baseConfig) => ({
+		...baseConfig,
+		resolve: {
+			...(baseConfig.resolve ?? {}),
+			alias: {
+				...(baseConfig.resolve?.alias ?? {}),
+				'@': resolve(import.meta.dirname, '../src'),
+			},
+		},
+	}),
 };
 
 export default config;

@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+    "upstash.context7-mcp",
+    "ms-playwright.playwright",
+    "storybookjs.storybook-vscode",
+    "biomejs.biome",
+    "bradlc.vscode-tailwindcss",
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+    "DavidAnson.vscode-markdownlint",
+    "streetsidesoftware.code-spell-checker",
+    "vscode-icons-team.vscode-icons"
+  ]
+}

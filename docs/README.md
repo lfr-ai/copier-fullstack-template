@@ -30,7 +30,9 @@ repository and generated-project scaffolding.
 ## Frontend and cross-cutting syntheses
 
 - `frontend/README.md`
+- `frontend/agentic-best-practices.md`
 - `cross-cuttings/README.md`
+- `cross-cuttings/agentic-ownership-map.md`
 
 ## Notable modernization outcomes in this pass
 

@@ -46,6 +46,13 @@ applyTo: "frontend/**/*.ts, frontend/**/*.tsx, frontend/**/*.css"
     etc.) and semantic invalid states (`data-invalid`, `text-destructive`)
 - Declare `lazy()` imports at module scope only and wrap with meaningful Suspense
     boundaries
+- Keep Storybook stories focused (one concept per story) and include JSDoc
+    summaries/descriptions for components and stories so manifests remain useful
+    for agent workflows
+- Use `!manifest` tags to exclude instructional-only stories/docs from AI
+    manifests
+- Prefer Playwright selectors in this order: `getByRole`, `getByLabel`,
+    `getByText`, then `getByTestId`
 
 - Mirror source structure in `frontend/tests/unit/`
 - Component tests verify render output and user interactions

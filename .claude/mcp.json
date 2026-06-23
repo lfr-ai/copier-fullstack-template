@@ -18,6 +18,11 @@
       "args": ["-y", "shadcn@latest", "mcp"],
       "description": "shadcn MCP server for component registry search and install"
     },
+    "storybook": {
+      "type": "http",
+      "url": "http://localhost:6006/mcp",
+      "description": "Storybook MCP server for component manifests and UI debugging"
+    },
     "gitnexus": {
       "type": "stdio",
       "command": "gitnexus",
