@@ -1,8 +1,8 @@
-# Feature: settings/config architecture benchmark (reference_refactor)
+# Feature: settings/config architecture benchmark
 
 ## Purpose and scope
 
-Document a deep comparative review between `reference_refactor` and
+Document a deep comparative review between an external benchmark repository and
 `copier-fullstack-template` focused on:
 
 - settings/config module structure,
@@ -14,14 +14,14 @@ This feature also records concrete scaffold changes implemented in this pass.
 
 ## Analyzed files
 
-### External reference (`reference_refactor`)
+### External reference repository
 
-- `src/reference/configs/base.py`
-- `src/reference/configs/runtime.py`
-- `src/reference/configs/_validators.py`
-- `src/reference/configs/environments/{local,dev,test,staging,prod}.py`
-- `src/reference/composition/container.py`
-- `src/reference/presentation/api/dependency_registry.py`
+- `src/*/configs/base.py`
+- `src/*/configs/runtime.py`
+- `src/*/configs/_validators.py`
+- `src/*/configs/environments/{local,dev,test,staging,prod}.py`
+- `src/*/composition/container.py`
+- `src/*/presentation/api/dependency_registry.py`
 
 ### Template repository
 

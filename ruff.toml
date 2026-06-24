@@ -4,6 +4,4 @@ src = ["scripts"]
 exclude = [".venv", ".tox", "dist", "build", "template"]
 
 [format]
-quote-style = "double"
-indent-style = "space"
 line-ending = "lf"

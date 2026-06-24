@@ -38,18 +38,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Root folder policy stubs for `docker/`, `azure/`, and `caddy/` to enforce
   folder-based runtime asset layout
 - Template `.agents/` scaffolding for generated-project agent workspace parity
-- Golden multi-reference parity audit wrapper (`scripts/audit_golden_alignment.py`)
-  and task alias (`audit:golden-alignment`)
 
 ### Changed
 
-- Hardened `scripts/audit_reference_alignment.py` with explicit expected top-level
-  delta allowlists and deeper parity checks for root `.github` agents/hooks/
-  instructions, root `.claude` rules, and core skills coverage against
-  `reference_automation`
-- Updated `scripts/audit_reference_alignment.py` mandatory root targets to include
-  `.agents`, `.azuredevops`, and folderized governance roots (`docker/`,
-  `azure/`, `caddy/`)
+- Simplified `.pre-commit-config.yaml` by removing a duplicate
+  `pre-commit-hooks` repository declaration and consolidating
+  `check-vcs-permalinks` into the primary hooks block
+- Simplified `.editorconfig` by removing file-type sections that only repeated
+  global default indentation values
+- Simplified `ruff.toml` by removing explicit formatter options that matched
+  Ruff defaults (`quote-style`, `indent-style`)
+- Simplified `.markdownlint-cli2.yaml` by removing redundant
+  `config.default: true` boilerplate
+- Refreshed `docs/TODO-COMPREHENSIVE-IMPLEMENTATION.md` into a pass-based,
+  execution-oriented cleanup plan with explicit verification gates
+- Simplified `.gitignore` by removing redundant duplicate ignore patterns for
+  `.gsd-id` and `.bg-shell/`
 - Added cross-platform `scripts/check-github-alignment.py` and switched
   `Taskfile.yml` `github:alignment` to Python execution for reliable Windows/
   Unix verification parity
@@ -57,10 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `dry-refactoring` skill docs to `4.0.5` for compatibility with the current
   `jscpd.json` schema (`skipBlocks`)
 - Renamed root/template jscpd configuration files from `.jscpd.json` to
-  `jscpd.json` and updated all commands/checks to match `reference_automation`
-  naming parity
-- Hardened `scripts/audit_reference_alignment.py` to ignore transient semver-like
-  top-level artifact names (for example `24.1.0`) when computing parity deltas
+  `jscpd.json` and updated all commands/checks for consistency across root and
+  template workflows
 - Aligned MCP configuration with golden-standard dual config files
   (`.vscode/mcp.json` + `.claude/mcp.json`) and added GitNexus server wiring
 - Added Playwright MCP server wiring in root and template MCP configs using the
@@ -107,6 +109,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switched PostgreSQL/Azure PostgreSQL template variants to local SQLite defaults,
   profile-gated server PostgreSQL containers, runtime dialect-aware migration/engine
   behavior, and added a local PostgreSQL → SQLite data migration utility task
+- Removed external-reference parity audit scripts/tasks and related
+  documentation links to keep repository checks self-contained
 
 ### Removed
 

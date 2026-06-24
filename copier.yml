@@ -72,10 +72,8 @@ python_version:
 
 frontend_framework:
   type: str
-  help: "Frontend framework (React only — Bun + Vite + TypeScript)"
   default: "react"
-  choices:
-    React (React 19 + Vite + Bun): "react"
+  when: false
 
 use_storybook:
   type: bool
@@ -89,7 +87,6 @@ vcs_platform:
   choices:
     GitHub Actions: "github"
     Azure DevOps Pipelines: "azuredevops"
-  validator: "{% if vcs_platform not in ['github', 'azuredevops'] %}Must be 'github' or 'azuredevops'{% endif %}"
 
 with_ai_assistants:
   type: bool
@@ -217,7 +214,6 @@ secret_backend:
   choices:
     Env files only: "env"
     Azure Key Vault: "azure_kv"
-  when: "{{ cloud_provider == 'azure' or cloud_provider == 'none' }}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  AI / RAG / MCP infrastructure

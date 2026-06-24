@@ -47,9 +47,6 @@ uvx pre-commit run --all-files
 
 # Validate template
 python scripts/validate-template.py
-
-# Audit parity with reference repository conventions
-python scripts/audit_reference_alignment.py
 ```
 
 ## Commit Conventions
