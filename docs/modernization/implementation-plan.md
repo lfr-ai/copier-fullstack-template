@@ -70,9 +70,9 @@ Acceptance criteria:
 
 ## Feature parity mapping
 
-- `reference_refactor` lock-aware dependency audit flow
+- External benchmark lock-aware dependency audit flow
   → `template/tools/security/dependency_audit.py.jinja` + hook/task wiring.
-- `reference_refactor` explicit runtime environment hygiene
+- External benchmark explicit runtime environment hygiene
   → warning-based observability in template runtime resolver.
 
 ## Data migration plan

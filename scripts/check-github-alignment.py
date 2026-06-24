@@ -82,8 +82,6 @@ _AGENTIC_PATHS_TO_SCAN: tuple[str, ...] = (
 )
 _PROJECT_SPECIFIC_TOKENS: tuple[str, ...] = (
     "copier-fullstack-template",
-    "reference_automation",
-    "frontend_frontend",
 )
 
 

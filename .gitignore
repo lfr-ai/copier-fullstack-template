@@ -126,11 +126,9 @@ jscpd-report/
 # GSD / tooling
 # ──────────────────────────────────────────────
 .gsd
-.gsd-id
 .gsd-id*
 .gsd.lock
 .bg-shell
-.bg-shell/
 
 # ──────────────────────────────────────────────
 # Copier / template rendering

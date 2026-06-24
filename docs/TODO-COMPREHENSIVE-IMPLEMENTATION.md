@@ -1,199 +1,121 @@
-# Comprehensive Modernization TODO (Exhaustive)
+# Comprehensive Cleanup & Simplification TODO (Exhaustive)
 
-## Scope and intent
+## Scope
 
-This document is the exhaustive, implementation-oriented modernization backlog for
-this template repository, aligned with a frontend-first target profile while
-preserving optional fullstack capabilities.
+This is the authoritative implementation backlog for making this template
+codebase simpler, more default-driven, architecture-safe, and consistently
+aligned across root and `template/` assets.
 
-It combines:
+It is intentionally execution-oriented and split into iterative passes so each
+pass is measurable and verifiable.
 
-- Repo audit findings in this workspace
-- Golden-reference alignment analysis against `reference_automation`
-- Current upstream guidance from Storybook, Playwright, LiteLLM, LangChain,
-  CrewAI, OpenTelemetry, Prometheus, Grafana, and SQLite documentation
+## Baseline findings (current cycle)
 
-## Current baseline snapshot
+### Verified
 
-### Already in good shape
+- `task verify-all` passes:
+  - architecture boundaries
+  - no `Final[]` misuse
+  - FastAPI status constants convention
+  - module docstrings
+  - `.github` alignment checks
+- Root and template structure are broadly coherent for current governance model.
 
-- Strong template-first repository structure with `template/` as source of truth
-- Existing MCP setup for `playwright`, `gitnexus`, `context7`, and `shadcn`
-- Existing frontend template support including Storybook and Playwright
-- Existing observability scaffolding in `template/infra` (Prometheus/Grafana/OTel)
-- Existing OpenSpec and GitNexus assets and prompt/skill coverage
+### Gaps / opportunities
 
-### Critical or high-priority deltas targeted in this cycle
+- `.pre-commit-config.yaml` had duplicate `pre-commit-hooks` repository blocks
+  that can be safely consolidated.
+- Existing modernization TODO included useful breadth but mixed status semantics
+  and lacked explicit pass-based completion criteria.
+- GitNexus index in this environment did not previously target this workspace,
+      so graph-level enforcement must be tracked as a dependency (not silently
+      assumed).
 
-- `.gitignore` policy verified for `.secrets.baseline` tracking behavior
-- Copilot hook command paths and file references to verify and normalize in:
-      - `.github/hooks/tool-guardian.json`
-      - `.github/hooks/dependency-license-checker.json`
-- Potential duplicate tooling blocks to verify in `.pre-commit-config.yaml`
-- Prompt docs to make more project-agnostic in `.github/prompts/README.md`
-- Root policy readmes to keep aligned with direct template path pointers:
-  - `docker/README.md`
-  - `azure/README.md`
-  - `caddy/README.md`
-- Frontend agentic coverage updates in root repo:
-  - `.github/agents/frontend-react.agent.md`
-  - `.github/instructions/frontend.instructions.md`
-  - `.github/skills/frontend-react-stack/SKILL.md`
-- Copilot skills tables to keep aligned with frontend-relevant skills in
-  `.github/copilot-instructions.md`
+## Iteration status
 
-## Exhaustive implementation backlog
+### Pass 1 — completed in this change set
 
-## 1) Agentic setup modernization (project-agnostic + frontend-first)
+- [x] Consolidate duplicate `pre-commit-hooks` repo blocks in
+      `.pre-commit-config.yaml`.
+- [x] Keep functionality equivalent by moving `check-vcs-permalinks` into the
+      main `pre-commit-hooks` block.
+- [x] Refresh this TODO document into an executable, pass-based, exhaustive plan.
 
-- [ ] Ensure all root agent descriptions avoid repository-name coupling and prefer
-      role-based, reusable wording.
-- [x] Add root-level cross-reference map for agents/skills/instructions to clarify
-      what belongs to root template-authoring vs generated-project output.
-- [x] Add explicit Storybook AI-manifest guidance to root instructions:
-      - write focused stories
-      - add JSDoc summaries/descriptions
-      - curate manifest with `!manifest` for instructional stories
-- [x] Add explicit Playwright selector priority guidance in root instructions and
-      keep it consistent with skill docs.
-- [ ] Add frontend UX/accessibility handoff guidance among `frontend-react`,
-      `testing`, and `debug` agents.
+## Remaining exhaustive backlog
 
-## 2) OpenSpec + GitNexus parity and hygiene
+### Pass 2 — config simplification and default-first cleanup
 
-- [ ] Validate prompt and command parity between root and template for OpenSpec and
-      GitNexus workflows.
-- [ ] Add a single “source-of-truth” table documenting where each OpenSpec/GitNexus
-      asset is maintained (root, template, or both).
-- [ ] Add CI checks that detect stale root/template drift for key agentic files.
+- [x] Audit all root config files for explicit values equal to tool defaults:
+  - `.pre-commit-config.yaml`
+  - `.markdownlint-cli2.yaml`
+  - `.yamllint.yaml`
+  - `jscpd.json`
+  - `ruff.toml`
+  - `ty.toml`
+- [x] Remove or collapse redundant ignore patterns while preserving behavior.
+- [ ] Add concise rationale comments only where explicit non-defaults are kept.
+- [x] Re-run `task verify-all`.
 
-## 3) Storybook + Playwright + shadcn production quality
+Pass 2 completion notes:
 
-- [x] Add a dedicated “frontend agentic best practices” doc under `docs/frontend/`
-      covering:
-      - Storybook manifests/debug routes
-      - story quality rules
-      - play functions and interaction testing
-      - Playwright CI strategy
-- [ ] Add a task or CI step that verifies Storybook builds for template frontend
-      when Storybook is enabled.
-- [ ] Add Storybook AI resource links and MCP guidance into template docs.
-- [ ] Add a visual regression strategy placeholder (Chromatic or equivalent)
-      documented as optional.
-- [x] Keep favicon setup validated in frontend template:
-      - confirm `template/frontend/public/favicon.svg`
-      - confirm link in `template/frontend/index.html.jinja`
+- Removed editorconfig sections that only restated global `indent_size = 2`.
+- Removed redundant Ruff formatter settings that matched defaults.
+- Removed markdownlint `default: true` boilerplate.
+- Simplified `.gitignore` by removing redundant duplicate patterns.
 
-## 4) Docker / Azure / Caddy production-readiness alignment
+### Pass 3 — template questionnaire simplification (`copier.yml`)
 
-- [ ] Add root policy doc explaining why runtime assets are template-scoped and
-      root folders contain policy pointers only.
-- [ ] Add checklist to validate generated runtime outputs for docker/azure/caddy
-      after template changes.
-- [ ] Add Azure deployment hardening checklist for generated projects:
-      identity, secrets handling, health checks, staged deployment, rollback.
-- [ ] Add Caddy production checklist for generated projects:
-      TLS, headers, upstream health, compression, observability hooks.
+- [ ] Identify prompts whose defaults can be derived (avoid repeated manual
+      input).
+- [ ] Evaluate whether high-complexity toggles should move to advanced profile
+      docs vs default interactive prompts.
+- [ ] Ensure conditional questions rely on documented Copier `when` behavior and
+      avoid duplicated validation logic.
+- [ ] Validate with render smoke test and generated project sanity checks.
 
-## 5) Tooling + config/meta hygiene
+### Pass 4 — architecture and boundary consistency
 
-- [ ] Resolve Codecov template duplication (`template/.codecov.yml.jinja` vs
-      `template/codecov.yml.jinja`) by consolidating on one canonical file and
-      documenting policy.
-- [ ] Add a CI safeguard that fails when duplicate tooling configs exist in
-      template root.
-- [ ] Re-audit `.gitignore` regularly to ensure `.secrets.baseline` remains
-      tracked and not accidentally ignored.
-- [x] Add repo script/check that validates hook command paths and existing files.
+- [ ] Keep backend clean architecture rules explicit and minimal:
+  - validate `scripts/check-architecture-boundaries.py` for edge cases
+  - confirm dependency direction policy remains framework-agnostic
+- [ ] Document any intentional exceptions in a short policy section.
+- [ ] Ensure root and template instruction parity for architecture guidance.
 
-## 6) Frontend structure and naming enforcement
+### Pass 5 — root/template drift prevention
 
-- [ ] Add explicit frontend naming conventions doc section for files, folders,
-      exports, and state/query hooks.
-- [ ] Add template lint rule recommendations for import boundaries between
-      frontend layers.
-- [ ] Add architecture verification script extension for frontend layer boundaries
-      (mirroring backend boundary checks conceptually).
+- [ ] Add or extend drift checks for critical mirrored assets:
+  - `.github/instructions/*`
+  - `.github/skills/*`
+  - `.claude/rules/*`
+- [ ] Add a machine-readable ownership matrix for root-only, template-only, and
+      mirrored files.
+- [ ] Wire drift checks into CI/pre-push path where cost is acceptable.
 
-## 7) LiteLLM + LangChain (scaffold plan only, frontend-first compatibility)
+### Pass 6 — docs coherence and operational simplicity
 
-- [ ] Define a project-agnostic scaffold contract (document only in this repo):
-      - gateway interface for model routing
-      - provider-neutral model aliasing
-      - optional LiteLLM Router/Proxy mode
-- [ ] Define required config schema for model groups, fallback, retry, and
-      timeout.
-- [ ] Define observability contract for request cost, model/provider labels,
-      latency, and cache-hit metrics.
-- [ ] Add a staged implementation plan that keeps this template frontend-first by
-      making AI backend features fully optional.
+- [ ] Normalize command examples to one canonical path per workflow.
+- [ ] Remove contradictory wording around prerequisites and install flow.
+- [ ] Ensure all code/config changes are reflected in docs in the same PR.
 
-## 8) CrewAI HMAS (scaffold/migration plan)
+### Pass 7 — GitNexus alignment enforcement (dependency)
 
-- [ ] Create architecture decision doc comparing:
-      - LangGraph orchestration
-      - CrewAI crew/flow orchestration
-      - hybrid delegation model
-- [ ] Define mandatory safety requirements for HMAS:
-      deterministic fallbacks, bounded retries, cancellation, timeout envelopes,
-      structured telemetry, and audit logs.
-- [ ] Define phased migration strategy with feature flags and side-by-side
-      execution paths.
+- [ ] Ensure this repo is indexed in GitNexus for this environment.
+- [ ] Add a short runbook for graph checks (query/impact usage and expected
+      outputs).
+- [ ] Add graph-backed consistency checks to pre-merge review process where
+      feasible.
 
-## 9) Database strategy plan (SQLite local, PostgreSQL dev/prod)
+## Verification checklist (required per pass)
 
-- [ ] Produce migration runbook for local PostgreSQL data export/import to SQLite
-      for local-only mode.
-- [ ] Define strict environment matrix:
-      - local: SQLite
-      - dev server/staging/prod: PostgreSQL
-- [ ] Define compatibility checklist (migrations, constraints, datetime/JSON,
-      test fixtures).
-- [ ] Add rollback and verification steps for local migration.
+- [ ] `task verify-all` passes.
+- [ ] Documentation updated for all behavior/config changes.
+- [ ] No new architecture-boundary violations introduced.
+- [ ] No accidental root/template coupling regressions introduced.
 
-## 10) Observability plan (OTel + Prometheus + Grafana)
+## Definition of done for this initiative
 
-- [ ] Add frontend-focused observability blueprint:
-      web vitals, route timings, API latency, error rates, user journey metrics.
-- [ ] Add collector security checklist based on OTel guidance:
-      localhost binding/default host policy, minimal components, redaction,
-      queue/memory limits, auth/TLS.
-- [ ] Add Prometheus metric naming checklist (units, suffixes, cardinality
-      control, counter/gauge correctness).
-- [ ] Add Grafana dashboard curation checklist for frontend and orchestrator
-      metrics.
-
-## 11) RAG architecture research backlog (document-only in this repo)
-
-- [ ] Define strict retrieval scope policy for case-handler-only data.
-- [ ] Define pluggable evaluation harness for comparing DeepRAG, Self-CRAG,
-      GraphRAG, and LightRAG.
-- [ ] Define objective evaluation metric schema and storage format.
-- [ ] Define boundaries so these remain optional modules and do not pollute
-      frontend-only generated profiles.
-
-## 12) CI/CD and dev-productivity enhancements
-
-- [ ] Add optional Azure deployment pipeline blueprint for ACR + App Service with
-      staged approvals.
-- [ ] Validate CodeRabbit and Codecov end-to-end with template-generated output
-      and document expected behavior.
-- [ ] Validate Keploy workflow expectations and document recording/replay usage
-      boundaries.
-- [ ] Document optional testcontainers/duckdb usage patterns in generated projects.
-
-## Verification checklist (for every modernization PR)
-
-- [ ] Pre-commit passes
-- [ ] Template render smoke test passes
-- [ ] No root/template drift in critical agentic files
-- [ ] Documentation updated with behavior/config changes
-- [ ] No accidental project-specific coupling introduced
-- [ ] `.secrets.baseline` remains tracked
-
-## Notes
-
-This repository is template-source infrastructure. Some requested items (runtime
-framework rewiring, full data migration, CrewAI/LiteLLM production integrations)
-are intentionally planned here as scaffolding and policy/backlog work, to be
-applied in generated projects where runtime context exists.
+- [ ] Config and setup are default-first and free of obvious redundancy.
+- [ ] Golden audits are stable (no noisy false positives).
+- [ ] Clean architecture checks are enforced and documented.
+- [ ] Root/template alignment is automated for critical governance assets.
+- [ ] Documentation is coherent, minimal, and current.

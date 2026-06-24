@@ -37,5 +37,3 @@ These must remain present and updated in root and template:
 Use these validation commands:
 
 - `python scripts/check-github-alignment.py`
-- `python scripts/audit_reference_alignment.py`
-- `python scripts/audit_golden_alignment.py`

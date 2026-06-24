@@ -24,6 +24,8 @@ repos:
       - id: check-ast
         exclude: ^template/
       - id: check-merge-conflict
+      - id: check-vcs-permalinks
+        name: Check VCS permalinks in docs
       - id: check-docstring-first
         exclude: ^template/
       - id: check-added-large-files
@@ -177,12 +179,6 @@ repos:
         args: [-color, -verbose]
 
   # ── GitHub-specific checks ──
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: check-vcs-permalinks
-        name: Check VCS permalinks in docs
-
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.31.0
     hooks:

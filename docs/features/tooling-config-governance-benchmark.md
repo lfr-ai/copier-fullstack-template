@@ -1,9 +1,9 @@
-# Tooling and config governance benchmark (reference_refactor)
+# Tooling and config governance benchmark
 
 ## Purpose and scope
 
 This feature document captures an exhaustive comparison between this template
-repository and `reference_refactor` for:
+repository and an external benchmark repository for:
 
 - tool/metafile structure,
 - pre-commit quality gates,
@@ -14,17 +14,17 @@ It also records what was scaffolded in this repository based on that benchmark.
 
 ## Analyzed files
 
-### External reference (`reference_refactor`)
+### External reference repository
 
 - `pyproject.toml`
 - `.pre-commit-config.yaml`
 - `Taskfile.yml`
 - `ruff.toml`, `tox.ini`, `ty.toml`, `pytest.ini`, `.cz.toml`
-- `src/reference/configs/base.py`
-- `src/reference/configs/runtime.py`
-- `src/reference/configs/_validators.py`
-- `src/reference/configs/environments/{local,dev,test,staging,prod}.py`
-- `src/reference/composition/container.py`
+- `src/*/configs/base.py`
+- `src/*/configs/runtime.py`
+- `src/*/configs/_validators.py`
+- `src/*/configs/environments/{local,dev,test,staging,prod}.py`
+- `src/*/composition/container.py`
 - `.github/copilot-instructions.md`, `AGENTS.md`, `.github/instructions/*`
 
 ### Template repository (`copier-fullstack-template`)
@@ -48,7 +48,7 @@ It also records what was scaffolded in this repository based on that benchmark.
 
 ### 1) Dependency auditing workflow
 
-Observed in `reference_refactor`: lock-aware dependency audit flow using `uv export`
+Observed in external benchmark: lock-aware dependency audit flow using `uv export`
 and `pip-audit` with deterministic inputs.
 
 Applied scaffold:
@@ -63,7 +63,7 @@ Applied scaffold:
 
 ### 2) Runtime environment safety workflow
 
-Observed in `reference_refactor`: explicit runtime environment selection logic and
+Observed in external benchmark: explicit runtime environment selection logic and
 deterministic resolution flow.
 
 Applied scaffold:

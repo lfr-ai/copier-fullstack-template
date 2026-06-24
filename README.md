@@ -84,18 +84,6 @@ If you prefer to use a remote URL (e.g., after publishing your fork):
 uvx copier copy --trust gh:<your-username>/copier-fullstack-template my-project
 ```
 
-### Repository Parity Audit (Template vs Reference Project)
-
-To validate this template repository remains aligned with
-`reference_automation` conventions (while preserving root-vs-template semantics):
-
-```bash
-task audit:reference-alignment
-```
-
-This runs `scripts/audit_reference_alignment.py` and reports mandatory parity gaps
-for structure, agentic setup, and governance artifacts.
-
 ### Update an Existing Project
 
 ```bash
@@ -117,7 +105,6 @@ During `copier copy`, you'll be prompted for:
 | **Author email**                | Valid email address                   | —                              |
 | **GitHub username**             | GitHub user or org                    | _(from author)_                |
 | **Python version**              | 3.12, 3.13, 3.14                      | 3.13                           |
-| **Frontend framework**          | React 19 (Bun + Vite + SWC)           | React                          |
 | **Storybook**                   | Yes / No                              | Yes                            |
 | **Database**                    | None, SQLite, PostgreSQL, Azure PG    | PostgreSQL                     |
 | **API style**                   | REST only, GraphQL only, Both         | REST                           |
