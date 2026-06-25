@@ -58,20 +58,38 @@ pass is measurable and verifiable.
 
 Pass 2 completion notes:
 
-- Removed editorconfig sections that only restated global `indent_size = 2`.
-- Removed redundant Ruff formatter settings that matched defaults.
-- Removed markdownlint `default: true` boilerplate.
-- Simplified `.gitignore` by removing redundant duplicate patterns.
+- Removed non-standard EditorConfig `max_line_length` to keep line-length
+      ownership in Ruff/markdownlint only.
+- Removed redundant Ruff formatter `line-ending` default override.
+- Removed explicit markdownlint defaults (`MD041: true`, `default: true`).
+- Removed duplicate markdownlint ignore globs in template config.
+- Removed typos locale override to rely on tool default locale.
+- Removed empty typos `[default]` table (no-op metadata).
+- Removed non-matching cspell ignore glob for `.lycheecache/**`.
+- Removed redundant cspell override-level `language: en` entries inherited from
+      global config.
+- Removed default `check-added-large-files --maxkb=500` argument from
+      pre-commit config.
+- Applied matching simplifications to template counterparts:
+      - removed redundant cspell override `language: en`
+      - removed typos default locale/empty table
+      - removed non-standard EditorConfig `max_line_length`
+      - removed Ruff format defaults (`quote-style`, `indent-style`)
 
 ### Pass 3 — template questionnaire simplification (`copier.yml`)
 
-- [ ] Identify prompts whose defaults can be derived (avoid repeated manual
+- [x] Identify prompts whose defaults can be derived (avoid repeated manual
       input).
 - [ ] Evaluate whether high-complexity toggles should move to advanced profile
       docs vs default interactive prompts.
 - [ ] Ensure conditional questions rely on documented Copier `when` behavior and
       avoid duplicated validation logic.
 - [ ] Validate with render smoke test and generated project sanity checks.
+
+Pass 3 completion notes (in progress):
+
+- Removed dead `frontend_framework` copier question (`when: false`, unused by
+      template files).
 
 ### Pass 4 — architecture and boundary consistency
 
@@ -91,6 +109,17 @@ Pass 2 completion notes:
       mirrored files.
 - [ ] Wire drift checks into CI/pre-push path where cost is acceptable.
 
+Pass 5 candidate alignment backlog:
+
+- [ ] Normalize Lychee hook version/id across root and template pre-commit
+      configs, or document intentional divergence.
+- [ ] Normalize GitHub Action major versions between root and template
+      workflows, or document intentional divergence.
+- [ ] Decide if Hadolint `DL3059` ignore should be root+template or
+      template-only policy.
+- [ ] Define canonical markdownlint scope/rule baseline for root vs template.
+- [ ] Define canonical core MCP server set and document optional server deltas.
+
 ### Pass 6 — docs coherence and operational simplicity
 
 - [ ] Normalize command examples to one canonical path per workflow.
@@ -104,6 +133,12 @@ Pass 2 completion notes:
       outputs).
 - [ ] Add graph-backed consistency checks to pre-merge review process where
       feasible.
+
+Pass 7 status note:
+
+- GitNexus MCP is reachable, but this workspace is not in the active index for
+  this session (available repos are different). Keep local validation as source
+  of truth until indexing is corrected.
 
 ## Verification checklist (required per pass)
 

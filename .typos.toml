@@ -2,9 +2,6 @@
 # Docs: https://github.com/crate-ci/typos
 # Run:  typos
 
-[default]
-locale = "en-us"
-
 [default.extend-words]
 # Technical abbreviations common in this codebase
 cfg = "cfg"

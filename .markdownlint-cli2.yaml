@@ -17,8 +17,6 @@ config:
   MD024:
     siblings_only: true
 
-  MD041: true
-
   MD046:
     style: fenced
 
