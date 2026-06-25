@@ -2,6 +2,3 @@ target-version = "py313"
 line-length = 88
 src = ["scripts"]
 exclude = [".venv", ".tox", "dist", "build", "template"]
-
-[format]
-line-ending = "lf"

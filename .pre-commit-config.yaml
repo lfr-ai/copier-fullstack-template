@@ -29,7 +29,6 @@ repos:
       - id: check-docstring-first
         exclude: ^template/
       - id: check-added-large-files
-        args: [--maxkb=500]
       - id: check-case-conflict
       - id: check-illegal-windows-names
       - id: check-symlinks
@@ -44,7 +43,6 @@ repos:
         args: [--fix=lf]
       - id: no-commit-to-branch
         args: [--branch=main]
-        stages: [pre-commit]
       - id: debug-statements
         exclude: ^template/
       - id: name-tests-test
@@ -176,7 +174,6 @@ repos:
     rev: v1.7.12
     hooks:
       - id: actionlint
-        args: [-color, -verbose]
 
   # ── GitHub-specific checks ──
   - repo: https://github.com/python-jsonschema/check-jsonschema
@@ -184,13 +181,10 @@ repos:
     hooks:
       - id: check-github-workflows
         name: Validate GitHub Actions workflow YAML
-        args: [--verbose]
       - id: check-github-actions
         name: Validate GitHub Actions action YAML
-        args: [--verbose]
       - id: check-dependabot
         name: Validate Dependabot YAML
-        args: [--verbose]
 
   # ── Link checking ──
   - repo: https://github.com/lycheeverse/lychee.git

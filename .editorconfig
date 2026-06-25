@@ -12,7 +12,6 @@ trim_trailing_whitespace = true
 
 [*.{py,py.jinja}]
 indent_size = 4
-max_line_length = 88
 
 [*.md]
 trim_trailing_whitespace = false

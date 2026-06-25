@@ -70,11 +70,6 @@ python_version:
     - "3.13"
     - "3.14"
 
-frontend_framework:
-  type: str
-  default: "react"
-  when: false
-
 use_storybook:
   type: bool
   help: "Include Storybook component development environment"

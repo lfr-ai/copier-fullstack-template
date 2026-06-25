@@ -60,7 +60,6 @@
     ".tox/**",
     ".ruff_cache/**",
     ".ty/**",
-    ".lycheecache/**",
     "logs/**",
     "template/**/*.lock",
     "CHANGELOG.md"
@@ -68,12 +67,10 @@
   "overrides": [
     {
       "filename": "**/*.py",
-      "language": "en",
       "dictionaries": ["python"]
     },
     {
       "filename": "**/*.{ts,tsx}",
-      "language": "en",
       "dictionaries": ["typescript"]
     },
     {
