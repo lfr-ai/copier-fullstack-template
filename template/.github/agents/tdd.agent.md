@@ -22,7 +22,7 @@ tools:
 model: ['Claude Sonnet 4', 'Claude Opus 4']
 handoffs:
   - label: 'Review architecture'
-    agent: claude-architect
+    agent: architect
     prompt: 'Review architecture boundaries of the implemented feature'
   - label: 'Debug failing test'
     agent: debug

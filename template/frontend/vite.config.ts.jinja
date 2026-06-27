@@ -20,9 +20,7 @@ export default defineConfig(({ mode }) => ({
 				]
 			: []),
 	],
-	root: '.',
 	build: {
-		outDir: 'dist',
 		sourcemap: mode === 'prod' ? 'hidden' : true,
 		target: 'es2022',
 		cssMinify: 'lightningcss',

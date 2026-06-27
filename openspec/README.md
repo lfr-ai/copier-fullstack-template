@@ -3,9 +3,9 @@
 This directory is the planning home for spec-driven changes in the template
 repository itself.
 
-- Use `/opsx-propose` to create a change.
-- Use `/opsx-apply` to implement approved tasks.
-- Use `/opsx-sync` and `/opsx-archive` to finalize.
+- Use `/openspec/propose` to create a change.
+- Use `/openspec/apply` to implement approved tasks.
+- Use `/openspec/sync` and `/openspec/archive` to finalize.
 
 Generated projects get their own `openspec/` directory from the template under
 `template/openspec/`.

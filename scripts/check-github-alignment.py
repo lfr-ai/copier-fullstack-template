@@ -12,9 +12,10 @@ from pathlib import Path
 _REQUIRED_FILES: tuple[str, ...] = (
     "template/.github/CODEOWNERS.jinja",
     "template/.github/copilot-instructions.md.jinja",
+    "template/.github/agents/ddd.agent.md",
     "template/.github/agents/debug.agent.md",
     "template/.github/agents/deep-thinking.agent.md",
-    "template/.github/agents/expert-react-frontend-engineer.agent.md",
+    "template/.github/agents/frontend-engineer.agent.md",
     "template/.github/agents/modernization.agent.md",
     "template/.github/agents/prompt-engineering.agent.md",
     "template/.github/agents/sdd.agent.md",

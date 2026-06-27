@@ -19,7 +19,7 @@ tools:
 model: ['Claude Sonnet 4', 'Claude Opus 4']
 handoffs:
   - label: 'Implement UI changes'
-    agent: frontend-react
+    agent: frontend-engineer
     prompt: 'Implement the UI updates proposed in this UX review'
   - label: 'Add test coverage'
     agent: testing-specialist

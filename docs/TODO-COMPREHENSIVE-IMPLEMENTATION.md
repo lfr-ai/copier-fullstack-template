@@ -1,5 +1,8 @@
 # Comprehensive Cleanup & Simplification TODO (Exhaustive)
 
+> **See also:** [PONYTAIL-AUDIT.md](./PONYTAIL-AUDIT.md) — ponytail over-engineering
+> audit with YAGNI/KISS/DRY/SRP findings and completed simplifications.
+
 ## Scope
 
 This is the authoritative implementation backlog for making this template
@@ -68,6 +71,7 @@ Pass 2 completion notes:
 - Removed non-matching cspell ignore glob for `.lycheecache/**`.
 - Removed redundant cspell override-level `language: en` entries inherited from
       global config.
+- Removed root cspell top-level `language: en` override to use default locale.
 - Removed default `check-added-large-files --maxkb=500` argument from
       pre-commit config.
 - Applied matching simplifications to template counterparts:
@@ -75,6 +79,9 @@ Pass 2 completion notes:
       - removed typos default locale/empty table
       - removed non-standard EditorConfig `max_line_length`
       - removed Ruff format defaults (`quote-style`, `indent-style`)
+      - removed redundant Lychee `--no-progress` CLI arg (moved to config behavior)
+      - removed no-op Biome `css` section and default formatter `lineEnding`
+- Verified rendered outputs no longer include those removed defaults/no-op entries.
 
 ### Pass 3 — template questionnaire simplification (`copier.yml`)
 
@@ -84,20 +91,29 @@ Pass 2 completion notes:
       docs vs default interactive prompts.
 - [ ] Ensure conditional questions rely on documented Copier `when` behavior and
       avoid duplicated validation logic.
-- [ ] Validate with render smoke test and generated project sanity checks.
+- [x] Validate with render smoke test and generated project sanity checks.
 
 Pass 3 completion notes (in progress):
 
 - Removed dead `frontend_framework` copier question (`when: false`, unused by
       template files).
+- Validated generated output with both minimal and feature-rich render scenarios.
 
 ### Pass 4 — architecture and boundary consistency
 
-- [ ] Keep backend clean architecture rules explicit and minimal:
+- [x] Keep backend clean architecture rules explicit and minimal:
   - validate `scripts/check-architecture-boundaries.py` for edge cases
   - confirm dependency direction policy remains framework-agnostic
 - [ ] Document any intentional exceptions in a short policy section.
 - [ ] Ensure root and template instruction parity for architecture guidance.
+
+Pass 4 completion notes (in progress):
+
+- Verified architecture boundaries pass after conditionalization and config cleanup.
+- Fixed a latent template bug in settings validation (`auth_enabled` reference
+      removed; auth validation now environment-driven).
+- Made observability bootstrap conditional (`use_observability`) to avoid runtime
+      import failures when observability is disabled.
 
 ### Pass 5 — root/template drift prevention
 
@@ -115,10 +131,16 @@ Pass 5 candidate alignment backlog:
       configs, or document intentional divergence.
 - [ ] Normalize GitHub Action major versions between root and template
       workflows, or document intentional divergence.
-- [ ] Decide if Hadolint `DL3059` ignore should be root+template or
+- [x] Decide if Hadolint `DL3059` ignore should be root+template or
       template-only policy.
 - [ ] Define canonical markdownlint scope/rule baseline for root vs template.
 - [ ] Define canonical core MCP server set and document optional server deltas.
+
+Pass 5 completion notes (in progress):
+
+- Hadolint `DL3059` remains template-only by design (generated project
+      Dockerfiles have multi-tool install readability tradeoffs; root does not).
+- `.github` drift checks continue to pass via existing validation scripts.
 
 ### Pass 6 — docs coherence and operational simplicity
 
@@ -140,17 +162,71 @@ Pass 7 status note:
   this session (available repos are different). Keep local validation as source
   of truth until indexing is corrected.
 
+### Pass 8 — script suite simplification and consistency
+
+- [x] Remove duplicated Python-file scanning logic across validation scripts.
+- [x] Introduce one internal helper module (`scripts/_python_file_utils.py`) for:
+      - Python/Jinja file discovery
+      - UTF-8 text reads with ignored decode errors
+- [x] Refactor checks to use shared helper:
+      - `scripts/check-architecture-boundaries.py`
+      - `scripts/check-fastapi-status-codes.py`
+      - `scripts/check-module-docstrings.py`
+      - `scripts/check-no-final.py`
+- [x] Normalize script structure for consistency (`main()` entrypoint,
+                  argument parsing, cohesive helper functions) in:
+      - `scripts/check-no-final.py`
+      - `scripts/copy-template-snapshot.py`
+- [x] Re-run full quality gate (`task verify-all`).
+
+Pass 8 completion notes:
+
+- Shared logic eliminated repeated `rglob`/suffix checks and repeated
+                  `read_text(..., errors='ignore')` calls.
+- Script behavior remains unchanged; only implementation structure and
+                  maintainability improved.
+- All validation tasks pass after refactor.
+
+### Pass 9 — backend utils ponytail cleanup
+
+- [x] Identify dead/thin utility wrappers in backend template utils package.
+- [x] Delete unused wrapper modules that only re-exposed stdlib behavior:
+  - `template/backend/src/{{ project_slug }}/utils/crypto_utils.py`
+  - `template/backend/src/{{ project_slug }}/utils/file_utils.py`
+  - `template/backend/src/{{ project_slug }}/utils/json_utils.py`
+- [x] Validate no references remained in template backend sources.
+- [x] Re-run full quality gate (`task verify-all`).
+
+Pass 9 completion notes:
+
+- Reduced generated project surface area and maintenance burden by removing
+      dead utility abstractions.
+- Kept behavior unchanged for generated projects because no callers existed.
+
+### Pass 10 — duplication-tooling hygiene
+
+- [x] Run clone detection with `npx jscpd --config jscpd.json`.
+- [x] Remove unsupported `jscpd.json` field (`skipBlocks`) to eliminate config
+      warnings and keep checks deterministic.
+- [x] Re-run clone detection to confirm warning removal.
+
+Pass 10 completion notes:
+
+- Remaining clone matches are predominantly intentional cross-tool/template
+      mirrors (`.claude` ↔ `.github` ↔ `template/`) and should be handled via
+      generated/synchronized source-of-truth strategy, not ad-hoc manual edits.
+
 ## Verification checklist (required per pass)
 
-- [ ] `task verify-all` passes.
-- [ ] Documentation updated for all behavior/config changes.
-- [ ] No new architecture-boundary violations introduced.
-- [ ] No accidental root/template coupling regressions introduced.
+- [x] `task verify-all` passes.
+- [x] Documentation updated for all behavior/config changes.
+- [x] No new architecture-boundary violations introduced.
+- [x] No accidental root/template coupling regressions introduced.
 
 ## Definition of done for this initiative
 
-- [ ] Config and setup are default-first and free of obvious redundancy.
-- [ ] Golden audits are stable (no noisy false positives).
+- [x] Config and setup are default-first and free of obvious redundancy.
+- [x] Golden audits are stable (no noisy false positives).
 - [ ] Clean architecture checks are enforced and documented.
 - [ ] Root/template alignment is automated for critical governance assets.
-- [ ] Documentation is coherent, minimal, and current.
+- [x] Documentation is coherent, minimal, and current.

@@ -18,7 +18,7 @@ tools:
 model: ['Claude Sonnet 4']
 handoffs:
   - label: 'Review architecture'
-    agent: claude-architect
+    agent: architect
     prompt: 'Review the architecture after refactoring'
   - label: 'Add test coverage'
     agent: tdd

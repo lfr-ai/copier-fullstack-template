@@ -8,15 +8,15 @@ This directory contains comprehensive Claude Code project configuration for temp
 .claude/
 ├── settings.json              # Project settings (permissions, env, hooks, plugins)
 ├── settings.local.json        # Local overrides (gitignored)
-├── agents/                    # Specialized agents (14)
-├── rules/                     # Path-scoped rules (7)
-├── commands/                  # Custom commands (1)
-├── skills/                    # Reusable skills (5)
+├── agents/                    # Specialized agents (16)
+├── rules/                     # Path-scoped rules (20)
+├── commands/                  # Custom commands (14)
+├── skills/                    # Reusable skills (14)
 ├── hooks/                     # Pre/Post tool-use hooks (both .sh and .ps1)
 └── CLAUDE.md                  # This documentation
 ```
 
-## Agents (14)
+## Agents (16)
 
 Specialized agents for template development workflows:
 
@@ -25,6 +25,7 @@ Specialized agents for template development workflows:
 - **backend-engineer.md** — Backend development specialist
 - **frontend-engineer.md** — Frontend development specialist
 - **devops.md** — Infrastructure and deployment
+- **ddd.md** — Domain-Driven Design modeling
 
 ### Code Quality
 - **code-reviewer.md** — Code review and quality assessment
@@ -41,34 +42,70 @@ Specialized agents for template development workflows:
 - **deep-thinking.md** — Extended reasoning
 - **modernization.md** — Codebase modernization
 - **researcher.md** — Research and exploration
+- **ui-ux-frontend.md** — UI/UX interaction quality
 
-## Rules (7)
+## Rules (20)
 
 Path-scoped rules automatically loaded for matching files:
 
+- **agent-prompting.md** — Agent prompt quality standards
+- **architecture-boundaries.md** — Cross-language architecture enforcement
 - **architecture.md** — Clean Architecture boundaries (`backend/src/**/*.py`)
-- **python.md** — Python conventions (`**/*.py`)
-- **frontend.md** — React/TypeScript rules (`frontend/src/**/*`)
-- **testing.md** — Test conventions (`**/tests/**/*`)
-- **shell.md** — Shell script rules (`**/*.sh`, `**/*.ps1`)
+- **coding-conventions.md** — Cross-language coding standards
+- **cognitive-load.md** — Readability and maintainability
 - **commit.md** — Conventional commit format
+- **ddd.md** — Domain-Driven Design (`core/**/*.py`)
 - **docs-sync.md** — Keep docs updated with code
+- **frontend.md** — React/TypeScript rules (`frontend/src/**/*`)
+- **prompt.md** — Prompt file standards
+- **python-conventions.md** — Python conventions (`**/*.py`)
+- **react-conventions.md** — React component rules (`**/*.tsx`)
+- **readability-and-cognitive-load.md** — Clarity-first structure
+- **registry.md** — Registry-first naming patterns
+- **sdd.md** — Spec-driven development
+- **shell.md** — Shell script rules (`**/*.sh`, `**/*.ps1`)
+- **tdd.md** — Test-driven development
+- **testing.md** — Test conventions (`**/tests/**/*`)
+- **typescript-conventions.md** — TypeScript standards
+- **ui-ux-frontend.md** — UI/UX interaction rules
 
-## Commands (1)
+## Commands (14)
 
 Custom commands for common workflows:
 
 - **commit.md** — Intelligent commit message generation
+- **gitnexus/debug.md** — Graph-powered debugging
+- **gitnexus/impact.md** — Change impact analysis
+- **openspec/apply.md** — Apply spec changes to code
+- **openspec/archive.md** — Archive completed specs
+- **openspec/bulk-archive.md** — Bulk archive specs
+- **openspec/continue.md** — Continue spec implementation
+- **openspec/explore.md** — Explore spec landscape
+- **openspec/ff.md** — Fast-forward implementation
+- **openspec/new.md** — Create new spec
+- **openspec/onboard.md** — Onboard to OpenSpec workflow
+- **openspec/propose.md** — Propose spec changes
+- **openspec/sync.md** — Sync specs with implementation
+- **openspec/verify.md** — Verify spec compliance
 
-## Skills (5)
+## Skills (14)
 
 Reusable domain knowledge:
 
 - **clean-architecture/** — Architecture boundaries and Dependency Rule
-- **python-conventions/** — Python code quality standards
-- **testing-conventions/** — Test strategy and markers
-- **naming-registry/** — Registry-first constant generation
+- **ddd/** — Domain-Driven Design tactical patterns
+- **dry-refactoring/** — Clone detection and elimination
 - **frontend-react-stack/** — React + TypeScript + shadcn/ui
+- **gitnexus/** — Graph-powered code intelligence
+- **jscpd/** — Clone detection workflow
+- **naming-registry/** — Registry-first constant generation
+- **openspec/** — OpenSpec workflow skills
+- **python-conventions/** — Python code quality standards
+- **quality-gate/** — Validation gates before completion
+- **sdd/** — Specification-driven implementation
+- **tdd/** — Test-driven development
+- **testing-conventions/** — Test strategy and markers
+- **ui-ux-frontend/** — Frontend interaction quality
 
 ## Settings
 
@@ -290,5 +327,5 @@ paths:
 ---
 
 **Status**: ✅ Production-Ready
-**Last Updated**: 2026-05-05
+**Last Updated**: 2026-06-25
 **Maintained By**: copier-fullstack-template team

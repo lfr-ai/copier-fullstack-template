@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING, final
 
 from {{ project_slug }}.infrastructure.cache.memory_cache import MemoryCacheAdapter
 from {{ project_slug }}.infrastructure.messaging.memory_event_bus import MemoryEventBus
+{% if use_auth %}
 from {{ project_slug }}.application.services.user_service import UserService
+{% endif %}
 from {{ project_slug }}.config.settings import get_settings
 
 if TYPE_CHECKING:
@@ -129,6 +131,7 @@ class Container:
             self._event_bus = MemoryEventBus()
         return self._event_bus
 
+{% if use_auth %}
     def user_service(self) -> UserService:
         """Create user service with its dependencies."""
         from {{ project_slug }}.infrastructure.security.hashing import PBKDF2PasswordHasher
@@ -137,7 +140,7 @@ class Container:
             uow=self.unit_of_work(),
             password_hasher=PBKDF2PasswordHasher(),
         )
-
+{% endif %}
 
 {% if use_ai %}
     def load_ai_config(self, config_path: str | None = None) -> object | None:
