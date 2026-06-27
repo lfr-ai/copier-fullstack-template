@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from {{ project_slug }}.presentation.api.routes import health, users
+from {{ project_slug }}.presentation.api.routes import health
+{%- if use_auth %}
+from {{ project_slug }}.presentation.api.routes import users
+{%- endif %}
 {%- if use_ai %}
 from {{ project_slug }}.presentation.api.routes import ai as ai_routes
 from {{ project_slug }}.presentation.api.routes import conversations as conv_routes
@@ -26,7 +29,9 @@ from {{ project_slug }}.presentation.api.routes import crewai as crewai_routes
 api_router = APIRouter()
 
 api_router.include_router(health.router, tags=["health"])
+{%- if use_auth %}
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+{%- endif %}
 {%- if use_ai %}
 api_router.include_router(ai_routes.router, prefix="/ai", tags=["ai"])
 api_router.include_router(conv_routes.router, prefix="/conversations", tags=["conversations"])

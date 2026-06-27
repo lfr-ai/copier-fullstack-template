@@ -1,7 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
   "assist": {
-    "enabled": true,
     "actions": {
       "source": {
         "organizeImports": "on"
@@ -9,7 +8,6 @@
     }
   },
   "linter": {
-    "enabled": true,
     "domains": ["react", "test"],
     "rules": {
       "recommended": true,
@@ -42,30 +40,12 @@
     }
   },
   "formatter": {
-    "enabled": true,
     "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 88,
-    "lineEnding": "lf"
+    "lineWidth": 88
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "single",
-      "trailingCommas": "all",
-      "semicolons": "always"
-    }
-  },
-  "json": {
-    "formatter": {
-      "indentWidth": 2
-    }
-  },
-  "css": {
-    "linter": {
-      "enabled": true
-    },
-    "formatter": {
-      "enabled": true
+      "quoteStyle": "single"
     }
   },
   "files": {

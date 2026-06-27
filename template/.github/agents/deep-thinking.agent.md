@@ -29,7 +29,7 @@ handoffs:
     agent: tdd
     prompt: 'Implement the designed solution using test-driven development'
   - label: 'Design architecture'
-    agent: claude-architect
+    agent: architect
     prompt: 'Design the architecture for this solution'
 ---
 

@@ -37,7 +37,6 @@ def validate_secret_key_strength(*, secret_key: str, env_prefix: str) -> None:
 
 def validate_auth_configuration(
     *,
-    auth_enabled: bool,
     environment: Environment,
     jwt_secret_key: str,
     jwt_expire_minutes: int,
@@ -46,7 +45,6 @@ def validate_auth_configuration(
     """Validate authentication settings consistency.
 
     Args:
-        auth_enabled (bool): Whether JWT auth is enabled.
         environment (Environment): Active application environment.
         jwt_secret_key (str): JWT signing secret.
         jwt_expire_minutes (int): Access-token expiration in minutes.
@@ -55,21 +53,21 @@ def validate_auth_configuration(
     Raises:
         ValueError: If auth settings are invalid.
     """
-    if not auth_enabled:
+    if environment == Environment.LOCAL:
         return
 
     if not jwt_secret_key or jwt_secret_key == 'change-me-jwt-secret':
         msg = (
-            'jwt_secret_key must be configured when auth_enabled is True. '
+            'jwt_secret_key must be configured for non-local environments. '
             f'Set {env_prefix}JWT_SECRET_KEY.'
         )
         raise ValueError(msg)
 
     if jwt_expire_minutes <= 0:
-        msg = 'jwt_expire_minutes must be greater than zero when authentication is enabled.'
+        msg = 'jwt_expire_minutes must be greater than zero.'
         raise ValueError(msg)
 
-    if environment != Environment.LOCAL and len(jwt_secret_key) < _MIN_SECRET_KEY_LENGTH:
+    if len(jwt_secret_key) < _MIN_SECRET_KEY_LENGTH:
         msg = (
             'jwt_secret_key must be at least 32 characters outside LOCAL '
             f'environment. Set {env_prefix}JWT_SECRET_KEY.'

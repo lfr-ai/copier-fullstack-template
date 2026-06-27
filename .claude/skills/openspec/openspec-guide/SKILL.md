@@ -36,23 +36,23 @@ For any task involving spec-driven development, behavioral changes, or feature w
 
 ## Slash Commands (GitHub Copilot)
 
-| Command             | Purpose                                      |
-| ------------------- | -------------------------------------------- |
-| `/opsx-propose`     | Create change + all artifacts in one step    |
-| `/opsx-explore`     | Investigate ideas before committing          |
-| `/opsx-new`         | Start a new change scaffold                  |
-| `/opsx-continue`    | Create next artifact in sequence             |
-| `/opsx-ff`          | Fast-forward all planning artifacts          |
-| `/opsx-apply`       | Implement tasks from the change              |
-| `/opsx-sync`        | Merge delta specs into main specs            |
-| `/opsx-verify`      | Validate implementation matches specs        |
-| `/opsx-archive`     | Archive a completed change                   |
-| `/opsx-bulk-archive`| Archive multiple changes                     |
-| `/opsx-onboard`     | Guided onboarding tutorial                   |
+| Command                    | Purpose                                      |
+| -------------------------- | -------------------------------------------- |
+| `/openspec/propose`        | Create change + all artifacts in one step    |
+| `/openspec/explore`        | Investigate ideas before committing          |
+| `/openspec/new`            | Start a new change scaffold                  |
+| `/openspec/continue`       | Create next artifact in sequence             |
+| `/openspec/ff`             | Fast-forward all planning artifacts          |
+| `/openspec/apply`          | Implement tasks from the change              |
+| `/openspec/sync`           | Merge delta specs into main specs            |
+| `/openspec/verify`         | Validate implementation matches specs        |
+| `/openspec/archive`        | Archive a completed change                   |
+| `/openspec/bulk-archive`   | Archive multiple changes                     |
+| `/openspec/onboard`        | Guided onboarding tutorial                   |
 
 ## Slash Commands (Claude Code)
 
-Same commands using colon syntax: `/opsx:propose`, `/opsx:apply`, etc.
+Same commands using colon syntax: `/openspec:propose`, `/openspec:apply`, etc.
 
 ## Spec Domains (Source of Truth)
 

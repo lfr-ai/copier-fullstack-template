@@ -18,10 +18,8 @@ class ProdSettings(BaseAppSettings):
 
     environment: Environment = Environment.PROD
     model_config = SettingsConfigDict(env_file=None)
-    debug: bool = False
     log_level: str = "WARNING"
     host: str = "0.0.0.0"  # noqa: S104  -- intentional: container networking
-    database_echo: bool = False
 
     @model_validator(mode="after")
     def _validate_secret_key(self) -> "ProdSettings":

@@ -5,27 +5,70 @@ Applies to public and internal constants/variables.
 
 from __future__ import annotations
 
+import argparse
 import re
-import sys
 from pathlib import Path
 
-root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("template/backend/src")
-pattern = re.compile(r"^[A-Z_][A-Z0-9_]*\s*:\s*Final", re.MULTILINE)
-offenders: list[str] = []
+from _python_file_utils import iter_python_like_files, read_text_ignore_errors
 
-for path in root.rglob("*"):
-    if not path.is_file():
-        continue
-    if not (path.name.endswith(".py") or path.name.endswith(".py.jinja")):
-        continue
-    text = path.read_text(encoding="utf-8", errors="ignore")
-    if pattern.search(text):
-        offenders.append(path.as_posix())
+_FINAL_ANNOTATION_PATTERN = re.compile(r"^[A-Z_][A-Z0-9_]*\s*:\s*Final", re.MULTILINE)
+_DEFAULT_ROOT = Path("template/backend/src")
 
-if offenders:
-    print("[FAIL] Found Final[] annotations on module-level constants/variables:")
-    for file in offenders:
-        print(f"  - {file}")
-    sys.exit(1)
 
-print("[OK] No Final[] type annotations on module-level constants/variables")
+def _parse_args() -> argparse.Namespace:
+    """Parse command-line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed CLI arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description="Fail when module-level constants use Final annotations.",
+    )
+    parser.add_argument(
+        "root",
+        nargs="?",
+        default=str(_DEFAULT_ROOT),
+        help="Root folder to scan recursively.",
+    )
+    return parser.parse_args()
+
+
+def _collect_offenders(*, root: Path) -> list[str]:
+    """Collect files containing module-level 'Final' annotations.
+
+    Args:
+        root (Path): Root folder to scan recursively.
+
+    Returns:
+        list[str]: Offending file paths formatted with POSIX separators.
+    """
+    offenders: list[str] = []
+    for file_path in iter_python_like_files(roots=[root]):
+        text = read_text_ignore_errors(path=file_path)
+        if _FINAL_ANNOTATION_PATTERN.search(text):
+            offenders.append(file_path.as_posix())
+    return offenders
+
+
+def main() -> int:
+    """Run no-'Final' validation and print diagnostics.
+
+    Returns:
+        int: Process exit code.
+    """
+    args = _parse_args()
+    root = Path(args.root)
+    offenders = _collect_offenders(root=root)
+
+    if offenders:
+        print("[FAIL] Found Final[] annotations on module-level constants/variables:")
+        for file_path in offenders:
+            print(f"  - {file_path}")
+        return 1
+
+    print("[OK] No Final[] type annotations on module-level constants/variables")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

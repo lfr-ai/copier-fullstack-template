@@ -10,35 +10,12 @@ from pathlib import Path
 import argparse
 import re
 
-_FILE_SUFFIXES = (".py", ".py.jinja")
+from _python_file_utils import iter_python_like_files, read_text_ignore_errors
+
 _DEFAULT_PATHS = ("scripts", "template/backend/src", "template/tools")
 _TOP_JINJA_LINE_PATTERN = re.compile(r"^\s*{[%#].*[%#]}\s*$")
 _STRING_START_PATTERN = re.compile(r"\s*(?:[rubfRUBF]{,2})?('''|\"\"\")")
 _ENCODING_PATTERN = re.compile(r"^\s*#.*coding[:=]")
-
-
-def _iter_python_like_files(*, roots: list[Path]) -> list[Path]:
-    """Collect Python-like files from root directories.
-
-    Args:
-        roots (list[Path]): Root folders to scan recursively.
-
-    Returns:
-        list[Path]: Sorted file paths ending with '.py' or '.py.jinja'.
-    """
-    files: list[Path] = []
-    for root in roots:
-        if root.is_file() and root.name.endswith(_FILE_SUFFIXES):
-            files.append(root)
-            continue
-        if not root.exists():
-            continue
-        files.extend(
-            path
-            for path in root.rglob("*")
-            if path.is_file() and path.name.endswith(_FILE_SUFFIXES)
-        )
-    return sorted(set(files))
 
 
 def _has_module_docstring(*, text: str) -> bool:
@@ -97,7 +74,7 @@ def main() -> int:
     """
     args = _parse_args()
     roots = [Path(raw_path) for raw_path in args.paths]
-    files = _iter_python_like_files(roots=roots)
+    files = iter_python_like_files(roots=roots)
 
     offenders: list[str] = []
     for file_path in files:
@@ -106,7 +83,7 @@ def main() -> int:
             "__init__.py.jinja",
         }:
             continue
-        text = file_path.read_text(encoding="utf-8", errors="ignore")
+        text = read_text_ignore_errors(path=file_path)
         if not _has_module_docstring(text=text):
             offenders.append(file_path.as_posix())
 

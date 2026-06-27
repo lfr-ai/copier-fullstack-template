@@ -25,7 +25,7 @@ _DEFAULT_NUM_RETRIES = 3
 _DEFAULT_TIMEOUT = 60
 _DEFAULT_COOLDOWN = 60
 _DEFAULT_ALLOWED_FAILS = 3
-_ENV_VAR_PATTERN = "${%s}"
+_ENV_VAR_PATTERN = {% raw %}"${%s}"{% endraw %}
 
 
 @dataclass(frozen=True, slots=True)

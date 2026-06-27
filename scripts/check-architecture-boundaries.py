@@ -6,6 +6,8 @@ import re
 import sys
 from pathlib import Path
 
+from _python_file_utils import iter_python_like_files, read_text_ignore_errors
+
 _LAYER_ORDER: dict[str, int] = {
     "utils": 0,
     "config": 1,
@@ -17,25 +19,6 @@ _LAYER_ORDER: dict[str, int] = {
     "composition": 7,
 }
 _IMPORT_RE = re.compile(r"^\s*(?:from|import)\s+([A-Za-z0-9_\.]+)", re.MULTILINE)
-
-
-def _iter_source_files(*, root: Path) -> list[Path]:
-    """Collect Python and Jinja-Python files under 'root'.
-
-    Args:
-        root (Path): Backend source root directory.
-
-    Returns:
-        list[Path]: Candidate source files for architecture checks.
-    """
-    files: list[Path] = []
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        if not (path.name.endswith(".py") or path.name.endswith(".py.jinja")):
-            continue
-        files.append(path)
-    return files
 
 
 def _detect_layer(*, path: Path) -> str | None:
@@ -128,11 +111,11 @@ def main() -> int:
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("template/backend/src")
     offenders: list[str] = []
 
-    for file_path in _iter_source_files(root=root):
+    for file_path in iter_python_like_files(roots=[root]):
         source_layer = _detect_layer(path=file_path)
         if source_layer is None:
             continue
-        text = file_path.read_text(encoding="utf-8", errors="ignore")
+        text = read_text_ignore_errors(path=file_path)
         imported_layers = _extract_layer_imports(text=text)
         violating_targets = sorted(
             target

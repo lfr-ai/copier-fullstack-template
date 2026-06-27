@@ -1,4 +1,4 @@
-"""Domain validation constants.
+"""Domain validation constants and type aliases.
 
 Shared by core, application, and adapter layers. Constants that are
 infrastructure-specific (DB pool sizes, networking defaults, etc.)
@@ -6,6 +6,8 @@ live in 'config.constants' instead.
 """
 
 from __future__ import annotations
+
+from typing import NewType
 
 DEFAULT_LIST_LIMIT = 100
 
@@ -17,3 +19,5 @@ DISPLAY_NAME_MAX_LENGTH = 100
 MIN_PASSWORD_LENGTH = 8
 PASSWORD_MAX_LENGTH = 128
 PASSWORD_HASH_MAX_LENGTH = 255
+
+UserId = NewType("UserId", str)

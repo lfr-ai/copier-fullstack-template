@@ -12,29 +12,14 @@ from pathlib import Path
 import re
 import sys
 
+from _python_file_utils import iter_python_like_files, read_text_ignore_errors
+
 
 _NUMERIC_STATUS_CODE_PATTERN = re.compile(r"\bstatus_code\s*=\s*\d{3}\b")
 _STARLETTE_STATUS_IMPORT_PATTERN = re.compile(
     r"^\s*(?:from\s+starlette(?:\.status)?\s+import\s+status|import\s+starlette\.status)\b",
     re.MULTILINE,
 )
-_FILE_SUFFIXES = (".py", ".py.jinja")
-
-
-def _iter_python_files(*, root: Path) -> list[Path]:
-    """Collect Python and Python Jinja template files.
-
-    Args:
-        root (Path): Root folder to scan recursively.
-
-    Returns:
-        list[Path]: Sorted Python-like file paths.
-    """
-    return sorted(
-        path
-        for path in root.rglob("*")
-        if path.is_file() and path.name.endswith(_FILE_SUFFIXES)
-    )
 
 
 def _scan_file(*, file_path: Path) -> list[str]:
@@ -46,7 +31,7 @@ def _scan_file(*, file_path: Path) -> list[str]:
     Returns:
         list[str]: List of human-readable violations.
     """
-    text = file_path.read_text(encoding="utf-8", errors="ignore")
+    text = read_text_ignore_errors(path=file_path)
     violations: list[str] = []
 
     if _NUMERIC_STATUS_CODE_PATTERN.search(text):
@@ -67,7 +52,7 @@ def main() -> int:
         int: Process exit code.
     """
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("template/backend/src")
-    all_files = _iter_python_files(root=root)
+    all_files = iter_python_like_files(roots=[root])
 
     offenders: dict[Path, list[str]] = {}
     for file_path in all_files:

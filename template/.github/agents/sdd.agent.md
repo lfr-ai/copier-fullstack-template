@@ -25,7 +25,7 @@ handoffs:
     agent: tdd
     prompt: 'Implement the specified feature using test-driven development'
   - label: 'Architecture review'
-    agent: claude-architect
+    agent: architect
     prompt: 'Review the architecture of the specified design'
 ---
 

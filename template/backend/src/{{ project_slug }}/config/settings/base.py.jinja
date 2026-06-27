@@ -193,7 +193,6 @@ class BaseAppSettings(BaseSettings):
         """Reject insecure default secrets outside local environment."""
 {%- if use_auth %}
         validate_auth_configuration(
-            auth_enabled=self.auth_enabled,
             environment=self.environment,
             jwt_secret_key=self.jwt_secret_key,
             jwt_expire_minutes=self.jwt_expire_minutes,

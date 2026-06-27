@@ -27,7 +27,7 @@ handoffs:
     agent: tdd
     prompt: 'Implement the planned modernization changes with tests'
   - label: 'Architecture review'
-    agent: claude-architect
+    agent: architect
     prompt: 'Review the modernization architecture plan'
 ---
 
