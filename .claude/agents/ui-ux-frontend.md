@@ -2,7 +2,7 @@
 name: UI UX Frontend
 description: UI/UX flow specialist for accessibility, responsive behavior, and Storybook interaction quality.
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit, Write, Agent
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: high
 maxTurns: 40

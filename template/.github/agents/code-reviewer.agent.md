@@ -1,18 +1,27 @@
 ---
-description: Code review specialist for correctness, Clean Architecture compliance, type safety, test coverage, and security issues. Read-only agent that produces actionable recommendations.
+description: Code review specialist for correctness, Clean Architecture compliance, type safety, test coverage, and security issues.
 tools:
   [
-    read/readFile,
+    vscode/getProjectSetupInfo,
+    vscode/extensions,
+    execute/getTerminalOutput,
+    execute/runInTerminal,
     read/problems,
+    read/readFile,
+    read/terminalSelection,
+    read/terminalLastCommand,
+    edit/editFiles,
+    search/changes,
     search/codebase,
     search/fileSearch,
+    search/searchResults,
     search/textSearch,
     search/listDirectory,
-    search/changes,
     search/usages,
-    execute/runInTerminal,
-    execute/getTerminalOutput,
+    web/fetch,
+    web/githubRepo,
     context7/get-library-docs,
+    context7/resolve-library-id,
   ]
 model: ['Claude Sonnet 4']
 handoffs:

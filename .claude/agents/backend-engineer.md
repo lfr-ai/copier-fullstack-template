@@ -2,7 +2,7 @@
 name: Backend Engineer
 description: Backend Python engineer. Use for FastAPI routes, SQLAlchemy models, service layer, DI container, Alembic migrations, and Clean Architecture compliance.
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit, Write, Agent
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: high
 maxTurns: 50

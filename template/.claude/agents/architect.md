@@ -1,10 +1,9 @@
 ---
 name: Architect
-description: System architecture and design specialist. Use for architectural decisions, module design, dependency analysis, and Clean Architecture compliance reviews. Read-only — produces recommendations, not code.
+description: System architecture and design specialist. Use for architectural decisions, module design, dependency analysis, and Clean Architecture compliance reviews.
 model: opus
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit
-permissionMode: plan
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
+permissionMode: acceptEdits
 effort: xhigh
 maxTurns: 30
 skills:

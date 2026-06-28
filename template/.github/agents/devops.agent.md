@@ -2,16 +2,24 @@
 description: DevOps specialist for CI/CD pipelines, container workflows, Alembic migrations, deployment automation, and environment configuration.
 tools:
   [
-    read/readFile,
+    vscode/getProjectSetupInfo,
+    vscode/extensions,
+    execute/getTerminalOutput,
+    execute/runInTerminal,
     read/problems,
+    read/readFile,
+    read/terminalSelection,
+    read/terminalLastCommand,
+    edit/editFiles,
+    search/changes,
     search/codebase,
     search/fileSearch,
+    search/searchResults,
     search/textSearch,
     search/listDirectory,
-    edit/editFiles,
-    execute/runInTerminal,
-    execute/getTerminalOutput,
+    search/usages,
     web/fetch,
+    web/githubRepo,
     context7/get-library-docs,
     context7/resolve-library-id,
   ]

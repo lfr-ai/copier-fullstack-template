@@ -2,9 +2,8 @@
 name: Code Reviewer
 description: Code review specialist. Use after implementing features to check correctness, Clean Architecture compliance, type safety, test coverage, and security issues.
 model: sonnet
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit
-permissionMode: plan
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
+permissionMode: acceptEdits
 effort: high
 maxTurns: 30
 skills:

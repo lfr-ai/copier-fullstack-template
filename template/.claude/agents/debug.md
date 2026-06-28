@@ -2,7 +2,7 @@
 name: Debug
 description: Debugging specialist. Use proactively when encountering any bug, test failure, stack trace, or unexpected behavior — before proposing fixes.
 model: sonnet
-tools: Read, Edit, Bash, Grep, Glob, Write
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: high
 maxTurns: 40

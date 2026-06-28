@@ -12,6 +12,9 @@ if TYPE_CHECKING:
     from {{ project_slug }}.application.services.user_service import UserService
     from {{ project_slug }}.config.settings.base import BaseAppSettings
     from {{ project_slug }}.presentation.graphql.types import UserType
+{%- if use_auth %}
+    from {{ project_slug }}.core.interfaces.token_decoder import TokenDecoder
+{%- endif %}
 {%- if use_ai %}
     from {{ project_slug }}.ai.services import AIService
 {%- endif %}
@@ -59,6 +62,13 @@ class GraphQLContext(BaseContext):
         from {{ project_slug }}.presentation.graphql.dataloaders import create_user_loader
 
         return create_user_loader()
+{%- if use_auth %}
+
+    @cached_property
+    def token_decoder(self) -> TokenDecoder:
+        """'TokenDecoder' resolved from the DI container."""
+        return self._container.token_decoder()
+{%- endif %}
 {%- if use_ai %}
 
     @cached_property

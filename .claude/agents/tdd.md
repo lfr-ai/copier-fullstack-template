@@ -2,7 +2,7 @@
 name: Test-Driven Development
 description: Test-Driven Development (TDD). Use when implementing any feature — enforces red-green-refactor cycle, writes failing tests before any production code.
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit, Write
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: high
 maxTurns: 60

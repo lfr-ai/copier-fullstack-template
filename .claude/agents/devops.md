@@ -2,7 +2,7 @@
 name: DevOps
 description: DevOps and infrastructure specialist. Use for container configuration, CI/CD pipelines, Alembic migrations, deployment scripts, and environment configuration.
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit, Write
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: high
 maxTurns: 40

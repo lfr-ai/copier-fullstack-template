@@ -2,9 +2,8 @@
 name: Researcher
 description: Technical research specialist. Use for evaluating libraries, investigating approaches, fetching documentation, and producing decision reports with trade-offs.
 model: opus
-tools: Read, Grep, Glob, Bash, WebFetch
-disallowedTools: Write, Edit
-permissionMode: plan
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
+permissionMode: acceptEdits
 effort: xhigh
 maxTurns: 30
 memory: project

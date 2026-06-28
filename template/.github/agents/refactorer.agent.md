@@ -2,18 +2,26 @@
 description: Code refactoring specialist for reducing complexity, eliminating duplication, and applying Clean Architecture patterns without changing behavior. Implements incremental, test-verified refactorings.
 tools:
   [
-    read/readFile,
+    vscode/getProjectSetupInfo,
+    vscode/extensions,
+    execute/getTerminalOutput,
+    execute/runInTerminal,
     read/problems,
+    read/readFile,
+    read/terminalSelection,
+    read/terminalLastCommand,
+    edit/editFiles,
+    search/changes,
     search/codebase,
     search/fileSearch,
+    search/searchResults,
     search/textSearch,
     search/listDirectory,
-    search/changes,
     search/usages,
-    edit/editFiles,
-    execute/runInTerminal,
-    execute/getTerminalOutput,
+    web/fetch,
+    web/githubRepo,
     context7/get-library-docs,
+    context7/resolve-library-id,
   ]
 model: ['Claude Sonnet 4']
 handoffs:

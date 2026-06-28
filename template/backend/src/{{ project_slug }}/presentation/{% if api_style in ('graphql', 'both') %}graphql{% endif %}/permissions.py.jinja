@@ -45,11 +45,7 @@ class IsAuthenticated(BasePermission):
 {%- if use_auth %}
         token = auth_header.removeprefix("Bearer ").strip()
         try:
-            # FIXME: imports concrete adapter directly -- should inject via DI container
-            from {{ project_slug }}.infrastructure.auth.jwt_adapter import JWTAdapter
-
-            jwt = JWTAdapter(secret_key=info.context.settings.jwt_secret_key)
-            payload = jwt.decode_token(token)
+            payload = info.context.token_decoder.decode_token(token)
             return payload is not None
         except Exception:  # noqa: BLE001
             logger.debug("auth_token_validation_failed", exc_info=True)

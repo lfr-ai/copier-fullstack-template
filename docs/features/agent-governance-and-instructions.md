@@ -41,6 +41,11 @@ implementation constraints for template development and generated projects.
 ## Integrations
 
 - Copilot agents and hooks.
+- Agent definitions under `.claude/agents/`, `template/.claude/agents/`, and
+  `template/.github/agents/` now use a unified broad tool set for all
+  user-invocable agents (read, edit, execute, search, web, docs lookups).
+- Global safety constraints remain centralized in hook configs and runtime
+  permission rules (for example, destructive operations and sensitive Git flows).
 - Template-generated AGENTS guidance for downstream repositories.
 - OpenSpec workflow skills for both Copilot and Claude
   (`.github/skills/openspec/`, `.claude/skills/openspec/`).
@@ -54,4 +59,6 @@ Not applicable. This is governance/policy infrastructure.
 ## Security and authorization
 
 - Tool/hook governance includes safeguards against unsafe operations.
+- Hook guardrails and Git safety restrictions remain authoritative even with
+  broad per-agent tool enablement.
 - Documentation and style constraints reduce risky or ambiguous code generation.

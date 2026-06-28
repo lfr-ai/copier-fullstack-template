@@ -2,9 +2,8 @@
 name: Deep Thinking
 description: Extended reasoning for complex architectural decisions, performance optimization, and multi-faceted problems requiring thorough analysis before action.
 model: opus
-tools: Read, Grep, Glob, Bash, WebFetch, Agent
-disallowedTools: Write, Edit
-permissionMode: plan
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
+permissionMode: acceptEdits
 effort: xhigh
 maxTurns: 30
 memory: project

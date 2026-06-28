@@ -126,7 +126,7 @@ repos:
     hooks:
       - id: hadolint-docker
         args: [-c, .hadolint.yaml]
-        exclude: \.dockerignore$
+        exclude: (\.dockerignore$|\.containerignore$|\.jinja$)
 
   # ── Local exhaustive checks (run on every commit) ──
   - repo: local

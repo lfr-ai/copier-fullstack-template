@@ -13,10 +13,13 @@ tools:
     edit/editFiles,
     search/changes,
     search/codebase,
+        search/fileSearch,
+        search/searchResults,
     search/listDirectory,
     search/textSearch,
     search/usages,
     web/fetch,
+        web/githubRepo,
     context7/get-library-docs,
     context7/resolve-library-id,
   ]

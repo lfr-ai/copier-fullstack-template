@@ -18,6 +18,14 @@ _LAYER_ORDER: dict[str, int] = {
     "presentation": 6,
     "composition": 7,
 }
+_ALLOWED_CROSS_LAYER_IMPORTS: dict[str, frozenset[str]] = {
+    "presentation": frozenset({"application", "core", "config", "utils", "ai"}),
+    "infrastructure": frozenset({"core", "config", "utils"}),
+    "application": frozenset({"core", "config", "utils"}),
+    "core": frozenset({"utils"}),
+    "config": frozenset({"utils"}),
+    "ai": frozenset({"core", "config", "utils", "infrastructure"}),
+}
 _IMPORT_RE = re.compile(r"^\s*(?:from|import)\s+([A-Za-z0-9_\.]+)", re.MULTILINE)
 
 
@@ -64,40 +72,9 @@ def _is_violation(*, source_layer: str, target_layer: str) -> bool:
     Returns:
         bool: True when import is forbidden.
     """
-    if source_layer == target_layer:
+    if source_layer == target_layer or source_layer == "composition":
         return False
-    if source_layer == "composition":
-        return False
-    if source_layer == "presentation" and target_layer in {
-        "application",
-        "core",
-        "config",
-        "utils",
-        "ai",
-    }:
-        return False
-    if source_layer == "infrastructure" and target_layer in {
-        "core",
-        "config",
-        "utils",
-    }:
-        return False
-    if source_layer == "application" and target_layer in {
-        "core",
-        "config",
-        "utils",
-    }:
-        return False
-    if source_layer == "core" and target_layer == "utils":
-        return False
-    if source_layer == "config" and target_layer == "utils":
-        return False
-    if source_layer == "ai" and target_layer in {
-        "core",
-        "config",
-        "utils",
-        "infrastructure",
-    }:
+    if target_layer in _ALLOWED_CROSS_LAYER_IMPORTS.get(source_layer, frozenset()):
         return False
     return _LAYER_ORDER[target_layer] > _LAYER_ORDER[source_layer]
 
