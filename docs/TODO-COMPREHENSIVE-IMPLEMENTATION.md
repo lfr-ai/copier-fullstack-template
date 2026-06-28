@@ -216,6 +216,51 @@ Pass 10 completion notes:
       mirrors (`.claude` ↔ `.github` ↔ `template/`) and should be handled via
       generated/synchronized source-of-truth strategy, not ad-hoc manual edits.
 
+### Pass 11 — agent tool-permission alignment
+
+- [x] Standardize `.claude/agents/*.md` tool access to a shared full-access set
+      for all user-invocable agents.
+- [x] Mirror same tool-access policy in `template/.claude/agents/*.md`.
+- [x] Standardize tool lists in `template/.github/agents/*.agent.md` to the
+      same comprehensive capability set.
+- [x] Preserve centralized safety controls (hooks + runtime permission denies)
+      instead of per-agent read-only overrides.
+
+Pass 11 completion notes:
+
+- Removed per-agent `disallowedTools` read-only constraints where present in
+      Claude agent definitions.
+- Kept hook guardrails and Git safety controls unchanged in hook/runtime policy.
+- Updated governance docs to reflect broad tool enablement with central safety
+      constraints.
+
+### Pass 12 — quality-gate blocker closure
+
+- [x] Fix `ty-check` diagnostics in `scripts/check-github-alignment.py`
+      (`entries[0]` typing/narrowing issue).
+- [x] Reduce xenon complexity to pass configured thresholds:
+      - `scripts/check-github-alignment.py:main`
+      - `scripts/check-architecture-boundaries.py:_is_violation`
+- [x] Scope root Hadolint pre-commit hook to avoid false parser failures on
+      Jinja Containerfile templates.
+- [x] Resolve GraphQL auth architecture FIXME by removing presentation-layer
+      direct import of infrastructure `JWTAdapter`.
+
+Pass 12 completion notes:
+
+- Added robust hook-entry type narrowing helper in
+      `scripts/check-github-alignment.py` and consolidated failure rendering via
+      a normalized message builder.
+- Replaced branch-heavy `_is_violation` logic with a declarative
+      `_ALLOWED_CROSS_LAYER_IMPORTS` map to lower cognitive load and complexity.
+- Updated root Hadolint hook exclusion regex to skip Jinja and
+      `*.containerignore` pseudo-container files.
+- Introduced `TokenDecoder` core protocol and wired GraphQL auth token
+      validation through DI (`GraphQLContext` → `Container.token_decoder()`),
+      removing presentation→infrastructure coupling.
+- Verified gates now pass for the remediated blockers:
+      `ty-check`, `xenon`, and `task verify-all`.
+
 ## Verification checklist (required per pass)
 
 - [x] `task verify-all` passes.

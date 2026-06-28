@@ -2,7 +2,7 @@
 name: Testing Specialist
 description: Testing specialist for pytest, factory-boy, hypothesis, Playwright, and Vitest. Use when writing or reviewing any tests.
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit, Write
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: high
 maxTurns: 50

@@ -2,12 +2,22 @@
 description: Technical research specialist for evaluating libraries, investigating approaches, fetching documentation, and producing decision reports with trade-offs.
 tools:
   [
-    read/readFile,
+    vscode/getProjectSetupInfo,
+    vscode/extensions,
+    execute/getTerminalOutput,
+    execute/runInTerminal,
     read/problems,
+    read/readFile,
+    read/terminalSelection,
+    read/terminalLastCommand,
+    edit/editFiles,
+    search/changes,
     search/codebase,
     search/fileSearch,
+    search/searchResults,
     search/textSearch,
     search/listDirectory,
+    search/usages,
     web/fetch,
     web/githubRepo,
     context7/get-library-docs,

@@ -7,6 +7,7 @@ from .password_hasher import PasswordHasher
 from .repository import Repository
 from .unit_of_work import UnitOfWork
 {% if use_auth %}
+from .token_decoder import TokenDecoder
 from .user_repository import UserRepository
 {% endif %}
 {% if use_rag %}
@@ -20,6 +21,7 @@ __all__ = [
     "Repository",
     "UnitOfWork",
 {% if use_auth %}
+    "TokenDecoder",
     "UserRepository",
 {% endif %}
 {% if use_rag %}

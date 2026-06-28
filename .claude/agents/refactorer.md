@@ -2,7 +2,7 @@
 name: Refactorer
 description: Code refactoring specialist. Use for reducing complexity, eliminating duplication, applying Clean Architecture patterns — without changing behavior.
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit, Write
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: high
 maxTurns: 50

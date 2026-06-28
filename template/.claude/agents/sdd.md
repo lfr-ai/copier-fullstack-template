@@ -2,7 +2,7 @@
 name: Specification-Driven Development
 description: Specification-Driven Development (SDD). Use for design-first implementation — writes formal specs covering interface, behavior, and constraints before any code.
 model: opus
-tools: Read, Grep, Glob, Bash, Edit, Write, Agent
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: xhigh
 maxTurns: 40

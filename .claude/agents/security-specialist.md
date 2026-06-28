@@ -2,9 +2,8 @@
 name: Security Specialist
 description: Security review specialist. Use for vulnerability analysis, secrets scanning, dependency auditing, and security hardening before deployments.
 model: opus
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit
-permissionMode: plan
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
+permissionMode: acceptEdits
 effort: high
 maxTurns: 30
 skills:

@@ -2,7 +2,7 @@
 name: Frontend Engineer
 description: Frontend React/TypeScript engineer. Use for React components, shadcn/ui, Tailwind CSS v4, Zustand, TanStack Query, Vitest, and Storybook.
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit, Write, Agent
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, Agent
 permissionMode: acceptEdits
 effort: high
 maxTurns: 50

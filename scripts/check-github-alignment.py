@@ -81,9 +81,7 @@ _AGENTIC_PATHS_TO_SCAN: tuple[str, ...] = (
     "template/.github/prompts",
     "template/.github/skills",
 )
-_PROJECT_SPECIFIC_TOKENS: tuple[str, ...] = (
-    "copier-fullstack-template",
-)
+_PROJECT_SPECIFIC_TOKENS: tuple[str, ...] = ("copier-fullstack-template",)
 
 
 def _collect_missing(*, repo_root: Path) -> list[str]:
@@ -136,14 +134,21 @@ def _validate_hook_entries(
     """
 
     violations: list[str] = []
-    for hook_name, (expected_command, expected_windows) in _EXPECTED_HOOK_COMMANDS.items():
-        entries = hooks.get(hook_name, [])
-        if not entries:
-            violations.append(f"Missing '{hook_name}' hook in {relative_path}")
+    for hook_name, (
+        expected_command,
+        expected_windows,
+    ) in _EXPECTED_HOOK_COMMANDS.items():
+        first_entry, error_message = _get_first_hook_entry(
+            hooks=hooks,
+            hook_name=hook_name,
+            relative_path=relative_path,
+        )
+        if error_message is not None:
+            violations.append(error_message)
             continue
 
-        current_command = entries[0].get("command")
-        current_windows = entries[0].get("windows")
+        current_command = first_entry.get("command")
+        current_windows = first_entry.get("windows")
         if current_command != expected_command:
             violations.append(
                 f"{relative_path} '{hook_name}' command is '{current_command}', expected '{expected_command}'"
@@ -153,6 +158,39 @@ def _validate_hook_entries(
                 f"{relative_path} '{hook_name}' windows command is '{current_windows}', expected '{expected_windows}'"
             )
     return violations
+
+
+def _get_first_hook_entry(
+    *,
+    hooks: dict[str, object],
+    hook_name: str,
+    relative_path: str,
+) -> tuple[dict[str, object], str | None]:
+    """Return the first hook entry and any validation error message.
+
+    Args:
+        hooks (dict[str, object]): Parsed 'hooks' mapping.
+        hook_name (str): Hook section name to inspect.
+        relative_path (str): Config path used for diagnostics.
+
+    Returns:
+        tuple[dict[str, object], str | None]: First hook entry mapping and
+            optional error message when missing or malformed.
+    """
+
+    entries_obj = hooks.get(hook_name)
+    if not isinstance(entries_obj, list) or not entries_obj:
+        return {}, f"Missing '{hook_name}' hook in {relative_path}"
+
+    first_entry = entries_obj[0]
+    if not isinstance(first_entry, dict):
+        return (
+            {},
+            f"Invalid '{hook_name}' hook in {relative_path}: expected object entry",
+        )
+
+    normalized_entry = {str(key): value for key, value in first_entry.items()}
+    return normalized_entry, None
 
 
 def _scan_candidate_for_project_tokens(
@@ -209,7 +247,9 @@ def _collect_hook_path_violations(*, repo_root: Path) -> list[str]:
             continue
 
         hooks = parsed.get("hooks", {})
-        violations.extend(_validate_hook_entries(hooks=hooks, relative_path=relative_path))
+        violations.extend(
+            _validate_hook_entries(hooks=hooks, relative_path=relative_path)
+        )
 
     return violations
 
@@ -244,6 +284,39 @@ def _collect_project_specific_agentic_refs(*, repo_root: Path) -> list[str]:
     return findings
 
 
+def _build_failure_messages(
+    *,
+    missing_files: list[str],
+    legacy_files: list[str],
+    hook_path_violations: list[str],
+    project_specific_refs: list[str],
+) -> list[str]:
+    """Build normalized failure messages for all alignment checks.
+
+    Args:
+        missing_files (list[str]): Required files that are absent.
+        legacy_files (list[str]): Deprecated files that still exist.
+        hook_path_violations (list[str]): Hook-path validation findings.
+        project_specific_refs (list[str]): Project-token findings in agentic assets.
+
+    Returns:
+        list[str]: Human-readable failures with stable prefixes.
+    """
+
+    failures: list[str] = []
+    failures.extend(
+        f"Missing required alignment file: {relative_path}"
+        for relative_path in missing_files
+    )
+    failures.extend(
+        f"Legacy file found: {relative_path} (should be removed)"
+        for relative_path in legacy_files
+    )
+    failures.extend(hook_path_violations)
+    failures.extend(project_specific_refs)
+    return failures
+
+
 def main() -> int:
     """Execute '.github' alignment checks.
 
@@ -259,23 +332,15 @@ def main() -> int:
     hook_path_violations = _collect_hook_path_violations(repo_root=repo_root)
     project_specific_refs = _collect_project_specific_agentic_refs(repo_root=repo_root)
 
-    if missing_files:
-        for relative_path in missing_files:
-            print(f"[FAIL] Missing required alignment file: {relative_path}")
-
-    if legacy_files:
-        for relative_path in legacy_files:
-            print(f"[FAIL] Legacy file found: {relative_path} (should be removed)")
-
-    if hook_path_violations:
-        for message in hook_path_violations:
+    failures = _build_failure_messages(
+        missing_files=missing_files,
+        legacy_files=legacy_files,
+        hook_path_violations=hook_path_violations,
+        project_specific_refs=project_specific_refs,
+    )
+    if failures:
+        for message in failures:
             print(f"[FAIL] {message}")
-
-    if project_specific_refs:
-        for message in project_specific_refs:
-            print(f"[FAIL] {message}")
-
-    if missing_files or legacy_files or hook_path_violations or project_specific_refs:
         return 1
 
     print("[OK] .github core alignment checks passed")

@@ -2,15 +2,26 @@
 description: Security review specialist for vulnerability analysis, secrets scanning, dependency auditing, and security hardening
 tools:
   [
-    read/readFile,
+    vscode/getProjectSetupInfo,
+    vscode/extensions,
+    execute/getTerminalOutput,
+    execute/runInTerminal,
     read/problems,
+    read/readFile,
+    read/terminalSelection,
+    read/terminalLastCommand,
+    edit/editFiles,
+    search/changes,
     search/codebase,
+    search/fileSearch,
+    search/searchResults,
     search/textSearch,
     search/listDirectory,
-    execute/runInTerminal,
-    execute/getTerminalOutput,
+    search/usages,
     web/fetch,
+    web/githubRepo,
     context7/get-library-docs,
+    context7/resolve-library-id,
   ]
 model: ['Claude Opus 4']
 handoffs:

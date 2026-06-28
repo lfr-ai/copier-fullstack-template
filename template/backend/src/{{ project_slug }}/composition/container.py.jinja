@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from {{ project_slug }}.infrastructure.persistence.unit_of_work.sqlalchemy_uow import (
         SQLAlchemyUnitOfWork,
     )
+{% if use_auth %}
+    from {{ project_slug }}.core.interfaces.token_decoder import TokenDecoder
+{% endif %}
 {% if use_ai %}
     from {{ project_slug }}.ai.services import AIService
     from {{ project_slug }}.core.interfaces.conversation_memory import ConversationMemoryGateway
@@ -140,6 +143,12 @@ class Container:
             uow=self.unit_of_work(),
             password_hasher=PBKDF2PasswordHasher(),
         )
+
+    def token_decoder(self) -> TokenDecoder:
+        """Create token decoder used by authentication boundaries."""
+        from {{ project_slug }}.infrastructure.auth.jwt_adapter import JWTAdapter
+
+        return JWTAdapter(secret_key=self._settings.jwt_secret_key)
 {% endif %}
 
 {% if use_ai %}
