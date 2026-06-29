@@ -1,4 +1,4 @@
-"""Verify template '.github' alignment rules in a cross-platform way.
+"""Verify agentic governance alignment rules in a cross-platform way.
 
 This script is a Python equivalent of 'scripts/check-github-alignment.sh' so
 alignment checks run consistently on Windows and Unix environments.
@@ -72,16 +72,31 @@ _EXPECTED_HOOK_COMMANDS: dict[str, tuple[str, str]] = {
 }
 
 _AGENTIC_PATHS_TO_SCAN: tuple[str, ...] = (
+    ".agents",
+    ".agents/skills",
+    ".claude/agents",
+    ".claude/commands",
+    ".claude/skills",
     ".github/agents",
     ".github/instructions",
     ".github/prompts",
     ".github/skills",
+    "template/.agents",
+    "template/.agents/skills",
+    "template/.claude/agents",
+    "template/.claude/commands",
+    "template/.claude/skills",
     "template/.github/agents",
     "template/.github/instructions",
     "template/.github/prompts",
     "template/.github/skills",
 )
-_PROJECT_SPECIFIC_TOKENS: tuple[str, ...] = ("copier-fullstack-template",)
+_PROJECT_SPECIFIC_TOKENS: tuple[str, ...] = (
+    "copier-fullstack-template",
+    "OneDrive - AP Pension",
+    "Documents/projects/copier-fullstack-template",
+    "Documents\\projects\\copier-fullstack-template",
+)
 
 
 def _collect_missing(*, repo_root: Path) -> list[str]:
@@ -318,13 +333,13 @@ def _build_failure_messages(
 
 
 def main() -> int:
-    """Execute '.github' alignment checks.
+    """Execute agentic alignment checks.
 
     Returns:
         int: Exit code (0 when alignment passes, 1 otherwise).
     """
 
-    print("Checking .github core alignment (agents/hooks/instructions/skills)...")
+    print("Checking agentic core alignment (agents/hooks/instructions/skills)...")
     repo_root = Path(__file__).resolve().parents[1]
 
     missing_files = _collect_missing(repo_root=repo_root)
@@ -343,7 +358,7 @@ def main() -> int:
             print(f"[FAIL] {message}")
         return 1
 
-    print("[OK] .github core alignment checks passed")
+    print("[OK] Agentic core alignment checks passed")
     return 0
 
 

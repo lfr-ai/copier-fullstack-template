@@ -34,3 +34,4 @@
 - `.pre-commit-config.yaml:8`
 - `scripts/check-fastapi-status-codes.py:61`
 - `docs/cross-cuttings/agentic-ownership-map.md`
+- `docs/cross-cuttings/gitnexus-runbook.md`

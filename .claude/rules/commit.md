@@ -19,7 +19,10 @@ feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
 
 ## Scopes
 
-backend, frontend, infra, ci, registry, scripts, docs, config, ai, deps
+template, backend, frontend, infra, ci, copier, hooks, agents
+
+Canonical source of truth: `.github/instructions/commit.instructions.md`.
+If this file and the canonical file diverge, follow the canonical file.
 
 ## Rules
 

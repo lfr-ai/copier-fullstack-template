@@ -136,14 +136,8 @@ Tooling conventions:
 ## Commit Conventions
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/) enforced
-by commitizen. Use the conventional-commit prompt (`.github/prompts/`) or:
-
-```text
-type(scope): description
-
-Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
-Scopes: template, backend, frontend, infra, ci, copier, hooks, agents
-```
+by commitizen. Canonical type/scope/rule definitions are maintained in
+`.github/instructions/commit.instructions.md`.
 
 ## Non-Negotiable Rules
 

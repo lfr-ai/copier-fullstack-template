@@ -104,7 +104,7 @@ Pass 3 completion notes (in progress):
 - [x] Keep backend clean architecture rules explicit and minimal:
   - validate `scripts/check-architecture-boundaries.py` for edge cases
   - confirm dependency direction policy remains framework-agnostic
-- [ ] Document any intentional exceptions in a short policy section.
+- [x] Document any intentional exceptions in a short policy section.
 - [ ] Ensure root and template instruction parity for architecture guidance.
 
 Pass 4 completion notes (in progress):
@@ -150,17 +150,19 @@ Pass 5 completion notes (in progress):
 
 ### Pass 7 — GitNexus alignment enforcement (dependency)
 
-- [ ] Ensure this repo is indexed in GitNexus for this environment.
-- [ ] Add a short runbook for graph checks (query/impact usage and expected
+- [x] Ensure this repo is indexed in GitNexus for this environment.
+- [x] Add a short runbook for graph checks (query/impact usage and expected
       outputs).
 - [ ] Add graph-backed consistency checks to pre-merge review process where
       feasible.
 
 Pass 7 status note:
 
-- GitNexus MCP is reachable, but this workspace is not in the active index for
-  this session (available repos are different). Keep local validation as source
-  of truth until indexing is corrected.
+- GitNexus now indexes both `copier-fullstack-template` and
+      `copier-template-source` in this environment.
+- `context`/`impact` and Cypher queries are available for graph-backed analysis.
+- MCP `query` currently reports FTS warnings in this environment, so fallback is
+      direct Cypher + context/impact until FTS behavior stabilizes.
 
 ### Pass 8 — script suite simplification and consistency
 
@@ -260,6 +262,48 @@ Pass 12 completion notes:
       removing presentation→infrastructure coupling.
 - Verified gates now pass for the remediated blockers:
       `ty-check`, `xenon`, and `task verify-all`.
+
+### Pass 13 — project-agnostic agentic enforcement
+
+- [x] Expand project-specific token scanning in
+      `scripts/check-github-alignment.py` beyond `.github/*` to include all
+      agentic surfaces:
+      - `.agents/*`
+      - `.claude/{agents,commands,skills}/*`
+      - `.github/{agents,instructions,prompts,skills}/*`
+      - template equivalents under `template/.agents/`, `template/.claude/`,
+        and `template/.github/`
+- [x] Extend token policy to detect both repository slug and local workstation
+      path leaks (cross-platform path forms).
+- [x] Update governance documentation to codify project-agnostic agentic
+      alignment policy.
+
+Pass 13 completion notes:
+
+- Tightened alignment guardrails to prevent agentic assets from embedding
+      repository-specific/workstation-specific strings.
+- This directly enforces the requirement that agentic setup content remains
+      project-agnostic.
+
+### Pass 14 — ponytail low-risk DRY/KISS sweep
+
+- [x] De-duplicate repeated Copier render command blocks in `Taskfile.yml`
+      by introducing a single internal `_render:copy` task.
+- [x] Replace custom ignore reimplementation in
+      `scripts/copy-template-snapshot.py` with stdlib-driven
+      `shutil.ignore_patterns(...)` composition.
+- [x] Reduce commit-policy drift by establishing one canonical source for
+      commit convention details and aligning secondary rule docs.
+
+Pass 14 completion notes:
+
+- `render` and `test:rendered` now reuse one render primitive with shared
+      variables for project metadata, reducing duplication and drift.
+- Snapshot ignore logic is now simpler and more explicit while preserving
+      full-directory exclusion behavior.
+- Commit conventions are still documented in multiple places for tool
+      ergonomics, but detailed type/scope policy now points to one canonical
+      instruction file.
 
 ## Verification checklist (required per pass)
 

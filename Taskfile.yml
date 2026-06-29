@@ -6,6 +6,18 @@ version: '3'
 
 vars:
   BACKEND_SRC: template/backend/src
+  TEST_PROJECT_NAME: Test Project
+  TEST_PROJECT_SLUG: test_project
+  TEST_AUTHOR_NAME: CI Bot
+  TEST_AUTHOR_EMAIL: ci@test.local
+  TEST_GITHUB_USERNAME: ci-bot
+  COPIER_COMMON_ARGS: >-
+    --trust --defaults
+    -d project_name="{{.TEST_PROJECT_NAME}}"
+    -d project_slug="{{.TEST_PROJECT_SLUG}}"
+    -d author_name="{{.TEST_AUTHOR_NAME}}"
+    -d author_email="{{.TEST_AUTHOR_EMAIL}}"
+    -d github_username="{{.TEST_GITHUB_USERNAME}}"
 
 tasks:
   # ── Architecture checks ──
@@ -54,13 +66,8 @@ tasks:
       - python scripts/copy-template-snapshot.py . {{.SRC_DIR}} {{.OUT_DIR}}
       - |
         echo "Rendering template to {{.RENDER_DIR}}..."
-        uvx copier copy --trust --defaults \
-          -d project_name="Test Project" \
-          -d project_slug="test_project" \
+        uvx copier copy {{.COPIER_COMMON_ARGS}} \
           -d project_description="Smoke test render" \
-          -d author_name="CI Bot" \
-          -d author_email="ci@test.local" \
-          -d github_username="ci-bot" \
           "{{.SRC_DIR}}" "{{.RENDER_DIR}}"
 
         echo "[OK] Template rendered successfully"
@@ -90,14 +97,11 @@ tasks:
       - python scripts/copy-template-snapshot.py . {{.SRC_DIR}} {{.OUT_DIR}}
       - |
         echo "Rendering template to {{.RENDER_DIR}} for test execution..."
-        uvx copier copy --trust --defaults \
-          -d project_name="Test Project" \
-          -d project_slug="test_project" \
+        uvx copier copy {{.COPIER_COMMON_ARGS}} \
           -d project_description="Rendered test suite" \
-          -d author_name="CI Bot" \
-          -d author_email="ci@test.local" \
-          -d github_username="ci-bot" \
           "{{.SRC_DIR}}" "{{.RENDER_DIR}}"
+
+        echo "[OK] Template rendered successfully"
 
         echo "Running generated backend quality + tests..."
         cd "{{.RENDER_DIR}}/backend"

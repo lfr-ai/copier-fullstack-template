@@ -51,6 +51,21 @@ render validation, and generated-project regression checks.
 - `pre-commit` provides local and staged policy enforcement.
 - External linters include Ruff, Bandit, yamllint, markdownlint, typos, actionlint.
 
+## Intentional architecture exceptions policy
+
+These exceptions are allowed by design and encoded in
+`scripts/check-architecture-boundaries.py`:
+
+- `composition` may import any layer (wiring boundary only).
+- `presentation` may import `application`, `core`, `config`, `utils`, and `ai`.
+- `infrastructure` may import `core`, `config`, and `utils`.
+- `application` may import `core`, `config`, and `utils`.
+- `core` and `config` may import `utils`.
+- `ai` may import `core`, `config`, `utils`, and `infrastructure`.
+
+Any new exception must be justified in docs and codified in the checker in the
+same change set.
+
 ## API endpoints or UI components
 
 Not applicable; this feature is build/quality infrastructure.
