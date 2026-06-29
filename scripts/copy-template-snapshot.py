@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 from pathlib import Path
 import shutil
 
@@ -42,7 +43,10 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _make_ignore_fn(*, exclude: Path | None):
+def _make_ignore_fn(
+    *,
+    exclude: Path | None,
+) -> Callable[[str, list[str]], set[str]]:
     """Build a 'copytree' ignore callback.
 
     Args:
@@ -52,11 +56,19 @@ def _make_ignore_fn(*, exclude: Path | None):
         callable: Ignore callback compatible with 'shutil.copytree'.
     """
 
+    base_ignore = shutil.ignore_patterns(*_IGNORED)
+
     def _ignore(path: str, names: list[str]) -> set[str]:
+        ignored_names = set(base_ignore(path, names))
+        if exclude is None:
+            return ignored_names
+
         current = Path(path).resolve()
-        if exclude and current == exclude:
+        if current == exclude:
             return set(names)
-        return {name for name in names if name in _IGNORED}
+        if current == exclude.parent and exclude.name in names:
+            ignored_names.add(exclude.name)
+        return ignored_names
 
     return _ignore
 

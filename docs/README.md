@@ -32,6 +32,7 @@ repository and generated-project scaffolding.
 - `frontend/agentic-best-practices.md`
 - `cross-cuttings/README.md`
 - `cross-cuttings/agentic-ownership-map.md`
+- `cross-cuttings/gitnexus-runbook.md`
 
 ## Notable modernization outcomes in this pass
 

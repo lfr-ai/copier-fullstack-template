@@ -44,6 +44,9 @@ implementation constraints for template development and generated projects.
 - Agent definitions under `.claude/agents/`, `template/.claude/agents/`, and
   `template/.github/agents/` now use a unified broad tool set for all
   user-invocable agents (read, edit, execute, search, web, docs lookups).
+- Alignment checks now enforce project-agnostic agentic content across
+  `.agents/`, `.claude/`, `.github/` and template equivalents by scanning for
+  repository- and workstation-specific tokens.
 - Global safety constraints remain centralized in hook configs and runtime
   permission rules (for example, destructive operations and sensitive Git flows).
 - Template-generated AGENTS guidance for downstream repositories.
