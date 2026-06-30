@@ -157,7 +157,10 @@ async def test_alembic_version_table_in_public_schema(
 
 def test_alembic_migrations_noop_for_sqlite() -> None:
     """SQLite does not support schemas — ensure migrations don't crash."""
-    assert True
+    pytest.skip(
+        "Schema-specific Alembic checks are PostgreSQL-only; "
+        "SQLite uses schema-less migrations."
+    )
 
 
 {%- else %}
@@ -165,7 +168,9 @@ def test_alembic_migrations_noop_for_sqlite() -> None:
 
 def test_alembic_migrations_placeholder() -> None:
     """Placeholder test for non-PostgreSQL backends."""
-    assert True
+    pytest.skip(
+        "Schema-specific Alembic checks are only applicable to PostgreSQL backends."
+    )
 
 
 {%- endif %}

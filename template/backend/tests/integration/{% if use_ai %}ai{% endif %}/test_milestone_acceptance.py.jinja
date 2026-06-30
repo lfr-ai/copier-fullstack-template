@@ -370,9 +370,9 @@ def test_acceptance_5_database_isolation_verification(
             os.environ.pop("{{ project_slug | upper }}_ENVIRONMENT", None)
         get_settings.cache_clear()
 {%- else %}
-    # Database isolation only applies to PostgreSQL backend
-    # For {{ database_backend }}, this test passes by default
-    assert True, "Database isolation is PostgreSQL-specific"
+    pytest.skip(
+        "Acceptance criterion 5 (database isolation) is PostgreSQL-specific."
+    )
 {%- endif %}
 
 

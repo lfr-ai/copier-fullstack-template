@@ -57,6 +57,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added cross-platform `scripts/check-github-alignment.py` and switched
   `Taskfile.yml` `github:alignment` to Python execution for reliable Windows/
   Unix verification parity
+- Moved `scripts/check-github-alignment.py` required/legacy/scan-path policy
+  into `docs/cross-cuttings/agentic-ownership-map.json` to eliminate duplicated
+  hardcoded lists in script code
+- Expanded ownership-matrix drift checks to additional mirrored agentic
+  surfaces (`.claude/agents`, `.claude/commands`, `.github/hooks`, and shared
+  `.github/prompts` subsets)
+- Narrowed internal prompt compatibility surface by switching evaluator
+  backtest tooling and general prompt-template tests to
+  `Jinja2PromptTemplate`, while keeping `PromptManager` as explicit legacy
+  compatibility alias coverage
+- Replaced integration-test placeholder `assert True` branches with explicit
+  `pytest.skip(...)` semantics for unsupported backend/database variants
+- Standardized ownership-matrix mirror policy schema with explicit
+  `requiredInRoot`, `requiredInTemplate`, and `optional` semantics consumed by
+  `scripts/check-github-alignment.py`
+- Aligned root/template Lychee hook versions to `lychee-v0.24.2` and
+  documented intentional hook-id divergence (`lychee-docker` for root,
+  `lychee` for generated template) based on environment portability
+- Documented canonical cross-cutting baselines for GitHub Actions major-version
+  policy, markdownlint scope/rule baseline, and MCP core-vs-optional server set
+- Added required manual pre-merge GitNexus graph-consistency checklist to
+  `docs/cross-cuttings/gitnexus-runbook.md`
 - Pinned `jscpd` command examples in root/template `jscpd` and
   `dry-refactoring` skill docs to `4.0.5` for compatibility with the current
   `jscpd.json` schema (`skipBlocks`)

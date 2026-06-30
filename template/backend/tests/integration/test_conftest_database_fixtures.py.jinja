@@ -89,7 +89,7 @@ async def test_basic_crud_in_test_database(engine: AsyncEngine) -> None:
 
 def test_database_isolation_not_applicable_for_sqlite() -> None:
     """SQLite isolation is via separate database file."""
-    assert True
+    pytest.skip("PostgreSQL schema isolation checks are not applicable to SQLite.")
 
 
 {%- else %}
@@ -97,7 +97,7 @@ def test_database_isolation_not_applicable_for_sqlite() -> None:
 
 def test_database_isolation_placeholder() -> None:
     """Placeholder test for non-database backends."""
-    assert True
+    pytest.skip("Database fixture isolation checks are SQL-backend specific.")
 
 
 {%- endif %}

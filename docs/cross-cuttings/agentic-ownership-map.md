@@ -3,6 +3,16 @@
 This is the source-of-truth map for where agentic assets belong in this
 repository.
 
+Machine-readable mirror pairs are defined in
+`docs/cross-cuttings/agentic-ownership-map.json`.
+
+The same JSON now also owns:
+
+- required file policy (`requiredFiles`)
+- forbidden legacy file policy (`legacyFiles`)
+- project-token scan scope (`agenticPathsToScan`)
+- mirror policy semantics (`requiredInRoot`, `requiredInTemplate`, `optional`)
+
 ## Principles
 
 - Root owns template-authoring workflows and repo maintenance checks.
@@ -13,13 +23,15 @@ repository.
 
 | Capability | Root | Template | Notes |
 | --- | --- | --- | --- |
-| Agents | `.github/agents/` | `template/.github/agents/` | Keep role names project-agnostic |
+| GitHub agents | *(none)* | `template/.github/agents/` | Generated-project only; keep role names project-agnostic |
+| Claude agents | `.claude/agents/` | `template/.claude/agents/` | Core role set mirrored |
+| Claude commands | `.claude/commands/` | `template/.claude/commands/` | Core GitNexus/OpenSpec mirrored; template adds `opsx/*` |
 | Instructions | `.github/instructions/` | `template/.github/instructions/` | Scope via `applyTo` |
 | Skills | `.github/skills/` | `template/.github/skills/` | Frontend skills must exist in both |
-| Prompts | `.github/prompts/` | `template/.github/prompts/` | OpenSpec/GitNexus parity required |
+| Prompts | `.github/prompts/` | `template/.github/prompts/` | GitNexus/OpenSpec subset mirrored; template keeps extra scaffolding prompts |
 | Hook configs | `.github/hooks/*.json` | `template/.github/hooks/hooks.json` | Commands must target `.github/hooks/scripts/*` |
 | Hook scripts | `.github/hooks/scripts/` | `template/.github/hooks/scripts/` | Cross-platform `.sh` + `.ps1` |
-| MCP config | `.mcp.json`, `.vscode/mcp.json`, `.claude/mcp.json` | `template/.mcp.json.jinja`, `template/.claude/mcp.json.jinja` | Keep server set aligned |
+| MCP config | `.vscode/mcp.json`, `.claude/mcp.json` | `template/.vscode/mcp.json.jinja`, `template/.claude/mcp.json.jinja` | Keep core server set aligned |
 | OpenSpec | `openspec/` | `template/openspec/` | Root for template changes, template for generated repos |
 | GitNexus | `.gitnexus/`, `.gitnexusignore` | `template/{% if with_gitnexus %}.gitnexus{% endif %}/` | Generated only when enabled |
 
@@ -37,3 +49,17 @@ These must remain present and updated in root and template:
 Use these validation commands:
 
 - `python scripts/check-github-alignment.py`
+
+The alignment script validates critical root↔template mirror pairs from the
+JSON ownership matrix above and consumes required/legacy/scan-path policy from
+the same file.
+
+Mirror entries now use explicit policy semantics:
+
+- `requiredInRoot`: root-side files in `pairs` must exist.
+- `requiredInTemplate`: template-side files in `pairs` must exist.
+- `optional`: when true, missing pair files are non-failing.
+
+Project-agnostic token checks in `scripts/check-github-alignment.py` are now
+derived dynamically from the current repository root path/name instead of
+hardcoded machine-specific tokens.
