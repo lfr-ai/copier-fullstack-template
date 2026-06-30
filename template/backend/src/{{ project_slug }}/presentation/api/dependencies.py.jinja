@@ -48,9 +48,7 @@ def _get_settings(request: Request) -> "BaseAppSettings":
 
 def _get_user_service(request: Request) -> "UserService":
     """Retrieve a 'UserService' from the DI container."""
-    from {{ project_slug }}.composition.container import get_container
-
-    return get_container().user_service()
+    return _get_container(request).user_service()
 
 
 ContainerDep = Annotated["Container", Depends(_get_container)]
@@ -61,9 +59,7 @@ UserServiceDep = Annotated["UserService", Depends(_get_user_service)]
 
 def _get_ai_service(request: Request) -> "AIService":
     """Retrieve an 'AIService' from the DI container."""
-    from {{ project_slug }}.composition.container import get_container
-
-    return get_container().ai_service()
+    return _get_container(request).ai_service()
 
 
 AIServiceDep = Annotated["AIService", Depends(_get_ai_service)]
@@ -73,9 +69,7 @@ AIServiceDep = Annotated["AIService", Depends(_get_ai_service)]
 
 def _get_rag_service(request: Request) -> "RAGService":
     """Retrieve a 'RAGService' from the DI container."""
-    from {{ project_slug }}.composition.container import get_container
-
-    return get_container().rag_service()
+    return _get_container(request).rag_service()
 
 
 RAGServiceDep = Annotated["RAGService", Depends(_get_rag_service)]

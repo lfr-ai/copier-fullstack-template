@@ -123,8 +123,10 @@ repos:
         files: ^(README|CONTRIBUTING|CHANGELOG|SECURITY|CODE_OF_CONDUCT|AGENTS)\.md$
 
   - repo: https://github.com/lycheeverse/lychee.git
-    rev: lychee-v0.23.0
+    rev: lychee-v0.24.2
     hooks:
+      # Intentionally use non-docker lychee in generated projects to avoid
+      # requiring Docker in contributor environments.
       - id: lychee
         args: ["--config", ".lychee.toml"]
         types_or: [markdown, html, rst]

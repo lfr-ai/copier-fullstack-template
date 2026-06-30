@@ -7,7 +7,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from {{ project_slug }}.ai.prompts.manager import PromptManager
+from {{ project_slug }}.ai.prompts.jinja2_templates import Jinja2PromptTemplate
 from {{ project_slug }}.ai.prompts.registry import build_prompt_version_run_name, parse_version_overrides
 
 
@@ -49,13 +49,13 @@ def _build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = _build_parser().parse_args()
 
-    manager = PromptManager(
+    prompt_templates = Jinja2PromptTemplate(
         registry_path=args.registry,
         versions_dir=args.versions_dir,
         profile=args.profile,
         version_overrides=parse_version_overrides(args.overrides),
     )
-    versions = manager.list_prompt_versions()
+    versions = prompt_templates.get_prompt_versions()
 
     prefix = f"backtest-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
     run_name = build_prompt_version_run_name(prefix=prefix, prompt_versions=versions)

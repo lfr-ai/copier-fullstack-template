@@ -190,6 +190,8 @@ repos:
   - repo: https://github.com/lycheeverse/lychee.git
     rev: lychee-v0.24.2
     hooks:
+      # Root template-authoring repo uses dockerized lychee for deterministic
+      # execution without relying on local host binary installation.
       - id: lychee-docker
         args: [--no-progress, -c, .lychee.toml]
         types_or: [markdown]

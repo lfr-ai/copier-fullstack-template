@@ -87,3 +87,14 @@ Comprehensive over-engineering audit. Ranked by lines/complexity removed.
 	- `utils/json_utils.py`
 2. ✅ Verified no in-template references remained before deletion.
 3. ✅ Re-ran `task verify-all` successfully after deletion.
+
+### Phase 7 — governance + template dead-code simplification ✅ DONE
+1. ✅ Deleted obsolete duplicate script: `scripts/check-github-alignment.sh`
+	(Python checker is canonical across platforms).
+2. ✅ Removed dead placeholder module:
+	`template/backend/src/{{ project_slug }}/application/services/{% if use_rag %}rag_service.py{% endif %}.jinja`.
+3. ✅ Simplified API dependency helpers to reuse one container accessor in
+	`presentation/api/dependencies.py.jinja`.
+4. ✅ Replaced hardcoded workstation/repository token checks with dynamic,
+	project-agnostic token derivation from the active repository root in
+	`scripts/check-github-alignment.py`.

@@ -222,7 +222,7 @@ def test_sqlite_engine_creation() -> None:
 
 def test_database_placeholder() -> None:
     """Placeholder test for non-database backends."""
-    assert True
+    pytest.skip("Database isolation checks are only applicable to SQL backends.")
 
 
 {%- endif %}

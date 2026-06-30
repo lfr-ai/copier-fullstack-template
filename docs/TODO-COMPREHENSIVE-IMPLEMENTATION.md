@@ -16,12 +16,9 @@ pass is measurable and verifiable.
 
 ### Verified
 
-- `task verify-all` passes:
-  - architecture boundaries
-  - no `Final[]` misuse
-  - FastAPI status constants convention
-  - module docstrings
-  - `.github` alignment checks
+- `task verify-all` passes (architecture boundaries, no `Final[]` misuse,
+  FastAPI status constants convention, module docstrings, and agentic
+  alignment checks).
 - Root and template structure are broadly coherent for current governance model.
 
 ### Gaps / opportunities
@@ -56,7 +53,7 @@ pass is measurable and verifiable.
   - `ruff.toml`
   - `ty.toml`
 - [x] Remove or collapse redundant ignore patterns while preserving behavior.
-- [ ] Add concise rationale comments only where explicit non-defaults are kept.
+- [x] Add concise rationale comments only where explicit non-defaults are kept.
 - [x] Re-run `task verify-all`.
 
 Pass 2 completion notes:
@@ -105,7 +102,7 @@ Pass 3 completion notes (in progress):
   - validate `scripts/check-architecture-boundaries.py` for edge cases
   - confirm dependency direction policy remains framework-agnostic
 - [x] Document any intentional exceptions in a short policy section.
-- [ ] Ensure root and template instruction parity for architecture guidance.
+- [x] Ensure root and template instruction parity for architecture guidance.
 
 Pass 4 completion notes (in progress):
 
@@ -117,30 +114,45 @@ Pass 4 completion notes (in progress):
 
 ### Pass 5 — root/template drift prevention
 
-- [ ] Add or extend drift checks for critical mirrored assets:
+- [x] Add or extend drift checks for critical mirrored assets:
   - `.github/instructions/*`
   - `.github/skills/*`
   - `.claude/rules/*`
-- [ ] Add a machine-readable ownership matrix for root-only, template-only, and
+- [x] Add a machine-readable ownership matrix for root-only, template-only, and
       mirrored files.
-- [ ] Wire drift checks into CI/pre-push path where cost is acceptable.
+- [x] Wire drift checks into CI/pre-push path where cost is acceptable.
 
 Pass 5 candidate alignment backlog:
 
-- [ ] Normalize Lychee hook version/id across root and template pre-commit
+- [x] Normalize Lychee hook version/id across root and template pre-commit
       configs, or document intentional divergence.
-- [ ] Normalize GitHub Action major versions between root and template
+- [x] Normalize GitHub Action major versions between root and template
       workflows, or document intentional divergence.
 - [x] Decide if Hadolint `DL3059` ignore should be root+template or
       template-only policy.
-- [ ] Define canonical markdownlint scope/rule baseline for root vs template.
-- [ ] Define canonical core MCP server set and document optional server deltas.
+- [x] Define canonical markdownlint scope/rule baseline for root vs template.
+- [x] Define canonical core MCP server set and document optional server deltas.
 
 Pass 5 completion notes (in progress):
 
 - Hadolint `DL3059` remains template-only by design (generated project
       Dockerfiles have multi-tool install readability tradeoffs; root does not).
-- `.github` drift checks continue to pass via existing validation scripts.
+- Lychee now uses aligned versioning (`lychee-v0.24.2`) across root/template;
+      hook-id divergence is intentional (`lychee-docker` in root for deterministic
+      template-authoring checks, `lychee` in template for generated-project
+      contributor environments without Docker requirement).
+- GitHub Actions major-version drift is now documented as intentional policy:
+      root tracks newer template-authoring majors; template workflows remain on
+      broader generated-project-compatible majors unless required otherwise.
+- Canonical markdownlint + MCP baselines are now documented in
+      `docs/cross-cuttings/README.md` with explicit optional server deltas.
+- Added machine-readable mirror matrix:
+      `docs/cross-cuttings/agentic-ownership-map.json`.
+- `scripts/check-github-alignment.py` now validates critical mirror pairs
+      for `.github/instructions`, `.github/skills`, and `.claude/rules` against
+      that matrix.
+- Drift checks run via existing `task verify-all` / pre-commit / CI pathways
+      because alignment validation is already part of those gates.
 
 ### Pass 6 — docs coherence and operational simplicity
 
@@ -153,7 +165,7 @@ Pass 5 completion notes (in progress):
 - [x] Ensure this repo is indexed in GitNexus for this environment.
 - [x] Add a short runbook for graph checks (query/impact usage and expected
       outputs).
-- [ ] Add graph-backed consistency checks to pre-merge review process where
+- [x] Add graph-backed consistency checks to pre-merge review process where
       feasible.
 
 Pass 7 status note:
@@ -163,6 +175,9 @@ Pass 7 status note:
 - `context`/`impact` and Cypher queries are available for graph-backed analysis.
 - MCP `query` currently reports FTS warnings in this environment, so fallback is
       direct Cypher + context/impact until FTS behavior stabilizes.
+- Added explicit pre-merge graph-check checklist to
+      `docs/cross-cuttings/gitnexus-runbook.md` and treat it as required manual
+      gate for governance/architecture touching PRs.
 
 ### Pass 8 — script suite simplification and consistency
 
@@ -288,7 +303,7 @@ Pass 13 completion notes:
 ### Pass 14 — ponytail low-risk DRY/KISS sweep
 
 - [x] De-duplicate repeated Copier render command blocks in `Taskfile.yml`
-      by introducing a single internal `_render:copy` task.
+      by centralizing shared Copier defaults into `COPIER_COMMON_ARGS`.
 - [x] Replace custom ignore reimplementation in
       `scripts/copy-template-snapshot.py` with stdlib-driven
       `shutil.ignore_patterns(...)` composition.
@@ -297,13 +312,92 @@ Pass 13 completion notes:
 
 Pass 14 completion notes:
 
-- `render` and `test:rendered` now reuse one render primitive with shared
-      variables for project metadata, reducing duplication and drift.
+- `render` and `test:rendered` now share the same core Copier argument set via
+      `COPIER_COMMON_ARGS`, reducing duplication and drift.
 - Snapshot ignore logic is now simpler and more explicit while preserving
       full-directory exclusion behavior.
 - Commit conventions are still documented in multiple places for tool
       ergonomics, but detailed type/scope policy now points to one canonical
       instruction file.
+
+### Pass 15 — deep ponytail + GitNexus simplification hardening
+
+- [x] Run graph-assisted hotspot/impact review in GitNexus for script-heavy
+      governance flows (focus: `scripts/check-github-alignment.py`).
+- [x] Remove duplicate shell implementation of alignment checks:
+      `scripts/check-github-alignment.sh`.
+- [x] Make agentic project-token detection project-agnostic by deriving token
+      checks from the current repository root path/name at runtime (no
+      hardcoded workstation/repo strings).
+- [x] DRY DI dependency helpers in
+      `template/backend/src/{{ project_slug }}/presentation/api/dependencies.py.jinja`
+      by reusing `_get_container(...)`.
+- [x] Delete dead placeholder module:
+      `template/backend/src/{{ project_slug }}/application/services/`
+      `{% if use_rag %}rag_service.py{% endif %}.jinja`.
+- [x] Expand ownership matrix coverage from instructions/skills/rules to all
+      mirrored agentic surfaces (`agents`, `prompts`, hook scripts/configs).
+- [ ] Evaluate manifest-driven generation for root/template mirror assets to
+      reduce drift maintenance.
+
+Pass 15 completion notes:
+
+- GitNexus impact analysis shows alignment-check refactors are low blast-radius
+      and isolated to the script execution flow.
+- Project-agnostic guardrails are now path/name derived from the active repo,
+      removing environment-specific tokens from enforcement logic.
+- Cleanup reduced dead-code surface and kept behavior unchanged for generated
+      projects.
+- Extended ownership-map drift enforcement to additional mirrored surfaces:
+      `.claude/agents`, `.claude/commands`, `.github/prompts` (shared subset),
+      and `.github/hooks` scripts/config.
+- Moved required/legacy/scan-path policy into
+      `docs/cross-cuttings/agentic-ownership-map.json` so
+      `scripts/check-github-alignment.py` no longer duplicates those lists.
+
+### Pass 16 — exhaustive backlog from deep audit (next iterations)
+
+Quick wins (low-risk):
+
+- [x] Consolidate `scripts/check-github-alignment.py` hardcoded required/legacy
+      lists into one machine-readable source (ownership/manifest) to remove
+      duplicate policy definitions.
+- [x] Replace placeholder integration tests (`assert True`) for unsupported
+      backend branches with explicit skip semantics or conditional file
+      generation.
+- [x] Evaluate whether prompt manager compatibility alias can be narrowed to
+      explicit legacy paths only (reduce API surface).
+
+Medium:
+
+- [x] Expand ownership-matrix parity checks to cover additional agentic mirrors:
+      `.claude/agents`, `.claude/commands`, `.github/prompts`,
+      `.github/hooks/scripts`, and template counterparts.
+- [ ] Introduce one canonical source for repeated instruction/rule prose where
+      tool compatibility allows generated wrappers.
+- [ ] Reduce duplicated OpenSpec guidance across prompts/commands/skills with a
+      source-of-truth projection pattern.
+
+Risky / coordination-heavy:
+
+- [ ] Evaluate manifest-driven generation of root/template governance assets
+      (agents/instructions/skills/prompts/hooks) to minimize manual drift.
+- [ ] Tighten architecture-boundary exception policy around `ai` ↔
+      `infrastructure` allowances with explicit rationale and tests.
+- [x] Standardize mirror-policy schema (`requiredInRoot`,
+      `requiredInTemplate`, `optional`) for explicit ownership semantics.
+
+Pass 16 progress notes:
+
+- Replaced non-informative integration placeholders (`assert True`) with
+      explicit `pytest.skip(...)` semantics in unsupported backend branches:
+      Alembic, database isolation, and milestone acceptance tests.
+- Narrowed internal usage to canonical prompt API by moving general prompt tests
+      and evaluator backtest tooling to `Jinja2PromptTemplate`; compatibility
+      alias coverage remains isolated in `test_prompt_manager.py`.
+- Standardized ownership-matrix mirror semantics with explicit per-mirror
+      `requiredInRoot` / `requiredInTemplate` / `optional` fields and
+      corresponding checker validation.
 
 ## Verification checklist (required per pass)
 
@@ -316,6 +410,6 @@ Pass 14 completion notes:
 
 - [x] Config and setup are default-first and free of obvious redundancy.
 - [x] Golden audits are stable (no noisy false positives).
-- [ ] Clean architecture checks are enforced and documented.
-- [ ] Root/template alignment is automated for critical governance assets.
+- [x] Clean architecture checks are enforced and documented.
+- [x] Root/template alignment is automated for critical governance assets.
 - [x] Documentation is coherent, minimal, and current.
