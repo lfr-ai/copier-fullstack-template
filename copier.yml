@@ -209,6 +209,7 @@ secret_backend:
   choices:
     Env files only: "env"
     Azure Key Vault: "azure_kv"
+  when: "{{ cloud_provider == 'azure' }}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  AI / RAG / MCP infrastructure

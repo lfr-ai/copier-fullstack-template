@@ -98,3 +98,16 @@ Comprehensive over-engineering audit. Ranked by lines/complexity removed.
 4. ✅ Replaced hardcoded workstation/repository token checks with dynamic,
 	project-agnostic token derivation from the active repository root in
 	`scripts/check-github-alignment.py`.
+
+### Phase 8 — policy hardening + docs normalization ✅ DONE
+1. ✅ DRY'd alignment checker path existence scans by replacing duplicated
+	required/legacy loops with one helper:
+	`_collect_paths_with_existence_mismatch(...)`.
+2. ✅ Tightened architecture checker policy to disallow `ai -> infrastructure`
+	imports; kept adapter wiring responsibility in `composition`.
+3. ✅ Simplified generated FastAPI dependency helpers so service providers accept
+	typed `ContainerDep` directly instead of re-fetching container from `Request`.
+4. ✅ Reduced Copier questionnaire cognitive load by asking `secret_backend`
+	only when `cloud_provider == 'azure'`.
+5. ✅ Normalized root documentation to one canonical template render workflow:
+	`task render` + one fallback command pattern.

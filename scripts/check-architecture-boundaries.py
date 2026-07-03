@@ -24,7 +24,8 @@ _ALLOWED_CROSS_LAYER_IMPORTS: dict[str, frozenset[str]] = {
     "application": frozenset({"core", "config", "utils"}),
     "core": frozenset({"utils"}),
     "config": frozenset({"utils"}),
-    "ai": frozenset({"core", "config", "utils", "infrastructure"}),
+    # AI remains orchestration/domain-facing; infrastructure wiring stays in composition.
+    "ai": frozenset({"core", "config", "utils"}),
 }
 _IMPORT_RE = re.compile(r"^\s*(?:from|import)\s+([A-Za-z0-9_\.]+)", re.MULTILINE)
 

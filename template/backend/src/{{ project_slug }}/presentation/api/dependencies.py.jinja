@@ -34,11 +34,14 @@ __all__ = [
 ]
 
 
-def _get_container(request: Request) -> "Container":
+def _get_container() -> "Container":
     """Retrieve the singleton DI container."""
     from {{ project_slug }}.composition.container import get_container
 
     return get_container()
+
+
+ContainerDep = Annotated["Container", Depends(_get_container)]
 
 
 def _get_settings(request: Request) -> "BaseAppSettings":
@@ -46,20 +49,21 @@ def _get_settings(request: Request) -> "BaseAppSettings":
     return request.app.state.settings  # type: ignore[return-value]
 
 
-def _get_user_service(request: Request) -> "UserService":
-    """Retrieve a 'UserService' from the DI container."""
-    return _get_container(request).user_service()
-
-
-ContainerDep = Annotated["Container", Depends(_get_container)]
 SettingsDep = Annotated["BaseAppSettings", Depends(_get_settings)]
+
+
+def _get_user_service(container: ContainerDep) -> "UserService":
+    """Retrieve a 'UserService' from the DI container."""
+    return container.user_service()
+
+
 UserServiceDep = Annotated["UserService", Depends(_get_user_service)]
 {%- if use_ai %}
 
 
-def _get_ai_service(request: Request) -> "AIService":
+def _get_ai_service(container: ContainerDep) -> "AIService":
     """Retrieve an 'AIService' from the DI container."""
-    return _get_container(request).ai_service()
+    return container.ai_service()
 
 
 AIServiceDep = Annotated["AIService", Depends(_get_ai_service)]
@@ -67,9 +71,9 @@ AIServiceDep = Annotated["AIService", Depends(_get_ai_service)]
 {%- if use_rag %}
 
 
-def _get_rag_service(request: Request) -> "RAGService":
+def _get_rag_service(container: ContainerDep) -> "RAGService":
     """Retrieve a 'RAGService' from the DI container."""
-    return _get_container(request).rag_service()
+    return container.rag_service()
 
 
 RAGServiceDep = Annotated["RAGService", Depends(_get_rag_service)]

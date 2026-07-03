@@ -25,42 +25,29 @@ _AGENTIC_SCAN_PATHS_KEY = "agenticPathsToScan"
 _MIRRORS_KEY = "mirrors"
 
 
-def _collect_missing(*, repo_root: Path, required_files: Sequence[str]) -> list[str]:
-    """Collect required alignment files that are currently missing.
-
-    Args:
-        repo_root (Path): Repository root path.
-        required_files (Sequence[str]): Required file paths to check.
-
-    Returns:
-        list[str]: Missing required file paths.
-    """
-
-    missing: list[str] = []
-    for relative_path in required_files:
-        if not (repo_root / relative_path).is_file():
-            missing.append(relative_path)
-    return missing
-
-
-def _collect_legacy_present(
-    *, repo_root: Path, legacy_files: Sequence[str]
+def _collect_paths_with_existence_mismatch(
+    *,
+    repo_root: Path,
+    candidate_paths: Sequence[str],
+    required_to_exist: bool,
 ) -> list[str]:
-    """Collect forbidden legacy files that are still present.
+    """Collect file paths whose existence state violates policy.
 
     Args:
         repo_root (Path): Repository root path.
-        legacy_files (Sequence[str]): Legacy file paths that must not exist.
+        candidate_paths (Sequence[str]): Relative file paths to validate.
+        required_to_exist (bool): Whether each path must exist.
 
     Returns:
-        list[str]: Legacy file paths that should be removed.
+        list[str]: Paths whose existence state mismatches 'required_to_exist'.
     """
 
-    present: list[str] = []
-    for relative_path in legacy_files:
-        if (repo_root / relative_path).is_file():
-            present.append(relative_path)
-    return present
+    mismatches: list[str] = []
+    for relative_path in candidate_paths:
+        exists = (repo_root / relative_path).is_file()
+        if exists != required_to_exist:
+            mismatches.append(relative_path)
+    return mismatches
 
 
 def _build_project_specific_tokens(*, repo_root: Path) -> tuple[str, ...]:
@@ -731,13 +718,15 @@ def main() -> int:
         policy_violations.extend(scan_path_violations)
         policy_violations.extend(mirror_policy_violations)
 
-    missing_files = _collect_missing(
+    missing_files = _collect_paths_with_existence_mismatch(
         repo_root=repo_root,
-        required_files=required_files,
+        candidate_paths=required_files,
+        required_to_exist=True,
     )
-    present_legacy_files = _collect_legacy_present(
+    present_legacy_files = _collect_paths_with_existence_mismatch(
         repo_root=repo_root,
-        legacy_files=legacy_files,
+        candidate_paths=legacy_files,
+        required_to_exist=False,
     )
     hook_path_violations = _collect_hook_path_violations(repo_root=repo_root)
     project_specific_refs = _collect_project_specific_agentic_refs(

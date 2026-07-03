@@ -26,8 +26,11 @@ cd copier-fullstack-template
 uvx pre-commit install
 uvx pre-commit install --hook-type commit-msg
 
-# 3. Test a local render
-uvx copier copy --trust . /tmp/test-project
+# 3. Run the canonical render smoke test
+task render
+
+# Fallback (when task render is unavailable on your platform)
+uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>
 ```
 
 ## Repository Structure
@@ -62,10 +65,16 @@ template/           # Everything inside here gets rendered by Copier
    uvx pre-commit run --all-files
    ```
 
-4. Test a local render to verify the generated output:
+4. Run the canonical render smoke test to verify generated output:
 
    ```bash
-   uvx copier copy --trust . /tmp/test-render
+   task render
+   ```
+
+   Fallback command:
+
+   ```bash
+   uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>
    ```
 
 5. Commit using [Conventional Commits](https://www.conventionalcommits.org/):
@@ -94,7 +103,13 @@ template/           # Everything inside here gets rendered by Copier
 
 ```bash
 uvx pre-commit run --all-files    # Run all pre-commit hooks
-uvx copier copy --trust . /tmp/test-render  # Render template and verify output
+task render                        # Canonical render smoke test
+```
+
+Fallback render command (if needed):
+
+```bash
+uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>
 ```
 
 ## Code Standards

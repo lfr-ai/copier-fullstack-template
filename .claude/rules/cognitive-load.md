@@ -5,6 +5,10 @@ paths:
 
 # Cognitive Load
 
+Canonical source of truth:
+`.github/instructions/cognitive-load.instructions.md`.
+If this file and the canonical file diverge, follow the canonical file.
+
 Write code for human brains. Working memory holds ~4 chunks simultaneously.
 
 ## Principles

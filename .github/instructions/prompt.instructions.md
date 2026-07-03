@@ -48,5 +48,6 @@ tools:
 - Keep prompts focused on a single workflow
 - Include concrete bash commands, not vague instructions
 - Reference project-specific paths (e.g. `template/`, `scripts/`)
-- Verify template rendering after changes: `uvx copier copy --trust --defaults .`
+- Verify template rendering after changes: `task render` (fallback:
+  `uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>`)
 - Always end with a verification step
