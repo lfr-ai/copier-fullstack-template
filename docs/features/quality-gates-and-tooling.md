@@ -61,7 +61,8 @@ These exceptions are allowed by design and encoded in
 - `infrastructure` may import `core`, `config`, and `utils`.
 - `application` may import `core`, `config`, and `utils`.
 - `core` and `config` may import `utils`.
-- `ai` may import `core`, `config`, `utils`, and `infrastructure`.
+- `ai` may import `core`, `config`, and `utils`; infrastructure adapters must
+  be wired in `composition`.
 
 Any new exception must be justified in docs and codified in the checker in the
 same change set.

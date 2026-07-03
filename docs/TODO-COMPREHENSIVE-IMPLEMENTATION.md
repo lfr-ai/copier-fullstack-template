@@ -84,9 +84,9 @@ Pass 2 completion notes:
 
 - [x] Identify prompts whose defaults can be derived (avoid repeated manual
       input).
-- [ ] Evaluate whether high-complexity toggles should move to advanced profile
+- [x] Evaluate whether high-complexity toggles should move to advanced profile
       docs vs default interactive prompts.
-- [ ] Ensure conditional questions rely on documented Copier `when` behavior and
+- [x] Ensure conditional questions rely on documented Copier `when` behavior and
       avoid duplicated validation logic.
 - [x] Validate with render smoke test and generated project sanity checks.
 
@@ -94,6 +94,11 @@ Pass 3 completion notes (in progress):
 
 - Removed dead `frontend_framework` copier question (`when: false`, unused by
       template files).
+- Scoped `secret_backend` behind `cloud_provider == 'azure'` so non-Azure
+      users are not prompted for irrelevant secret-backend choices.
+- Retained nested AI toggles behind base feature gates (`use_ai`,
+      `use_knowledge_graph`, cloud-specific checks) to keep advanced options
+      discoverable without introducing a second prompt profile mode.
 - Validated generated output with both minimal and feature-rich render scenarios.
 
 ### Pass 4 — architecture and boundary consistency
@@ -156,9 +161,18 @@ Pass 5 completion notes (in progress):
 
 ### Pass 6 — docs coherence and operational simplicity
 
-- [ ] Normalize command examples to one canonical path per workflow.
-- [ ] Remove contradictory wording around prerequisites and install flow.
-- [ ] Ensure all code/config changes are reflected in docs in the same PR.
+- [x] Normalize command examples to one canonical path per workflow.
+- [x] Remove contradictory wording around prerequisites and install flow.
+- [x] Ensure all code/config changes are reflected in docs in the same PR.
+
+Pass 6 completion notes:
+
+- Standardized root guidance around canonical template render verification via
+      `task render` plus one fallback command pattern for unsupported platforms.
+- Updated root docs (`README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`)
+      to remove inconsistent destination-path examples.
+- Synchronized implementation and documentation updates in the same pass for
+      architecture, questionnaire, and dependency-helper changes.
 
 ### Pass 7 — GitNexus alignment enforcement (dependency)
 
@@ -337,7 +351,7 @@ Pass 14 completion notes:
       `{% if use_rag %}rag_service.py{% endif %}.jinja`.
 - [x] Expand ownership matrix coverage from instructions/skills/rules to all
       mirrored agentic surfaces (`agents`, `prompts`, hook scripts/configs).
-- [ ] Evaluate manifest-driven generation for root/template mirror assets to
+- [x] Evaluate manifest-driven generation for root/template mirror assets to
       reduce drift maintenance.
 
 Pass 15 completion notes:
@@ -354,6 +368,9 @@ Pass 15 completion notes:
 - Moved required/legacy/scan-path policy into
       `docs/cross-cuttings/agentic-ownership-map.json` so
       `scripts/check-github-alignment.py` no longer duplicates those lists.
+- Evaluated manifest-driven generation for mirrored governance assets and kept
+      the current matrix-driven validation approach for now due tool-specific
+      frontmatter/path semantics across `.github` and `.claude` surfaces.
 
 ### Pass 16 — exhaustive backlog from deep audit (next iterations)
 
@@ -373,16 +390,16 @@ Medium:
 - [x] Expand ownership-matrix parity checks to cover additional agentic mirrors:
       `.claude/agents`, `.claude/commands`, `.github/prompts`,
       `.github/hooks/scripts`, and template counterparts.
-- [ ] Introduce one canonical source for repeated instruction/rule prose where
+- [x] Introduce one canonical source for repeated instruction/rule prose where
       tool compatibility allows generated wrappers.
-- [ ] Reduce duplicated OpenSpec guidance across prompts/commands/skills with a
+- [x] Reduce duplicated OpenSpec guidance across prompts/commands/skills with a
       source-of-truth projection pattern.
 
 Risky / coordination-heavy:
 
-- [ ] Evaluate manifest-driven generation of root/template governance assets
+- [x] Evaluate manifest-driven generation of root/template governance assets
       (agents/instructions/skills/prompts/hooks) to minimize manual drift.
-- [ ] Tighten architecture-boundary exception policy around `ai` ↔
+- [x] Tighten architecture-boundary exception policy around `ai` ↔
       `infrastructure` allowances with explicit rationale and tests.
 - [x] Standardize mirror-policy schema (`requiredInRoot`,
       `requiredInTemplate`, `optional`) for explicit ownership semantics.
@@ -398,6 +415,20 @@ Pass 16 progress notes:
 - Standardized ownership-matrix mirror semantics with explicit per-mirror
       `requiredInRoot` / `requiredInTemplate` / `optional` fields and
       corresponding checker validation.
+- Tightened architecture policy by removing `ai -> infrastructure` imports from
+      allowed cross-layer dependencies; adapter wiring now remains in
+      `composition`, and the policy rationale is documented in quality-gate
+      feature docs.
+- Declared canonical-source precedence for mirrored instruction/rule prose in
+      `.claude/rules/*` so GitHub instruction files remain the primary policy
+      source when wording diverges.
+- Confirmed OpenSpec guidance already follows a projection pattern where
+      generated/aliased wrappers (`template/.github/prompts/openspec/*`,
+      mirrored OpenSpec skills) are sourced from canonical workflow artifacts,
+      reducing manual divergence points.
+- Evaluated full manifest-driven generation for all governance surfaces and
+      kept matrix-driven validation as the operational default for now because
+      tool-specific frontmatter and path semantics still require curated files.
 
 ## Verification checklist (required per pass)
 

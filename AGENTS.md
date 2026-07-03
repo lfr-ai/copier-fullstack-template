@@ -77,7 +77,13 @@ Scopes: template, backend, frontend, infra, ci, copier, hooks, agents
 After any template change, verify rendering:
 
 ```bash
-uvx copier copy --trust --defaults --vcs-ref HEAD . /tmp/test-render
+task render
+```
+
+Fallback command (if `task render` is unavailable on your platform):
+
+```bash
+uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>
 ```
 
 ### Pre-commit

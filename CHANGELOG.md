@@ -41,6 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Simplified `scripts/check-github-alignment.py` by replacing duplicated
+  required/legacy file-existence loops with a single policy-driven helper
+  (`_collect_paths_with_existence_mismatch`)
+- Tightened architecture boundary policy by disallowing `ai -> infrastructure`
+  imports in `scripts/check-architecture-boundaries.py` and documenting the
+  rationale in quality-gate feature docs
+- Simplified generated FastAPI dependency helpers to inject the container
+  dependency directly into service providers in
+  `presentation/api/dependencies.py.jinja`
+- Reduced prompt cognitive load by showing `secret_backend` only when
+  `cloud_provider == 'azure'` in `copier.yml`
+- Normalized template-render verification docs to the canonical `task render`
+  workflow with one consistent fallback command pattern
 - Simplified `.pre-commit-config.yaml` by removing a duplicate
   `pre-commit-hooks` repository declaration and consolidating
   `check-vcs-permalinks` into the primary hooks block

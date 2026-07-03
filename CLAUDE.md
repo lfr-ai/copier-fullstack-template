@@ -40,13 +40,19 @@ Multiple `CLAUDE.md` files are intentional and scoped:
 
 ```bash
 # Render template locally
-uvx copier copy --trust --defaults --vcs-ref HEAD . /tmp/test-render
+task render
 
 # Run pre-commit hooks
 uvx pre-commit run --all-files
 
 # Validate template
 python scripts/validate-template.py
+```
+
+Fallback render command (if `task render` is unavailable on your platform):
+
+```bash
+uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>
 ```
 
 ## Commit Conventions

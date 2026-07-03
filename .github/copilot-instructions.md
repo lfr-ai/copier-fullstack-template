@@ -106,7 +106,8 @@ Active hooks for the Copilot coding agent:
 - Use `{% if condition %}...{% endif %}` for conditional content
 - Conditional directories use the pattern `{% if var %}dirname{% endif %}/`
 - NEVER use raw Python expressions in templates — only Copier answer variables
-- Test template rendering with `uvx copier copy --trust --defaults .` locally
+- Test template rendering with `task render` locally (fallback:
+   `uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>`)
 
 ## Copier Questions (`copier.yml`)
 
@@ -123,7 +124,8 @@ When adding new template variables:
 Always prefer repository-native tooling:
 
 - Pre-commit: `uvx pre-commit run --all-files`
-- Render test: `uvx copier copy --trust --defaults --vcs-ref HEAD . /tmp/test-render`
+- Render test: `task render` (fallback:
+   `uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>`)
 - Commit-msg hook: `uvx pre-commit install --hook-type commit-msg`
 
 Tooling conventions:
@@ -144,8 +146,8 @@ by commitizen. Canonical type/scope/rule definitions are maintained in
 1. **Never edit generated files** — change the template source under `template/`
 2. **Root `.github/` is a SUBSET** — root is for template development only;
    template `.github/` is for generated projects
-3. **Test rendering** — after any template change: `uvx copier copy --trust --defaults
-   --vcs-ref HEAD . /tmp/test-render`
+3. **Test rendering** — after any template change: `task render` (fallback:
+   `uvx copier copy --trust --defaults --vcs-ref HEAD . <destination-dir>`)
 4. **Pre-commit must pass** — `uvx pre-commit run --all-files`
 5. **Conventional commits** — all commits must follow the format above
 6. **No `Final[...]` for internals** — NEVER use `Final` or `Final[...]` for internal

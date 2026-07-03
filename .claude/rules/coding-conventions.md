@@ -7,6 +7,10 @@ paths:
 
 # Coding Conventions
 
+Canonical source of truth:
+`.github/instructions/coding-conventions.instructions.md`.
+If this file and the canonical file diverge, follow the canonical file.
+
 - Keep changes minimal, explicit, and type-safe.
 - Prefer clear names over abbreviations.
 - Remove dead code in the same change set.

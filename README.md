@@ -22,6 +22,11 @@ following Clean Architecture, modern best practices, and global standards.
 | **pre-commit**           | Git hooks              | Yes (via `uv`)  |
 | **WSL2** (Windows only)  | Linux on Windows       | Yes             |
 
+> For template-authoring in this repository, run checks directly with
+> `uvx pre-commit run --all-files` and `task render` (Linux/macOS). The table
+> above describes generated-project bootstrap automation via
+> `scripts/install/install-all.*`.
+
 ### Usage — Local-First (Recommended)
 
 This template is designed to be used **locally** after cloning

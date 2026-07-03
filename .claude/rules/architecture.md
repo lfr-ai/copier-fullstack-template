@@ -7,6 +7,10 @@ paths:
 
 # Architecture Rules
 
+Canonical source of truth:
+`.github/instructions/architecture.instructions.md`.
+If this file and the canonical file diverge, follow the canonical file.
+
 ## Dependency Rule (NEVER violate)
 
 Inner layers must never import from outer layers:
