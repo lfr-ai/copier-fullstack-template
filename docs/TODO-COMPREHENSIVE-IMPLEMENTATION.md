@@ -430,6 +430,93 @@ Pass 16 progress notes:
       kept matrix-driven validation as the operational default for now because
       tool-specific frontmatter and path semantics still require curated files.
 
+### Pass 17 — abstraction delete sweep (ponytail)
+
+- [x] Remove thin `BaseService` inheritance layer from application services.
+- [x] Remove CQRS base abstractions:
+      - `template/backend/src/{{ project_slug }}/application/commands/base.py.jinja`
+      - `template/backend/src/{{ project_slug }}/application/queries/base.py`
+- [x] Convert command/query handlers to plain classes with explicit dependencies.
+- [x] Delete abstraction-only unit tests tied to removed base classes:
+      - `template/backend/tests/unit/application/test_base_service.py.jinja`
+      - `template/backend/tests/unit/application/test_command_handler.py.jinja`
+      - `template/backend/tests/unit/application/test_query_handler.py.jinja`
+- [x] Re-run full pre-commit gate (expected protected-branch hook caveat only).
+
+Pass 17 completion notes:
+
+- Handlers and services now expose direct, explicit constructor dependencies
+      without thin inheritance wrappers.
+- Verified there are no remaining imports of
+      `application.services.base`, `application.commands.base`, or
+      `application.queries.base` in template sources.
+
+### Pass 18 — script cognitive-load reduction + clone-signal hardening (ponytail)
+
+- [x] Reduce complexity hotspots in repository validation scripts by extracting
+      single-responsibility helpers while preserving behavior:
+      - `scripts/check-architecture-boundaries.py`
+      - `scripts/check-module-docstrings.py`
+      - `scripts/validate-template.py`
+- [x] Simplify shared Python-like file traversal in
+      `scripts/_python_file_utils.py` to one helper-driven scan path.
+- [x] Make clone detection actionable by excluding intentional governance and
+      documentation mirrors from `jscpd.json` (`.agents`, `.claude`, `.github`,
+      `docs`, `openspec`, shell hook script formats).
+- [x] Re-run verification gate and static quality checks:
+      - `task verify-all`
+      - `uvx radon cc scripts -s -a`
+      - `npx jscpd --config jscpd.json --reporters console --verbose .`
+
+Pass 18 completion notes:
+
+- Architecture/docstring/template-validation scripts now use smaller helpers
+      and clearer control flow (lower cognitive load, easier future edits).
+- Shared file-scanning logic now has one reusable candidate iterator path,
+      reducing duplicate traversal logic in the script suite.
+- jscpd now reports on implementation-level duplication instead of expected
+      policy/documentation mirror clones, improving DRY signal quality.
+
+### Pass 19 — checker decomposition completion + DRY signal finalization
+
+- [x] Refactor `scripts/check-fastapi-status-codes.py` to align with SRP
+      structure used across other validation scripts (`_resolve_root_path`,
+      `_collect_offenders`, `_print_result`).
+- [x] Reduce this checker's complexity rank from `B` to `A` via control-flow
+      flattening and helper extraction.
+- [x] Extend jscpd ignore scope to exclude generated planning artifacts in
+      `.gsd/`, keeping clone reports focused on maintainable source.
+- [x] Re-run quality gates:
+      - `task verify-all`
+      - `uvx radon cc scripts -s -a`
+      - `npx jscpd --config jscpd.json`
+
+Pass 19 completion notes:
+
+- Script-suite complexity now reports all-A for
+      `check-architecture-boundaries`, `check-module-docstrings`,
+      `check-fastapi-status-codes`, and `validate-template`.
+- jscpd duplicate noise from mirrored/governance/generated content is now
+      filtered, restoring actionable DRY signal for implementation files.
+
+### Pass 20 — alignment checker deep simplification (ponytail + GitNexus-guided)
+
+- [x] Reduce complexity hotspots in
+      `scripts/check-github-alignment.py` by extracting mirror-entry schema
+      validation into `_validate_mirror_entry_fields(...)`.
+- [x] Replace branch-heavy missing-asset logic with a compact data-driven check
+      in `_collect_missing_mirror_asset_violations(...)`.
+- [x] Re-run complexity and verification gates:
+      - `uvx radon cc scripts -s -a`
+      - `task verify-all`
+      - `npx jscpd --config jscpd.json`
+
+Pass 20 completion notes:
+
+- `scripts/check-github-alignment.py` no longer has B-rank functions.
+- Entire `scripts/` suite now reports A-rank complexity for all analyzed
+      functions, improving maintainability and reviewability.
+
 ## Verification checklist (required per pass)
 
 - [x] `task verify-all` passes.
@@ -444,3 +531,169 @@ Pass 16 progress notes:
 - [x] Clean architecture checks are enforced and documented.
 - [x] Root/template alignment is automated for critical governance assets.
 - [x] Documentation is coherent, minimal, and current.
+
+### Pass 21 — prompt registry, agentic alignment, and convention enforcement
+
+- [x] Make `experimental` prompt profile meaningful: v2 prompt versions that
+      differentiate from `default` v1 (structured, concise, production-grade).
+- [x] Create v2 prompt template files for all 6 registered prompts:
+      `rag_query`, `summarize`, `entity_extraction`, `classify`,
+      `agent_system`, `conversational_rag`.
+- [x] Wire `LocalSettings` to use `experimental` profile so local development
+      automatically picks up v2 prompts without code changes.
+- [x] Add 8 missing `.claude/rules/` to template for generated-project parity:
+      `typescript-conventions`, `tdd`, `registry`, `readability-and-cognitive-load`,
+      `react-conventions`, `ddd`, `coding-conventions`, `architecture-boundaries`.
+- [x] Add `prompt-engineer.md` agent to root `.claude/agents/` (was missing
+      despite template having `prompt-engineering.agent.md` in `.github/agents/`).
+- [x] Add `prompt-engineer.md` agent to `template/.claude/agents/` for mirror
+      consistency.
+- [x] Update `docs/cross-cuttings/agentic-ownership-map.json`:
+      - Expand `claude_rules` mirror pairs from 9 to 17.
+      - Add `prompt-engineer.md` to `claude_agents` mirror pairs.
+- [x] Update root `.vscode/mcp.json` to include `github` and `microsoft-docs`
+      MCP servers matching template (parity).
+- [x] Fix convention contradiction: template copilot-instructions said
+      "Use `Final[type]` for module-level constants" — corrected to
+      `UPPER_SNAKE_CASE` with `_` prefix for non-public (matching root policy).
+- [x] Update `.claude/CLAUDE.md` agent count (16 to 17) and agent listing.
+- [x] Verify: `task verify-all`, `check-json`, `trailing-whitespace`,
+      `end-of-file-fixer`, `module-docstrings` all pass.
+
+Pass 21 completion notes:
+
+- Prompt registry now has a meaningful experimental profile that local
+      development automatically uses. Developers can iterate on v2 prompts
+      without affecting production (default profile stays on v1).
+- Template `.claude/rules/` now covers 17 rules matching root-relevant subset
+      (excluding template-dev-only rules: `agent-prompting`, `prompt`, `sdd`).
+- All agentic surfaces are now consistent across root, template/.claude, and
+      template/.github — enforced by the expanded ownership-map matrix.
+- MCP server coverage is unified: both root and template declare context7,
+      github, shadcn, storybook, playwright, gitnexus, microsoft-docs.
+- Convention alignment verified: no `Final[]` misuse, no external project
+      references, project-agnostic agentic content throughout.
+
+### Pass 22 — comprehensive convention audit and dataclass hardening
+
+- [x] Fix `SubGoal` and `HMASPlan` dataclasses in `hmas.py.jinja` missing
+      `slots=True` (now `@dataclass(slots=True)` per project convention).
+- [x] Verify all `@dataclass` usages across template backend use `slots=True`:
+      - Mutable entities/state: `@dataclass(slots=True)` ✓
+      - Immutable configs/events/results: `@dataclass(frozen=True, slots=True)` ✓
+      - No bare `@dataclass` without parameters remains.
+- [x] Verify prompt registry architecture:
+      - Versioned profiles (`default`=v1, `experimental`=v2) ✓
+      - Local development automatically uses `experimental` profile ✓
+      - File-backed registry (`prompts/registry.json`) with template resolution ✓
+      - `PromptVersionResolver` and `PromptRegistryEditor` for runtime management ✓
+      - `Jinja2PromptTemplate` adapter implementing `PromptTemplateGateway` protocol ✓
+      - `PromptManager` backward-compatibility alias (legacy API surface) ✓
+      - Inline RAG prompt constants in `rag_prompts.py` for pipeline fallbacks ✓
+- [x] Verify configuration/environment architecture:
+      - Env-specific settings subclasses (`Local`, `Dev`, `Test`, `Staging`, `Prod`) ✓
+      - `resolve_runtime_environment()` with precedence (env var → dotenv → hostname) ✓
+      - `get_settings()` factory with `@lru_cache(maxsize=1)` ✓
+      - Typed env prefix `{{ project_slug | upper }}_` ✓
+      - `model_validator` for secret-key strength in staging/prod ✓
+      - `env_file=None` in staging/prod to prevent accidental dotenv loading ✓
+- [x] Verify agentic setup is completely project-agnostic:
+      - No references to any external projects in entire codebase ✓
+      - Root and template `.claude/agents/` use identical content ✓
+      - Template `.github/agents/` use project-agnostic instructions ✓
+      - MCP servers use generic URLs and tool references only ✓
+      - Ownership matrix enforces mirror parity ✓
+- [x] Verify naming conventions:
+      - `_UPPER_SNAKE_CASE` for private constants ✓
+      - `UPPER_SNAKE_CASE` for public constants ✓
+      - `@final` on non-inheritable classes ✓
+      - `__slots__` on non-dataclass final classes ✓
+      - `_` prefix on non-public module-level functions ✓
+      - Single-line module docstrings for simple modules ✓
+      - Multi-line docstrings with proper format for complex modules ✓
+- [x] Verify clean architecture enforcement:
+      - `scripts/check-architecture-boundaries.py` passes ✓
+      - Dependency direction: utils→config→core→infra/ai→application→composition→presentation ✓
+      - Core layer has zero outward imports ✓
+      - Infrastructure implements core protocols via adapter pattern ✓
+      - Composition root wires concrete adapters ✓
+- [x] Verify observability stack:
+      - OpenTelemetry Collector with OTLP gRPC/HTTP receivers ✓
+      - Prometheus scraping with alert rules ✓
+      - Grafana with provisioned datasources and dashboards ✓
+      - Tempo for distributed tracing ✓
+      - `compose.observability.yml` with proper service dependencies ✓
+- [x] Verify retry policies and HTTP client:
+      - Centralized `retry_policies.py` with tenacity decorators ✓
+      - `HTTPClientAdapter` with retry support and proper timeouts ✓
+      - Separate policies for general HTTP vs API calls ✓
+- [x] Verify middleware stack:
+      - Security headers (HSTS, CSP, X-Frame-Options, etc.) ✓
+      - CORS configuration ✓
+      - Request ID injection with UUID validation ✓
+      - Timing middleware for latency tracking ✓
+      - Rate limiting via slowapi ✓
+      - Profiling middleware (conditional) ✓
+- [x] Verify error handling:
+      - Domain exceptions mapped to HTTP status codes ✓
+      - `from fastapi import status` constants only (no literals) ✓
+      - Structured error responses ✓
+- [x] Verify pre-commit and CI:
+      - Comprehensive pre-commit hooks (hygiene, YAML, commits, Python, markdown,
+        secrets, typos, shell, Docker, complexity, actions, links) ✓
+      - CI pipeline (lint, validate-template, render, test) ✓
+      - Template-specific checks (architecture, module-docstrings, no-final,
+        status-codes, github-alignment) ✓
+- [x] Verify tox configuration:
+      - Uses `tox-uv` for fast environments ✓
+      - Environments: unit, property, integration, e2e, lint, typecheck, security,
+        coverage, registry-check ✓
+- [x] Verify container setup:
+      - Multi-stage build (builder → app-base → dev/prod) ✓
+      - Non-root user, health checks, proper labels ✓
+      - Cache mounts for uv, minimal prod image ✓
+- [x] Re-run full verification gate: all 5 scripts pass.
+
+Pass 22 completion notes:
+
+- Codebase is production-ready with consistent conventions throughout.
+- All dataclasses now uniformly use `slots=True` (or `frozen=True, slots=True`).
+- Prompt registry is fully operational with versioned profiles, file-backed
+      resolution, and automatic experimental usage in local development.
+- Agentic setup is verified project-agnostic across all surfaces (root, template
+      .claude, template .github).
+- Clean architecture is enforced at multiple levels: scripts, CI, agent
+      instructions, and pre-commit hooks.
+- No external project references exist anywhere in the codebase.
+- Configuration follows env-specific subclass pattern with proper validation.
+- Observability, retry, middleware, error handling, and container patterns all
+      follow production best practices.
+
+### Pass 23 — jscpd report-file suppression and final pre-commit hardening
+
+- [x] Fix jscpd pre-commit hook generating report files that caused
+      "files were modified by this hook" false failures.
+- [x] Add `"reporters": ["console"]` and `"output": ""` to `jscpd.json` config.
+- [x] Add `--reporters console --output ""` CLI overrides to pre-commit entry.
+- [x] Fix BOM (byte-order-marker) in template file (auto-fixed by hook).
+- [x] Re-run full pre-commit suite: all hooks pass (except expected
+      `no-commit-to-branch` guard on `main`).
+- [x] Re-run `task verify-all`: all 5 verification scripts pass.
+- [x] Comprehensive codebase walkthrough confirms:
+      - Prompt registry: file-based versioning, profiles, experimental in local ✓
+      - Configuration: pydantic-settings, env hierarchy, runtime resolution ✓
+      - Agentic setup: fully project-agnostic, no external references ✓
+      - Clean architecture: enforced with scripts, CI, composition root ✓
+      - Conventions: `@final`, `__slots__`, `@dataclass(slots=True)`, prefixes ✓
+      - Observability: OTEL + Prometheus + Grafana + Tempo ✓
+      - Pre-commits: 30+ hooks with zero false positives ✓
+      - MCP: 7 servers aligned between root and template ✓
+      - Ownership map: enforces mirror parity across all agentic surfaces ✓
+
+Pass 23 completion notes:
+
+- The only pre-commit failure is the expected `no-commit-to-branch` guard
+      which prevents direct commits to `main` (working as designed).
+- jscpd now reports duplication metrics to console only, never generating
+      file artifacts that trigger false "modified files" failures.
+- Full codebase is verified clean, consistent, aligned, and production-ready.

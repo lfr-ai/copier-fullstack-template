@@ -216,7 +216,7 @@ DI wiring:
 - `composition/container.py` wires gateway/repository protocols to concrete implementations
 - Constructor injection via typed parameters — no service locator, no global mutable state
 - Routes NEVER instantiate dependencies — use `Depends()` in `presentation/api/dependencies.py`
-- Application services inherit `BaseService`, depend on port protocols ONLY
+- Application services are plain classes, depend on port protocols ONLY
 - Application services access persistence via UoW repository properties (e.g. `uow.users`), NEVER by importing concrete infrastructure classes
 
 ### Domain Modeling Patterns

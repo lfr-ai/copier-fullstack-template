@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import final, override
+from typing import final
 
 import structlog
 
 from {{ project_slug }}.application.dtos.rag_dto import SourceDTO
-from {{ project_slug }}.application.queries.base import QueryHandler
 from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
 from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
@@ -28,14 +27,13 @@ class SearchDocumentsQuery:
 
 
 @final
-class SearchDocumentsHandler(QueryHandler[SearchDocumentsQuery, list[SourceDTO]]):
+class SearchDocumentsHandler:
     """Handles document search using vector similarity."""
 
     def __init__(self, *, embedding: EmbeddingGateway, vector_store: VectorStoreGateway) -> None:
         self._embedding = embedding
         self._vector_store = vector_store
 
-    @override
     async def handle(self, query: SearchDocumentsQuery) -> list[SourceDTO]:
         """Execute vector similarity search.
 

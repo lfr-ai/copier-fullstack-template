@@ -25,9 +25,9 @@ Comprehensive over-engineering audit. Ranked by lines/complexity removed.
 
 | Tag | Finding | Replacement | Path |
 |-----|---------|-------------|------|
-| `yagni:` | CQRS `CommandHandler` ABC — 1 abstract method, likely 1-3 impls | Delete base; handlers are just `async def handle()` functions | `application/commands/base.py.jinja` |
-| `yagni:` | CQRS `QueryHandler` ABC — same | Delete base; plain functions suffice | `application/queries/base.py` |
-| `yagni:` | `BaseService` — 2 fields, no logic | Inline `self._uow` and `self._logger` in services | `application/services/base.py.jinja` |
+| `done:` | Removed CQRS `CommandHandler` ABC | Handlers are plain classes with `async def handle()` | `application/commands/base.py.jinja` (deleted) |
+| `done:` | Removed CQRS `QueryHandler` ABC | Handlers are plain classes with `async def handle()` | `application/queries/base.py` (deleted) |
+| `done:` | Removed `BaseService` (2 fields, no logic) | Inlined `self._uow` and service logger state | `application/services/base.py.jinja` (deleted) |
 | `shrink:` | `utils/crypto_utils.py` — 2 one-liner stdlib wrappers | Inline `secrets.token_urlsafe()` / `hashlib.sha256()` at call site | `utils/crypto_utils.py` |
 | `shrink:` | `utils/file_utils.py` — 3 trivial stdlib wrappers | Inline where used | `utils/file_utils.py` |
 | `shrink:` | `utils/json_utils.py` — `AppJSONEncoder` wrapping stdlib json | Use Pydantic's JSON serialization (already a dep) | `utils/json_utils.py` |
@@ -72,6 +72,10 @@ Comprehensive over-engineering audit. Ranked by lines/complexity removed.
 ### Phase 3 — Simplify over-abstractions ✅ DONE
 1. ✅ Merged `core/types.py` (`UserId` NewType) into `core/constants.py`
 2. ✅ Made AI enums conditional
+3. ✅ Removed CQRS base abstractions (`application/commands/base.py.jinja`,
+	`application/queries/base.py`) and simplified handlers to plain classes
+4. ✅ Removed service base abstraction (`application/services/base.py.jinja`)
+	and deleted obsolete abstraction-only unit tests
 
 ### Phase 4 — Bug fixes (discovered during audit) ✅ DONE
 1. ✅ Fixed Jinja syntax error in `litellm_router.py.jinja` (`${%s}` → `{% raw %}...{% endraw %}`)

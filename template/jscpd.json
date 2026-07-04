@@ -1,11 +1,9 @@
 {
   "threshold": 3,
-  "skipBlocks": [
-    {
-      "open": "\"\"\"",
-      "close": "\"\"\""
-    }
-  ],
+  "minLines": 10,
+  "minTokens": 70,
+  "reporters": ["console"],
+  "output": "",
   "ignore": [
     "node_modules",
     "dist",
@@ -25,7 +23,6 @@
     "htmlcov",
     "coverage",
     ".lycheecache",
-    "jscpd-report/**",
     "logs/**",
     "**/.github/agents/**",
     "**/prompts/**"

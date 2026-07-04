@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from typing import final
 
+import structlog
+
 from {{ project_slug }}.application.dtos.mcp_dto import MCPToolCallDTO, MCPToolResultDTO
-from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.mcp_server import MCPServerGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+
 @final
-class MCPService(BaseService):
+class MCPService:
     """Application-level MCP orchestration.
 
     Manages MCP server lifecycle and delegates tool invocations
@@ -22,7 +25,10 @@ class MCPService(BaseService):
         uow: UnitOfWork,
         mcp_server: MCPServerGateway,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
+        self._logger: structlog.stdlib.BoundLogger = structlog.get_logger(
+            f"{__name__}.{self.__class__.__name__}"
+        )
         self._mcp_server = mcp_server
 
     def get_mcp_app(self) -> object:

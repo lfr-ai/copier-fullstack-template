@@ -91,7 +91,7 @@ class SubGoalState(StrEnum):
     SKIPPED = "skipped"
 
 
-@dataclass
+@dataclass(slots=True)
 @final
 class SubGoal:
     """Decomposed sub-goal within the HMAS plan."""
@@ -107,7 +107,7 @@ class SubGoal:
     dependencies: list[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(slots=True)
 @final
 class HMASPlan:
     """Execution plan produced by the HMAS planner."""

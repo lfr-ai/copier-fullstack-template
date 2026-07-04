@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import final, override
+from typing import final
 
 import structlog
 
-from {{ project_slug }}.application.commands.base import CommandHandler
 from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
@@ -23,7 +22,7 @@ class BuildKnowledgeGraphCommand:
 
 
 @final
-class BuildKnowledgeGraphHandler(CommandHandler[BuildKnowledgeGraphCommand, int]):
+class BuildKnowledgeGraphHandler:
     """Handles bulk knowledge graph construction."""
 
     def __init__(
@@ -32,10 +31,9 @@ class BuildKnowledgeGraphHandler(CommandHandler[BuildKnowledgeGraphCommand, int]
         uow: UnitOfWork,
         knowledge_graph: KnowledgeGraphGateway,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
         self._kg = knowledge_graph
 
-    @override
     async def handle(self, command: BuildKnowledgeGraphCommand) -> int:
         """Add triplets to the knowledge graph.
 

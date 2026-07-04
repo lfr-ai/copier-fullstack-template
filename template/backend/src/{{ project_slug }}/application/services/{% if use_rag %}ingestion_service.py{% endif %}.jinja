@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import final
 
+import structlog
+
 from {{ project_slug }}.application.dtos.ingestion_dto import IngestionRequestDTO, IngestionResultDTO
-from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
 from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
 from {{ project_slug }}.core.interfaces.knowledge_graph import KnowledgeGraphGateway
@@ -15,8 +16,9 @@ from {{ project_slug }}.core.interfaces.vector_store import VectorStoreGateway
 
 _MIN_TRIPLET_TOKENS = 3
 
+
 @final
-class IngestionService(BaseService):
+class IngestionService:
     """Application-level document ingestion orchestration.
 
     Coordinates loading, splitting, embedding, vector storage,
@@ -33,7 +35,10 @@ class IngestionService(BaseService):
         vector_store: VectorStoreGateway,
         knowledge_graph: KnowledgeGraphGateway | None = None,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
+        self._logger: structlog.stdlib.BoundLogger = structlog.get_logger(
+            f"{__name__}.{self.__class__.__name__}"
+        )
         self._loader = loader
         self._splitter = splitter
         self._embedding = embedding

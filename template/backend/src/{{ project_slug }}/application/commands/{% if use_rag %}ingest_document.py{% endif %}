@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import final, override
+from typing import final
 
 import structlog
 
-from {{ project_slug }}.application.commands.base import CommandHandler
 from {{ project_slug }}.application.dtos.ingestion_dto import IngestionRequestDTO, IngestionResultDTO
 from {{ project_slug }}.core.interfaces.document_loader import DocumentLoaderGateway
 from {{ project_slug }}.core.interfaces.embedding import EmbeddingGateway
@@ -33,7 +32,7 @@ class IngestDocumentCommand:
 
 
 @final
-class IngestDocumentHandler(CommandHandler[IngestDocumentCommand, IngestionResultDTO]):
+class IngestDocumentHandler:
     """Handles document ingestion through the RAG pipeline."""
 
     def __init__(
@@ -45,13 +44,12 @@ class IngestDocumentHandler(CommandHandler[IngestDocumentCommand, IngestionResul
         embedding: EmbeddingGateway,
         vector_store: VectorStoreGateway,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
         self._loader = loader
         self._splitter = splitter
         self._embedding = embedding
         self._vector_store = vector_store
 
-    @override
     async def handle(self, command: IngestDocumentCommand) -> IngestionResultDTO:
         """Execute document ingestion pipeline."""
         logger.info("Ingesting document", source=command.source)

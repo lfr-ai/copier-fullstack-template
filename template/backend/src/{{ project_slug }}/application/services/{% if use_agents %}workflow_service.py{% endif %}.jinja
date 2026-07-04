@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import final
 
-from collections.abc import AsyncIterator
+import structlog
 
 from {{ project_slug }}.application.dtos.workflow_dto import (
     ExecuteWorkflowDTO,
@@ -12,7 +13,6 @@ from {{ project_slug }}.application.dtos.workflow_dto import (
     WorkflowResultDTO,
     WorkflowStepDTO,
 )
-from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 from {{ project_slug }}.core.interfaces.workflow_engine import (
     WorkflowConfig,
@@ -21,7 +21,7 @@ from {{ project_slug }}.core.interfaces.workflow_engine import (
 
 
 @final
-class WorkflowService(BaseService):
+class WorkflowService:
     """Application-level workflow orchestration.
 
     Dispatches multi-agent graph execution to the configured
@@ -34,7 +34,10 @@ class WorkflowService(BaseService):
         uow: UnitOfWork,
         engine: WorkflowEngineGateway,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
+        self._logger: structlog.stdlib.BoundLogger = structlog.get_logger(
+            f"{__name__}.{self.__class__.__name__}"
+        )
         self._engine = engine
 
     async def execute(self, dto: ExecuteWorkflowDTO) -> WorkflowResultDTO:

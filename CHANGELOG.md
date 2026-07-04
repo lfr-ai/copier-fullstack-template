@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Removed thin inheritance layers in template backend application code by
+  deleting `BaseService`, `CommandHandler`, and `QueryHandler` base abstractions
+  and simplifying services/handlers to plain classes with explicit dependencies
+- Removed abstraction-only backend template unit tests tied to deleted base
+  classes (`test_base_service.py.jinja`, `test_command_handler.py.jinja`,
+  `test_query_handler.py.jinja`)
 - Simplified `scripts/check-github-alignment.py` by replacing duplicated
   required/legacy file-existence loops with a single policy-driven helper
   (`_collect_paths_with_existence_mismatch`)
