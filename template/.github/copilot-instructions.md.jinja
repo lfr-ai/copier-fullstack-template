@@ -54,7 +54,7 @@ applyTo: "**"
 - Keep changes minimal and scoped
 - Update docs in the same change when behavior or setup changes
 - Use typed Python signatures; avoid `Any` unless truly unavoidable
-- Use `Final[type]` for module-level constants
+- Use `UPPER_SNAKE_CASE` for module-level constants; prefix with `_` for non-public
 - Use `@dataclass(frozen=True, slots=True)` for all dataclasses (except `Container`)
 - Use `cn()` for Tailwind class merging; semantic color tokens only
 
@@ -78,6 +78,7 @@ Specialized agents for different workflows:
 | `deep-thinking` | Extended reasoning for complex decisions |
 | `modernization` | Dependency upgrades, deprecated pattern replacement |
 | `security-specialist` | Vulnerability analysis, secrets scanning, dep auditing |
+| `prompt-engineering` | Prompt creation, improvement, and validation |
 
 ## Agent Skills (`.github/skills/`)
 

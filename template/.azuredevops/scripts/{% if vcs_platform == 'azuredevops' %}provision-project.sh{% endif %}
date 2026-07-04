@@ -14,7 +14,7 @@ readonly NC='\033[0m' # No Color
 # Script configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_NAME="${3:-${2}}"  # Default to project name if not specified
-readonly DESCRIPTION="${4:-Scaffolded by copier-fullstack-template}"
+readonly DESCRIPTION="${4:-Fullstack application project}"
 
 # Validate required arguments
 if [[ $# -lt 2 ]]; then

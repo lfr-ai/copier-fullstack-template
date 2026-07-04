@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from pathlib import Path
+from typing import cast
 
 _ROOT_HOOKS_CONFIG = ".github/hooks/hooks.json"
 _TEMPLATE_HOOKS_CONFIG = "template/.github/hooks/hooks.json"
@@ -469,16 +470,76 @@ def _collect_missing_mirror_asset_violations(
     if optional:
         return []
 
-    violations: list[str] = []
-    if required_in_root and not root_path.exists():
-        violations.append(
-            f"Missing mirrored root asset for '{mirror_name}': {root_base_obj}/{root_rel}"
-        )
-    if required_in_template and not template_path.exists():
-        violations.append(
-            f"Missing mirrored template asset for '{mirror_name}': {template_base_obj}/{template_rel}"
-        )
-    return violations
+    checks = (
+        (
+            required_in_root,
+            root_path,
+            f"Missing mirrored root asset for '{mirror_name}': {root_base_obj}/{root_rel}",
+        ),
+        (
+            required_in_template,
+            template_path,
+            f"Missing mirrored template asset for '{mirror_name}': {template_base_obj}/{template_rel}",
+        ),
+    )
+    return [
+        message for required, path, message in checks if required and not path.exists()
+    ]
+
+
+def _validate_mirror_entry_fields(
+    *,
+    mirror_obj: dict[str, object],
+    mirror_name: str,
+) -> tuple[
+    tuple[str, str, list[object], bool, bool, bool] | None,
+    list[str],
+]:
+    """Validate and normalize mirror entry fields from matrix config.
+
+    Args:
+        mirror_obj (dict[str, object]): Raw mirror entry object.
+        mirror_name (str): Mirror name used in diagnostics.
+
+    Returns:
+        tuple[tuple[str, str, list[object], bool, bool, bool] | None, list[str]]:
+            Normalized fields tuple and validation violations.
+    """
+
+    root_base_obj = mirror_obj.get("rootBase")
+    template_base_obj = mirror_obj.get("templateBase")
+    pairs_obj = mirror_obj.get("pairs")
+    required_in_root_obj = mirror_obj.get("requiredInRoot", True)
+    required_in_template_obj = mirror_obj.get("requiredInTemplate", True)
+    optional_obj = mirror_obj.get("optional", False)
+
+    field_checks: tuple[tuple[str, object, type[object]], ...] = (
+        ("rootBase", root_base_obj, str),
+        ("templateBase", template_base_obj, str),
+        ("pairs", pairs_obj, list),
+        ("requiredInRoot", required_in_root_obj, bool),
+        ("requiredInTemplate", required_in_template_obj, bool),
+        ("optional", optional_obj, bool),
+    )
+    violations = [
+        f"Invalid '{mirror_name}' in {_OWNERSHIP_MATRIX_PATH}: '{field_name}' must be {expected_type.__name__}"
+        for field_name, value, expected_type in field_checks
+        if not isinstance(value, expected_type)
+    ]
+    if violations:
+        return None, violations
+
+    return (
+        (
+            cast(str, root_base_obj),
+            cast(str, template_base_obj),
+            cast(list[object], pairs_obj),
+            cast(bool, required_in_root_obj),
+            cast(bool, required_in_template_obj),
+            cast(bool, optional_obj),
+        ),
+        [],
+    )
 
 
 def _collect_mirror_pair_violations(
@@ -562,33 +623,23 @@ def _collect_mirror_entry_violations(
     """
 
     mirror_name = str(mirror_obj.get("name", f"mirror[{mirror_index}]"))
-    root_base_obj = mirror_obj.get("rootBase")
-    template_base_obj = mirror_obj.get("templateBase")
-    pairs_obj = mirror_obj.get("pairs")
-    required_in_root_obj = mirror_obj.get("requiredInRoot", True)
-    required_in_template_obj = mirror_obj.get("requiredInTemplate", True)
-    optional_obj = mirror_obj.get("optional", False)
+    normalized_fields, validation_violations = _validate_mirror_entry_fields(
+        mirror_obj=mirror_obj,
+        mirror_name=mirror_name,
+    )
+    if validation_violations:
+        return validation_violations
+    if normalized_fields is None:
+        return []
 
-    if not isinstance(root_base_obj, str) or not isinstance(template_base_obj, str):
-        return [
-            f"Invalid '{mirror_name}' in {_OWNERSHIP_MATRIX_PATH}: 'rootBase' and 'templateBase' must be strings"
-        ]
-    if not isinstance(pairs_obj, list):
-        return [
-            f"Invalid '{mirror_name}' in {_OWNERSHIP_MATRIX_PATH}: 'pairs' must be list"
-        ]
-    if not isinstance(required_in_root_obj, bool):
-        return [
-            f"Invalid '{mirror_name}' in {_OWNERSHIP_MATRIX_PATH}: 'requiredInRoot' must be bool"
-        ]
-    if not isinstance(required_in_template_obj, bool):
-        return [
-            f"Invalid '{mirror_name}' in {_OWNERSHIP_MATRIX_PATH}: 'requiredInTemplate' must be bool"
-        ]
-    if not isinstance(optional_obj, bool):
-        return [
-            f"Invalid '{mirror_name}' in {_OWNERSHIP_MATRIX_PATH}: 'optional' must be bool"
-        ]
+    (
+        root_base_obj,
+        template_base_obj,
+        pairs_obj,
+        required_in_root_obj,
+        required_in_template_obj,
+        optional_obj,
+    ) = normalized_fields
 
     root_base = repo_root / root_base_obj
     template_base = repo_root / template_base_obj

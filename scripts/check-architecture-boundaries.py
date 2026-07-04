@@ -80,39 +80,89 @@ def _is_violation(*, source_layer: str, target_layer: str) -> bool:
     return _LAYER_ORDER[target_layer] > _LAYER_ORDER[source_layer]
 
 
+def _resolve_root_path(*, argv: list[str]) -> Path:
+    """Resolve the scan root path from CLI arguments.
+
+    Args:
+        argv (list[str]): Raw process arguments.
+
+    Returns:
+        Path: Root path for architecture scanning.
+    """
+    return Path(argv[1]) if len(argv) > 1 else Path("template/backend/src")
+
+
+def _find_violating_targets(*, source_layer: str, text: str) -> list[str]:
+    """Return violating imported layers for one source file.
+
+    Args:
+        source_layer (str): Layer containing the current file.
+        text (str): File contents to inspect.
+
+    Returns:
+        list[str]: Sorted violating target layer names.
+    """
+    imported_layers = _extract_layer_imports(text=text)
+    return sorted(
+        target
+        for target in imported_layers
+        if _is_violation(source_layer=source_layer, target_layer=target)
+    )
+
+
+def _collect_boundary_violations(*, root: Path) -> list[str]:
+    """Collect architecture boundary violations under one scan root.
+
+    Args:
+        root (Path): Root directory to scan.
+
+    Returns:
+        list[str]: Human-readable violation lines.
+    """
+    offenders: list[str] = []
+    for file_path in iter_python_like_files(roots=[root]):
+        source_layer = _detect_layer(path=file_path)
+        if source_layer is None:
+            continue
+        text = read_text_ignore_errors(path=file_path)
+        violating_targets = _find_violating_targets(
+            source_layer=source_layer, text=text
+        )
+        if not violating_targets:
+            continue
+        offenders.append(
+            f"{file_path.as_posix()}  [{source_layer} -> {', '.join(violating_targets)}]"
+        )
+    return offenders
+
+
+def _print_result(*, offenders: list[str]) -> int:
+    """Print architecture-check result and return process exit code.
+
+    Args:
+        offenders (list[str]): Collected violation lines.
+
+    Returns:
+        int: Exit code (0 when clean, 1 when violations exist).
+    """
+    if offenders:
+        print("[FAIL] Architecture boundary violations detected:")
+        for offender in offenders:
+            print(f"  - {offender}")
+        return 1
+    print("[OK] Architecture boundary imports comply with configured rules")
+    return 0
+
+
 def main() -> int:
     """Validate architecture boundary imports and print diagnostics.
 
     Returns:
         int: Process exit code.
     """
-    root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("template/backend/src")
-    offenders: list[str] = []
-
-    for file_path in iter_python_like_files(roots=[root]):
-        source_layer = _detect_layer(path=file_path)
-        if source_layer is None:
-            continue
-        text = read_text_ignore_errors(path=file_path)
-        imported_layers = _extract_layer_imports(text=text)
-        violating_targets = sorted(
-            target
-            for target in imported_layers
-            if _is_violation(source_layer=source_layer, target_layer=target)
-        )
-        if violating_targets:
-            offenders.append(
-                f"{file_path.as_posix()}  [{source_layer} -> {', '.join(violating_targets)}]"
-            )
-
-    if offenders:
-        print("[FAIL] Architecture boundary violations detected:")
-        for offender in offenders:
-            print(f"  - {offender}")
-        return 1
-
-    print("[OK] Architecture boundary imports comply with configured rules")
-    return 0
+    root = _resolve_root_path(argv=sys.argv)
+    offenders = _collect_boundary_violations(root=root)
+    return _print_result(offenders=offenders)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,20 @@
+{% if history %}## Conversation History
+
+{{ history }}
+
+{% endif %}## Context
+
+{{ context }}
+
+## Question
+
+{{ question }}
+
+## Instructions
+
+- Answer based on the context and conversation history.
+- Maintain conversational coherence with prior exchanges.
+- If the context contradicts prior answers, acknowledge the update.
+- Be concise and cite relevant context passages.
+
+## Answer

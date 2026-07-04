@@ -6,6 +6,7 @@ iteration and decoding logic.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 _PYTHON_LIKE_SUFFIXES = (".py", ".py.jinja")
@@ -23,6 +24,23 @@ def is_python_like_file(*, path: Path) -> bool:
     return path.is_file() and path.name.endswith(_PYTHON_LIKE_SUFFIXES)
 
 
+def _iter_scan_candidates(*, root: Path) -> Iterator[Path]:
+    """Yield candidate paths to evaluate under one scan root.
+
+    Args:
+        root (Path): Directory or file passed to the scanner.
+
+    Yields:
+        Iterator[Path]: Candidate file-system paths for suffix filtering.
+    """
+    if root.is_file():
+        yield root
+        return
+    if not root.exists():
+        return
+    yield from root.rglob("*")
+
+
 def iter_python_like_files(*, roots: list[Path]) -> list[Path]:
     """Collect Python-like files from the provided roots.
 
@@ -32,17 +50,12 @@ def iter_python_like_files(*, roots: list[Path]) -> list[Path]:
     Returns:
         list[Path]: Sorted, de-duplicated Python-like file paths.
     """
-    files: set[Path] = set()
-    for root in roots:
-        if root.is_file():
-            if is_python_like_file(path=root):
-                files.add(root)
-            continue
-        if not root.exists():
-            continue
-        for candidate in root.rglob("*"):
-            if is_python_like_file(path=candidate):
-                files.add(candidate)
+    files = {
+        candidate
+        for root in roots
+        for candidate in _iter_scan_candidates(root=root)
+        if is_python_like_file(path=candidate)
+    }
     return sorted(files)
 
 

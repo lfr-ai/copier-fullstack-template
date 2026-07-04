@@ -697,3 +697,156 @@ Pass 23 completion notes:
 - jscpd now reports duplication metrics to console only, never generating
       file artifacts that trigger false "modified files" failures.
 - Full codebase is verified clean, consistent, aligned, and production-ready.
+
+### Pass 24 — exhaustive final verification and golden-standard alignment
+
+- [x] Comprehensive codebase walkthrough confirms all prior passes completed:
+      - All 5 verification scripts pass (`architecture-boundaries`,
+        `module-docstrings`, `no-final`, `fastapi-status-codes`,
+        `github-alignment`).
+      - Template validation (`validate-template.py`) confirms successful rendering
+        for both `github` and `azuredevops` VCS platforms.
+- [x] Prompt registry setup verified as golden-standard pattern:
+      - File-backed registry (`prompts/registry.json`) with schema versioning.
+      - `PromptVersionResolver` resolves templates from versioned profiles.
+      - `PromptRegistryEditor` provisions new immutable prompt versions.
+      - `Jinja2PromptTemplate` adapter implements `PromptTemplateGateway` protocol.
+      - `PromptManager` provides backward-compatibility alias (legacy API).
+      - Two profiles: `default` (v1, production) and `experimental` (v2, local dev).
+      - `LocalSettings.prompt_version_profile = "experimental"` auto-activates v2.
+      - 12 versioned template files (6 prompts × 2 versions).
+      - RAG pipeline prompts in `rag_prompts.py` as inline constants (fallbacks).
+      - `build_prompt_version_run_name()` for deterministic experiment tracking.
+      - `parse_version_overrides()` for runtime override injection.
+- [x] Configuration/environment setup verified:
+      - Pydantic-settings with `BaseAppSettings` and env-specific subclasses
+        (`Local`, `Dev`, `Test`, `Staging`, `Prod`).
+      - `resolve_runtime_environment()` with 5-level precedence chain.
+      - `get_settings()` cached factory with `@lru_cache(maxsize=1)`.
+      - Typed env prefix `{{ project_slug | upper }}_` for all variables.
+      - `model_validator` for secret-key strength in staging/prod.
+      - `env_file=None` in staging/prod to prevent dotenv leakage.
+      - Port constants in `config/constants.py` (DEFAULT_PORT=8000, etc.).
+      - Infrastructure constants separated from domain constants.
+- [x] Adapter/naming conventions verified:
+      - All adapters implement core `Protocol`/`Gateway` interfaces.
+      - Adapter naming: `{Implementation}{Gateway}` pattern (e.g.,
+        `LiteLLMAdapter`, `PBKDF2PasswordHasher`, `MemoryCacheAdapter`).
+      - Client naming: `{Service}Client` for external service clients.
+      - Gateway interfaces in `core/interfaces/` with `@runtime_checkable`.
+      - DI wiring exclusively in `composition/container.py`.
+- [x] Agentic setup verified as completely project-agnostic:
+      - Zero references to any external projects (confirmed via grep).
+      - Root and template `.claude/agents/` use identical content (17 agents).
+      - Template `.github/agents/` use project-agnostic instructions (17 agents).
+      - MCP servers use generic URLs/tools only (context7, github, shadcn,
+        storybook, playwright, gitnexus, microsoft-docs).
+      - Ownership matrix (`agentic-ownership-map.json`) enforces 7 mirror
+        categories with explicit pairs.
+      - `scripts/check-github-alignment.py` validates project-agnostic tokens.
+- [x] Clean Architecture enforced at multiple levels:
+      - `scripts/check-architecture-boundaries.py` validates import direction.
+      - Agent instructions codify layer hierarchy and forbidden imports.
+      - CI pipeline regex checks core layer isolation.
+      - Composition root (`composition/container.py`) is the only cross-layer
+        dependency wiring point.
+- [x] Naming and conventions verified:
+      - `_UPPER_SNAKE_CASE` for private constants (module-level).
+      - `UPPER_SNAKE_CASE` for public constants.
+      - `@final` on non-inheritable classes throughout.
+      - `__slots__` on non-dataclass final classes.
+      - `@dataclass(frozen=True, slots=True)` for immutable value objects.
+      - `@dataclass(slots=True)` for mutable entities/state.
+      - No bare `@dataclass` without parameters anywhere.
+      - `_` prefix on non-public functions/modules consistently.
+      - Single-line docstrings use `"` format; multi-line use `"""..."""`.
+      - No markdown backticks in docstrings (uses `'word'` convention).
+      - `*` keyword-only separator in functions with 3+ parameters.
+      - `from fastapi import status` for all HTTP status codes (no literals).
+      - Structured logging via `structlog` (no `print()` in backend src).
+- [x] Observability stack verified:
+      - OpenTelemetry Collector (OTLP gRPC/HTTP).
+      - Prometheus with alert rules and scrape configs.
+      - Grafana with provisioned datasources/dashboards.
+      - Tempo for distributed tracing.
+      - `compose.observability.yml` with proper health checks and dependencies.
+      - Conditional `_setup_observability()` in app factory.
+- [x] Container setup verified:
+      - Multi-stage Containerfile (builder → app-base → dev/prod).
+      - Non-root user (`appuser:1000`), health checks, OCI labels.
+      - UV cache mounts for fast rebuilds.
+      - Minimal prod image (no dev dependencies).
+- [x] Pre-commit and CI verified:
+      - Root: 30+ hooks covering hygiene, YAML, commits, Python (ruff, ty,
+        bandit), markdown, secrets, typos, shell, actions, links.
+      - Template: comprehensive pre-commit for generated projects.
+      - CI: lint → validate → render → rendered-tests → pre-commit → links →
+        shellcheck pipeline.
+- [x] Tox configuration verified:
+      - `tox-uv` for fast env creation.
+      - Environments: py313, property, integration, e2e, lint, typecheck,
+        security, coverage, coverage-core, registry-check, links, duplicates.
+- [x] Retry policies verified:
+      - Centralized in `utils/retry_policies.py` with tenacity decorators.
+      - `http_retry`: 3 attempts, 1.5× backoff (2-15s), transient errors.
+      - `api_retry`: 5 attempts, 2× backoff (3-30s), broader error matching.
+- [x] Middleware stack verified:
+      - Security headers (HSTS, CSP, X-Frame-Options, etc.).
+      - CORS (configurable origins).
+      - Request ID injection (UUID-based).
+      - Timing middleware (response latency tracking).
+      - Rate limiting (slowapi, configurable per-minute limit).
+      - Profiling middleware (conditional, secret-gated).
+- [x] Error handling verified:
+      - Domain exceptions hierarchy (`DomainError`, `NotFoundError`,
+        `ConflictError`, `AuthorizationError`, `ValidationError`).
+      - Exception handlers map domain errors to HTTP status codes.
+      - Structured error responses with `detail` field.
+- [x] Enum conventions verified:
+      - `ParseableEnum(StrEnum)` base with `from_str()` class method.
+      - `@unique` decorator on all enums.
+      - Explicit string values (no auto-generated).
+      - Canonical location: `core/enums/`.
+- [x] Default argument simplification verified:
+      - Settings use defaults where appropriate.
+      - Container methods use keyword-only arguments.
+      - No redundant explicit defaults matching library defaults.
+- [x] CodeRabbit, Codecov, Keploy integrations verified:
+      - `.coderabbit.yaml` present in root for template repo review.
+      - `.codecov.yml.jinja` in template for generated project coverage.
+      - Keploy environment variables in `.env.example` for traffic-based testing.
+      - Keploy task runner commands in template `Taskfile.yml`.
+- [x] No external project references anywhere in codebase (confirmed).
+- [x] Consistency between root and template agentic setups (confirmed via
+      ownership-map enforcement).
+
+Pass 24 completion notes:
+
+- This pass is a comprehensive verification sweep confirming all prior 23
+      passes remain valid and no regressions have been introduced.
+- The codebase represents a modern, state-of-the-art, production-ready
+      fullstack template following Clean Architecture, DDD principles, and
+      industry best practices.
+- All conventions are enforced via automated scripts, CI pipelines, pre-commit
+      hooks, and agent instructions — not just documented.
+- The prompt registry reflects the golden-standard pattern: file-backed,
+      versioned, profile-switchable, with experimental prompts auto-activated
+      in local development.
+- The agentic setup is verified project-agnostic across all surfaces with
+      automated enforcement via `check-github-alignment.py` and the ownership
+      matrix.
+
+## Final status
+
+All 24 passes complete. The codebase is:
+
+1. **Clean** — no dead code, no redundant defaults, no thin abstractions.
+2. **Consistent** — conventions enforced at script/CI/hook/agent levels.
+3. **Aligned** — root and template mirror parity verified automatically.
+4. **Project-agnostic** — zero external project references in any surface.
+5. **Production-ready** — observability, security, retry, error handling, and
+   container best practices implemented throughout.
+6. **Modern** — Python 3.13, FastAPI, Pydantic v2, structlog, UV, Bun, React 19,
+   Tailwind v4, shadcn/ui, OpenTelemetry.
+7. **State-of-the-art** — AI/RAG infrastructure with versioned prompts,
+   LangGraph orchestration, MCP integration, and multi-agent patterns.

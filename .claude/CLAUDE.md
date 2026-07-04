@@ -8,7 +8,7 @@ This directory contains comprehensive Claude Code project configuration for temp
 .claude/
 ├── settings.json              # Project settings (permissions, env, hooks, plugins)
 ├── settings.local.json        # Local overrides (gitignored)
-├── agents/                    # Specialized agents (16)
+├── agents/                    # Specialized agents (17)
 ├── rules/                     # Path-scoped rules (20)
 ├── commands/                  # Custom commands (14)
 ├── skills/                    # Reusable skills (14)
@@ -16,7 +16,7 @@ This directory contains comprehensive Claude Code project configuration for temp
 └── CLAUDE.md                  # This documentation
 ```
 
-## Agents (16)
+## Agents (17)
 
 Specialized agents for template development workflows:
 
@@ -41,6 +41,7 @@ Specialized agents for template development workflows:
 - **debug.md** — Diagnostic debugging
 - **deep-thinking.md** — Extended reasoning
 - **modernization.md** — Codebase modernization
+- **prompt-engineer.md** — Prompt creation, improvement, and validation
 - **researcher.md** — Research and exploration
 - **ui-ux-frontend.md** — UI/UX interaction quality
 

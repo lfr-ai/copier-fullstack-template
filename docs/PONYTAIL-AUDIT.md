@@ -115,3 +115,32 @@ Comprehensive over-engineering audit. Ranked by lines/complexity removed.
 	only when `cloud_provider == 'azure'`.
 5. ✅ Normalized root documentation to one canonical template render workflow:
 	`task render` + one fallback command pattern.
+
+### Phase 9 — script complexity + actionable DRY signal ✅ DONE
+1. ✅ Reduced script cognitive load by decomposing high-complexity functions in:
+	- `scripts/check-architecture-boundaries.py`
+	- `scripts/check-module-docstrings.py`
+	- `scripts/validate-template.py`
+2. ✅ Simplified shared Python-like file scanning in
+	`scripts/_python_file_utils.py` via one candidate iterator helper.
+3. ✅ Tuned `jscpd.json` ignore scope to exclude intentional governance mirrors
+	(`.claude/.github/.agents/.gsd/docs`) so duplication reports target actionable
+	implementation code instead of known policy/documentation overlap.
+4. ✅ Re-ran verification (`task verify-all`, complexity scan, jscpd) after
+	changes.
+
+### Phase 10 — checker SRP follow-up hardening ✅ DONE
+1. ✅ Refactored `scripts/check-fastapi-status-codes.py` to split entrypoint
+	logic into `_resolve_root_path`, `_collect_offenders`, and `_print_result`.
+2. ✅ Verified script complexity for this checker moved from `B` to `A` while
+	keeping behavior unchanged.
+3. ✅ Re-ran `task verify-all` and duplicate-detection gate successfully.
+
+### Phase 11 — alignment-checker complexity flattening ✅ DONE
+1. ✅ Refactored mirror-entry validation in
+	`scripts/check-github-alignment.py` by extracting schema checks into
+	`_validate_mirror_entry_fields(...)`.
+2. ✅ Simplified missing-asset checks with a data-driven tuple/list-comprehension
+	flow in `_collect_missing_mirror_asset_violations(...)`.
+3. ✅ Re-ran radon complexity analysis and achieved all-`A` ranks across the
+	entire `scripts/` suite.
