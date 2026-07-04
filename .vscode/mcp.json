@@ -1,6 +1,23 @@
 {
   "$schema": "https://json.schemastore.org/vscode-mcp.json",
   "servers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "shadcn": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "shadcn@latest", "mcp"]
+    },
+    "storybook": {
+      "type": "http",
+      "url": "http://localhost:6006/mcp"
+    },
     "playwright": {
       "type": "stdio",
       "command": "npx",
@@ -12,18 +29,9 @@
       "args": ["mcp"],
       "cwd": "${workspaceFolder}"
     },
-    "storybook": {
+    "microsoft-docs": {
       "type": "http",
-      "url": "http://localhost:6006/mcp"
-    },
-    "shadcn": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "shadcn@latest", "mcp"]
-    },
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp"
+      "url": "https://api.githubcopilot.com/mcp/microsoft-docs"
     }
   }
 }

@@ -45,21 +45,45 @@ def _scan_file(*, file_path: Path) -> list[str]:
     return violations
 
 
-def main() -> int:
-    """Run FastAPI status-code convention checks.
+def _resolve_root_path(*, argv: list[str]) -> Path:
+    """Resolve scan root path from command-line arguments.
+
+    Args:
+        argv (list[str]): Raw process argument list.
 
     Returns:
-        int: Process exit code.
+        Path: Root path to scan for violations.
     """
-    root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("template/backend/src")
-    all_files = iter_python_like_files(roots=[root])
+    return Path(argv[1]) if len(argv) > 1 else Path("template/backend/src")
 
+
+def _collect_offenders(*, root: Path) -> dict[Path, list[str]]:
+    """Collect files violating FastAPI status-code conventions.
+
+    Args:
+        root (Path): Root directory to scan.
+
+    Returns:
+        dict[Path, list[str]]: Offending files mapped to their violations.
+    """
     offenders: dict[Path, list[str]] = {}
-    for file_path in all_files:
+    for file_path in iter_python_like_files(roots=[root]):
         file_violations = _scan_file(file_path=file_path)
-        if file_violations:
-            offenders[file_path] = file_violations
+        if not file_violations:
+            continue
+        offenders[file_path] = file_violations
+    return offenders
 
+
+def _print_result(*, offenders: dict[Path, list[str]]) -> int:
+    """Print checker result and return process exit code.
+
+    Args:
+        offenders (dict[Path, list[str]]): Collected offending files.
+
+    Returns:
+        int: Exit code (0 when clean, 1 when violations exist).
+    """
     if offenders:
         print("[FAIL] FastAPI status-code convention violations found:")
         for file_path, file_violations in offenders.items():
@@ -67,9 +91,19 @@ def main() -> int:
             for violation in file_violations:
                 print(f"      * {violation}")
         return 1
-
     print("[OK] FastAPI status-code conventions satisfied")
     return 0
+
+
+def main() -> int:
+    """Run FastAPI status-code convention checks.
+
+    Returns:
+        int: Process exit code.
+    """
+    root = _resolve_root_path(argv=sys.argv)
+    offenders = _collect_offenders(root=root)
+    return _print_result(offenders=offenders)
 
 
 if __name__ == "__main__":

@@ -71,6 +71,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `config.default: true` boilerplate
 - Refreshed `docs/TODO-COMPREHENSIVE-IMPLEMENTATION.md` into a pass-based,
   execution-oriented cleanup plan with explicit verification gates
+- Reduced cognitive complexity in validation scripts by decomposing
+  `scripts/check-architecture-boundaries.py`,
+  `scripts/check-module-docstrings.py`,
+  `scripts/check-fastapi-status-codes.py`, and
+  `scripts/validate-template.py` into smaller SRP helpers while preserving
+  behavior
+- Simplified shared Python-like file traversal in
+  `scripts/_python_file_utils.py` with a single candidate iterator helper to
+  remove repeated scan-path branching
+- Tuned `jscpd.json` ignore scope to exclude intentional mirrored governance,
+  generated planning, and documentation surfaces (`.agents`, `.claude`,
+  `.github`, `.azuredevops`, `.gsd`, `docs`, `openspec`) so clone detection
+  reports actionable implementation duplication only
+- Simplified mirror-entry validation flow in
+  `scripts/check-github-alignment.py` by extracting schema validation and
+  flattening missing-asset checks, resulting in an all-A complexity profile
+  across the entire `scripts/` validation suite
 - Simplified `.gitignore` by removing redundant duplicate ignore patterns for
   `.gsd-id` and `.bg-shell/`
 - Added cross-platform `scripts/check-github-alignment.py` and switched

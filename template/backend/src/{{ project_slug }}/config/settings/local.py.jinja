@@ -13,3 +13,6 @@ class LocalSettings(BaseAppSettings):
     debug: bool = True
     log_level: str = "DEBUG"
     database_echo: bool = True
+{%- if use_ai %}
+    prompt_version_profile: str = "experimental"
+{%- endif %}

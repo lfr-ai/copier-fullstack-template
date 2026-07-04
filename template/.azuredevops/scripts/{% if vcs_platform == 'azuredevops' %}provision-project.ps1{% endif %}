@@ -15,7 +15,7 @@ param(
     [string]$RepoName,
 
     [Parameter(Mandatory = $false, Position = 3)]
-    [string]$Description = "Scaffolded by copier-fullstack-template"
+    [string]$Description = "Fullstack application project"
 )
 
 $ErrorActionPreference = 'Stop'
