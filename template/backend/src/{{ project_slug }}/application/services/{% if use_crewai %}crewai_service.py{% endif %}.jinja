@@ -11,7 +11,8 @@ from __future__ import annotations
 
 from typing import final
 
-from {{ project_slug }}.application.services.base import BaseService
+import structlog
+
 from {{ project_slug }}.core.interfaces.crewai import (
     CrewFlowRegistry,
     CrewOrchestrationSupervisor,
@@ -22,7 +23,7 @@ _LOG_TASK_TRUNCATE_LEN = 200
 
 
 @final
-class CrewAIService(BaseService):
+class CrewAIService:
     """Application-layer CrewAI service.
 
     The service depends on orchestration ports ('CrewOrchestrationSupervisor',
@@ -40,7 +41,10 @@ class CrewAIService(BaseService):
         default_llm: str = "gpt-4o",
         verbose: bool = False,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
+        self._logger: structlog.stdlib.BoundLogger = structlog.get_logger(
+            f"{__name__}.{self.__class__.__name__}"
+        )
         self._supervisor = supervisor
         self._flow_registry = flow_registry
         self._embedder = embedder

@@ -24,7 +24,7 @@ backend/src/{{ project_slug }}/
 │   └── specifications/       # Domain specification objects
 │
 ├── application/              # Use cases, orchestration, DTOs
-│   ├── services/             # Inherit BaseService (services/base.py), depend on port protocols ONLY
+│   ├── services/             # Plain services; depend on port protocols ONLY
 │   ├── commands/             # Write-side inputs (frozen dataclasses)
 │   ├── queries/              # Read-side inputs (frozen dataclasses)
 │   ├── dtos/                 # Inherit BaseDTO (dtos/base.py), Annotated[..., Field(...)]

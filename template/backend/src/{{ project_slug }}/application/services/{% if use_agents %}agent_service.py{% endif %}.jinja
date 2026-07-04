@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import final
 
-from collections.abc import AsyncIterator
+import structlog
 
 from {{ project_slug }}.application.dtos.agent_dto import AgentResultDTO, AgentTaskDTO
-from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.agent_orchestrator import AgentOrchestratorGateway, AgentState
 from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
+
+
 @final
-class AgentService(BaseService):
+class AgentService:
     """Application-level agent execution orchestration.
 
     Dispatches tasks to the appropriate agent backend (ReAct,
@@ -25,7 +27,10 @@ class AgentService(BaseService):
         uow: UnitOfWork,
         orchestrator: AgentOrchestratorGateway,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
+        self._logger: structlog.stdlib.BoundLogger = structlog.get_logger(
+            f"{__name__}.{self.__class__.__name__}"
+        )
         self._orchestrator = orchestrator
 
     async def execute(self, dto: AgentTaskDTO) -> AgentResultDTO:

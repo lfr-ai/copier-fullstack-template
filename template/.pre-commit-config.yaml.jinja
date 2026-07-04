@@ -151,7 +151,7 @@ repos:
     hooks:
       - id: jscpd
         name: jscpd copy-paste detection
-        entry: jscpd --config jscpd.json
+        entry: jscpd --config jscpd.json --reporters console --output ""
         language: node
         additional_dependencies: [jscpd@4.0.5]
         pass_filenames: false

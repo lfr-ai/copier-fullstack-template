@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import final
 
+import structlog
+
 from {{ project_slug }}.application.dtos.user_dto import CreateUserDTO, UserDTO
 from {{ project_slug }}.application.mappers.user_mapper import UserMapper
-from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.domain_services.user_domain_service import UserDomainService
 from {{ project_slug }}.core.entities.user import User
 from {{ project_slug }}.core.events.user_events import UserCreated
@@ -21,7 +22,7 @@ from {{ project_slug }}.core.interfaces.unit_of_work import UnitOfWork
 
 
 @final
-class UserService(BaseService):
+class UserService:
     """Application service for user management.
 
     Follows the clean-architecture use-case pattern:
@@ -36,7 +37,10 @@ class UserService(BaseService):
         uow: UnitOfWork,
         password_hasher: PasswordHasher,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
+        self._logger: structlog.stdlib.BoundLogger = structlog.get_logger(
+            f"{__name__}.{self.__class__.__name__}"
+        )
         self._password_hasher = password_hasher
         self._domain_service = UserDomainService()
 

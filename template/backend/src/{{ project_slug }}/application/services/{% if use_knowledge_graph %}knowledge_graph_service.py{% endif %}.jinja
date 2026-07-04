@@ -7,9 +7,9 @@ from typing import final
 from dataclasses import dataclass, field
 
 from pydantic import Field
+import structlog
 
 from {{ project_slug }}.application.dtos.base import BaseDTO
-from {{ project_slug }}.application.services.base import BaseService
 from {{ project_slug }}.core.interfaces.knowledge_graph import (
     DEFAULT_NEIGHBOR_DEPTH,
     DEFAULT_NEIGHBOR_LIMIT,
@@ -60,7 +60,7 @@ class AddTripletsCommand:
 
 
 @final
-class KnowledgeGraphService(BaseService):
+class KnowledgeGraphService:
     """Application-level knowledge graph orchestration."""
 
     def __init__(
@@ -70,7 +70,10 @@ class KnowledgeGraphService(BaseService):
         knowledge_graph: KnowledgeGraphGateway,
         llm: LLMGateway | None = None,
     ) -> None:
-        super().__init__(uow=uow)
+        self._uow = uow
+        self._logger: structlog.stdlib.BoundLogger = structlog.get_logger(
+            f"{__name__}.{self.__class__.__name__}"
+        )
         self._kg = knowledge_graph
         self._llm = llm
 
